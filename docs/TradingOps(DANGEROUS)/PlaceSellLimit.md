@@ -1,4 +1,4 @@
-# 🧾 Placing a Pending Sell Limit Order
+#  Placing a Pending Sell Limit Order
 
 > **Request:** place a **SELL LIMIT** pending order at a specified price (optionally with SL/TP and expiration).
 
