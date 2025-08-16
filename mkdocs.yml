@@ -21,7 +21,8 @@ theme:
     - navigation.tracking
     - content.code.copy
     - content.action.edit
-    - navigation.tabs   # вкладки сверху (без секций/expand)
+    - navigation.sections
+    - navigation.expand       
 
 nav:
   - Home: index.md
