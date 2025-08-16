@@ -17,21 +17,24 @@ This guide shows how to run **GoMT5** straight from the terminal — no GUI, onl
 
 ---
 
-## 📁 Project Structure (your repo)
+## 📁 Project Structure (current)
 
 ```bash
 GoMT5/
 ├─ docs/                                 # Documentation (what you're reading)
-├─ config/
-│  ├─ config.go                           # Loads config.json
-│  └─ config.json                         # Login/Server/DefaultSymbol
-├─ mt5/
-│  ├─ MT5Account.go                       # Low-level account & connection helpers
-│  └─ MT5Service.go                       # High-level helpers (Show*/Place*/Buy/Sell)
-├─ main.go                                # Entry point to run examples from code
+├─ examples/                             # Full runnable example (single module)
+│  ├─ config/
+│  │  ├─ config.go                        # Loads config.json
+│  │  └─ config.json                      # Login/Server/DefaultSymbol
+│  ├─ mt5/
+│  │  ├─ MT5Account.go                    # Low-level account & connection helpers
+│  │  └─ MT5Service.go                    # High-level helpers (Show*/Place*/Buy/Sell)
+│  ├─ go.mod                              # Module for the examples project
+│  ├─ go.sum
+│  └─ main.go                             # Entry point for running examples
 ├─ go.work / go.work.sum                  # Workspace files
 ├─ mkdocs.yml                             # Docs site config (optional)
-└─ examples/                              # (optional) extra runnable samples
+└─ .gitignore
 ```
 
 ---
@@ -56,11 +59,11 @@ GoMT5/
 
 ## 🚀 Run It
 
-From the **repo root**:
+From the **examples/** folder (it contains its own `go.mod` and `main.go`):
 
 ```bash
+cd examples
 # Windows PowerShell / cmd / Bash — all the same
-# make sure you're in the folder where main.go lives
 
 go run .
 ```
@@ -75,7 +78,7 @@ symbol ready: EURUSD
 ✅ Done.
 ```
 
-**Typical fix if you get** `no Go files` — you’re not in the folder with `main.go`. `cd` to repo root and re-run `go run .`.
+**Typical fix if you get** `no Go files` — you’re not in `examples/`. `cd examples` and re-run `go run .`.
 
 ---
 
