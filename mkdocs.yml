@@ -71,8 +71,8 @@ nav:
       - Deal By Ticket: History_And_SimpleStatistics/DealByTicket.md
 
 
-  # - CLI Guide: Using_GoMT5.md
-  # - Beginner Run Guide: Beginner_Run_Guide.md
+   - CLI Guide: Using_GoMT5.md
+   - Beginner Run Guide: Beginner_Run_Guide.md
 
 plugins:
   - search
