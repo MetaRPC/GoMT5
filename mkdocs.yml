@@ -1,8 +1,8 @@
-site_name: MetaRPC MT4 Golang Documentation
+site_name: MetaRPC MT5 Golang Documentation
+site_description: Docs and examples for MetaRPC MT5 in Go (account, market, trading, history)
+# repo_url: https://github.com/MetaRPC/GoMT5   # (опционально, укажи свой URL)
+# edit_uri: edit/main/docs/                    # (опционально для кнопки "Edit this page")
 
-nav:
-  - Home: index.md
-  - API Reference: api.md
 theme:
   name: material
   palette:
@@ -19,8 +19,72 @@ theme:
   features:
     - palette.toggle
     - palette.auto
+    - navigation.top
+    - navigation.tracking
+    - content.code.copy
+    - content.action.edit
+
+nav:
+  - Home: index.md
+
+  - Quick Account & Market Info:
+      - Account Summary: QuickAccount_MarketInfo/AccountSummary.md
+      - Quote: QuickAccount_MarketInfo/Quote.md
+      - Quotes Many: QuickAccount_MarketInfo/QuotesMany.md
+      - Symbol Params: QuickAccount_MarketInfo/SymbolParams.md
+      - Tick Values: QuickAccount_MarketInfo/TickValues.md
+      - All Symbols: QuickAccount_MarketInfo/AllSymbols.md
+
+  - Opened State Snapshot:
+      - Opened Orders: Opened_State_Snapshot/OpenedOrders.md
+      - Opened Order Tickets: Opened_State_Snapshot/OpenedOrderTickets.md
+      - Show Positions: Opened_State_Snapshot/ShowPositions.md
+      - Has Open Position: Opened_State_Snapshot/HasOpenPosition.md
+
+  - Calculations & Safety Checks:
+      - Order Calc Margin: Calculations_And_PreliminaryVerification/OrderCalcMargin.md
+      - Order Calc Profit: Calculations_And_PreliminaryVerification/OrderCalcProfit.md
+      - Order Check: Calculations_And_PreliminaryVerification/ShowOrderCheck.md
+
+  # Важно: каталог со скобками нужно ОБЯЗАТЕЛЬНО брать в кавычки
+  - "Trading Operations (DANGEROUS)":
+      - Buy Market: "TradingOps(DANGEROUS)/BuyMarket.md"
+      - Sell Market: "TradingOps(DANGEROUS)/SellMarket.md"
+      - Place Buy Limit: "TradingOps(DANGEROUS)/PlaceBuyLimit.md"
+      - Place Sell Limit: "TradingOps(DANGEROUS)/PlaceSellLimit.md"
+      - Place Buy Stop: "TradingOps(DANGEROUS)/PlaceBuyStop.md"
+      - Place Sell Stop: "TradingOps(DANGEROUS)/PlaceSellStop.md"
+      - Place Stop Limit: "TradingOps(DANGEROUS)/PlaceStopLimit.md"
+      - Order Modify Example: "TradingOps(DANGEROUS)/OrderModifyExample.md"
+      - Order Close Example: "TradingOps(DANGEROUS)/OrderCloseExample.md"
+      - Order Delete Example: "TradingOps(DANGEROUS)/OrderDeleteExample.md"
+      - Position Modify: "TradingOps(DANGEROUS)/PositionModify.md"
+      - Position Close: "TradingOps(DANGEROUS)/PositionClose.md"
+      - Close All Positions: "TradingOps(DANGEROUS)/CloseAllPositions.md"
+      - Set Order Expiration: "TradingOps(DANGEROUS)/SetOrderExpiration.md"
+
+  - History & Simple Statistics:
+      - Overview: History_And_SimpleStatistics/HistoryAndStats_Overview.md
+      - Show Orders History: History_And_SimpleStatistics/ShowOrdersHistory.md
+      - Show Deals Count: History_And_SimpleStatistics/ShowDealsCount.md
+      - Order By Ticket: History_And_SimpleStatistics/OrderByTicket.md
+      - Deal By Ticket: History_And_SimpleStatistics/DealByTicket.md
+
+
+  # - CLI Guide: Using_GoMT5.md
+  # - Beginner Run Guide: Beginner_Run_Guide.md
+
+plugins:
+  - search
 
 markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
-  - pymdownx.superfences
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:pymdownx.emoji.to_svg
