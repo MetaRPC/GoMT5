@@ -1,4 +1,4 @@
-# Getting an Account Summary (MT5)
+# Getting an Account Summary
 
 > **Request:** full account summary (`AccountSummaryData`) from MT5.
 > Fetch all core account metrics in a single call.
