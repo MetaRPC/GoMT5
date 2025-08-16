@@ -57,4 +57,4 @@ Prints a single integer count of all deals found in the given range (optionally 
 * Always ensure `from < to`, otherwise you’ll get empty results or errors.
 * Use empty `symbol` when you want total activity across all instruments.
 * Works well for periodic reporting (daily, weekly, monthly trade counts).
-* 🔗 For `from/to` handling see: **History Range (from/to) — How to Use**.
+* 🔗 For `from/to` handling see: **History_Range(important)**.
