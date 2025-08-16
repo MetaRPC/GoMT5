@@ -33,7 +33,7 @@ func (s *MT5Service) ShowOrdersHistory(ctx context.Context, from time.Time, to t
 | `from`    | `time.Time`       | yes      | Start of time range (inclusive). |
 | `to`      | `time.Time`       | yes      | End of time range (exclusive).   |
 
-📎 For practical usage and examples on how to construct `from` and `to` (week, today, month-to-date, etc.) see 👉 **[History_Range(important)](68a0bfff30648191b2b6511a2691647b)**
+📎 For practical usage and examples on how to construct `from` and `to` (week, today, month-to-date, etc.) see 👉 **History_Range(important)**
 
 ---
 
