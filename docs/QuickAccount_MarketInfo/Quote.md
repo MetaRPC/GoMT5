@@ -1,4 +1,4 @@
-# Getting a Quote (MT5)
+# Getting a Quote
 
 > **Request:** latest tick for a symbol (Bid/Ask/Last & timestamp).
 > Fetch a single quote snapshot for one symbol.
