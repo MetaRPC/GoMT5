@@ -8,6 +8,7 @@ This documentation will help you:
 * 💡 Learn from **Go usage examples** with context and timeout control
 * 🔁 Work with **real-time streaming** of quotes, orders, positions, and deals
 * ⚙️ Understand all **input/output types**, such as `OrderSendData`, `PositionData`, `QuoteData`, and enums like `ENUM_ORDER_TYPE_TF` or `MRPC_ENUM_TRADE_REQUEST_ACTIONS`
+* 🟢 A link to a convenient way to view information https://metarpc.github.io/GoMT5/
 
 ---
 
