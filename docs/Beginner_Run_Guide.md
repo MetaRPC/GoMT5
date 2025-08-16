@@ -1,174 +1,213 @@
-# 🚦 Beginner Run Guide — “What do I run and where?”
+# 🚦 Beginner Run Guide for GoMT5
 
-This page is for a newcomer who already has **config filled** and wants to **start doing things** with MT5 from code.
-
-> You run everything from **`examples/`**:
->
-> ```bash
-> cd examples
-> go run .
-> ```
->
-> All snippets below go **into `examples/main.go`**, inside `main()` **after** you create `svc := mt5.NewMT5Service(account)` and choose `selectedSymbol`.
+This guide is designed for **beginners** who already have their `config.json` set up with login, password, server, and default symbol. It explains **what to uncomment** in `examples/main.go` and what happens when you run the code.
 
 ---
 
-## ✅ Scenario 0 — Minimal sanity check (safe)
+## ⚡ How to Run
 
-**Goal:** make sure terminal is connected and symbol works.
+Open your terminal in the project root:
+
+```bash
+cd examples
+go run .
+```
+
+This will use your `examples/main.go` file as the entry point.
+
+---
+
+## 🧪 Safe First Steps
+
+These operations **do not change anything** on your account. They are safe to test.
+
+In `examples/main.go`, uncomment one or more of the following:
 
 ```go
+// Show account summary
 svc.ShowAccountSummary(ctx)
-svc.ShowQuote(ctx, selectedSymbol)
+
+// Show all available symbols
+svc.ShowAllSymbols(ctx)
+
+// Get live quote for EURUSD
+svc.ShowQuote(ctx, "EURUSD")
+
+// Stream continuous quotes
+svc.StreamQuotes(ctx)
 ```
 
-**Expected:** balance/equity + live bid/ask in console.
+Run the app again and watch the output.
 
 ---
 
-## 🧭 Scenario 1 — Snapshot of current state (safe)
+## 📊 Getting Data
 
-**Goal:** see what is open now.
+Useful methods to retrieve account or market information:
 
 ```go
+// Print history of trades (last 7 days by default)
+svc.ShowOrdersHistory(ctx)
+
+// Print currently open orders
 svc.ShowOpenedOrders(ctx)
-svc.ShowOpenedOrderTickets(ctx)
-svc.ShowPositions(ctx)
-svc.ShowHasOpenPosition(ctx, selectedSymbol)
-```
 
-**Expected:** lists of orders, tickets, positions, or “no items”.
+// Show full symbol parameters (like contract size, digits, etc.)
+svc.ShowSymbolParams(ctx, "EURUSD")
+```
 
 ---
 
-## 🧮 Scenario 2 — Calculations before trading (safe)
+## ⚠️ Trading Operations (Be Careful)
 
-**Goal:** estimate margin/profit and validate a future trade.
+These will actually place, modify, or close orders (even on demo). Always test on a demo account first.
 
 ```go
-// 2.1 Margin for a potential BUY
-svc.ShowOrderCalcMargin(ctx, selectedSymbol, pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY, 0.10, 0)
+// Open a sample Buy order
+svc.ShowOrderSendExample(ctx, "EURUSD")
 
-// 2.2 Profit estimation if price moves from 1.08000 to 1.08350
-svc.ShowOrderCalcProfit(ctx, selectedSymbol, pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY, 0.10, 1.08000, 1.08350)
+// Modify order SL/TP (requires a real ticket)
+svc.ShowOrderModifyExample(ctx, 123456789)
 
-// 2.3 Dry‑run check (no trade yet): market BUY 0.10 lots
-svc.ShowOrderCheck(
-    ctx,
-    pb.MRPC_ENUM_TRADE_REQUEST_ACTIONS_TRADE_ACTION_DEAL, // market action
-    pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY,              // BUY
-    selectedSymbol,
-    0.10,
-    0,   // price=0 → market on most servers
-    nil, // sl
-    nil, // tp
-    nil, // deviation
-    nil, // magic
-    nil, // expiration
-)
+// Close order by ticket
+svc.ShowOrderCloseExample(ctx, 123456789)
 ```
-
-**Expected:** margin/profit numbers and `OrderCheck` retcode/comment.
 
 ---
 
-## 🧪 Scenario 3 — Place a *pending* order with expiration (real!)
+## 🎬 Combo Scenarios
 
-**Goal:** safely test order placement without instant execution.
-
-> ⚠️ This is a **real trading action** (even on demo). Keep volume small.
+### 1. Open → Check → Close
 
 ```go
-exp := timestamppb.New(time.Now().Add(24 * time.Hour)) // auto-cancel in 24h
+// Step 1: Open Buy Market order
+svc.ShowOrderSendExample(ctx, "EURUSD")
 
-// Example: Buy Limit at 1.07500, 0.10 lots
+// Step 2: List opened orders
+svc.ShowOpenedOrders(ctx)
+
+// Step 3: Close by ticket (replace with real ticket number from output)
+svc.ShowOrderCloseExample(ctx, 123456789)
+```
+
+---
+
+### 2. Place Pending → Wait → Delete
+
+```go
+// Step 1: Place pending order (Buy Limit)
+svc.ShowOrderSendExample(ctx, "EURUSD") // adjust inside method to pending type if needed
+
+// Step 2: Check active pending orders
+svc.ShowOpenedOrders(ctx)
+
+// Step 3: Delete the pending order by ticket
+svc.ShowOrderDeleteExample(ctx, 123456789)
+```
+
+---
+
+### 3. Market Data Dashboard
+
+```go
+// Show account summary
+svc.ShowAccountSummary(ctx)
+
+// Stream real-time quotes
+svc.StreamQuotes(ctx)
+
+// Print live profits of open orders
+svc.StreamOpenedOrderProfits(ctx)
+```
+
+---
+
+## 🧠 Tips for Beginners
+
+* Always start with **safe methods** before trying trading functions.
+* Replace `123456789` with the **real order ticket number** you see in the output.
+* Keep `config.json` secure — it contains your login details.
+* Use **demo accounts** until you are fully confident.
+
+---
+
+This way, even a beginner can follow step by step, uncomment the right methods, and see immediate results without being lost.
+
+---
+
+## 🔗 Combo Scenario A — Place Buy Limit → monitor → delete (real!)
+
+**Goal:** create a pending order with expiration, watch it in streams for \~30s, then delete it by ticket.
+
+```go
+// 1) Place Buy Limit (auto-cancel in 24h)
+exp := timestamppb.New(time.Now().Add(24 * time.Hour))
 svc.PlaceBuyLimit(ctx, selectedSymbol, 0.10, 1.07500, nil, nil, exp)
 
-// See result in console, then you may delete it:
+// 2) Watch tickets/profits for ~30s (internally stop by timeout)
+svc.StreamOpenedOrderTickets(ctx)
+svc.StreamOpenedOrderProfits(ctx)
+
+// 3) Get the order ticket from console output (or from your terminal log)
+//    Then delete it:
 // svc.ShowOrderDeleteExample(ctx, YOUR_ORDER_TICKET)
 ```
 
-**Notes:** for Sell/Stop/StopLimit use corresponding helpers (`PlaceSellLimit`, `PlaceBuyStop`, `PlaceStopLimit`, …).
+**Tip:** To make finding the ticket easier, use a unique comment when placing orders (see trading helpers with `comment`).
 
 ---
 
-## ⚡ Scenario 4 — Market trade (real!)
+## 🔗 Combo Scenario B — Market Buy → show position → modify SL/TP → close (real!)
 
-**Goal:** execute now at market price.
-
-> ⚠️ Real trade! Uncomment only when you are **ready**.
+**Goal:** open a position at market, ensure it exists, optionally adjust, then close.
 
 ```go
+// 1) Execute market BUY (⚠️ real trade)
 // svc.BuyMarket(ctx, selectedSymbol, 0.10, nil, nil)
-// svc.SellMarket(ctx, selectedSymbol, 0.10, nil, nil)
-```
 
-**Next steps:** check `svc.ShowPositions(ctx)` and close/modify if needed:
+// 2) Confirm in console
+svc.ShowPositions(ctx)            // should show an open position for selectedSymbol
+svc.ShowHasOpenPosition(ctx, selectedSymbol)
 
-```go
-// svc.ShowOrderCloseExample(ctx, 123456789)
+// 3) Modify position SL/TP (needs position ticket) — optional
+//    If you know the ticket, call:
+// svc.ShowPositionModify(ctx, /*ticket=*/ 123456789, /*newSL=*/ nil, /*newTP=*/ nil)
+//    (Without a helper that returns the ticket programmatically, take it from ShowPositions output.)
+
+// 4) Close the position by symbol
 // svc.ShowPositionClose(ctx, selectedSymbol)
 ```
 
+**Note:** If you prefer closing the *order* itself, use `ShowOrderCloseExample(ctx, ticket)` with the exact order ticket.
+
 ---
 
-## 📊 Scenario 5 — History & simple stats (safe)
+## 🔗 Combo Scenario C — Intraday pending workflow (place → auto-expire)
 
-**Goal:** read what happened earlier.
+**Goal:** create orders that auto-cancel by end of day if not filled.
 
 ```go
-from := time.Now().AddDate(0, 0, -7)
-to   := time.Now()
+// Expire at local midnight
+endOfDay := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 23, 59, 0, 0, time.Local)
+exp := timestamppb.New(endOfDay)
 
-svc.ShowOrdersHistory(ctx)
-svc.ShowDealsCount(ctx, from, to, "") // all symbols
-// svc.ShowOrderByTicket(ctx, 123456789)
-// svc.ShowDealByTicket(ctx, 987654321)
+// Two brackets: BUY_STOP above market and SELL_STOP below
+svc.PlaceBuyStop(ctx,  selectedSymbol, 0.10, /*trigger=*/ 1.09200, nil, nil, exp)
+svc.PlaceSellStop(ctx, selectedSymbol, 0.10, /*trigger=*/ 1.07800, nil, nil, exp)
+
+// Optional: watch for ~30s
+svc.StreamTradeUpdates(ctx)
 ```
 
+**Cleanup:** If needed, delete by ticket later via `ShowOrderDeleteExample`.
+
 ---
 
-## 📡 Scenario 6 — Streaming (safe to read)
+## 🔗 Combo Scenario D — Quick read-only dashboard (safe)
 
-**Goal:** watch live updates for a short period.
+**Goal:** one-shot snapshot for monitoring.
 
 ```go
-svc.StreamQuotes(ctx)               // live ticks
-// svc.StreamOpenedOrderProfits(ctx) // P/L per open order
-// svc.StreamOpenedOrderTickets(ctx) // open tickets
-// svc.StreamTradeUpdates(ctx)       // trade events
-```
-
-**Tip:** each stream stops by timeout inside the helper (≈30s) or on error.
-
----
-
-## 🔧 Where exactly to paste?
-
-Open `examples/main.go` and find the block where you already have:
-
-```go
-svc := mt5.NewMT5Service(account)
-selectedSymbol := cfg.DefaultSymbol // after EnsureSymbolVisible(...)
-```
-
-Paste any scenario **right below** this block. You can run scenarios one by one, or combine several — they will execute in order.
-
----
-
-## 🆘 Common pitfalls
-
-* **“no Go files in …”** — You ran from the wrong folder. Use: `cd examples && go run .`
-* **Proxy/internet issues** — set `MT5_PROXY` env var if you’re behind a firewall.
-* **Symbol not found** — we try several aliases; still failing? Ask your broker for exact symbol name.
-* **Trade rejected** — check `AccountSummary` (free margin), then run `ShowOrderCheck` to see the reason code.
-
----
-
-## 🧠 Quick copy block (everything safe)
-
-```go
-// Minimal safe pack
 svc.ShowAccountSummary(ctx)
 svc.ShowQuote(ctx, selectedSymbol)
 svc.ShowOpenedOrders(ctx)
@@ -177,4 +216,11 @@ from := time.Now().AddDate(0, 0, -7); to := time.Now()
 svc.ShowDealsCount(ctx, from, to, "")
 ```
 
-That’s it — uncomment gradually, watch the console, and move from safe checks to real actions when you’re ready. 🚀
+---
+
+## 🧷 Copy‑Paste Starters
+
+* Need expiration doc? See **SetOrderExpiration.md** in `docs/TradingOps(DANGEROUS)/`.
+* Need time range patterns? See **History\_Range(important).md** in `docs/History_And_SimpleStatistics/`.
+
+These combos keep changes minimal and mirror the helpers you already have, so a newcomer can un‑comment a block, run it, and understand the flow step by step. ✅
