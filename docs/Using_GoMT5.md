@@ -129,7 +129,7 @@ symbol ready: EURUSD
 * `svc.ShowOrderByTicket(ctx, orderTicket)`
 * `svc.ShowDealByTicket(ctx, dealTicket)`
 
-> Need help with `from/to` ranges? See the doc: **History Range (from/to) — How to Use**.
+> Need help with `from/to` ranges? See the doc: **History_Range(important)**.
 
 ---
 
