@@ -37,7 +37,7 @@ This documentation will help you:
 
 ### Trading Operations ⚠️
 
-* **Section index:** [TradingOps (DANGEROUS)](TradingOps%28DANGEROUS%29/index.md)
+* **Section index:** TradingOps (DANGEROUS)
 * Popular entries:
 
   * [Buy Market](TradingOps%28DANGEROUS%29/BuyMarket.md)
