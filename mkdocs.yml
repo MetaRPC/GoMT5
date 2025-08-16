@@ -21,11 +21,13 @@ theme:
     - navigation.tracking
     - content.code.copy
     - content.action.edit
+    - navigation.sections
 
 nav:
   - Home: index.md
 
   - Quick Account & Market Info:
+      - Overview: QuickAccount_MarketInfo/MarketInfo_Overview.md
       - Account Summary: QuickAccount_MarketInfo/AccountSummary.md
       - Quote: QuickAccount_MarketInfo/Quote.md
       - Quotes Many: QuickAccount_MarketInfo/QuotesMany.md
@@ -34,17 +36,20 @@ nav:
       - All Symbols: QuickAccount_MarketInfo/AllSymbols.md
 
   - Opened State Snapshot:
+      - Overview: Opened_State_Snapshot/OpenedStateSnapshot_Overview.md
       - Opened Orders: Opened_State_Snapshot/OpenedOrders.md
       - Opened Order Tickets: Opened_State_Snapshot/OpenedOrderTickets.md
       - Show Positions: Opened_State_Snapshot/ShowPositions.md
       - Has Open Position: Opened_State_Snapshot/HasOpenPosition.md
 
   - Calculations & Safety Checks:
+      - Overview: Calculations_And_PreliminaryVerification/Verification_Overview.md
       - Order Calc Margin: Calculations_And_PreliminaryVerification/OrderCalcMargin.md
       - Order Calc Profit: Calculations_And_PreliminaryVerification/OrderCalcProfit.md
       - Order Check: Calculations_And_PreliminaryVerification/ShowOrderCheck.md
 
   - "Trading Operations (DANGEROUS)":
+      - Overview: "TradingOps(DANGEROUS)/TradingOperations_Overview.md"
       - Buy Market: "TradingOps(DANGEROUS)/BuyMarket.md"
       - Sell Market: "TradingOps(DANGEROUS)/SellMarket.md"
       - Place Buy Limit: "TradingOps(DANGEROUS)/PlaceBuyLimit.md"
@@ -65,11 +70,11 @@ nav:
       - Show Deals Count: History_And_SimpleStatistics/ShowDealsCount.md
       - Order By Ticket: History_And_SimpleStatistics/OrderByTicket.md
       - Deal By Ticket: History_And_SimpleStatistics/DealByTicket.md
+      - "History Range (important)": "History_And_SimpleStatistics/History_Range(important).md"
 
   - Guides:
       - CLI Guide: Using_GoMT5.md
       - Beginner Run Guide: Beginner_Run_Guide.md
-
 
 plugins:
   - search
