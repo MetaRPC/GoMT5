@@ -21,7 +21,7 @@ theme:
     - navigation.tracking
     - content.code.copy
     - content.action.edit
-    - navigation.sections
+    - navigation.tabs
 
 nav:
   - Home: index.md
