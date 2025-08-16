@@ -2,50 +2,45 @@
 
 Welcome to the **MetaRPC MT5 Go Documentation** — your guide to building integrations with **MetaTrader 5** using **Go** and **gRPC**.
 
-This documentation provides everything you need to:
+This documentation will help you:
 
 * 📘 Explore all available **account, trading, and market methods**
 * 💡 Learn from **Go usage examples** with context and timeout control
 * 🔁 Work with **real-time streaming** of quotes, orders, positions, and deals
-* ⚙️ Understand all **input/output types**, including `OrderSendData`, `PositionData`, `QuoteData`, and enums like `ENUM_ORDER_TYPE_TF` or `MRPC_ENUM_TRADE_REQUEST_ACTIONS`
+* ⚙️ Understand all **input/output types**, such as `OrderSendData`, `PositionData`, `QuoteData`, and enums like `ENUM_ORDER_TYPE_TF` or `MRPC_ENUM_TRADE_REQUEST_ACTIONS`
 
 ---
 
 ## 📚 Main Sections
 
-* **Quick Account & Market Info** — quotes, tick values, trading symbols
-* **Opened State Snapshot** — open orders, tickets, and active positions
-* **Calculations & Safety Checks** — margin, profit, and pre-trade validation
-* **Trading Operations** — sending, modifying, and closing orders (⚠️ dangerous section)
-* **History & Statistics** — orders history, deals, and range-based stats
-* **Streaming** — subscribe to continuous updates on trades, quotes, and profits
+* **[Quick Account & Market Info](QuickAccount_MarketInfo/index.md)** — quotes, tick values, trading symbols
+* **[Opened State Snapshot](Opened_State_Snapshot/index.md)** — open orders, tickets, and active positions
+* **[Calculations & Safety Checks](Calculations_And_PreliminaryVerification/index.md)** — margin, profit, and pre-trade validation
+* **[Trading Operations ⚠️](TradingOps%28DANGEROUS%29/index.md)** — sending, modifying, and closing orders
+* **[History & Simple Statistics](History_And_SimpleStatistics/index.md)** — orders history, deals, and range-based stats
+* **[Streaming](Streaming/index.md)** — subscribe to updates on trades, quotes, and profits
 
 ---
 
 ## 🚀 Quick Start
 
-To get started with Go + MetaTrader 5:
-
-1. **Prepare your `config.json`** with MT5 credentials and connection details.
-2. Initialize an `MT5Account` and wrap it in an `MT5Service` to access helper methods.
-3. Run provided examples (`Show*.go` methods) or call services directly from `main.go`.
+1. **Configure your `config.json`** with MT5 credentials and connection details
+2. Use the `MT5Account` or `MT5Service` structs to access functionality
+3. Run examples via `main.go` or helper files like `Show*.go`
 
 ---
 
 ## 🛠 Requirements
 
-* Go 1.20+
+* Go 1.21+
 * gRPC-Go
-* Protobuf-generated Go bindings for MT5 `.proto` definitions
-* VS Code, GoLand, or LiteIDE for development
+* Protobuf bindings (imported automatically from remote repo)
+* VS Code / GoLand / LiteIDE
 
 ---
 
-With this documentation, you can:
+## 🧭 Navigation Tips
 
-* Monitor account health and exposure
-* Automate trade operations safely
-* Build dashboards for quotes and market data
-* Run backtests and analyze history
-
-Ready to trade with MT5? Let’s Go 🟢
+* Each section has its own **index.md** with explanations and links to sub-methods
+* Code examples are always in **Go**, with comments in English
+* Dangerous operations (like closing all positions) are flagged ⚠️
