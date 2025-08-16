@@ -1,7 +1,5 @@
 site_name: MetaRPC MT5 Golang Documentation
 site_description: Docs and examples for MetaRPC MT5 in Go (account, market, trading, history)
-# repo_url: https://github.com/MetaRPC/GoMT5   # (опционально, укажи свой URL)
-# edit_uri: edit/main/docs/                    # (опционально для кнопки "Edit this page")
 
 theme:
   name: material
@@ -46,7 +44,6 @@ nav:
       - Order Calc Profit: Calculations_And_PreliminaryVerification/OrderCalcProfit.md
       - Order Check: Calculations_And_PreliminaryVerification/ShowOrderCheck.md
 
-  # Важно: каталог со скобками нужно ОБЯЗАТЕЛЬНО брать в кавычки
   - "Trading Operations (DANGEROUS)":
       - Buy Market: "TradingOps(DANGEROUS)/BuyMarket.md"
       - Sell Market: "TradingOps(DANGEROUS)/SellMarket.md"
@@ -60,7 +57,6 @@ nav:
       - Order Delete Example: "TradingOps(DANGEROUS)/OrderDeleteExample.md"
       - Position Modify: "TradingOps(DANGEROUS)/PositionModify.md"
       - Position Close: "TradingOps(DANGEROUS)/PositionClose.md"
-      - Close All Positions: "TradingOps(DANGEROUS)/CloseAllPositions.md"
       - Set Order Expiration: "TradingOps(DANGEROUS)/SetOrderExpiration.md"
 
   - History & Simple Statistics:
@@ -70,9 +66,10 @@ nav:
       - Order By Ticket: History_And_SimpleStatistics/OrderByTicket.md
       - Deal By Ticket: History_And_SimpleStatistics/DealByTicket.md
 
+  - Guides:
+      - CLI Guide: Using_GoMT5.md
+      - Beginner Run Guide: Beginner_Run_Guide.md
 
-   - CLI Guide: Using_GoMT5.md
-   - Beginner Run Guide: Beginner_Run_Guide.md
 
 plugins:
   - search
