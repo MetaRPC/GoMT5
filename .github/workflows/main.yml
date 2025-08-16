@@ -1,0 +1,57 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - master
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Cache MkDocs Dependencies
+        run: echo "cache_id=$(date --utc '+%V')" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        with:
+          key: mkdocs-material-${{ env.cache_id }}
+          path: .cache
+          restore-keys: |
+            mkdocs-material-
+
+      - run: pip install mkdocs-material pymdown-extensions
+
+      # --- GODOC2MD SECTION STARTS HERE ---
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Install godoc2md
+        run: go install github.com/davecheney/godoc2md@latest
+
+      - name: Generate Go API docs (Markdown)
+        run: |
+          cd examples
+          mkdir -p ../docs
+          ~/go/bin/godoc2md . > ../docs/api.md
+      # --- GODOC2MD SECTION ENDS HERE ---
+
+      - name: Deploy Docs to GitHub Pages
+        run: mkdocs gh-deploy --force --clean
