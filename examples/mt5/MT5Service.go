@@ -9,8 +9,8 @@ import (
 	pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
-	// Если в этом файле есть ConnectByProxy/ShowCheckConnect/и т.п. — раскомментируй:
-	//  "github.com/google/uuid"
+	 //Если в этом файле есть ConnectByProxy/ShowCheckConnect/и т.п. — раскомментируй:
+	  //"github.com/google/uuid"
 	// _go "git.mtapi.io/root/mrpc-proto.git/mt5/libraries/go"
 	// "google.golang.org/grpc/metadata"
 )
