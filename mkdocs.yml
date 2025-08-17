@@ -17,9 +17,7 @@ theme:
   features:
     - palette.toggle
     - palette.auto
-    - navigation.top
-    - navigation.tracking
-    - navigation.sections     # ← группы в левом сайдбаре (свернуты по умолчанию)
+    - navigation.sections      # левый сайдбар, группы сворачиваются/разворачиваются
     - content.code.copy
     - content.action.edit
 
@@ -71,6 +69,13 @@ nav:
       - Order By Ticket: History_And_SimpleStatistics/OrderByTicket.md
       - Deal By Ticket: History_And_SimpleStatistics/DealByTicket.md
       - "History Range (important)": "History_And_SimpleStatistics/History_Range(important).md"
+
+  - Streaming:
+      - Overview: Stream/StreamingOverview.md
+      - Streaming Quotes: Stream/StreamingQuotes.md
+      - Opened Order Profits: Stream/StreamOpenedOrderProfits.md
+      - Opened Order Tickets: Stream/StreamOpenedOrderTickets.md
+      - Trade Updates: Stream/StreamTradeUpdates.md
 
   - Guides:
       - CLI Guide: Using_GoMT5.md
