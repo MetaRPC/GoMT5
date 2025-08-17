@@ -1,4 +1,4 @@
-# Streaming Quotes (OnSymbolTick)
+# Streaming Quotes (OnSymbolTick) — Proto‑accurate
 
 > **Request:** subscribe to live ticks for one or more symbols. Uses gRPC streaming with two channels: **data** and **errors**.
 
@@ -10,7 +10,7 @@
 // High-level helper (inside MT5Service):
 svc.StreamQuotes(ctx) // by default streams EURUSD, GBPUSD
 
-// Low-level (pass your own symbols and handle packets):
+// Low-level (control your own symbols and packets):
 symbols := []string{"EURUSD", "GBPUSD", "XAUUSD"}
 ctx2, cancel := context.WithCancel(ctx)
 defer cancel()
@@ -19,12 +19,14 @@ tickCh, errCh := s.account.OnSymbolTick(ctx2, symbols)
 fmt.Println("🔄 Streaming ticks...")
 for {
     select {
-    case pkt, ok := <-tickCh:
+    case reply, ok := <-tickCh:
         if !ok { fmt.Println("✅ Tick stream ended."); return }
-        if st := pkt.GetSymbolTick(); st != nil {
-            fmt.Printf("[Tick] %s | Bid: %.5f | Ask: %.5f | Time: %s\n",
-                st.GetSymbol(), st.GetBid(), st.GetAsk(), st.GetTime().AsTime().Format("2006-01-02 15:04:05"))
-        }
+        data := reply.GetOnSymbolTickData() // name may be GetData() in your wrapper
+        if data == nil || data.GetSymbolTick() == nil { continue }
+        st := data.GetSymbolTick() // MrpcSubscriptionMqlTick
+        fmt.Printf("[Tick] %s | Bid: %.5f | Ask: %.5f | Time: %s
+",
+            st.GetSymbol(), st.GetBid(), st.GetAsk(), st.GetTime().AsTime().Format("2006-01-02 15:04:05"))
     case err := <-errCh:
         log.Printf("❌ Stream error: %v", err)
         return
@@ -43,16 +45,16 @@ for {
 func (s *MT5Service) StreamQuotes(ctx context.Context)
 ```
 
-**Under the hood:** calls `OnSymbolTick(ctx, symbols []string)` on the account client and forwards packets from its channels.
+**Underlying gRPC:** `OnSymbolTick` → `OnSymbolTickReply` → `OnSymbolTickData` with `MrpcSubscriptionMqlTick`.
 
 ---
 
 ## 🔽 Input
 
-| Parameter | Type              | Required | Description                                                                                                      |
-| --------- | ----------------- | -------- | ---------------------------------------------------------------------------------------------------------------- |
-| `ctx`     | `context.Context` | yes      | Controls lifetime of the stream (cancel/timeout).                                                                |
-| `symbols` | `[]string`        | no\*     | Helper uses a built-in slice (e.g., `EURUSD`, `GBPUSD`). For a custom list, use the **low-level** example above. |
+| Parameter | Type              | Required | Description                                                                                                   |
+| --------- | ----------------- | -------- | ------------------------------------------------------------------------------------------------------------- |
+| `ctx`     | `context.Context` | yes      | Controls lifetime of the stream (cancel/timeout).                                                             |
+| `symbols` | `[]string`        | no\*     | Helper uses an internal slice (e.g., `EURUSD`, `GBPUSD`). For a custom list, use the low-level example above. |
 
 > \*In the helper, edit the `symbols := []string{...}` line to change the watch list.
 
@@ -60,14 +62,20 @@ func (s *MT5Service) StreamQuotes(ctx context.Context)
 
 ## ⬆️ Output
 
-Continuous packets on channels:
+**Tick message type:** `MrpcSubscriptionMqlTick`
+Available getters (per your bindings):
 
-* **`tickCh`** (`<-chan *pb.SymbolTickPacket`)
-
-  * `Symbol` — e.g., `EURUSD`
-  * `Bid`, `Ask` — latest prices
-  * `Time` — server timestamp (`google.protobuf.Timestamp`)
-* **`errCh`** (`<-chan error`) — transport/stream errors
+| Field        | Type                     | Note                              |
+| ------------ | ------------------------ | --------------------------------- |
+| `Time`       | `*timestamppb.Timestamp` | server time                       |
+| `Bid`        | `float64`                | current bid                       |
+| `Ask`        | `float64`                | current ask                       |
+| `Last`       | `float64`                | last trade/price, may be 0 for FX |
+| `Volume`     | `uint64`                 | tick volume                       |
+| `TimeMsc`    | `int64`                  | epoch ms                          |
+| `Flags`      | `uint32`                 | exchange flags/bitmask            |
+| `VolumeReal` | `float64`                | real volume (if provided)         |
+| `Symbol`     | `string`                 | symbol name                       |
 
 **Sample console output:**
 
@@ -87,8 +95,8 @@ Continuous packets on channels:
 
 ## 🧩 Notes & Tips
 
-* **Symbol visibility:** make sure symbols are visible (`EnsureSymbolVisible`) before streaming.
-* **Throttle logs:** printing every tick can flood stdout; batch or rate-limit in production.
+* **Symbol visibility:** ensure symbols are visible (`EnsureSymbolVisible`) before streaming.
+* **Throttle logs:** printing every tick can flood stdout; batch or rate‑limit in production.
 * **Stop conditions:** stream ends when `ctx` is canceled, timeout fires, server closes the stream, or an error arrives on `errCh`.
 * **Reconnect logic:** for long-running services, wrap with retry/backoff on errors.
 * **Scope the list:** watch only the symbols you need to reduce traffic.
