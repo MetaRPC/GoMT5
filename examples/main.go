@@ -4,22 +4,25 @@ import (
 	"context"
 	"log"
 	"os"
+"os/signal"
+   "sync"
+   "syscall"
 	"time"
+
+	pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
 
 	"github.com/MetaRPC/GoMT5/mt5"
 	"github.com/google/uuid"
 )
 
-type Config struct {
-	DefaultSymbol string
-}
-
+// waitReady polls terminal liveness until deadline.
+// Safe to call right after Connect* even if it returned an error.
 func waitReady(ctx context.Context, acc *mt5.MT5Account, maxWait time.Duration) bool {
 	deadline := time.Now().Add(maxWait)
 	t := time.NewTicker(2 * time.Second)
 	defer t.Stop()
 
-	for i := 1; ; i++ {
+	for attempt := 1; ; attempt++ {
 		ok, _ := acc.IsTerminalAlive(ctx)
 		if ok {
 			log.Println("terminal is ready")
@@ -31,7 +34,7 @@ func waitReady(ctx context.Context, acc *mt5.MT5Account, maxWait time.Duration) 
 			return false
 		case <-t.C:
 			log.Printf("still waiting... attempt %d, time left: %s",
-				i, time.Until(deadline).Truncate(time.Second))
+				attempt, time.Until(deadline).Truncate(time.Second))
 		}
 	}
 }
@@ -39,22 +42,14 @@ func waitReady(ctx context.Context, acc *mt5.MT5Account, maxWait time.Duration) 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 
-	// Общий «зонтик» на запуск
-	rootCtx, cancelRoot := context.WithTimeout(context.Background(), 12*time.Minute)
-	defer cancelRoot()
+	// Umbrella context for the whole run (keep it simple).
+	rootCtx, cancel := context.WithTimeout(context.Background(), 12*time.Minute)
+	defer cancel()
 
-	cfg := Config{DefaultSymbol: "EURUSD"}
-
+	// --- Basic settings (edit these as needed) ---
 	const login uint64 = 501401178
 	const password = "v8gctta"
-
-	// Прокси читаем из окружения: socks5://user:pass@host:port или http://host:port
-	proxy := os.Getenv("MT5_PROXY")
-	if proxy != "" {
-		log.Printf("using proxy: %s", proxy)
-	} else {
-		log.Printf("no proxy set (set MT5_PROXY if your egress requires it)")
-	}
+	defaultSymbol := "EURUSD"
 
 	servers := []string{
 		"RoboForex-Demo",
@@ -63,18 +58,21 @@ func main() {
 		"RoboForex-Pro-2",
 		"RoboForex-ECN",
 		"RoboForex-ECN-Pro",
-		"MetaQuotes-Demo", // как диагностический
+		"MetaQuotes-Demo", // diagnostic fallback
 	}
 
-	const serverSideWaitSeconds = 480          // ждём на стороне сервера
-	const localReadinessWait = 8 * time.Minute // и потом ждём сами
+	const serverSideWait = 480           // how long terminal may block during login
+	const localReadinessWait = 8 * time.Minute
 
-	var (
-		account      *mt5.MT5Account
-		connectedSrv string
-	)
+	// Optional proxy: socks5://user:pass@host:port or http://host:port
+	proxy := os.Getenv("MT5_PROXY")
+	if proxy != "" {
+		log.Printf("using proxy: %s", proxy)
+	} else {
+		log.Printf("no proxy set (set MT5_PROXY if your egress requires it)")
+	}
 
-	// Всегда создаём новый экземпляр для первой попытки
+	// --- Connect (simple, readable retry over servers) ---
 	newAccount := func() *mt5.MT5Account {
 		acc, err := mt5.NewMT5Account(login, password, "", uuid.Nil)
 		if err != nil {
@@ -82,50 +80,40 @@ func main() {
 		}
 		return acc
 	}
-	account = newAccount()
-	defer func() {
-		if account != nil {
-			_ = account.Disconnect(context.Background())
+
+	acc := newAccount()
+	defer func() { _ = acc.Disconnect(context.Background()) }()
+
+	var connectedSrv string
+	for i, srv := range servers {
+		if i > 0 {
+			_ = acc.Disconnect(context.Background())
+			acc = newAccount()
 		}
-	}()
+		log.Printf("connect(wait on server %ds) to %s ...", serverSideWait, srv)
 
-	for idx, srv := range servers {
-		if idx > 0 {
-			// между попытками — чистый инстанс
-			_ = account.Disconnect(context.Background())
-			account = newAccount()
-		}
+		// Even if Connect returns an error, terminal may continue initializing — keep waiting below.
+		_ = acc.ConnectByServerName(rootCtx, srv, proxy, true, serverSideWait)
 
-		log.Printf("connect(wait on server %ds) to %s ...", serverSideWaitSeconds, srv)
-		// Пытаемся коннектиться, даже если вернулся error — будем дальше сами ждать готовность
-		if err := account.ConnectByServerName(rootCtx, srv, proxy, true, serverSideWaitSeconds); err != nil {
-			log.Printf("connect returned error (ignore & keep waiting): %v", err)
-		}
-
-		time.Sleep(2 * time.Second) // дать терминалу «вдохнуть»
-
-		readyCtx, cancelReady := context.WithTimeout(rootCtx, localReadinessWait)
-		ready := waitReady(readyCtx, account, localReadinessWait)
-		cancelReady()
-
-		if ready {
+		time.Sleep(2 * time.Second) // small breath
+		if waitReady(rootCtx, acc, localReadinessWait) {
 			connectedSrv = srv
 			break
 		}
 	}
-
 	if connectedSrv == "" {
-		log.Fatal("не удалось подключиться ни к одному серверу. Если вы за прокси/фаерволом — задайте MT5_PROXY (http:// или socks5://) или откройте egress из MRPC.")
+		log.Fatal("failed to connect to any server. If behind proxy/firewall — set MT5_PROXY or allow egress.")
 	}
+	log.Printf("connected to: %s", connectedSrv)
 
-	// === Далее обычная работа ===
-	selectedSymbol := cfg.DefaultSymbol
-	for _, s := range []string{cfg.DefaultSymbol, "EURUSD.", "EURUSD.pro"} {
+	// --- Prepare symbol (try common suffixes; pick first visible) ---
+	selected := defaultSymbol
+	for _, s := range []string{defaultSymbol, defaultSymbol + ".", defaultSymbol + ".pro"} {
 		if s == "" {
 			continue
 		}
-		if err := account.EnsureSymbolVisible(rootCtx, s); err == nil {
-			selectedSymbol = s
+		if err := acc.EnsureSymbolVisible(rootCtx, s); err == nil {
+			selected = s
 			log.Printf("symbol ready: %s", s)
 			break
 		} else {
@@ -133,13 +121,105 @@ func main() {
 		}
 	}
 
-	svc := mt5.NewMT5Service(account)
+	// --- Service facade tied to the connected account ---
+	svc := mt5.NewMT5Service(acc)
 
-	// Минимальный sanity-check, без «опасных» операций
-	svc.ShowHealthCheck(rootCtx)
-	svc.ShowCheckConnect(rootCtx)
+	// ===============================
+	// CALLS IN A CLEAR, SAFE ORDER
+	// ===============================
+
+	// 1) 📂 Quick account & market info (read-only)
 	svc.ShowAccountSummary(rootCtx)
-	svc.ShowQuote(rootCtx, selectedSymbol)
+	svc.ShowQuote(rootCtx, selected)
+	svc.ShowQuotesMany(rootCtx, []string{selected, "GBPUSD"})
+	svc.ShowSymbolParams(rootCtx, selected)
+	svc.ShowTickValues(rootCtx, []string{selected, "GBPUSD"})
+	svc.ShowAllSymbols(rootCtx) // may print a lot
 
-	log.Println("✅ Done.")
+	// 2) 📂 Opened state snapshot (read-only)
+	svc.ShowOpenedOrders(rootCtx)
+	svc.ShowOpenedOrderTickets(rootCtx)
+	svc.ShowPositions(rootCtx)
+	svc.ShowHasOpenPosition(rootCtx, selected)
+
+	// 3) 📂 Calculations & a dry-run check (still safe)
+	svc.ShowOrderCalcMargin(rootCtx, selected, pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY, 0.10, 0)
+	svc.ShowOrderCalcProfit(rootCtx, selected, pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY, 0.10, 1.08000, 1.08350)
+	svc.ShowOrderCheck(rootCtx,
+		pb.MRPC_ENUM_TRADE_REQUEST_ACTIONS_TRADE_ACTION_DEAL,
+		pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY,
+		selected, 0.10, 0, // price=0 means "market" on many servers
+		nil, nil, nil, nil, nil)
+
+	// 4) 📂 Trading ops (DANGEROUS) — keep commented until you really want them.
+	// svc.ShowOrderSendExample(rootCtx, selected)
+	// svc.ShowOrderSendStopLimitExample(rootCtx, selected, true, 1.09100, 1.09120)
+	// svc.BuyMarket(rootCtx, selected, 0.10, nil, nil)
+	// svc.SellMarket(rootCtx, selected, 0.10, nil, nil)
+	// exp := timestamppb.New(time.Now().Add(24 * time.Hour))
+
+	//--------------------------------------------------------------
+
+	// svc.PlaceBuyLimit(rootCtx, selected, 0.10, 1.07500, nil, nil, exp)
+	// svc.PlaceSellLimit(rootCtx, selected, 0.10, 1.09500, nil, nil, exp)
+	// svc.PlaceBuyStop(rootCtx, selected, 0.10, 1.09200, nil, nil, exp)
+	// svc.PlaceSellStop(rootCtx, selected, 0.10, 1.07800, nil, nil, exp)
+	// svc.PlaceStopLimit(rootCtx, selected, true, 0.10, 1.09100, 1.09120, nil, nil, exp)
+
+	//--------------------------------------------------------------
+
+	// svc.ShowOrderModifyExample(rootCtx, /*ticket=*/ 123456789)
+	// svc.ShowOrderCloseExample(rootCtx,  /*ticket=*/ 123456789)
+	// svc.ShowOrderDeleteExample(rootCtx, /*ticket=*/ 123456789)
+	// svc.ShowPositionModify(rootCtx,     /*ticket=*/ 987654321, nil, nil)
+	// svc.ShowPositionClose(rootCtx, selected)
+	// svc.ShowCloseAllPositions(rootCtx) // CAREFUL!
+
+	// 5) 📂 History & simple stats (read-only)
+	svc.ShowOrdersHistory(rootCtx)
+	from := time.Now().AddDate(0, 0, -7)
+	to := time.Now()
+	svc.ShowDealsCount(rootCtx, from, to, "")
+	// svc.ShowOrderByTicket(rootCtx, 123456789) // optional lookups
+	// svc.ShowDealByTicket(rootCtx, 987654321)
+
+	// 6) 📂 Streaming (parallel)
+// ❗ Dangers/rakes:
+// - Noisy streams: lots of logs → use them purposefully.
+// - Don't forget about network limits/broker restrictions.
+// - Give a reasonable total timeout so as not to hang indefinitely (example below).
+
+// We are preparing a general context that will be canceled by Ctrl+C
+ctx, stop := signal.NotifyContext(rootCtx, os.Interrupt, syscall.SIGTERM)
+defer stop()
+
+var wg sync.WaitGroup
+run := func(name string, fn func(context.Context)) {
+    wg.Add(1)
+    go func() {
+        defer wg.Done()
+        log.Printf("▶ %s started", name)
+        fn(ctx)
+        log.Printf("■ %s stopped", name)
+    }()
+}
+
+// Launching multiple streams in parallel
+run("StreamQuotes", func(c context.Context) { svc.StreamQuotes(c) })
+run("StreamOpenedOrderProfits", func(c context.Context) { svc.StreamOpenedOrderProfits(c) })
+run("StreamOpenedOrderTickets", func(c context.Context) { svc.StreamOpenedOrderTickets(c) })
+// run("StreamTradeUpdates", func(c context.Context) { svc.StreamTradeUpdates(c) }) // turn it on if necessary
+
+// Global fuse: stop after 45s if there is no Ctrl+C
+select {
+case <-ctx.Done(): // Ctrl+C or SIGTERM
+case <-time.After(45 * time.Second):
+    log.Println("⏱ global streaming timeout reached, stopping")
+}
+
+// Disabling subscriptions and waiting for the completion of mining
+stop()
+wg.Wait()
+
+log.Println("✅ Done.")
 }
