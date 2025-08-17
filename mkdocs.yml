@@ -71,7 +71,7 @@ nav:
       - "History Range (important)": "History_And_SimpleStatistics/History_Range(important).md"
 
   - Streaming:
-      - Overview: Stream/StreamingOverview.md
+      - Overview: Stream/StreamingMethods_Overview.md
       - Streaming Quotes: Stream/StreamingQuotes.md
       - Opened Order Profits: Stream/StreamOpenedOrderProfits.md
       - Opened Order Tickets: Stream/StreamOpenedOrderTickets.md
