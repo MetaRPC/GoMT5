@@ -23,22 +23,22 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// MT4Account represents a client session for interacting with the MT4 terminal API over gRPC.
+// MT5Account represents a client session for interacting with the MT4 terminal API over gRPC.
 type MT5Account struct {
 
-	// User is the MT4 account login number.
+	// User is the MT5 account login number.
 	User uint64
 
 	// Password for the user account.
 	Password string
 
-	// Host is the IP/domain of the MT4 server.
+	// Host is the IP/domain of the MT5 server.
 	Host string
 
-	// Port is the MT4 server port (typically 443).
+	// Port is the MT5 server port (typically 443).
 	Port int
 
-	// ServerName is the MT4 server name (used for cluster connections).
+	// ServerName is the MT5 server name (used for cluster connections).
 	ServerName string
 
 	// BaseChartSymbol is the default chart symbol (e.g., "EURUSD").
@@ -71,7 +71,7 @@ type mrpcError interface {
 	GetErrorCode() string
 }
 
-// NewMT4Account initializes a new MT4Account and establishes the underlying gRPC connection.
+// NewMT5Account initializes a new MT4Account and establishes the underlying gRPC connection.
 // Returns a pointer to the account object and any error encountered while connecting.
 func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID) (*MT5Account, error) {
 	// If no endpoint specified, use production default
@@ -128,13 +128,18 @@ func (a *MT5Account) Close() error {
 }
 
 // Disconnect closes the connection and resets the main fields
+// MT5Account.Disconnect — идемпотентный сброс соединения и состояния
 func (a *MT5Account) Disconnect(ctx context.Context) error {
-	// Close underlying gRPC connection first
+	if a == nil {
+		return errors.New("account is nil")
+	}
+
+	// Closing the gRPC connection (if it is already closed, nil will be returned from a.Close())
 	if err := a.Close(); err != nil {
 		return err
 	}
 
-	// Hard-reset all client handles to avoid using a dead connection
+	// We reset the client handles to exclude the use of a dead connection.
 	a.GrpcConn = nil
 	a.ConnectionClient = nil
 	a.SubscriptionClient = nil
@@ -145,12 +150,16 @@ func (a *MT5Account) Disconnect(ctx context.Context) error {
 	a.TradeFunctionsClient = nil
 	a.HealthClient = nil
 
-	// Reset identity and host metadata
+	// Resetting session IDs and metadata.
 	a.Id = uuid.Nil
 	a.Host = ""
 	a.ServerName = ""
+	a.BaseChartSymbol = ""
+	a.ConnectTimeout = 0
+
 	return nil
 }
+
 
 // ConnectByProxy connects via proxy (socks5/http) using Connection.ConnectProxy.
 func (s *MT5Service) ConnectByProxy(
@@ -219,14 +228,25 @@ func (s *MT5Service) ConnectByProxy(
 
 // ShowCheckConnect prints terminal connection status via Connection.CheckConnect.
 func (s *MT5Service) ShowCheckConnect(ctx context.Context) {
+	// Normalize context: ensure non-nil and add a short per-call timeout if none is set.
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 3*time.Second) // health check should be fast
+		defer cancel()
+	}
+
 	if s.account == nil {
 		log.Println("❌ MT5 account not initialized")
 		return
 	}
 
 	req := &pb.CheckConnectRequest{}
+
 	call := func(h metadata.MD) (*pb.CheckConnectReply, error) {
-		c := metadata.NewOutgoingContext(ctx, h)
+		c := metadata.NewOutgoingContext(ctx, h) // attach metadata to normalized ctx
 		return s.account.ConnectionClient.CheckConnect(c, req)
 	}
 	errSel := func(r *pb.CheckConnectReply) mrpcError { return r.GetError() }
@@ -247,7 +267,8 @@ func (s *MT5Service) ShowCheckConnect(ctx context.Context) {
 		fmt.Printf("✅ CheckConnect: uid=%s | (no health payload)\n", d.GetUniqueIdentifier())
 		return
 	}
-	// Optional strings are wrappers; guard nil
+
+	// Optional strings are wrappers; guard nil.
 	var msg, code string
 	if hc.GetErrorMessage() != nil {
 		msg = hc.GetErrorMessage().GetValue()
@@ -267,14 +288,26 @@ func (s *MT5Service) ShowCheckConnect(ctx context.Context) {
 	)
 }
 
-// Reconnect calls Connection.Reconnect to recreate terminal instance with same id.
+
+// Reconnect triggers Connection.Reconnect with per-call timeout and ctx normalization.
 func (s *MT5Service) Reconnect(ctx context.Context) error {
+	
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second) // reconnect can take a moment
+		defer cancel()
+	}
+
 	if s.account == nil {
 		return fmt.Errorf("MT5 account not initialized")
 	}
+
 	req := &pb.ReconnectRequest{}
 	call := func(h metadata.MD) (*pb.ReconnectReply, error) {
-		c := metadata.NewOutgoingContext(ctx, h)
+		c := metadata.NewOutgoingContext(ctx, h) // attach metadata to normalized ctx
 		return s.account.ConnectionClient.Reconnect(c, req)
 	}
 	errSel := func(r *pb.ReconnectReply) mrpcError { return r.GetError() }
@@ -283,18 +316,30 @@ func (s *MT5Service) Reconnect(ctx context.Context) error {
 	return err
 }
 
+
 // ShowHealthCheck prints result of Health.Check (service liveness).
 func (s *MT5Service) ShowHealthCheck(ctx context.Context) {
+	// Normalize context: ensure non-nil and add a short per-call timeout if none is set.
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 3*time.Second) // health check should be quick
+		defer cancel()
+	}
+
 	if s.account == nil {
 		log.Println("❌ MT5 account not initialized")
 		return
 	}
+
 	req := &pb.HealthCheckRequest{}
 	call := func(h metadata.MD) (*pb.HealthCheckReply, error) {
-		c := metadata.NewOutgoingContext(ctx, h)
+		c := metadata.NewOutgoingContext(ctx, h) // attach metadata to normalized ctx
 		return s.account.HealthClient.Check(c, req)
 	}
-
+	// Health.Check uses transport status for errors; no app-level error expected.
 	errSel := func(_ *pb.HealthCheckReply) mrpcError { return nil }
 
 	reply, err := ExecuteWithReconnect(s.account, ctx, call, errSel)
@@ -306,41 +351,65 @@ func (s *MT5Service) ShowHealthCheck(ctx context.Context) {
 		fmt.Println("⚠️ Health.Check returned nil reply")
 		return
 	}
+
 	fmt.Printf("✅ Health: isConnectedToServer=%v | serverTime=%d\n",
 		reply.GetIsConnectedToServer(), reply.GetServerTimeSeconds())
 }
 
+
+// StopListening requests the Health service to stop any active server-side listeners
+// associated with the current session. It normalizes the context and applies a short
+// per-call timeout. Note: this does not close the underlying gRPC connection.
 func (s *MT5Service) StopListening(ctx context.Context) error {
+	// Normalize context: ensure non-nil and add a short per-call timeout if none is set.
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 3*time.Second) // quick control operation
+		defer cancel()
+	}
+
 	if s.account == nil {
 		return fmt.Errorf("MT5 account not initialized")
 	}
+
 	req := &pb.StopListeningRequest{}
+
 	call := func(h metadata.MD) (*pb.StopListeningReply, error) {
-		c := metadata.NewOutgoingContext(ctx, h)
+		c := metadata.NewOutgoingContext(ctx, h) // attach metadata to normalized ctx
 		return s.account.HealthClient.StopListening(c, req)
 	}
-
+	// No application-level error expected from StopListening; rely on transport status.
 	errSel := func(_ *pb.StopListeningReply) mrpcError { return nil }
 
 	_, err := ExecuteWithReconnect(s.account, ctx, call, errSel)
 	return err
 }
 
-// IsTerminalAlive checks if the terminal session is still active and responsive.
+
+// IsTerminalAlive checks if the terminal session is active and responsive
+// by issuing a lightweight AccountSummary call with a short timeout.
 func (a *MT5Account) IsTerminalAlive(ctx context.Context) (bool, error) {
-	// If there is no session, we don't even try
+	// Fast pre-check: no session → no RPC
 	if !a.isConnected() {
 		return false, errors.New("not connected")
 	}
 
-	// Local timeout, so as not to freeze
-	ctx2, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 2*time.Second) // quick liveness probe
+		defer cancel()
+	}
 
 	req := &pb.AccountSummaryRequest{}
 
 	grpcCall := func(headers metadata.MD) (*pb.AccountSummaryReply, error) {
-		c := metadata.NewOutgoingContext(ctx2, headers)
+		c := metadata.NewOutgoingContext(ctx, headers) // attach metadata to normalized ctx
 		return a.AccountClient.AccountSummary(c, req)
 	}
 
@@ -348,15 +417,15 @@ func (a *MT5Account) IsTerminalAlive(ctx context.Context) (bool, error) {
 		return reply.GetError()
 	}
 
-	_, err := ExecuteWithReconnect(a, ctx2, grpcCall, errorSelector)
+	_, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
 	if err != nil {
 		return false, err
 	}
-
 	return true, nil
 }
 
-// ConnectByHostPort connects to the MT4 terminal using a host/port pair.
+
+// ConnectByHostPort connects to the MT5 terminal using a host/port pair.
 // Updates the session state fields (Host, Port, etc.) upon success.
 func (a *MT5Account) ConnectByHostPort(
 	ctx context.Context,
@@ -366,7 +435,23 @@ func (a *MT5Account) ConnectByHostPort(
 	waitForTerminalIsAlive bool,
 	timeoutSeconds int,
 ) error {
-	// Build the protobuf request struct
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		// Use a sane default; if caller provided a larger server-side wait, prefer it.
+		d := 15 * time.Second
+		if timeoutSeconds > 0 {
+			td := time.Duration(timeoutSeconds) * time.Second
+			if td > d {
+				d = td
+			}
+		}
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, d)
+		defer cancel()
+	}
+
 	req := &pb.ConnectRequest{
 		User:                                   a.User,
 		Password:                               a.Password,
@@ -376,68 +461,95 @@ func (a *MT5Account) ConnectByHostPort(
 		WaitForTerminalIsAlive:                 proto.Bool(waitForTerminalIsAlive),
 		TerminalReadinessWaitingTimeoutSeconds: proto.Int32(int32(timeoutSeconds)),
 	}
-	// Set metadata if available
-	md := a.getHeaders()
-	ctx = metadata.NewOutgoingContext(ctx, md)
 
-	// Make the actual gRPC call
-	res, err := a.ConnectionClient.Connect(ctx, req)
+	md := a.getHeaders()
+	c := metadata.NewOutgoingContext(ctx, md)
+
+	res, err := a.ConnectionClient.Connect(c, req)
 	if err != nil {
 		return err
 	}
-	// API errors are delivered via .GetError()
 	if res.GetError() != nil {
 		return fmt.Errorf("API error: %v", res.GetError())
 	}
 
-	// Store session properties if connection is established
+	// Persist session properties
 	a.Host = host
 	a.Port = port
 	a.BaseChartSymbol = baseChartSymbol
 	a.ConnectTimeout = timeoutSeconds
 
-	// Set the session UUID if present in response
+	// Set session UUID if present
 	if data := res.GetData(); data != nil && data.GetTerminalInstanceGuid() != "" {
-		id, _ := uuid.Parse(data.GetTerminalInstanceGuid())
-		a.Id = id
+		if id, parseErr := uuid.Parse(data.GetTerminalInstanceGuid()); parseErr == nil {
+			a.Id = id
+		}
 	}
+
 	return nil
 }
 
-// ConnectByServerName connects to the MT4 terminal using the cluster/server name.
+
+// ConnectByServerName connects to the MT5 terminal using the cluster/server name.
+// Updates session fields on success.
 func (a *MT5Account) ConnectByServerName(
 	ctx context.Context,
 	serverName string,
 	baseChartSymbol string,
-	waitForTerminalIsAlive bool,
+	waitForTerminalIsAlive bool, // kept in signature for symmetry; not used by ConnectEx
 	timeoutSeconds int,
 ) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		d := 15 * time.Second
+		if timeoutSeconds > 0 {
+			if td := time.Duration(timeoutSeconds) * time.Second; td > d {
+				d = td
+			}
+		}
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, d)
+		defer cancel()
+	}
+
 	req := &pb.ConnectExRequest{
 		User:                                   a.User,
 		Password:                               a.Password,
 		MtClusterName:                          serverName,
 		BaseChartSymbol:                        proto.String(baseChartSymbol),
 		TerminalReadinessWaitingTimeoutSeconds: proto.Int32(int32(timeoutSeconds)),
+		// NOTE: no WaitForTerminalIsAlive in ConnectExRequest
 	}
+
 	md := a.getHeaders()
-	ctx = metadata.NewOutgoingContext(ctx, md)
-	res, err := a.ConnectionClient.ConnectEx(ctx, req)
+	c := metadata.NewOutgoingContext(ctx, md)
+
+	res, err := a.ConnectionClient.ConnectEx(c, req)
 	if err != nil {
 		return err
 	}
 	if res.GetError() != nil {
 		return fmt.Errorf("API error: %v", res.GetError())
 	}
+
+	// Persist session properties
 	a.ServerName = serverName
 	a.BaseChartSymbol = baseChartSymbol
 	a.ConnectTimeout = timeoutSeconds
 
+	// Set session UUID if present
 	if data := res.GetData(); data != nil && data.GetTerminalInstanceGuid() != "" {
-		id, _ := uuid.Parse(data.GetTerminalInstanceGuid())
-		a.Id = id
+		if id, parseErr := uuid.Parse(data.GetTerminalInstanceGuid()); parseErr == nil {
+			a.Id = id
+		}
 	}
+
 	return nil
 }
+
+
 
 // ExecuteWithReconnect retries a gRPC call on recoverable errors (network/instance-not-found).
 //
@@ -458,54 +570,71 @@ func ExecuteWithReconnect[T any](
 	grpcCall func(metadata.MD) (T, error),
 	errorSelector func(T) mrpcError,
 ) (T, error) {
-	var zeroT T // Zero value of T (used for error returns)
+	var zeroT T
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	const (
+		initialDelay = 500 * time.Millisecond
+		maxDelay     = 5 * time.Second
+	)
+	delay := initialDelay
 
 	for {
-		// Prepare gRPC headers for session (may be nil)
 		headers := a.getHeaders()
 
-		// Call the gRPC method (returns (reply, error))
 		res, err := grpcCall(headers)
 		if err != nil {
-			// If it's a gRPC Unavailable (connection/server issue), wait and retry
-			if s, ok := status.FromError(err); ok && s.Code() == codes.Unavailable {
-				base := 500 * time.Millisecond
-				jitter := time.Duration(rand.Intn(501)-250) * time.Millisecond // [-250ms, +250ms]
+			// Retry on transient transport errors.
+			if s, ok := status.FromError(err); ok && (s.Code() == codes.Unavailable || s.Code() == codes.DeadlineExceeded) {
+				j := time.Duration(rand.Int63n(int64(delay/2))) - delay/4 // [-delay/4, +delay/4]
+				wait := delay + j
 				select {
-				case <-time.After(base + jitter):
+				case <-time.After(wait):
+					// Exponential backoff with cap.
+					delay *= 2
+					if delay > maxDelay {
+						delay = maxDelay
+					}
 					continue
 				case <-ctx.Done():
 					return zeroT, ctx.Err()
 				}
 			}
-
-			// Other errors: return immediately
+			// Propagate cancellations/timeouts as-is.
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return zeroT, err
+			}
 			return zeroT, err
 		}
 
-		// Check for API (business logic) error in the response
 		apiErr := errorSelector(res)
 		if apiErr != nil {
-			// If terminal instance not found (e.g., dropped session), wait and retry
-			if apiErr.GetErrorCode() == "TERMINAL_INSTANCE_NOT_FOUND" {
-				base := 500 * time.Millisecond
-				jitter := time.Duration(rand.Intn(501)-250) * time.Millisecond
+			code := apiErr.GetErrorCode()
+			// Recoverable app-level errors (lost/deregistered terminal).
+			if code == "TERMINAL_INSTANCE_NOT_FOUND" || code == "TERMINAL_REGISTRY_TERMINAL_NOT_FOUND" {
+				j := time.Duration(rand.Int63n(int64(delay/2))) - delay/4
+				wait := delay + j
 				select {
-				case <-time.After(base + jitter):
+				case <-time.After(wait):
+					delay *= 2
+					if delay > maxDelay {
+						delay = maxDelay
+					}
 					continue
 				case <-ctx.Done():
 					return zeroT, ctx.Err()
 				}
 			}
-
-			// All other API errors: return as Go errors
 			return zeroT, fmt.Errorf("API error: %v", apiErr)
 		}
 
-		// Success! Return the response.
 		return res, nil
 	}
 }
+
 
 //=== 📂 Account Info ===
 
@@ -530,39 +659,37 @@ func ExecuteWithReconnect[T any](
 //   - Safe to invoke frequently (lightweight read).
 
 func (a *MT5Account) AccountSummary(ctx context.Context) (*pb.AccountSummaryData, error) {
-	// Ensure the account is connected to a server before making a request.
+	
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
+	}
+
+	// Require an active session.
 	if !a.isConnected() {
 		return nil, errors.New("not connected")
 	}
 
-	// Construct the empty request message (no parameters for account summary).
+	// Request + call wrapper.
 	req := &pb.AccountSummaryRequest{}
-
-	// grpcCall is a closure that performs the gRPC request.
-	// It takes the request metadata (headers), creates a context with it,
-	// and calls the generated AccountSummary client method.
 	grpcCall := func(headers metadata.MD) (*pb.AccountSummaryReply, error) {
 		c := metadata.NewOutgoingContext(ctx, headers)
 		return a.AccountClient.AccountSummary(c, req)
 	}
-
-	// errorSelector inspects the reply for any application-level error.
-	// It extracts the API error from the response (if present), or returns nil for success.
 	errorSelector := func(reply *pb.AccountSummaryReply) mrpcError { return reply.GetError() }
 
-	// ExecuteWithReconnect wraps the gRPC call in retry/reconnect logic.
-	// It will retry on certain recoverable errors (network/server unavailable, terminal instance lost).
-	// If successful, reply will be non-nil and err will be nil.
 	reply, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
 	if err != nil {
-		// Return nil and the error to the caller.
 		return nil, err
 	}
-
-	// Return the data portion of the reply (may be nil if server returned no data).
-	// Always use the generated GetData() method for proto oneof fields.
 	return reply.GetData(), nil
 }
+
+
 
 // NOTE: All values are retrieved via AccountSummary,
 // which already uses ExecuteWithReconnect internally.
@@ -669,6 +796,11 @@ func ExecuteStreamWithReconnect[TRequest any, TReply any, TData any](
 	dataCh := make(chan TData)
 	errCh := make(chan error, 1)
 
+	// guard ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	go func() {
 		defer close(dataCh)
 		defer close(errCh)
@@ -682,7 +814,7 @@ func ExecuteStreamWithReconnect[TRequest any, TReply any, TData any](
 			if err != nil {
 				if s, ok := status.FromError(err); ok && s.Code() == codes.Unavailable {
 					select {
-					case <-time.After(500 * time.Millisecond):
+					case <-time.After(500 * time.Millisecond + time.Duration(rand.Intn(501)-250)*time.Millisecond):
 						continue // retry
 					case <-ctx.Done():
 						errCh <- ctx.Err()
@@ -704,12 +836,10 @@ func ExecuteStreamWithReconnect[TRequest any, TReply any, TData any](
 						reconnectRequired = true
 						break
 					}
-					// Normal EOF: stream ended
+					// Normal EOF: stream ended (do not reconnect)
 					if errors.Is(recvErr, io.EOF) {
-						reconnectRequired = true
-						break
+						return
 					}
-
 					// Context errors: just stop
 					if errors.Is(recvErr, context.Canceled) || errors.Is(recvErr, context.DeadlineExceeded) {
 						errCh <- recvErr
@@ -761,10 +891,6 @@ func ExecuteStreamWithReconnect[TRequest any, TReply any, TData any](
 	return dataCh, errCh
 }
 
-// withTimeout returns a child context with a fixed timeout.
-func withTimeout(ctx context.Context, d time.Duration) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(ctx, d)
-}
 
 //=== 📂 Order Operations ===
 
@@ -809,7 +935,6 @@ func (a *MT5Account) OrderSend(
 	magicNumber *int32, // input stays *int32
 	expiration *timestamppb.Timestamp,
 ) (*pb.OrderSendData, error) {
-
 	if !a.isConnected() {
 		return nil, errors.New("not connected")
 	}
@@ -821,12 +946,21 @@ func (a *MT5Account) OrderSend(
 		return nil, fmt.Errorf("use OrderSendEx/OrderSendStopLimit for STOP_LIMIT (requires stopLimitPrice)")
 	}
 
+	// per-call deadline (5s) if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+	}
+
 	req := &pb.OrderSendRequest{
 		Symbol:    symbol,
 		Operation: operationType,
 		Volume:    volume,
 	}
-
 	if price != nil {
 		req.Price = price
 	}
@@ -848,21 +982,20 @@ func (a *MT5Account) OrderSend(
 		req.ExpirationTimeType = &t
 		req.ExpirationTime = expiration
 	}
-	ctx2, cancel := withTimeout(ctx, 5*time.Second)
-	defer cancel()
 
 	grpcCall := func(headers metadata.MD) (*pb.OrderSendReply, error) {
-		c := metadata.NewOutgoingContext(ctx2, headers)
+		c := metadata.NewOutgoingContext(ctx, headers)
 		return a.TradeClient.OrderSend(c, req)
 	}
 	errorSelector := func(reply *pb.OrderSendReply) mrpcError { return reply.GetError() }
 
-	reply, err := ExecuteWithReconnect(a, ctx2, grpcCall, errorSelector)
+	reply, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
 	if err != nil {
 		return nil, err
 	}
 	return reply.GetData(), nil
 }
+
 
 // OrderSendEx places a new trade order (market, pending, or STOP_LIMIT) on the connected MT5 terminal.
 // Similar to OrderSend, but adds an extra stopLimitPrice parameter for STOP_LIMIT orders.
@@ -899,12 +1032,12 @@ func (a *MT5Account) OrderSendEx(
 	symbol string,
 	operationType pb.TMT5_ENUM_ORDER_TYPE,
 	volume float64,
-	price *float64, // For pending orders; trigger price for STOP_LIMIT
-	slippage *int32, // caller-friendly; will be converted to *uint64
+	price *float64,        // For pending orders; trigger price for STOP_LIMIT
+	slippage *int32,       // caller-friendly; will be converted to *uint64
 	stoploss *float64,
 	takeprofit *float64,
 	comment *string,
-	magicNumber *int32, // caller-friendly; will be converted to *uint64
+	magicNumber *int32,    // caller-friendly; will be converted to *uint64
 	expiration *timestamppb.Timestamp,
 	stopLimitPrice *float64, // Limit price for STOP_LIMIT
 ) (*pb.OrderSendData, error) {
@@ -914,6 +1047,16 @@ func (a *MT5Account) OrderSendEx(
 	}
 	if symbol == "" {
 		return nil, fmt.Errorf("symbol is empty")
+	}
+
+	// per-call deadline (5s) if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
 	}
 
 	// 2) Build request (match proto types exactly)
@@ -937,13 +1080,13 @@ func (a *MT5Account) OrderSendEx(
 
 	// Proto requires uint64 for slippage/expert_id
 	req.Slippage = u64pFromI32(slippage)
-	req.ExpertId = u64pFromI32(magicNumber)
+	req.ExpertId  = u64pFromI32(magicNumber)
 
 	// 3) Expiration → also set expiration_time_type
 	if expiration != nil {
 		t := pb.TMT5_ENUM_ORDER_TYPE_TIME_TMT5_ORDER_TIME_SPECIFIED
 		req.ExpirationTimeType = &t
-		req.ExpirationTime = expiration
+		req.ExpirationTime     = expiration
 	}
 
 	// 4) STOP_LIMIT specifics: need both trigger (price) and stopLimitPrice
@@ -971,6 +1114,7 @@ func (a *MT5Account) OrderSendEx(
 	}
 	return reply.GetData(), nil
 }
+
 
 // PendingReplaceStopLimit recreates a STOP_LIMIT pending order with new parameters.
 // Algorithm:
@@ -1013,7 +1157,7 @@ func (a *MT5Account) PendingReplaceStopLimit(
 	isBuy bool,
 	volume float64,
 	triggerPrice float64, // STOP_LIMIT trigger price
-	limitPrice float64, // STOP_LIMIT limit price after trigger
+	limitPrice float64,   // STOP_LIMIT limit price after trigger
 	slippage *int32,
 	stoploss, takeprofit *float64,
 	comment *string,
@@ -1029,6 +1173,22 @@ func (a *MT5Account) PendingReplaceStopLimit(
 	}
 	if symbol == "" {
 		return nil, fmt.Errorf("symbol is empty")
+	}
+	if volume <= 0 {
+		return nil, fmt.Errorf("volume must be > 0")
+	}
+	if triggerPrice <= 0 || limitPrice <= 0 {
+		return nil, fmt.Errorf("triggerPrice and limitPrice must be > 0")
+	}
+
+	// per-call deadline if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
 	}
 
 	// (1) Create the new STOP_LIMIT order
@@ -1059,6 +1219,7 @@ func (a *MT5Account) PendingReplaceStopLimit(
 	// Return the newly created order data
 	return res, nil
 }
+
 
 // OrderSendStopLimit is a convenience wrapper for placing STOP_LIMIT pending orders.
 // It reduces the risk of mixing up triggerPrice and limitPrice parameters.
@@ -1096,13 +1257,27 @@ func (a *MT5Account) OrderSendStopLimit(
 	isBuy bool,
 	volume float64,
 	triggerPrice float64, // STOP_LIMIT trigger price
-	limitPrice float64, // STOP_LIMIT limit price after trigger
+	limitPrice float64,   // STOP_LIMIT limit price after trigger
 	slippage *int32,
 	stoploss, takeprofit *float64,
 	comment *string,
 	magicNumber *int32,
 	expiration *timestamppb.Timestamp,
 ) (*pb.OrderSendData, error) {
+	// Basic input validation (OrderSendEx will also validate, but this gives clearer errors early)
+	if !a.isConnected() {
+		return nil, errors.New("not connected")
+	}
+	if symbol == "" {
+		return nil, fmt.Errorf("symbol is empty")
+	}
+	if volume <= 0 {
+		return nil, fmt.Errorf("volume must be > 0")
+	}
+	if triggerPrice <= 0 || limitPrice <= 0 {
+		return nil, fmt.Errorf("triggerPrice and limitPrice must be > 0")
+	}
+
 	// Determine order type based on isBuy
 	var op pb.TMT5_ENUM_ORDER_TYPE
 	if isBuy {
@@ -1131,6 +1306,7 @@ func (a *MT5Account) OrderSendStopLimit(
 		&lim,
 	)
 }
+
 
 // OrderClose closes (or deletes) an existing market or pending order on the connected MT5 terminal.
 //
@@ -1162,6 +1338,9 @@ func (a *MT5Account) OrderClose(
 	if !a.isConnected() {
 		return nil, errors.New("not connected")
 	}
+	if ticket == 0 {
+		return nil, fmt.Errorf("invalid ticket")
+	}
 
 	// Build request with mandatory ticket
 	req := &pb.OrderCloseRequest{Ticket: ticket}
@@ -1176,10 +1355,17 @@ func (a *MT5Account) OrderClose(
 	}
 
 	// gRPC call closure with metadata
-	ctx2, cancel := withTimeout(ctx, 5*time.Second)
-	defer cancel()
+	// per-call deadline (5s) if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+	}
 	grpcCall := func(headers metadata.MD) (*pb.OrderCloseReply, error) {
-		c := metadata.NewOutgoingContext(ctx2, headers)
+		c := metadata.NewOutgoingContext(ctx, headers)
 		return a.TradeClient.OrderClose(c, req)
 	}
 
@@ -1187,7 +1373,7 @@ func (a *MT5Account) OrderClose(
 	errorSelector := func(reply *pb.OrderCloseReply) mrpcError { return reply.GetError() }
 
 	// Execute with retry/reconnect semantics
-	reply, err := ExecuteWithReconnect(a, ctx2, grpcCall, errorSelector)
+	reply, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
 	if err != nil {
 		return nil, err
 	}
@@ -1195,6 +1381,7 @@ func (a *MT5Account) OrderClose(
 	// Return the data section from reply
 	return reply.GetData(), nil
 }
+
 
 // OrderSelect retrieves detailed information about a currently opened order by its ticket number.
 //
@@ -1219,14 +1406,30 @@ func (a *MT5Account) OrderSelect(
 	ctx context.Context,
 	ticket uint64,
 ) (*pb.OpenedOrderInfo, error) {
-
+	// Ensure connection
 	if !a.isConnected() {
-		return nil, errors.New("not connected to terminal")
+		return nil, errors.New("not connected")
+	}
+	if ticket == 0 {
+		return nil, fmt.Errorf("invalid ticket")
+	}
+
+	// Per-call timeout if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
 	}
 
 	data, err := a.OpenedOrders(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if data == nil {
+		return nil, fmt.Errorf("no opened orders data")
 	}
 
 	for _, o := range data.GetOpenedOrders() {
@@ -1234,9 +1437,9 @@ func (a *MT5Account) OrderSelect(
 			return o, nil
 		}
 	}
-
 	return nil, fmt.Errorf("order with ticket %d not found", ticket)
 }
+
 
 // OrdersTotal returns the number of currently opened orders on the connected MT5 account.
 //
@@ -1259,7 +1462,17 @@ func (a *MT5Account) OrdersTotal(
 ) (int32, error) {
 	// Ensure terminal connection
 	if !a.isConnected() {
-		return 0, errors.New("not connected to terminal")
+		return 0, errors.New("not connected")
+	}
+
+	// Per-call timeout if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
 	}
 
 	// Fetch all currently opened orders
@@ -1271,6 +1484,7 @@ func (a *MT5Account) OrdersTotal(
 	// Return count of opened orders
 	return int32(len(orders.GetOpenedOrders())), nil
 }
+
 
 // OrderModify updates parameters of an existing order on the connected MT5 terminal.
 //
@@ -1307,6 +1521,19 @@ func (a *MT5Account) OrderModify(
 	if !a.isConnected() {
 		return nil, errors.New("not connected")
 	}
+	if ticket == 0 {
+		return nil, fmt.Errorf("invalid ticket")
+	}
+
+	// per-call deadline (5s) if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+	}
 
 	req := &pb.OrderModifyRequest{
 		Ticket:     ticket,
@@ -1337,6 +1564,7 @@ func (a *MT5Account) OrderModify(
 
 	return reply.GetData(), nil
 }
+
 
 // PendingModify updates parameters of a pending order by its ticket number.
 //
@@ -1376,6 +1604,16 @@ func (a *MT5Account) PendingModify(
 		return false, fmt.Errorf("invalid ticket")
 	}
 
+	// Per-call timeout (5s) if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+	}
+
 	// Build request with ticket and optional updates
 	req := &pb.OrderModifyRequest{Ticket: ticket}
 	if price != nil {
@@ -1389,6 +1627,8 @@ func (a *MT5Account) PendingModify(
 	}
 	if expiration != nil {
 		req.ExpirationTime = expiration
+		t := pb.TMT5_ENUM_ORDER_TYPE_TIME_TMT5_ORDER_TIME_SPECIFIED
+		req.ExpirationTimeType = &t
 	}
 
 	// gRPC call closure with metadata
@@ -1409,6 +1649,7 @@ func (a *MT5Account) PendingModify(
 	// Success if Data is present
 	return reply.GetData() != nil, nil
 }
+
 
 // OpenedOrders retrieves all currently opened orders for the connected MT5 account.
 //
@@ -1432,7 +1673,17 @@ func (a *MT5Account) OpenedOrders(
 ) (*pb.OpenedOrdersData, error) {
 	// Ensure terminal connection
 	if !a.isConnected() {
-		return nil, errors.New("not connected to terminal")
+		return nil, errors.New("not connected")
+	}
+
+	// Per-call timeout if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
 	}
 
 	// Prepare empty request (no parameters required)
@@ -1457,6 +1708,7 @@ func (a *MT5Account) OpenedOrders(
 	return reply.GetData(), nil
 }
 
+
 // OpenedOrdersTickets retrieves the ticket IDs and basic details of all currently opened orders.
 //
 // Parameters:
@@ -1479,7 +1731,17 @@ func (a *MT5Account) OpenedOrdersTickets(
 ) (*pb.OpenedOrdersTicketsData, error) {
 	// Ensure terminal connection
 	if !a.isConnected() {
-		return nil, errors.New("not connected to terminal")
+		return nil, errors.New("not connected")
+	}
+
+	// Per-call timeout if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
 	}
 
 	// Prepare empty request (no parameters required)
@@ -1503,6 +1765,7 @@ func (a *MT5Account) OpenedOrdersTickets(
 	// Return data payload
 	return reply.GetData(), nil
 }
+
 
 // OrdersHistory retrieves a filtered and paginated list of historical orders from the connected MT5 account.
 //
@@ -1531,6 +1794,16 @@ func (a *MT5Account) OrdersHistory(
 	// Ensure connection
 	if !a.isConnected() {
 		return nil, fmt.Errorf("not connected to terminal")
+	}
+
+	// Per-call timeout if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
 	}
 
 	// Build request with mandatory sort type
@@ -1577,6 +1850,7 @@ func (a *MT5Account) OrdersHistory(
 	return data, nil
 }
 
+
 // DeleteOrder removes a pending order from the MT5 terminal by its ticket number.
 //
 // Parameters:
@@ -1595,10 +1869,23 @@ func (a *MT5Account) DeleteOrder(ctx context.Context, ticket uint64) (*pb.OrderC
 	if !a.isConnected() {
 		return nil, errors.New("not connected")
 	}
+	if ticket == 0 {
+		return nil, fmt.Errorf("invalid ticket")
+	}
 
 	// Build request (Volume not needed for pending orders)
 	req := &pb.OrderCloseRequest{
 		Ticket: ticket,
+	}
+
+	// Per-call timeout if caller didn't set one
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
 	}
 
 	// Define gRPC call
@@ -1620,9 +1907,11 @@ func (a *MT5Account) DeleteOrder(ctx context.Context, ticket uint64) (*pb.OrderC
 	return reply.GetData(), nil
 }
 
+
 // === 📂 Pending / StopLimit ===
 
 // ShowPendingReplaceStopLimit — create a new STOP_LIMIT and delete the old pending (old ticket).
+// ShowPendingReplaceStopLimit replaces an existing pending order with a STOP_LIMIT order and prints the outcome.
 func (s *MT5Service) ShowPendingReplaceStopLimit(
 	ctx context.Context,
 	oldTicket uint64,
@@ -1641,6 +1930,17 @@ func (s *MT5Service) ShowPendingReplaceStopLimit(
 		log.Println("❌ MT5 account not initialized")
 		return
 	}
+
+	// per-call deadline (5s) if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+	}
+
 	data, err := s.account.PendingReplaceStopLimit(
 		ctx,
 		oldTicket,
@@ -1670,11 +1970,11 @@ func (s *MT5Service) ShowPendingReplaceStopLimit(
 		fmt.Printf("✅ Replaced pending %d with executed deal %d (trigger=%.5f, limit=%.5f)\n",
 			oldTicket, newDeal, triggerPrice, limitPrice)
 	} else {
-		// printing a shared success with a price
 		fmt.Printf("✅ Replaced pending %d with STOP_LIMIT (price=%.5f, trigger=%.5f, limit=%.5f)\n",
 			oldTicket, data.GetPrice(), triggerPrice, limitPrice)
 	}
 }
+
 
 // === 📂 Position ===
 
@@ -1707,8 +2007,12 @@ func (a *MT5Account) PositionsGet(ctx context.Context) ([]*pb.PositionInfo, erro
 	}
 
 	// Extract only positions from the result
+	if opened == nil || opened.GetPositionInfos() == nil {
+		return []*pb.PositionInfo{}, nil
+	}
 	return opened.GetPositionInfos(), nil
 }
+
 
 // PositionGet retrieves information about a currently opened position for a specific symbol.
 //
@@ -1733,11 +2037,27 @@ func (a *MT5Account) PositionGet(ctx context.Context, symbol string) (*pb.Positi
 	if !a.isConnected() {
 		return nil, errors.New("not connected")
 	}
+	if symbol == "" {
+		return nil, fmt.Errorf("symbol is empty")
+	}
+
+	// Per-call timeout if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
+	}
 
 	// Fetch current opened orders/positions
 	opened, err := a.OpenedOrders(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if opened == nil || opened.GetPositionInfos() == nil {
+		return nil, nil
 	}
 
 	// Search for position by symbol
@@ -1750,6 +2070,7 @@ func (a *MT5Account) PositionGet(ctx context.Context, symbol string) (*pb.Positi
 	// No position found for the given symbol
 	return nil, nil
 }
+
 
 // HasOpenPosition checks if there is an active open position for a given symbol.
 //
@@ -1775,6 +2096,7 @@ func (a *MT5Account) HasOpenPosition(ctx context.Context, symbol string) (bool, 
 	return p != nil && p.GetTicket() != 0, nil
 }
 
+
 // PositionClose closes an active open position by its PositionInfo object.
 //
 // Parameters:
@@ -1798,6 +2120,16 @@ func (a *MT5Account) PositionClose(ctx context.Context, position *pb.PositionInf
 	// Validate input
 	if position == nil || position.GetTicket() == 0 {
 		return nil, fmt.Errorf("invalid position")
+	}
+
+	// per-call deadline (5s) if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
 	}
 
 	// Prepare the gRPC request to close the position
@@ -1826,6 +2158,7 @@ func (a *MT5Account) PositionClose(ctx context.Context, position *pb.PositionInf
 	return reply.GetData(), nil
 }
 
+
 // CloseAllPositions closes all currently open positions sequentially.
 //
 // Parameters:
@@ -1851,13 +2184,18 @@ func (a *MT5Account) CloseAllPositions(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to fetch positions: %w", err)
 	}
+	if len(positions) == 0 {
+		return nil
+	}
 
 	var firstErr error
 
 	// Loop through each position and attempt to close it
 	for _, pos := range positions {
-		_, cerr := a.PositionClose(ctx, pos)
-		if cerr != nil && firstErr == nil {
+		if pos == nil || pos.GetTicket() == 0 {
+			continue
+		}
+		if _, cerr := a.PositionClose(ctx, pos); cerr != nil && firstErr == nil {
 			// Store the first error but keep closing the rest
 			firstErr = fmt.Errorf(
 				"failed to close position %d (%s): %w",
@@ -1870,6 +2208,7 @@ func (a *MT5Account) CloseAllPositions(ctx context.Context) error {
 
 	return firstErr
 }
+
 
 // PositionModify updates the Stop Loss and/or Take Profit levels
 // of an existing open position.
@@ -1903,6 +2242,16 @@ func (a *MT5Account) PositionModify(
 		return false, fmt.Errorf("invalid ticket")
 	}
 
+	// Per-call timeout if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+	}
+
 	// Prepare modification request
 	req := &pb.OrderModifyRequest{
 		Ticket: ticket,
@@ -1932,6 +2281,7 @@ func (a *MT5Account) PositionModify(
 	// Success if Data field exists
 	return reply.GetData() != nil, nil
 }
+
 
 // === 📂 History ===
 
@@ -1968,6 +2318,20 @@ func (a *MT5Account) HistoryDealsGet(
 	if !a.isConnected() {
 		return nil, errors.New("not connected")
 	}
+	// Validate time range
+	if to.Before(from) {
+		return nil, fmt.Errorf("invalid time range: to < from")
+	}
+
+	// per-call deadline (5s) if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+	}
 
 	// Build request for the history period
 	req := &pb.OrderHistoryRequest{
@@ -1990,12 +2354,13 @@ func (a *MT5Account) HistoryDealsGet(
 		return nil, err
 	}
 	if reply.GetData() == nil {
-		return nil, nil
+		return []*pb.DealHistoryData{}, nil
 	}
 
 	// Extract only deal entries from history
-	res := make([]*pb.DealHistoryData, 0, len(reply.GetData().GetHistoryData()))
-	for _, h := range reply.GetData().GetHistoryData() {
+	hist := reply.GetData().GetHistoryData()
+	res := make([]*pb.DealHistoryData, 0, len(hist))
+	for _, h := range hist {
 		d := h.GetHistoryDeal()
 		if d == nil {
 			continue
@@ -2006,6 +2371,7 @@ func (a *MT5Account) HistoryDealsGet(
 	}
 	return res, nil
 }
+
 
 // HistoryDealsTotal counts the total number of executed deals within a given time range,
 // optionally filtered by trading symbol.
@@ -2036,6 +2402,10 @@ func (a *MT5Account) HistoryDealsTotal(
 	if !a.isConnected() {
 		return 0, errors.New("not connected")
 	}
+	// Validate time range
+	if to.Before(from) {
+		return 0, fmt.Errorf("invalid time range: to < from")
+	}
 
 	var total int32
 	page := int32(1)
@@ -2050,9 +2420,19 @@ func (a *MT5Account) HistoryDealsTotal(
 			ItemsPerPage: pageSize,
 		}
 
+		// Per-iteration timeout if caller didn't set one
+		iterCtx := ctx
+		if iterCtx == nil {
+			iterCtx = context.Background()
+		}
+		var cancel context.CancelFunc
+		if _, ok := iterCtx.Deadline(); !ok {
+			iterCtx, cancel = context.WithTimeout(iterCtx, 5*time.Second)
+		}
+
 		// Define gRPC call
 		grpcCall := func(headers metadata.MD) (*pb.OrderHistoryReply, error) {
-			c := metadata.NewOutgoingContext(ctx, headers)
+			c := metadata.NewOutgoingContext(iterCtx, headers)
 			return a.AccountClient.OrderHistory(c, req)
 		}
 
@@ -2060,7 +2440,10 @@ func (a *MT5Account) HistoryDealsTotal(
 		errorSelector := func(reply *pb.OrderHistoryReply) mrpcError { return reply.GetError() }
 
 		// Execute request with retry/reconnect support
-		reply, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
+		reply, err := ExecuteWithReconnect(a, iterCtx, grpcCall, errorSelector)
+		if cancel != nil {
+			cancel()
+		}
 		if err != nil {
 			return 0, err
 		}
@@ -2093,6 +2476,7 @@ func (a *MT5Account) HistoryDealsTotal(
 	return total, nil
 }
 
+
 // HistoryOrderByTicket searches for a specific historical order by its ticket number.
 //
 // This method iterates over all pages of historical orders via AccountClient.OrderHistory,
@@ -2118,6 +2502,9 @@ func (a *MT5Account) HistoryOrderByTicket(
 	if !a.isConnected() {
 		return nil, errors.New("not connected")
 	}
+	if ticket == 0 {
+		return nil, fmt.Errorf("invalid ticket")
+	}
 
 	page := int32(1)
 	const pageSize = int32(500) // adjust if needed
@@ -2130,9 +2517,19 @@ func (a *MT5Account) HistoryOrderByTicket(
 			// No time filters — scanning the full history
 		}
 
+		// Per-iteration timeout (keeps long scans responsive)
+		iterCtx := ctx
+		if iterCtx == nil {
+			iterCtx = context.Background()
+		}
+		var cancel context.CancelFunc
+		if _, ok := iterCtx.Deadline(); !ok {
+			iterCtx, cancel = context.WithTimeout(iterCtx, 5*time.Second)
+		}
+
 		// Define the gRPC call
 		grpcCall := func(headers metadata.MD) (*pb.OrderHistoryReply, error) {
-			c := metadata.NewOutgoingContext(ctx, headers)
+			c := metadata.NewOutgoingContext(iterCtx, headers)
 			return a.AccountClient.OrderHistory(c, req)
 		}
 
@@ -2140,7 +2537,10 @@ func (a *MT5Account) HistoryOrderByTicket(
 		errorSelector := func(reply *pb.OrderHistoryReply) mrpcError { return reply.GetError() }
 
 		// Execute with automatic retry/reconnect
-		reply, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
+		reply, err := ExecuteWithReconnect(a, iterCtx, grpcCall, errorSelector)
+		if cancel != nil {
+			cancel()
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -2160,7 +2560,6 @@ func (a *MT5Account) HistoryOrderByTicket(
 			if o == nil {
 				continue
 			}
-			// Ensure safe type conversion for ticket comparison
 			if uint64(o.GetTicket()) == ticket {
 				return o, nil
 			}
@@ -2175,6 +2574,7 @@ func (a *MT5Account) HistoryOrderByTicket(
 
 	return nil, fmt.Errorf("order %d not found", ticket)
 }
+
 
 // HistoryDealByTicket searches for a specific historical deal by its ticket number.
 //
@@ -2201,6 +2601,9 @@ func (a *MT5Account) HistoryDealByTicket(
 	if !a.isConnected() {
 		return nil, errors.New("not connected")
 	}
+	if ticket == 0 {
+		return nil, fmt.Errorf("invalid ticket")
+	}
 
 	page := int32(1)
 	const pageSize = int32(500) // adjust if needed
@@ -2213,9 +2616,19 @@ func (a *MT5Account) HistoryDealByTicket(
 			// Optional: can add InputFrom / InputTo filters if needed
 		}
 
+		// Per-iteration timeout (keeps long scans responsive)
+		iterCtx := ctx
+		if iterCtx == nil {
+			iterCtx = context.Background()
+		}
+		var cancel context.CancelFunc
+		if _, ok := iterCtx.Deadline(); !ok {
+			iterCtx, cancel = context.WithTimeout(iterCtx, 5*time.Second)
+		}
+
 		// Define the gRPC call
 		grpcCall := func(headers metadata.MD) (*pb.OrderHistoryReply, error) {
-			c := metadata.NewOutgoingContext(ctx, headers)
+			c := metadata.NewOutgoingContext(iterCtx, headers)
 			return a.AccountClient.OrderHistory(c, req)
 		}
 
@@ -2223,7 +2636,10 @@ func (a *MT5Account) HistoryDealByTicket(
 		errorSelector := func(reply *pb.OrderHistoryReply) mrpcError { return reply.GetError() }
 
 		// Execute with automatic retry/reconnect
-		reply, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
+		reply, err := ExecuteWithReconnect(a, iterCtx, grpcCall, errorSelector)
+		if cancel != nil {
+			cancel()
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -2258,6 +2674,7 @@ func (a *MT5Account) HistoryDealByTicket(
 	return nil, fmt.Errorf("deal %d not found", ticket)
 }
 
+
 // === 📂 Trade Functions ===
 
 // OrderCalcMargin computes the required margin for a hypothetical order,
@@ -2283,6 +2700,19 @@ func (a *MT5Account) OrderCalcMargin(
 	if !a.isConnected() {
 		return nil, errors.New("not connected")
 	}
+	if req == nil {
+		return nil, fmt.Errorf("nil request")
+	}
+
+	// per-call deadline (3s) if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
+	}
 
 	// 2) Define RPC call
 	grpcCall := func(headers metadata.MD) (*pb.OrderCalcMarginReply, error) {
@@ -2302,6 +2732,7 @@ func (a *MT5Account) OrderCalcMargin(
 	// 5) Return payload
 	return reply.GetData(), nil
 }
+
 
 // OrderCalcProfit calculates the potential profit or loss for a hypothetical order
 // using the server-side calculation (same rules as the terminal).
@@ -2326,6 +2757,19 @@ func (a *MT5Account) OrderCalcProfit(
 	if !a.isConnected() {
 		return nil, errors.New("not connected")
 	}
+	if req == nil {
+		return nil, fmt.Errorf("nil request")
+	}
+
+	// per-call deadline (3s) if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
+	}
 
 	// 2) Define RPC call
 	grpcCall := func(headers metadata.MD) (*pb.OrderCalcProfitReply, error) {
@@ -2345,6 +2789,7 @@ func (a *MT5Account) OrderCalcProfit(
 	// 5) Return payload
 	return reply.GetData(), nil
 }
+
 
 // OrderCheck checks the validity of an order request (e.g., if it can be placed),
 // including margin and other parameters.
@@ -2369,6 +2814,20 @@ func (a *MT5Account) OrderCheck(
 	if !a.isConnected() {
 		return nil, errors.New("not connected")
 	}
+	// Guard against nil request
+	if req == nil {
+		return nil, fmt.Errorf("nil request")
+	}
+
+	// Per-call timeout (3s) if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
+	}
 
 	// 2) Define the RPC call
 	grpcCall := func(headers metadata.MD) (*pb.OrderCheckReply, error) {
@@ -2389,6 +2848,7 @@ func (a *MT5Account) OrderCheck(
 	return reply.GetData(), nil
 }
 
+
 // PositionsTotal returns the total number of positions currently open on the connected MT4 account.
 //
 // Parameters:
@@ -2406,6 +2866,16 @@ func (a *MT5Account) PositionsTotal(ctx context.Context) (int32, error) {
 	// 1) Ensure the account is connected
 	if !a.isConnected() {
 		return 0, errors.New("not connected")
+	}
+
+	// per-call timeout if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
 	}
 
 	// 2) Create an empty request (PositionsTotal does not need any parameters)
@@ -2427,8 +2897,12 @@ func (a *MT5Account) PositionsTotal(ctx context.Context) (int32, error) {
 	}
 
 	// 6) Return the total positions from the response
+	if reply == nil || reply.GetData() == nil {
+		return 0, nil
+	}
 	return reply.GetData().GetTotalPositions(), nil
 }
+
 
 // === 📂 Market Info / Symbol Info ===
 
@@ -2457,6 +2931,11 @@ func (a *MT5Account) Quote(ctx context.Context, symbol string) (*pb.OnSymbolTick
 		return nil, errors.New("symbol is empty")
 	}
 
+	// 2a) Use Background when caller passes nil context
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	// 3) Create a new context with a 3-second timeout for the quote request.
 	ctx2, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel() // Ensure the context is cancelled when done
@@ -2472,7 +2951,11 @@ func (a *MT5Account) Quote(ctx context.Context, symbol string) (*pb.OnSymbolTick
 				return nil, fmt.Errorf("tick stream closed")
 			}
 			if tick != nil {
-				return tick, nil // Return the first valid tick
+				// Ensure the payload is a symbol tick and matches the requested symbol
+				if st := tick.GetSymbolTick(); st != nil && st.GetSymbol() == symbol {
+					return tick, nil // Return the first valid tick
+				}
+				// otherwise keep waiting
 			}
 		case err := <-errCh: // Wait for any errors in the tick stream
 			if err != nil {
@@ -2484,6 +2967,7 @@ func (a *MT5Account) Quote(ctx context.Context, symbol string) (*pb.OnSymbolTick
 		}
 	}
 }
+
 
 // QuoteMany retrieves the latest market quotes for multiple trading symbols.
 //
@@ -2507,49 +2991,82 @@ func (a *MT5Account) QuoteMany(ctx context.Context, symbols []string) ([]*pb.OnS
 		return nil, errors.New("symbols list is empty")
 	}
 
-	// 3) Create a new context with a timeout of 5 seconds for the quote request.
-	ctx2, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel() // Ensure the context is cancelled when done
+	// 2a) Make ctx safe and add a 5s per-call timeout if none provided.
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+	}
 
-	// 4) Subscribe to the tick stream for the given symbols.
-	dataCh, errCh := a.OnSymbolTick(ctx2, symbols)
+	// 3) Subscribe to the tick stream for the given symbols.
+	dataCh, errCh := a.OnSymbolTick(ctx, symbols)
 
-	// 5) Prepare a slice to store the quotes as they are received.
-	out := make([]*pb.OnSymbolTickData, 0, len(symbols))
+	// 4) Collect the first tick per requested symbol (no duplicates).
+	want := make(map[string]struct{}, len(symbols))
+	for _, s := range symbols {
+		want[s] = struct{}{}
+	}
+	seen := make(map[string]*pb.OnSymbolTickData, len(symbols))
 
-	// 6) Wait for the first `len(symbols)` ticks to be received.
-	for len(out) < len(symbols) {
+	// 5) Wait until we have one tick for each symbol or we time out/err.
+	for len(seen) < len(want) {
 		select {
-		case tick, ok := <-dataCh: // Wait for data from the tick stream.
+		case tick, ok := <-dataCh:
 			if !ok {
-				// The stream was closed before any data was received.
-				if len(out) == 0 {
+				// Stream closed; return whatever we have so far (or error if none).
+				if len(seen) == 0 {
 					return nil, fmt.Errorf("tick stream closed before any data")
 				}
-				// Return the data we've received so far.
+				// Preserve caller's order when returning partial results.
+				out := make([]*pb.OnSymbolTickData, 0, len(seen))
+				for _, s := range symbols {
+					if t, ok := seen[s]; ok {
+						out = append(out, t)
+					}
+				}
 				return out, nil
 			}
-			// If the tick is not nil, append it to the output slice.
 			if tick != nil {
-				out = append(out, tick)
+				if st := tick.GetSymbolTick(); st != nil {
+					sym := st.GetSymbol()
+					if _, wanted := want[sym]; wanted {
+						if _, already := seen[sym]; !already {
+							seen[sym] = tick
+						}
+					}
+				}
 			}
-		case err := <-errCh: // Wait for errors in the tick stream.
+		case err := <-errCh:
 			if err != nil {
-				return nil, err // Return the error if encountered.
+				return nil, err
 			}
-			// If the error channel closes without an error, continue waiting for data.
-		case <-ctx2.Done(): // If the context times out.
-			if len(out) == 0 {
-				return nil, ctx2.Err() // Return the timeout error if no data was received.
+			// If errCh closes without error, keep waiting.
+		case <-ctx.Done():
+			// Timeout/cancel: return what we have, or the timeout error if empty.
+			if len(seen) == 0 {
+				return nil, ctx.Err()
 			}
-			// Return the data received so far.
+			out := make([]*pb.OnSymbolTickData, 0, len(seen))
+			for _, s := range symbols {
+				if t, ok := seen[s]; ok {
+					out = append(out, t)
+				}
+			}
 			return out, nil
 		}
 	}
 
-	// 7) Return the list of received ticks.
+	// 6) Build result in the same order as requested.
+	out := make([]*pb.OnSymbolTickData, 0, len(symbols))
+	for _, s := range symbols {
+		out = append(out, seen[s])
+	}
 	return out, nil
 }
+
 
 // ShowAllSymbols retrieves all available trading symbols from the server.
 //
@@ -2576,7 +3093,7 @@ func (a *MT5Account) ShowAllSymbols(ctx context.Context) ([]string, error) {
 	}
 
 	// 3) Initialize a slice to hold the names of the symbols.
-	names := make([]string, 0, total)
+	names := make([]string, 0, int(total))
 
 	// 4) Iterate through the symbols by their index.
 	for i := int32(0); i < total; i++ {
@@ -2596,6 +3113,7 @@ func (a *MT5Account) ShowAllSymbols(ctx context.Context) ([]string, error) {
 	return names, nil
 }
 
+
 // SymbolParams retrieves detailed trading parameters for a single symbol.
 //
 // Parameters:
@@ -2614,10 +3132,23 @@ func (a *MT5Account) SymbolParams(ctx context.Context, symbol string) (*pb.Symbo
 	if !a.isConnected() {
 		return nil, fmt.Errorf("not connected to terminal")
 	}
+	if symbol == "" {
+		return nil, fmt.Errorf("symbol is empty")
+	}
 
 	// Request with filter by symbol name
 	req := &pb.SymbolParamsManyRequest{
 		SymbolName: proto.String(symbol), // optional string
+	}
+
+	// Short per-call timeout if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
 	}
 
 	grpcCall := func(headers metadata.MD) (*pb.SymbolParamsManyReply, error) {
@@ -2632,12 +3163,16 @@ func (a *MT5Account) SymbolParams(ctx context.Context, symbol string) (*pb.Symbo
 	}
 
 	data := resp.GetData()
-	if data == nil || len(data.GetSymbolInfos()) == 0 {
+	infos := data.GetSymbolInfos()
+	if data == nil || len(infos) == 0 {
 		return nil, fmt.Errorf("no parameters returned for symbol: %s", symbol)
 	}
 
-	return data.GetSymbolInfos()[0], nil // type: *pb.SymbolParameters
+	// Some proto versions don't expose a SymbolName getter on SymbolParameters.
+	// Since the request is filtered by SymbolName, return the first entry.
+	return infos[0], nil
 }
+
 
 // Symbols retrieves a list of symbol names from the MetaTrader terminal.
 // It can either return all symbols or only those in the Market Watch (selected space),
@@ -2664,6 +3199,9 @@ func (a *MT5Account) Symbols(ctx context.Context, selectedOnly bool) ([]string, 
 	if !a.isConnected() {
 		return nil, fmt.Errorf("not connected to terminal")
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	// 1) Get the total number of symbols.
 	totalReq := &pb.SymbolsTotalRequest{Mode: selectedOnly}
@@ -2674,23 +3212,24 @@ func (a *MT5Account) Symbols(ctx context.Context, selectedOnly bool) ([]string, 
 	}
 	errorSelectorTotal := func(reply *pb.SymbolsTotalReply) mrpcError { return reply.GetError() }
 
-	// Execute the SymbolsTotal request with automatic reconnection.
 	totalReply, err := ExecuteWithReconnect(a, ctx, grpcCallTotal, errorSelectorTotal)
 	if err != nil {
-		return nil, err // Return error if request fails.
+		return nil, err
+	}
+	if totalReply.GetData() == nil {
+		return []string{}, nil
 	}
 	total := totalReply.GetData().GetTotal()
 	if total <= 0 {
-		return []string{}, nil // Return empty list if no symbols are available.
+		return []string{}, nil
 	}
 
 	// 2) Iterate over symbol indices and fetch the symbol names.
-	names := make([]string, 0, total)
+	names := make([]string, 0, int(total))
 	for i := int32(0); i < total; i++ {
-		// Request the symbol name at the given index.
 		nameReq := &pb.SymbolNameRequest{
 			Index:    i,
-			Selected: selectedOnly, // The space (Selected or All) depends on the selectedOnly flag.
+			Selected: selectedOnly,
 		}
 
 		grpcCallName := func(headers metadata.MD) (*pb.SymbolNameReply, error) {
@@ -2699,21 +3238,18 @@ func (a *MT5Account) Symbols(ctx context.Context, selectedOnly bool) ([]string, 
 		}
 		errorSelectorName := func(reply *pb.SymbolNameReply) mrpcError { return reply.GetError() }
 
-		// Execute the SymbolName request with automatic reconnection.
 		nameReply, err := ExecuteWithReconnect(a, ctx, grpcCallName, errorSelectorName)
 		if err != nil {
-			return nil, fmt.Errorf("SymbolName(%d) failed: %w", i, err) // Return error if request fails.
+			return nil, fmt.Errorf("SymbolName(%d) failed: %w", i, err)
 		}
-
-		// If a valid symbol name is returned, add it to the list of names.
 		if data := nameReply.GetData(); data != nil && data.GetName() != "" {
 			names = append(names, data.GetName())
 		}
 	}
 
-	// Return the list of symbol names.
 	return names, nil
 }
+
 
 // SymbolParamsMany retrieves trading symbol parameters for one or more symbols.
 //
@@ -2729,6 +3265,16 @@ func (a *MT5Account) SymbolParamsMany(ctx context.Context, symbols []string) (*p
 		return nil, errors.New("not connected to terminal")
 	}
 
+	// Safe ctx + short per-call timeout if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+	}
+
 	// If the list is empty, return all symbol parameters.
 	if len(symbols) == 0 {
 		req := &pb.SymbolParamsManyRequest{}
@@ -2737,21 +3283,23 @@ func (a *MT5Account) SymbolParamsMany(ctx context.Context, symbols []string) (*p
 			c := metadata.NewOutgoingContext(ctx, headers)
 			return a.AccountClient.SymbolParamsMany(c, req)
 		}
-
 		errorSelector := func(reply *pb.SymbolParamsManyReply) mrpcError { return reply.GetError() }
 
-		// Execute the request to get all symbol parameters.
 		reply, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
 		if err != nil {
 			return nil, err
+		}
+		if reply == nil || reply.GetData() == nil {
+			return &pb.SymbolParamsManyData{}, nil
 		}
 		return reply.GetData(), nil
 	}
 
 	// Otherwise, collect parameters for each specified symbol.
-	out := &pb.SymbolParamsManyData{}
+	out := &pb.SymbolParamsManyData{
+		SymbolInfos: make([]*pb.SymbolParameters, 0, len(symbols)),
+	}
 	for _, s := range symbols {
-		// For each symbol, get its parameters.
 		p, err := a.SymbolParams(ctx, s)
 		if err != nil {
 			return nil, fmt.Errorf("SymbolParams(%s) failed: %w", s, err)
@@ -2762,6 +3310,7 @@ func (a *MT5Account) SymbolParamsMany(ctx context.Context, symbols []string) (*p
 	// Return the collected symbol parameters.
 	return out, nil
 }
+
 
 // TickValueWithSize calculates tick value, lot size, and contract size for specified symbols.
 //
@@ -2775,6 +3324,20 @@ func (a *MT5Account) TickValueWithSize(ctx context.Context, symbolNames []string
 	// Ensure the account is connected to the terminal before making the request.
 	if !a.isConnected() {
 		return nil, errors.New("not connected to terminal")
+	}
+	// Validate input
+	if len(symbolNames) == 0 {
+		return nil, fmt.Errorf("symbols list is empty")
+	}
+
+	// Ensure non-nil ctx and add a short per-call timeout if none is set.
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
 	}
 
 	// Create the request object containing the list of symbols.
@@ -2794,61 +3357,77 @@ func (a *MT5Account) TickValueWithSize(ctx context.Context, symbolNames []string
 	// Execute the gRPC request with automatic retries in case of temporary network or session failures.
 	reply, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
 	if err != nil {
-		return nil, err // Return error if the request fails.
+		return nil, err
 	}
 
 	// Return the data part of the response, which contains the tick value and size calculations.
+	if reply == nil || reply.GetData() == nil {
+		return &pb.TickValueWithSizeData{}, nil
+	}
 	return reply.GetData(), nil
 }
+
 
 // === 📂 Symbol State (visibility, index, etc.) ===
 
 // SymbolSelect sets the visibility of a symbol in Market Watch (show/hide).
 // SymbolSelect allows enabling or disabling the visibility of a symbol in Market Watch,
 // which means showing or hiding the symbol from the user's watchlist.
-
 func (a *MT5Account) SymbolSelect(ctx context.Context, symbol string, enable bool) (bool, error) {
-	// Ensure the account is connected to the terminal before making the request.
+	// Guard connection and inputs
 	if !a.isConnected() {
 		return false, fmt.Errorf("not connected to terminal")
 	}
-
-	// Create the request object containing the symbol and its visibility setting (enable/disable).
-	req := &pb.SymbolSelectRequest{
-		Symbol: symbol, // The symbol to show/hide
-		Select: enable, // True to show the symbol, false to hide it
+	if symbol == "" {
+		return false, fmt.Errorf("symbol is empty")
 	}
 
-	// grpcCall performs the gRPC request to change the symbol's visibility in Market Watch.
+	// Safe ctx + short timeout if none provided
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
+	}
+
+	// Build request
+	req := &pb.SymbolSelectRequest{
+		Symbol: symbol,
+		Select: enable,
+	}
+
+	// RPC call
 	grpcCall := func(headers metadata.MD) (*pb.SymbolSelectReply, error) {
 		c := metadata.NewOutgoingContext(ctx, headers)
 		return a.MarketInfoClient.SymbolSelect(c, req)
 	}
-
-	// errorSelector inspects the response and extracts the error if there is one.
 	errorSelector := func(reply *pb.SymbolSelectReply) mrpcError { return reply.GetError() }
 
-	// Execute the gRPC request with automatic retries in case of network or session errors.
+	// Execute
 	reply, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
 	if err != nil {
-		return false, err // Return error if the request fails.
+		return false, err
 	}
-
-	// Check the data from the response. If it's empty, return an error.
-	data := reply.GetData()
-	if data == nil {
+	if reply == nil || reply.GetData() == nil {
 		return false, fmt.Errorf("empty SymbolSelectData")
 	}
-
-	// Return the success status from the response.
-	return data.GetSuccess(), nil
+	return reply.GetData().GetSuccess(), nil
 }
+
 
 // IsVisible checks if the specified symbol is visible in Market Watch.
 func (a *MT5Account) IsVisible(ctx context.Context, symbol string) (bool, error) {
 	// First, ensure the account is connected to the terminal.
 	if !a.isConnected() {
 		return false, fmt.Errorf("not connected to terminal")
+	}
+	if symbol == "" {
+		return false, fmt.Errorf("symbol is empty")
+	}
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
 	// Request the total number of visible symbols (selected/visible symbols).
@@ -2867,6 +3446,9 @@ func (a *MT5Account) IsVisible(ctx context.Context, symbol string) (bool, error)
 	totalReply, err := ExecuteWithReconnect(a, ctx, grpcCallTotal, errorSelectorTotal)
 	if err != nil {
 		return false, err // Return error if there was an issue with the request.
+	}
+	if totalReply == nil || totalReply.GetData() == nil {
+		return false, nil
 	}
 
 	// Get the total count of visible symbols.
@@ -2933,6 +3515,9 @@ func (a *MT5Account) SymbolsTotal(ctx context.Context) (int32, error) {
 	if !a.isConnected() {
 		return 0, errors.New("not connected to terminal") // If not connected, return an error.
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	// Step 2: Prepare the request to fetch the total number of symbols.
 	req := &pb.SymbolsTotalRequest{} // The request doesn't need any additional parameters.
@@ -2951,6 +3536,9 @@ func (a *MT5Account) SymbolsTotal(ctx context.Context) (int32, error) {
 	if err != nil {
 		return 0, err // If there was an error, return it.
 	}
+	if reply == nil || reply.GetData() == nil {
+		return 0, nil
+	}
 
 	// Step 6: Return the total number of symbols from the response data.
 	return reply.GetData().GetTotal(), nil
@@ -2961,6 +3549,9 @@ func (a *MT5Account) SymbolName(ctx context.Context, index int32, selectedOnly b
 	// Step 1: Check if the account is connected to the terminal.
 	if !a.isConnected() {
 		return "", fmt.Errorf("not connected to terminal") // If not connected, return an error.
+	}
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
 	// Step 2: Create the request to get the symbol name by index.
@@ -3192,3 +3783,4 @@ func (a *MT5Account) OnSymbolTick(
 
 	return dataCh, errCh
 }
+
