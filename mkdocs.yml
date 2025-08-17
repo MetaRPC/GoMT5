@@ -19,10 +19,9 @@ theme:
     - palette.auto
     - navigation.top
     - navigation.tracking
+    - navigation.sections     # ← группы в левом сайдбаре (свернуты по умолчанию)
     - content.code.copy
     - content.action.edit
-    - navigation.sections
-    - navigation.expand       
 
 nav:
   - Home: index.md
