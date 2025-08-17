@@ -1,9 +1,9 @@
 package config
 
-
-
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"os"
 )
 
@@ -14,14 +14,22 @@ type Config struct {
 	DefaultSymbol string `json:"DefaultSymbol"`
 }
 
-func LoadConfig(path string) (*Config, error) {
-	data, err := os.ReadFile(path)
+func LoadConfig(filename string) (*Config, error) {
+	file, err := os.Open(filename)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("config.json load error: %w", err)
 	}
-	var cfg Config
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return nil, err
+	defer file.Close()
+
+	log.Printf("loading config from: %s", filename)
+
+	decoder := json.NewDecoder(file)
+	config := &Config{}
+	if err := decoder.Decode(config); err != nil {
+		return nil, fmt.Errorf("config.json decode error: %w", err)
 	}
-	return &cfg, nil
+
+	log.Printf("loaded config: login=%d server=%q password=%q", config.Login, config.Server, config.Password)
+
+	return config, nil
 }

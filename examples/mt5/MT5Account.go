@@ -9,6 +9,8 @@ import (
 	"log"
 	"math/rand"
 	"time"
+	"net"
+	"strings"
 
 	pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
 
@@ -18,6 +20,8 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/backoff"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -74,20 +78,59 @@ type mrpcError interface {
 // NewMT5Account initializes a new MT4Account and establishes the underlying gRPC connection.
 // Returns a pointer to the account object and any error encountered while connecting.
 func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID) (*MT5Account, error) {
-	// If no endpoint specified, use production default
+	// Default endpoint
 	if grpcServer == "" {
 		grpcServer = "mt5.mrpc.pro:443"
 	}
 
-	config := &tls.Config{
+host := grpcServer
+if strings.Contains(host, ":") {
+    if h, _, err := net.SplitHostPort(grpcServer); err == nil {
+        host = h
+    }
+}
+
+	tlsCfg := &tls.Config{
+		MinVersion:         tls.VersionTLS12,
 		InsecureSkipVerify: false,
-	}
-	conn, err := grpc.Dial(grpcServer, grpc.WithTransportCredentials(credentials.NewTLS(config)))
-	if err != nil {
-		return nil, err
+		// ServerName: "mt5.mrpc.pro",
 	}
 
-	// Instantiate API service clients using the shared gRPC connection
+	if ip := net.ParseIP(host); ip == nil && host != "" {
+    tlsCfg.ServerName = host
+}
+	// Blocking dial with timeout
+	dctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+
+	bcfg := backoff.Config{
+		BaseDelay:  200 * time.Millisecond,
+		Multiplier: 1.6,
+		Jitter:     0.2,
+		MaxDelay:   3 * time.Second,
+	}
+
+	kp := keepalive.ClientParameters{
+		Time:                20 * time.Second,
+		Timeout:             5 * time.Second,
+		PermitWithoutStream: true,
+	}
+
+	conn, err := grpc.DialContext(
+		dctx,
+		grpcServer,
+		grpc.WithTransportCredentials(credentials.NewTLS(tlsCfg)),
+		grpc.WithBlock(),
+		grpc.WithConnectParams(grpc.ConnectParams{
+			Backoff:           bcfg,              
+			MinConnectTimeout: 5 * time.Second,
+		}),
+		grpc.WithKeepaliveParams(kp),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("grpc dial failed to %s: %w", grpcServer, err)
+	}
+
 	return &MT5Account{
 		User:                 user,
 		Password:             password,
@@ -106,6 +149,7 @@ func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID
 	}, nil
 }
 
+
 // isConnected returns true if this account is associated with any host or server name.
 func (a *MT5Account) isConnected() bool {
 	// Connected — only if there is a live gRPC channel and a valid Terminal Id
@@ -119,28 +163,29 @@ func (a *MT5Account) getHeaders() metadata.MD {
 	}
 	return metadata.Pairs("id", a.Id.String())
 }
-
+// CHANGED: Close() now resets the reference to conn after closing.
 func (a *MT5Account) Close() error {
+	if a == nil {
+		return nil
+	}
 	if a.GrpcConn != nil {
-		return a.GrpcConn.Close()
+		err := a.GrpcConn.Close()
+		a.GrpcConn = nil // CHANGED
+		return err
 	}
 	return nil
 }
 
 // Disconnect closes the connection and resets the main fields
-// MT5Account.Disconnect — идемпотентный сброс соединения и состояния
 func (a *MT5Account) Disconnect(ctx context.Context) error {
 	if a == nil {
 		return errors.New("account is nil")
 	}
 
-	// Closing the gRPC connection (if it is already closed, nil will be returned from a.Close())
-	if err := a.Close(); err != nil {
-		return err
-	}
+	// Close a low-level connection
+	closeErr := a.Close() // CHANGED: Close() уже зануляет GrpcConn
 
-	// We reset the client handles to exclude the use of a dead connection.
-	a.GrpcConn = nil
+	// Reset gRPC clients
 	a.ConnectionClient = nil
 	a.SubscriptionClient = nil
 	a.AccountClient = nil
@@ -150,16 +195,18 @@ func (a *MT5Account) Disconnect(ctx context.Context) error {
 	a.TradeFunctionsClient = nil
 	a.HealthClient = nil
 
-	// Resetting session IDs and metadata.
+	// Reset the runtime state (do not touch credits)
 	a.Id = uuid.Nil
 	a.Host = ""
 	a.ServerName = ""
 	a.BaseChartSymbol = ""
 	a.ConnectTimeout = 0
 
-	return nil
+	return closeErr
 }
-
+func (a *MT5Account) IsConnected() bool {
+	return a != nil && a.GrpcConn != nil && a.Id != uuid.Nil
+}
 
 // ConnectByProxy connects via proxy (socks5/http) using Connection.ConnectProxy.
 func (s *MT5Service) ConnectByProxy(
@@ -571,7 +618,6 @@ func ExecuteWithReconnect[T any](
 	errorSelector func(T) mrpcError,
 ) (T, error) {
 	var zeroT T
-
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -587,34 +633,9 @@ func ExecuteWithReconnect[T any](
 
 		res, err := grpcCall(headers)
 		if err != nil {
-			// Retry on transient transport errors.
+			// ✳️ Logging the gRPC status before the reset
 			if s, ok := status.FromError(err); ok && (s.Code() == codes.Unavailable || s.Code() == codes.DeadlineExceeded) {
-				j := time.Duration(rand.Int63n(int64(delay/2))) - delay/4 // [-delay/4, +delay/4]
-				wait := delay + j
-				select {
-				case <-time.After(wait):
-					// Exponential backoff with cap.
-					delay *= 2
-					if delay > maxDelay {
-						delay = maxDelay
-					}
-					continue
-				case <-ctx.Done():
-					return zeroT, ctx.Err()
-				}
-			}
-			// Propagate cancellations/timeouts as-is.
-			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-				return zeroT, err
-			}
-			return zeroT, err
-		}
-
-		apiErr := errorSelector(res)
-		if apiErr != nil {
-			code := apiErr.GetErrorCode()
-			// Recoverable app-level errors (lost/deregistered terminal).
-			if code == "TERMINAL_INSTANCE_NOT_FOUND" || code == "TERMINAL_REGISTRY_TERMINAL_NOT_FOUND" {
+				log.Printf("[grpc-retry] code=%s msg=%q next_delay=%s", s.Code(), s.Message(), delay)
 				j := time.Duration(rand.Int63n(int64(delay/2))) - delay/4
 				wait := delay + j
 				select {
@@ -628,12 +649,40 @@ func ExecuteWithReconnect[T any](
 					return zeroT, ctx.Err()
 				}
 			}
-			return zeroT, fmt.Errorf("API error: %v", apiErr)
+			// Other errors — immediately out
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return zeroT, err
+			}
+			return zeroT, err
+		}
+
+		apiErr := errorSelector(res)
+		if apiErr != nil {
+			code := apiErr.GetErrorCode()
+			// ✳️ The terminal has not been registered yet - soft delay
+			if code == "TERMINAL_INSTANCE_NOT_FOUND" || code == "TERMINAL_REGISTRY_TERMINAL_NOT_FOUND" {
+				log.Printf("[api-retry] code=%s next_delay=%s", code, delay)
+				j := time.Duration(rand.Int63n(int64(delay/2))) - delay/4
+				wait := delay + j
+				select {
+				case <-time.After(wait):
+					delay *= 2
+					if delay > maxDelay {
+						delay = maxDelay
+					}
+					continue
+				case <-ctx.Done():
+					return zeroT, ctx.Err()
+				}
+			}
+			// ✳️ Explicitly logging the API error code
+			return zeroT, fmt.Errorf("API error (code=%s): %v", code, apiErr)
 		}
 
 		return res, nil
 	}
 }
+
 
 
 //=== 📂 Account Info ===
@@ -2922,51 +2971,52 @@ func (a *MT5Account) PositionsTotal(ctx context.Context) (int32, error) {
 //   - Uses a context with a timeout of 3 seconds to ensure the call doesn't block indefinitely.
 func (a *MT5Account) Quote(ctx context.Context, symbol string) (*pb.OnSymbolTickData, error) {
 	// 1) Check if the account is connected to the terminal.
-	if !a.isConnected() {
+	if !a.IsConnected() {
 		return nil, errors.New("not connected to terminal")
 	}
 
-	// 2) Ensure the symbol is not empty
+	// 2) Validate input.
 	if symbol == "" {
 		return nil, errors.New("symbol is empty")
 	}
 
-	// 2a) Use Background when caller passes nil context
+	// 3) Ensure ctx is non-nil.
 	if ctx == nil {
 		ctx = context.Background()
 	}
-
-	// 3) Create a new context with a 3-second timeout for the quote request.
+	// 3a) ✅ Added timeout: 3s to receive the first tick.
 	ctx2, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel() // Ensure the context is cancelled when done
+	defer cancel()
 
-	// 4) Subscribe to the symbol's tick stream
+	// 4) Subscribe to symbol ticks.
 	dataCh, errCh := a.OnSymbolTick(ctx2, []string{symbol})
 
-	// 5) Wait for the first valid tick or an error
+	// 5) Wait for first tick or error.
 	for {
 		select {
-		case tick, ok := <-dataCh: // Wait for data from the tick stream
+		case tick, ok := <-dataCh:
 			if !ok {
 				return nil, fmt.Errorf("tick stream closed")
 			}
 			if tick != nil {
-				// Ensure the payload is a symbol tick and matches the requested symbol
 				if st := tick.GetSymbolTick(); st != nil && st.GetSymbol() == symbol {
-					return tick, nil // Return the first valid tick
+					return tick, nil
 				}
-				// otherwise keep waiting
 			}
-		case err := <-errCh: // Wait for any errors in the tick stream
-			if err != nil {
-				return nil, err // Return the error if encountered
+
+		case err, ok := <-errCh:
+			// ✅ Changed: handle closed channel without error (don't hang).
+			if !ok || err == nil {
+				continue // no error, just wait for data or ctx timeout
 			}
-			// If errCh closes without error, continue waiting for data
-		case <-ctx2.Done(): // If the context times out
-			return nil, ctx2.Err() // Return timeout error
+			return nil, err
+
+		case <-ctx2.Done():
+			return nil, ctx2.Err()
 		}
 	}
 }
+
 
 
 // QuoteMany retrieves the latest market quotes for multiple trading symbols.
@@ -2982,7 +3032,7 @@ func (a *MT5Account) Quote(ctx context.Context, symbol string) (*pb.OnSymbolTick
 //   - An error if the request fails or if the account is not connected.
 func (a *MT5Account) QuoteMany(ctx context.Context, symbols []string) ([]*pb.OnSymbolTickData, error) {
 	// 1) Check if the account is connected to the terminal.
-	if !a.isConnected() {
+	if !a.IsConnected() { // CHANGED
 		return nil, errors.New("not connected to terminal")
 	}
 
@@ -3039,11 +3089,17 @@ func (a *MT5Account) QuoteMany(ctx context.Context, symbols []string) ([]*pb.OnS
 					}
 				}
 			}
-		case err := <-errCh:
+
+		case err, ok := <-errCh: // CHANGED: correctly handling the errCh closure
+			if !ok {
+				errCh = nil // disabling the select branch to avoid sticking
+				continue
+			}
 			if err != nil {
 				return nil, err
 			}
-			// If errCh closes without error, keep waiting.
+			// if err == nil, we continue to wait for other cases
+
 		case <-ctx.Done():
 			// Timeout/cancel: return what we have, or the timeout error if empty.
 			if len(seen) == 0 {
@@ -3066,6 +3122,7 @@ func (a *MT5Account) QuoteMany(ctx context.Context, symbols []string) ([]*pb.OnS
 	}
 	return out, nil
 }
+
 
 
 // ShowAllSymbols retrieves all available trading symbols from the server.
@@ -3128,20 +3185,20 @@ func (a *MT5Account) ShowAllSymbols(ctx context.Context) ([]string, error) {
 //   - Internally calls SymbolParamsMany with one symbol.
 //   - Returns the first result in the symbol info list.
 //   - Performs automatic reconnect if the terminal connection is lost.
+
+
 func (a *MT5Account) SymbolParams(ctx context.Context, symbol string) (*pb.SymbolParameters, error) {
-	if !a.isConnected() {
+	if !a.IsConnected() {
 		return nil, fmt.Errorf("not connected to terminal")
 	}
 	if symbol == "" {
 		return nil, fmt.Errorf("symbol is empty")
 	}
 
-	// Request with filter by symbol name
 	req := &pb.SymbolParamsManyRequest{
-		SymbolName: proto.String(symbol), // optional string
+		SymbolName: proto.String(symbol),
 	}
 
-	// Short per-call timeout if none provided
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -3162,16 +3219,19 @@ func (a *MT5Account) SymbolParams(ctx context.Context, symbol string) (*pb.Symbo
 		return nil, err
 	}
 
+	// ✅ CHANGED: secure nil checks
 	data := resp.GetData()
+	if data == nil {
+		return nil, fmt.Errorf("no parameters returned for symbol: %s", symbol)
+	}
 	infos := data.GetSymbolInfos()
-	if data == nil || len(infos) == 0 {
+	if len(infos) == 0 || infos[0] == nil {
 		return nil, fmt.Errorf("no parameters returned for symbol: %s", symbol)
 	}
 
-	// Some proto versions don't expose a SymbolName getter on SymbolParameters.
-	// Since the request is filtered by SymbolName, return the first entry.
 	return infos[0], nil
 }
+
 
 
 // Symbols retrieves a list of symbol names from the MetaTrader terminal.
@@ -3511,79 +3571,89 @@ func (a *MT5Account) EnsureSymbolVisible(ctx context.Context, symbol string) err
 
 // SymbolsTotal returns the number of available symbols in the terminal.
 func (a *MT5Account) SymbolsTotal(ctx context.Context) (int32, error) {
-	// Step 1: Check if the account is connected to the terminal.
-	if !a.isConnected() {
-		return 0, errors.New("not connected to terminal") // If not connected, return an error.
+	// 1) Check if the account is connected to the terminal.
+	if !a.IsConnected() {
+		return 0, errors.New("not connected to terminal")
 	}
+
+	// 2) Ensure ctx is non-nil.
 	if ctx == nil {
 		ctx = context.Background()
 	}
-
-	// Step 2: Prepare the request to fetch the total number of symbols.
-	req := &pb.SymbolsTotalRequest{} // The request doesn't need any additional parameters.
-
-	// Step 3: Define the gRPC call to the SymbolsTotal service.
-	grpcCall := func(headers metadata.MD) (*pb.SymbolsTotalReply, error) {
-		c := metadata.NewOutgoingContext(ctx, headers) // Add metadata to the request context.
-		return a.MarketInfoClient.SymbolsTotal(c, req) // Call the SymbolsTotal method.
+	// 2a) ✅ Added per-call timeout (3s) if none is provided.
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
 	}
 
-	// Step 4: Define how to extract an error from the reply.
+	// 3) Prepare request.
+	req := &pb.SymbolsTotalRequest{} // all symbols
+
+	// 4) Execute RPC with reconnect wrapper.
+	grpcCall := func(headers metadata.MD) (*pb.SymbolsTotalReply, error) {
+		c := metadata.NewOutgoingContext(ctx, headers)
+		return a.MarketInfoClient.SymbolsTotal(c, req)
+	}
 	errorSelector := func(reply *pb.SymbolsTotalReply) mrpcError { return reply.GetError() }
 
-	// Step 5: Execute the gRPC call and handle retries if necessary.
 	reply, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
 	if err != nil {
-		return 0, err // If there was an error, return it.
+		return 0, err
 	}
+
+	// 5) Validate reply.
 	if reply == nil || reply.GetData() == nil {
 		return 0, nil
 	}
-
-	// Step 6: Return the total number of symbols from the response data.
 	return reply.GetData().GetTotal(), nil
 }
 
+
 // SymbolName returns the symbol name by index in the symbols list.
 func (a *MT5Account) SymbolName(ctx context.Context, index int32, selectedOnly bool) (string, error) {
-	// Step 1: Check if the account is connected to the terminal.
-	if !a.isConnected() {
-		return "", fmt.Errorf("not connected to terminal") // If not connected, return an error.
+	// 1) Check if the account is connected to the terminal.
+	if !a.IsConnected() {
+		return "", fmt.Errorf("not connected to terminal")
 	}
+
+	// 2) Ensure ctx is non-nil.
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	// 2a) ✅ Added per-call timeout (3s) if none is provided.
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
+	}
 
-	// Step 2: Create the request to get the symbol name by index.
+	// 3) Prepare request.
 	req := &pb.SymbolNameRequest{
-		Index:    index,        // Index of the symbol in the list.
-		Selected: selectedOnly, // Determine if we want only selected symbols (from Market Watch) or all.
+		Index:    index,
+		Selected: selectedOnly,
 	}
 
-	// Step 3: Define the gRPC call to the SymbolName service.
+	// 4) Execute RPC with reconnect wrapper.
 	grpcCall := func(headers metadata.MD) (*pb.SymbolNameReply, error) {
-		c := metadata.NewOutgoingContext(ctx, headers) // Add metadata to the context.
-		return a.MarketInfoClient.SymbolName(c, req)   // Call the SymbolName method.
+		c := metadata.NewOutgoingContext(ctx, headers)
+		return a.MarketInfoClient.SymbolName(c, req)
 	}
-
-	// Step 4: Define how to extract any errors from the reply.
 	errorSelector := func(reply *pb.SymbolNameReply) mrpcError { return reply.GetError() }
 
-	// Step 5: Execute the gRPC call with automatic retries if necessary.
 	reply, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
 	if err != nil {
-		return "", err // If there was an error, return it.
+		return "", err
 	}
 
-	// Step 6: Extract the data from the reply.
+	// 5) Validate reply.
 	data := reply.GetData()
 	if data == nil {
-		return "", fmt.Errorf("empty SymbolNameData") // If no data was returned, return an error.
+		return "", fmt.Errorf("empty SymbolNameData")
 	}
-
-	// Step 7: Return the symbol name from the reply data.
-	return data.GetName(), nil // Return the name of the symbol.
+	return data.GetName(), nil
 }
+
 
 // === 📂 Streaming ===
 

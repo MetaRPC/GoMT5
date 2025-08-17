@@ -5,14 +5,18 @@ import (
 	"fmt"
 	"log"
 	"time"
+	"errors"
+	"io"
 
 	pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
-	 //Если в этом файле есть ConnectByProxy/ShowCheckConnect/и т.п. — раскомментируй:
-	  //"github.com/google/uuid"
-	// _go "git.mtapi.io/root/mrpc-proto.git/mt5/libraries/go"
-	// "google.golang.org/grpc/metadata"
+
+	//If this file contains ConnectByProxy/ShowCheckConnect/etc., please comment:
+   //"github.com/google/uuid "
+  // _go "git.mtapi.io/root/mrpc-proto.git/mt5/libraries/go "
+ // "google.golang.org/grpc/metadata "
+
 )
 
 // MT5Service wraps MT5Account with human-friendly demo/CLI methods.
@@ -1148,6 +1152,7 @@ func (s *MT5Service) StreamQuotes(ctx context.Context) {
 
 	tickCh, errCh := s.account.OnSymbolTick(ctx2, symbols)
 	fmt.Println("🔄 Streaming ticks...")
+
 	for {
 		select {
 		case tick, ok := <-tickCh:
@@ -1159,15 +1164,29 @@ func (s *MT5Service) StreamQuotes(ctx context.Context) {
 				fmt.Printf("[Tick] %s | Bid: %.5f | Ask: %.5f | Time: %s\n",
 					st.GetSymbol(), st.GetBid(), st.GetAsk(), st.GetTime().AsTime().Format("2006-01-02 15:04:05"))
 			}
-		case err := <-errCh:
+
+		case err, ok := <-errCh:
+			if !ok {
+				// error channel closed without error — normal termination
+				fmt.Println("✅ Tick stream closed.")
+				return
+			}
+			// carefully extinguish the "normal" completions
+			if err == nil || errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				fmt.Println("✅ Tick stream finished.")
+				return
+			}
 			log.Printf("❌ Stream error: %v", err)
 			return
-		case <-time.After(30 * time.Second):
-			fmt.Println("⏱️ Timeout reached.")
+
+		case <-ctx2.Done():
+			// the external context is completed
+			fmt.Println("⏹️ Stream canceled.")
 			return
 		}
 	}
 }
+
 
 func (s *MT5Service) StreamOpenedOrderProfits(ctx context.Context) {
 	ctx2, cancel := context.WithCancel(ctx)
@@ -1175,6 +1194,7 @@ func (s *MT5Service) StreamOpenedOrderProfits(ctx context.Context) {
 
 	profitCh, errCh := s.account.OnOpenedOrdersProfit(ctx2, 1000)
 	fmt.Println("🔄 Streaming order profits...")
+
 	for {
 		select {
 		case pkt, ok := <-profitCh:
@@ -1196,16 +1216,26 @@ func (s *MT5Service) StreamOpenedOrderProfits(ctx context.Context) {
 					info.GetTicket(), info.GetPositionSymbol(), info.GetProfit())
 			}
 
-		case err := <-errCh:
+		case err, ok := <-errCh:
+			if !ok || err == nil {
+				fmt.Println("✅ Profit stream finished.")
+				return
+			}
+			// normal reasons for termination — we do not consider it a mistake
+			if errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				fmt.Println("✅ Profit stream finished.")
+				return
+			}
 			log.Printf("❌ Stream error: %v", err)
 			return
 
-		case <-time.After(30 * time.Second):
-			fmt.Println("⏱️ Timeout reached.")
+		case <-ctx2.Done():
+			fmt.Println("⏹️ Profit stream canceled.")
 			return
 		}
 	}
 }
+
 
 func (s *MT5Service) StreamOpenedOrderTickets(ctx context.Context) {
 	ctx2, cancel := context.WithCancel(ctx)
@@ -1213,6 +1243,7 @@ func (s *MT5Service) StreamOpenedOrderTickets(ctx context.Context) {
 
 	ticketCh, errCh := s.account.OnOpenedOrdersTickets(ctx2, 1000)
 	fmt.Println("🔄 Streaming opened order tickets...")
+
 	for {
 		select {
 		case pkt, ok := <-ticketCh:
@@ -1220,18 +1251,26 @@ func (s *MT5Service) StreamOpenedOrderTickets(ctx context.Context) {
 				fmt.Println("✅ Ticket stream ended.")
 				return
 			}
-			tix := append(pkt.GetPositionTickets(), pkt.GetPendingOrderTickets()...)
-			fmt.Printf("[Tickets] %d open tickets: %v\n", len(tix), tix)
+			if pkt != nil {
+				tix := append(pkt.GetPositionTickets(), pkt.GetPendingOrderTickets()...)
+				fmt.Printf("[Tickets] %d open tickets: %v\n", len(tix), tix)
+			}
 
-		case err := <-errCh:
+		case err, ok := <-errCh:
+			if !ok || err == nil || errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				fmt.Println("✅ Ticket stream finished.")
+				return
+			}
 			log.Printf("❌ Stream error: %v", err)
 			return
-		case <-time.After(30 * time.Second):
-			fmt.Println("⏱️ Timeout reached.")
+
+		case <-ctx2.Done():
+			fmt.Println("⏹️ Ticket stream canceled.")
 			return
 		}
 	}
 }
+
 
 func (s *MT5Service) StreamTradeUpdates(ctx context.Context) {
 	ctx2, cancel := context.WithCancel(ctx)
@@ -1239,6 +1278,7 @@ func (s *MT5Service) StreamTradeUpdates(ctx context.Context) {
 
 	tradeCh, errCh := s.account.OnTrade(ctx2)
 	fmt.Println("🔄 Streaming trade updates...")
+
 	for {
 		select {
 		case tr, ok := <-tradeCh:
@@ -1246,23 +1286,32 @@ func (s *MT5Service) StreamTradeUpdates(ctx context.Context) {
 				fmt.Println("✅ Trade stream ended.")
 				return
 			}
-			if ev := tr.GetEventData(); ev != nil && len(ev.GetNewOrders()) > 0 {
-				o := ev.GetNewOrders()[0]
-				
-				fmt.Printf("[Trade] Ticket: %d | Symbol: %s | Type: %v | Volume: %.2f\n",
-					o.GetTicket(), o.GetSymbol(), o.GetOrderType(), o.GetVolumeCurrent())
+			if tr != nil {
+				if ev := tr.GetEventData(); ev != nil {
+					
+					for _, o := range ev.GetNewOrders() {
+						fmt.Printf("[Trade|NEW] Ticket: %d | Symbol: %s | Type: %v | Volume: %.2f\n",
+							o.GetTicket(), o.GetSymbol(), o.GetOrderType(), o.GetVolumeCurrent())
+					}
+				}
 			}
 
-		case err := <-errCh:
+		case err, ok := <-errCh:
+			if !ok || err == nil || errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				fmt.Println("✅ Trade stream finished.")
+				return
+			}
 			log.Printf("❌ Stream error: %v", err)
 			return
 
-		case <-time.After(30 * time.Second):
-			fmt.Println("⏱️ Timeout reached.")
+		case <-ctx2.Done():
+			fmt.Println("⏹️ Trade stream canceled.")
 			return
 		}
 	}
 }
+
+
 
 // --- Small ptr helpers ---
 func ptrInt32(v int32) *int32    { return &v }
