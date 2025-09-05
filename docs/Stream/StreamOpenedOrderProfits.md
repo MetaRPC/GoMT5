@@ -125,7 +125,7 @@ Your wrapper may expose:
 
 1. Keep an in‑memory map: `map[int64]OnPositionProfitPositionInfo` keyed by `Ticket`.
 2. Apply `DeletedPositions` to evict finished tickets from the cache/UI.
-3. Throttle or aggregate logs — profit updates приходят часто.
+3. Throttle or aggregate logs — profit updates they come often.
 4. Use a parent context; stop streams on shutdown (Ctrl+C) or service restarts.
 5. Implement **reconnect/backoff** in long‑running daemons.
 
