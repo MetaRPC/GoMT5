@@ -68,8 +68,6 @@ Returns a slice of **`PositionInfo`** objects.
 | `MagicNumber`  | `int64`                     | EA magic number (if any).               |
 | `Identifier`   | `uint64`                    | Position identifier (may match Ticket). |
 
-> Полный набор полей включает также маржинальные и расчётные величины (margin, price change и т.п.) — можно добавить 1:1 из `pb` при необходимости.
-
 ---
 
 ### Enum: `BMT5_ENUM_POSITION_TYPE`
