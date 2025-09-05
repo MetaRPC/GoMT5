@@ -117,7 +117,7 @@ func main() {
 		password = strings.TrimSpace(password)
 		serverName = strings.TrimSpace(serverName)
 
-		// Debug: show length and first bytes of password (not сам пароль)
+		// Debug: show length and first bytes of password
 		pwHex := ""
 		{
 			b := []byte(password)
