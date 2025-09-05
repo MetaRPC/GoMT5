@@ -106,7 +106,7 @@ Available getters (per your bindings):
 ## ⚠️ Pitfalls
 
 * No trading side-effects, but **high CPU/log I/O** possible if you print every tick.
-* On quiet markets you may see long pauses — это нормально.
+* On quiet markets you may see long pauses — this is normal.
 
 ---
 
