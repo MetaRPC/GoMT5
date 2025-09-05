@@ -183,7 +183,7 @@ func (a *MT5Account) Disconnect(ctx context.Context) error {
 	}
 
 	// Close a low-level connection
-	closeErr := a.Close() // CHANGED: Close() уже зануляет GrpcConn
+	closeErr := a.Close()
 
 	// Reset gRPC clients
 	a.ConnectionClient = nil
