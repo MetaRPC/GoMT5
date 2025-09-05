@@ -78,7 +78,7 @@ func main() {
 	}
 	log.Printf("cfg: login=%d server=%q symbol=%q", cfg.Login, cfg.Server, cfg.DefaultSymbol)
 	if len(cfg.Password) >= 2 {
-		log.Printf("cfg: password=***%s", cfg.Password[len(cfg.Password)-2:]) // последние 2 символа, чтобы проверить совпадение
+		log.Printf("cfg: password=***%s", cfg.Password[len(cfg.Password)-2:]) // the last 2 characters to check for a match
 	}
 
 	login := uint64(cfg.Login)
