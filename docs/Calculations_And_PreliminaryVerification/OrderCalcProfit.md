@@ -84,5 +84,5 @@ Returns **`OrderCalcProfitData`**.
 ## 🧩 Notes & Tips
 
 * The result depends on contract size, tick value, and digits — pair with `SymbolParams` and `TickValueWithSize`.
-* For BUY positions: Profit grows as `closePrice` > `openPrice`; for SELL — наоборот.
+* For BUY positions: Profit grows as `closePrice` > `openPrice`; for SELL — on the contrary.
 * Consider spreads/commissions/slippage separately; this call focuses on price P/L, not full trade cost.
