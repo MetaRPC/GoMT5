@@ -1,0 +1,2466 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Docs and examples for MetaRPC MT5 in Go (account, market, trading, history)">
+      
+      
+      
+      
+        <link rel="prev" href="../Using_GoMT5/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Beginner Run Guide - MetaRPC MT5 Golang Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#beginner-run-guide-for-gomt5" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="MetaRPC MT5 Golang Documentation" class="md-header__button md-logo" aria-label="MetaRPC MT5 Golang Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MetaRPC MT5 Golang Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Beginner Run Guide
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="MetaRPC MT5 Golang Documentation" class="md-nav__button md-logo" aria-label="MetaRPC MT5 Golang Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    MetaRPC MT5 Golang Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Account & Market Info
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Quick Account & Market Info
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../QuickAccount_MarketInfo/MarketInfo_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../QuickAccount_MarketInfo/AccountSummary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Account Summary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../QuickAccount_MarketInfo/Quote/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quote
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../QuickAccount_MarketInfo/QuotesMany/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quotes Many
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../QuickAccount_MarketInfo/SymbolParams/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Symbol Params
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../QuickAccount_MarketInfo/TickValues/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tick Values
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../QuickAccount_MarketInfo/AllSymbols/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    All Symbols
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Opened State Snapshot
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Opened State Snapshot
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Opened_State_Snapshot/OpenedStateSnapshot_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Opened_State_Snapshot/OpenedOrders/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Opened Orders
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Opened_State_Snapshot/OpenedOrderTickets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Opened Order Tickets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Opened_State_Snapshot/ShowPositions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Show Positions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Opened_State_Snapshot/HasOpenPosition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Has Open Position
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Calculations & Safety Checks
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Calculations & Safety Checks
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Calculations_And_PreliminaryVerification/Verification_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Calculations_And_PreliminaryVerification/OrderCalcMargin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Order Calc Margin
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Calculations_And_PreliminaryVerification/OrderCalcProfit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Order Calc Profit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Calculations_And_PreliminaryVerification/ShowOrderCheck/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Order Check
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trading Operations (DANGEROUS)
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Trading Operations (DANGEROUS)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TradingOps%28DANGEROUS%29/TradingOperations_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TradingOps%28DANGEROUS%29/BuyMarket/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Buy Market
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TradingOps%28DANGEROUS%29/SellMarket/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sell Market
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TradingOps%28DANGEROUS%29/PlaceBuyLimit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Place Buy Limit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TradingOps%28DANGEROUS%29/PlaceSellLimit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Place Sell Limit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TradingOps%28DANGEROUS%29/PlaceBuyStop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Place Buy Stop
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TradingOps%28DANGEROUS%29/PlaceSellStop/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Place Sell Stop
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TradingOps%28DANGEROUS%29/PlaceStopLimit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Place Stop Limit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TradingOps%28DANGEROUS%29/OrderModifyExample/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Order Modify Example
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TradingOps%28DANGEROUS%29/OrderCloseExample/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Order Close Example
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TradingOps%28DANGEROUS%29/OrderDeleteExample/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Order Delete Example
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TradingOps%28DANGEROUS%29/PositionModify/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Position Modify
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TradingOps%28DANGEROUS%29/PositionClose/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Position Close
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TradingOps%28DANGEROUS%29/SetOrderExpiration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Set Order Expiration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    History & Simple Statistics
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    History & Simple Statistics
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../History_And_SimpleStatistics/HistoryAndStats_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../History_And_SimpleStatistics/ShowOrdersHistory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Show Orders History
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../History_And_SimpleStatistics/ShowDealsCount/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Show Deals Count
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../History_And_SimpleStatistics/OrderByTicket/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Order By Ticket
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../History_And_SimpleStatistics/DealByTicket/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deal By Ticket
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../History_And_SimpleStatistics/History_Range%28important%29/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    History Range (important)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Streaming
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Streaming
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Stream/StreamingMethods_Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Stream/StreamingQuotes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Streaming Quotes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Stream/StreamOpenedOrderProfits/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Opened Order Profits
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Stream/StreamOpenedOrderTickets/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Opened Order Tickets
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Stream/StreamTradeUpdates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trade Updates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Using_GoMT5/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Beginner Run Guide
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Beginner Run Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚡ How to Run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#safe-first-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🧪 Safe First Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📊 Getting Data
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#trading-operations-be-careful" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚠️ Trading Operations (Be Careful)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combo-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎬 Combo Scenarios
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎬 Combo Scenarios">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-open-check-close" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Open → Check → Close
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-place-pending-wait-delete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Place Pending → Wait → Delete
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-market-data-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Market Data Dashboard
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tips-for-beginners" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🧠 Tips for Beginners
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combo-scenario-a-place-buy-limit-monitor-delete-real" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔗 Combo Scenario A — Place Buy Limit → monitor → delete (real!)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combo-scenario-b-market-buy-show-position-modify-sltp-close-real" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔗 Combo Scenario B — Market Buy → show position → modify SL/TP → close (real!)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combo-scenario-c-intraday-pending-workflow-place-auto-expire" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔗 Combo Scenario C — Intraday pending workflow (place → auto-expire)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combo-scenario-d-quick-read-only-dashboard-safe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔗 Combo Scenario D — Quick read-only dashboard (safe)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#copypaste-starters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🧷 Copy‑Paste Starters
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚡ How to Run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#safe-first-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🧪 Safe First Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📊 Getting Data
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#trading-operations-be-careful" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚠️ Trading Operations (Be Careful)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combo-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎬 Combo Scenarios
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎬 Combo Scenarios">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-open-check-close" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Open → Check → Close
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-place-pending-wait-delete" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Place Pending → Wait → Delete
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-market-data-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Market Data Dashboard
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tips-for-beginners" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🧠 Tips for Beginners
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combo-scenario-a-place-buy-limit-monitor-delete-real" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔗 Combo Scenario A — Place Buy Limit → monitor → delete (real!)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combo-scenario-b-market-buy-show-position-modify-sltp-close-real" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔗 Combo Scenario B — Market Buy → show position → modify SL/TP → close (real!)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combo-scenario-c-intraday-pending-workflow-place-auto-expire" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔗 Combo Scenario C — Intraday pending workflow (place → auto-expire)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combo-scenario-d-quick-read-only-dashboard-safe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔗 Combo Scenario D — Quick read-only dashboard (safe)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#copypaste-starters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🧷 Copy‑Paste Starters
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="beginner-run-guide-for-gomt5">🚦 Beginner Run Guide for GoMT5<a class="headerlink" href="#beginner-run-guide-for-gomt5" title="Permanent link">&para;</a></h1>
+<p>This guide is designed for <strong>beginners</strong> who already have their <code>config.json</code> set up with login, password, server, and default symbol. It explains <strong>what to uncomment</strong> in <code>examples/main.go</code> and what happens when you run the code.</p>
+<hr />
+<h2 id="how-to-run">⚡ How to Run<a class="headerlink" href="#how-to-run" title="Permanent link">&para;</a></h2>
+<p>Open your terminal in the project root:</p>
+<div class="highlight"><pre><span></span><code><span class="nb">cd</span><span class="w"> </span>examples
+go<span class="w"> </span>run<span class="w"> </span>.
+</code></pre></div>
+<p>This will use your <code>examples/main.go</code> file as the entry point.</p>
+<hr />
+<h2 id="safe-first-steps">🧪 Safe First Steps<a class="headerlink" href="#safe-first-steps" title="Permanent link">&para;</a></h2>
+<p>These operations <strong>do not change anything</strong> on your account. They are safe to test.</p>
+<p>In <code>examples/main.go</code>, uncomment one or more of the following:</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// Show account summary</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowAccountSummary</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+
+<span class="c1">// Show all available symbols</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowAllSymbols</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+
+<span class="c1">// Get live quote for EURUSD</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowQuote</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;EURUSD&quot;</span><span class="p">)</span>
+
+<span class="c1">// Stream continuous quotes</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">StreamQuotes</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+<p>Run the app again and watch the output.</p>
+<hr />
+<h2 id="getting-data">📊 Getting Data<a class="headerlink" href="#getting-data" title="Permanent link">&para;</a></h2>
+<p>Useful methods to retrieve account or market information:</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// Print history of trades (last 7 days by default)</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowOrdersHistory</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+
+<span class="c1">// Print currently open orders</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowOpenedOrders</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+
+<span class="c1">// Show full symbol parameters (like contract size, digits, etc.)</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowSymbolParams</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;EURUSD&quot;</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="trading-operations-be-careful">⚠️ Trading Operations (Be Careful)<a class="headerlink" href="#trading-operations-be-careful" title="Permanent link">&para;</a></h2>
+<p>These will actually place, modify, or close orders (even on demo). Always test on a demo account first.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// Open a sample Buy order</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowOrderSendExample</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;EURUSD&quot;</span><span class="p">)</span>
+
+<span class="c1">// Modify order SL/TP (requires a real ticket)</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowOrderModifyExample</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="mi">123456789</span><span class="p">)</span>
+
+<span class="c1">// Close order by ticket</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowOrderCloseExample</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="mi">123456789</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="combo-scenarios">🎬 Combo Scenarios<a class="headerlink" href="#combo-scenarios" title="Permanent link">&para;</a></h2>
+<h3 id="1-open-check-close">1. Open → Check → Close<a class="headerlink" href="#1-open-check-close" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// Step 1: Open Buy Market order</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowOrderSendExample</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;EURUSD&quot;</span><span class="p">)</span>
+
+<span class="c1">// Step 2: List opened orders</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowOpenedOrders</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+
+<span class="c1">// Step 3: Close by ticket (replace with real ticket number from output)</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowOrderCloseExample</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="mi">123456789</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h3 id="2-place-pending-wait-delete">2. Place Pending → Wait → Delete<a class="headerlink" href="#2-place-pending-wait-delete" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// Step 1: Place pending order (Buy Limit)</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowOrderSendExample</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;EURUSD&quot;</span><span class="p">)</span><span class="w"> </span><span class="c1">// adjust inside method to pending type if needed</span>
+
+<span class="c1">// Step 2: Check active pending orders</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowOpenedOrders</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+
+<span class="c1">// Step 3: Delete the pending order by ticket</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowOrderDeleteExample</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="mi">123456789</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h3 id="3-market-data-dashboard">3. Market Data Dashboard<a class="headerlink" href="#3-market-data-dashboard" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="c1">// Show account summary</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowAccountSummary</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+
+<span class="c1">// Stream real-time quotes</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">StreamQuotes</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+
+<span class="c1">// Print live profits of open orders</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">StreamOpenedOrderProfits</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="tips-for-beginners">🧠 Tips for Beginners<a class="headerlink" href="#tips-for-beginners" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Always start with <strong>safe methods</strong> before trying trading functions.</li>
+<li>Replace <code>123456789</code> with the <strong>real order ticket number</strong> you see in the output.</li>
+<li>Keep <code>config.json</code> secure — it contains your login details.</li>
+<li>Use <strong>demo accounts</strong> until you are fully confident.</li>
+</ul>
+<hr />
+<p>This way, even a beginner can follow step by step, uncomment the right methods, and see immediate results without being lost.</p>
+<hr />
+<h2 id="combo-scenario-a-place-buy-limit-monitor-delete-real">🔗 Combo Scenario A — Place Buy Limit → monitor → delete (real!)<a class="headerlink" href="#combo-scenario-a-place-buy-limit-monitor-delete-real" title="Permanent link">&para;</a></h2>
+<p><strong>Goal:</strong> create a pending order with expiration, watch it in streams for \~30s, then delete it by ticket.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// 1) Place Buy Limit (auto-cancel in 24h)</span>
+<span class="nx">exp</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">timestamppb</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">().</span><span class="nx">Add</span><span class="p">(</span><span class="mi">24</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Hour</span><span class="p">))</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">PlaceBuyLimit</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">selectedSymbol</span><span class="p">,</span><span class="w"> </span><span class="mf">0.10</span><span class="p">,</span><span class="w"> </span><span class="mf">1.07500</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="nx">exp</span><span class="p">)</span>
+
+<span class="c1">// 2) Watch tickets/profits for ~30s (internally stop by timeout)</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">StreamOpenedOrderTickets</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">StreamOpenedOrderProfits</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+
+<span class="c1">// 3) Get the order ticket from console output (or from your terminal log)</span>
+<span class="c1">//    Then delete it:</span>
+<span class="c1">// svc.ShowOrderDeleteExample(ctx, YOUR_ORDER_TICKET)</span>
+</code></pre></div>
+<p><strong>Tip:</strong> To make finding the ticket easier, use a unique comment when placing orders (see trading helpers with <code>comment</code>).</p>
+<hr />
+<h2 id="combo-scenario-b-market-buy-show-position-modify-sltp-close-real">🔗 Combo Scenario B — Market Buy → show position → modify SL/TP → close (real!)<a class="headerlink" href="#combo-scenario-b-market-buy-show-position-modify-sltp-close-real" title="Permanent link">&para;</a></h2>
+<p><strong>Goal:</strong> open a position at market, ensure it exists, optionally adjust, then close.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// 1) Execute market BUY (⚠️ real trade)</span>
+<span class="c1">// svc.BuyMarket(ctx, selectedSymbol, 0.10, nil, nil)</span>
+
+<span class="c1">// 2) Confirm in console</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowPositions</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span><span class="w">            </span><span class="c1">// should show an open position for selectedSymbol</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowHasOpenPosition</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">selectedSymbol</span><span class="p">)</span>
+
+<span class="c1">// 3) Modify position SL/TP (needs position ticket) — optional</span>
+<span class="c1">//    If you know the ticket, call:</span>
+<span class="c1">// svc.ShowPositionModify(ctx, /*ticket=*/ 123456789, /*newSL=*/ nil, /*newTP=*/ nil)</span>
+<span class="c1">//    (Without a helper that returns the ticket programmatically, take it from ShowPositions output.)</span>
+
+<span class="c1">// 4) Close the position by symbol</span>
+<span class="c1">// svc.ShowPositionClose(ctx, selectedSymbol)</span>
+</code></pre></div>
+<p><strong>Note:</strong> If you prefer closing the <em>order</em> itself, use <code>ShowOrderCloseExample(ctx, ticket)</code> with the exact order ticket.</p>
+<hr />
+<h2 id="combo-scenario-c-intraday-pending-workflow-place-auto-expire">🔗 Combo Scenario C — Intraday pending workflow (place → auto-expire)<a class="headerlink" href="#combo-scenario-c-intraday-pending-workflow-place-auto-expire" title="Permanent link">&para;</a></h2>
+<p><strong>Goal:</strong> create orders that auto-cancel by end of day if not filled.</p>
+<div class="highlight"><pre><span></span><code><span class="c1">// Expire at local midnight</span>
+<span class="nx">endOfDay</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Date</span><span class="p">(</span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">().</span><span class="nx">Year</span><span class="p">(),</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">().</span><span class="nx">Month</span><span class="p">(),</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">().</span><span class="nx">Day</span><span class="p">(),</span><span class="w"> </span><span class="mi">23</span><span class="p">,</span><span class="w"> </span><span class="mi">59</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Local</span><span class="p">)</span>
+<span class="nx">exp</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">timestamppb</span><span class="p">.</span><span class="nx">New</span><span class="p">(</span><span class="nx">endOfDay</span><span class="p">)</span>
+
+<span class="c1">// Two brackets: BUY_STOP above market and SELL_STOP below</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">PlaceBuyStop</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w">  </span><span class="nx">selectedSymbol</span><span class="p">,</span><span class="w"> </span><span class="mf">0.10</span><span class="p">,</span><span class="w"> </span><span class="cm">/*trigger=*/</span><span class="w"> </span><span class="mf">1.09200</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="nx">exp</span><span class="p">)</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">PlaceSellStop</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">selectedSymbol</span><span class="p">,</span><span class="w"> </span><span class="mf">0.10</span><span class="p">,</span><span class="w"> </span><span class="cm">/*trigger=*/</span><span class="w"> </span><span class="mf">1.07800</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="kc">nil</span><span class="p">,</span><span class="w"> </span><span class="nx">exp</span><span class="p">)</span>
+
+<span class="c1">// Optional: watch for ~30s</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">StreamTradeUpdates</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Cleanup:</strong> If needed, delete by ticket later via <code>ShowOrderDeleteExample</code>.</p>
+<hr />
+<h2 id="combo-scenario-d-quick-read-only-dashboard-safe">🔗 Combo Scenario D — Quick read-only dashboard (safe)<a class="headerlink" href="#combo-scenario-d-quick-read-only-dashboard-safe" title="Permanent link">&para;</a></h2>
+<p><strong>Goal:</strong> one-shot snapshot for monitoring.</p>
+<div class="highlight"><pre><span></span><code><span class="nx">svc</span><span class="p">.</span><span class="nx">ShowAccountSummary</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowQuote</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">selectedSymbol</span><span class="p">)</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowOpenedOrders</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowPositions</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<span class="nx">from</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">().</span><span class="nx">AddDate</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mi">7</span><span class="p">);</span><span class="w"> </span><span class="nx">to</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">()</span>
+<span class="nx">svc</span><span class="p">.</span><span class="nx">ShowDealsCount</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">from</span><span class="p">,</span><span class="w"> </span><span class="nx">to</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;&quot;</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="copypaste-starters">🧷 Copy‑Paste Starters<a class="headerlink" href="#copypaste-starters" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Need expiration doc? See <strong>SetOrderExpiration.md</strong> in <code>docs/TradingOps(DANGEROUS)/</code>.</li>
+<li>Need time range patterns? See <strong>History_Range(important).md</strong> in <code>docs/History_And_SimpleStatistics/</code>.</li>
+</ul>
+<p>These combos keep changes minimal and mirror the helpers you already have, so a newcomer can un‑comment a block, run it, and understand the flow step by step. ✅</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["palette.toggle", "palette.auto", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
