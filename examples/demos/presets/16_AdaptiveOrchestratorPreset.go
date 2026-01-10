@@ -206,7 +206,7 @@ func NewAdaptiveOrchestratorPreset(sugar *mt5.MT5Sugar) *AdaptiveOrchestratorPre
 		sugar:                     sugar,
 		Symbol:                    "EURUSD",
 		BaseRiskAmount:            20.0,
-		LowVolatilityThreshold:    25.0,  // ← Увеличено с 20.0 до 25.0 (чтобы включить Grid Mode)
+		LowVolatilityThreshold:    25.0,  // ← Increased from 20.0 to 25.0 (to enable Grid Mode)
 		HighVolatilityThreshold:   50.0,
 		CycleDuration:             5 * time.Minute,
 		EnablePortfolioMode:       false,
