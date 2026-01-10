@@ -102,21 +102,21 @@ import (
 )
 
 func main() {
-	// Главный цикл
+	// Main loop
 	for {
 		var command string
 
-		// Получить команду из аргументов или показать меню
+		// Get the command from the arguments or show the menu
 		if len(os.Args) > 1 {
-			// Режим прямой команды: go run main.go <command>
+			// Direct command mode: go run main.go <command>
 			command = strings.ToLower(os.Args[1])
 		} else {
-			// Режим интерактивного меню
+			// Interactive menu mode
 			printBanner()
 			command = showMenu()
 		}
 
-		// Выполнить команду
+		// Execute command
 		exitRequested, err := executeCommand(command)
 		if err != nil {
 			fmt.Println("\n╔════════════════════════════════════════════════════════════╗")
@@ -138,14 +138,14 @@ func main() {
 			return
 		}
 
-		// Режим командной строки: выход после одного запуска
+		// Command line mode: exit after a single run
 		if len(os.Args) > 1 {
 			fmt.Println("\n\nPress Enter to exit...")
 			fmt.Scanln()
 			return
 		}
 
-		// Интерактивный режим: спросить продолжить
+		// Interactive mode: ask to continue
 		fmt.Println()
 		fmt.Println("┌──────────────────────────────────────────────────────────────┐")
 		fmt.Println("│  [M] Return to Main Menu  |  [0] Exit                        │")
@@ -162,7 +162,7 @@ func main() {
 			return
 		}
 
-		// Продолжить к меню
+		// Continue to menu
 	}
 }
 
