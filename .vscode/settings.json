@@ -7,18 +7,18 @@
   "proto3.compile_on_save": false,
   "proto3.protoc": "C:/Tools/bin/protoc.exe",
 
-  // Отключаем ложные ошибки gopls case-insensitive import collision
-  // (на Windows файловая система регистронезависимая, но импорты Go - регистрозависимые)
+// Disabling false gopls errors for case-insensitive import collision
+// (on Windows the file system is case-insensitive, but Go imports are case-sensitive)
   "gopls": {
     "ui.diagnostic.staticcheck": false,
     "build.expandWorkspaceToModule": false
   },
 
-  // Скрываем определенные диагностики
+// Hiding certain diagnostics
   "go.lintFlags": [
     "--disable=all"
   ],
 
-  // Разрешаем поиск в файлах из .gitignore (для CSharpMT5/RE)
+  // Allow searching in files from .gitignore
   "search.useIgnoreFiles": false
 }
