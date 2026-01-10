@@ -386,15 +386,3 @@ go.work
 # Dependency directories
 vendor/
 
-# ============================================
-# Project specific ignores
-# ============================================
-
-# C# Project
-CSharpMT5/
-
-# Protobuf source files
-mrpc-proto-main/
-
-# Claude AI assistant files
-.claude/
