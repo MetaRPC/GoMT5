@@ -94,6 +94,7 @@ import (
 
 	pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
 
+	mt5errors "github.com/MetaRPC/GoMT5/examples/errors"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -158,7 +159,7 @@ func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID
 		tlsCfg.ServerName = host
 	}
 
-	dctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	dctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	bcfg := backoff.Config{
@@ -239,20 +240,30 @@ func (a *MT5Account) IsConnected() bool {
 	return a != nil && a.GrpcConn != nil && a.Id != uuid.Nil
 }
 
-// ExecuteWithReconnect executes a gRPC call with automatic retry and reconnection logic.
+// ExecuteWithReconnect is THE CORE PATTERN used by ALL non-streaming methods in this file.
 //
-// This generic function wraps all unary RPC calls providing:
-//   - Automatic reconnection on TERMINAL_INSTANCE_NOT_FOUND errors
-//   - Exponential backoff retry mechanism (up to 5 attempts)
-//   - Session ID injection via metadata headers
-//   - Context cancellation support
+// WHAT THIS DOES:
+//   Executes a gRPC call with automatic reconnection on network failures.
+//   If connection is lost - attempts to reconnect and retry the request.
 //
-// Parameters:
-//   - grpcCall: Function that performs the actual gRPC call with metadata headers
-//   - errorSelector: Function that extracts error from the reply message
+// ALGORITHM:
+//   1. Check gRPC connection
+//   2. Add metadata (headers) with session UUID
+//   3. Call the passed grpcCall() function
+//   4. If network error → exponential backoff + retry
+//   5. If API error (TERMINAL_INSTANCE_NOT_FOUND) → reconnect + retry
+//   6. Check reply.Error (protobuf errors from MT5)
+//   7. Return data or error
 //
-// Returns the reply data or error. On TERMINAL_INSTANCE_NOT_FOUND, automatically
-// calls Reconnect and retries the operation.
+// WHY THIS IS NEEDED:
+//   MT5 Terminal can drop connection (timeout, restart, network issues).
+//   This mechanism makes the API resilient to network failures.
+//
+// RETRY LOGIC:
+//   - Initial delay: 500ms
+//   - Max delay: 5s
+//   - Exponential backoff with jitter
+//   - Retries on: Unavailable, DeadlineExceeded, TERMINAL_INSTANCE_NOT_FOUND
 func ExecuteWithReconnect[T any](
 	a *MT5Account,
 	ctx context.Context,
@@ -297,7 +308,7 @@ func ExecuteWithReconnect[T any](
 		}
 
 		apiErr := errorSelector(res)
-		if apiErr != nil {
+		if apiErr != nil && apiErr.GetErrorCode() != "" {
 			code := apiErr.GetErrorCode()
 			if code == "TERMINAL_INSTANCE_NOT_FOUND" || code == "TERMINAL_REGISTRY_TERMINAL_NOT_FOUND" {
 				log.Printf("[api-retry] code=%s next_delay=%s", code, delay)
@@ -314,31 +325,40 @@ func ExecuteWithReconnect[T any](
 					return zeroT, ctx.Err()
 				}
 			}
-			return zeroT, fmt.Errorf("API error (code=%s): %v", code, apiErr)
+			// Convert mrpcError to *pb.Error and wrap in ApiError
+			if pbErr, ok := apiErr.(*pb.Error); ok {
+				return zeroT, mt5errors.NewApiError(pbErr)
+			}
+			return zeroT, fmt.Errorf("API error (code=%s): unknown error type", code)
 		}
 
 		return res, nil
 	}
 }
 
-// ExecuteStreamWithReconnect executes a streaming gRPC call with automatic reconnection.
+// ExecuteStreamWithReconnect is THE CORE PATTERN used by ALL streaming methods in this file.
 //
-// This generic function wraps all streaming RPC calls providing:
-//   - Automatic reconnection on TERMINAL_INSTANCE_NOT_FOUND errors
-//   - Automatic stream restart on connection loss
-//   - Exponential backoff retry mechanism
-//   - Session ID injection via metadata headers
-//   - Separate data and error channels
+// WHAT THIS DOES:
+//   Executes a streaming gRPC call with automatic stream restart on failures.
+//   If stream breaks - automatically reconnects and restarts the stream.
 //
-// Parameters:
-//   - request: The protobuf request message
-//   - streamInvoker: Function that creates the gRPC stream
-//   - getError: Function that extracts error from reply messages
-//   - getData: Function that extracts data from reply messages
-//   - newReply: Function that creates new reply instances for Recv()
+// ALGORITHM:
+//   1. Create gRPC stream with session UUID in metadata
+//   2. Start goroutine that continuously receives messages
+//   3. Send data to dataChan, errors to errChan
+//   4. If stream error (TERMINAL_INSTANCE_NOT_FOUND, Unavailable) → restart stream
+//   5. Apply exponential backoff between retries
+//   6. Close channels when context cancelled or stream ends
 //
-// Returns two channels: data channel and error channel. Both channels are closed
-// when the stream ends or context is cancelled.
+// WHY THIS IS NEEDED:
+//   Streaming connections can break due to network issues or MT5 restart.
+//   This mechanism ensures continuous data flow by auto-restarting streams.
+//
+// RETRY LOGIC:
+//   - Initial delay: 500ms
+//   - Max delay: 5s
+//   - Exponential backoff with jitter
+//   - Infinite retries until context cancelled
 func ExecuteStreamWithReconnect[TRequest any, TReply any, TData any](
 	ctx context.Context,
 	a *MT5Account,
@@ -399,13 +419,18 @@ func ExecuteStreamWithReconnect[TRequest any, TReply any, TData any](
 				}
 
 				apiErr := getError(reply)
-				if apiErr != nil {
+				if apiErr != nil && apiErr.GetErrorCode() != "" {
 					code := apiErr.GetErrorCode()
 					if code == "TERMINAL_INSTANCE_NOT_FOUND" || code == "TERMINAL_REGISTRY_TERMINAL_NOT_FOUND" {
 						reconnectRequired = true
 						break
 					}
-					errCh <- fmt.Errorf("API error: %v", apiErr)
+					// Convert mrpcError to *pb.Error and wrap in ApiError
+					if pbErr, ok := apiErr.(*pb.Error); ok {
+						errCh <- mt5errors.NewApiError(pbErr)
+					} else {
+						errCh <- fmt.Errorf("API error: unknown error type")
+					}
 					return
 				}
 
@@ -437,19 +462,20 @@ func ExecuteStreamWithReconnect[TRequest any, TReply any, TData any](
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// #region 1. CONNECTION
+// #region CONNECTION
 // ══════════════════════════════════════════════════════════════════════════════
 
 // ConnectEx establishes connection to MT5 terminal with extended parameters.
 //
 // This method provides full control over connection settings including:
-//   - Custom host, port, and server name configuration
+//   - MT5 cluster name for connection
 //   - Connection timeout settings
 //   - Base chart symbol selection
+//   - Expert Advisors to add
 //
 // Parameters:
 //   - ctx: Context for timeout and cancellation control
-//   - req: ConnectExRequest with User, Password, Host, Port, ServerName, BaseChartSymbol, ConnectTimeout
+//   - req: ConnectExRequest with User, Password, MtClusterName, BaseChartSymbol, TerminalReadinessWaitingTimeoutSeconds, ExpertsToAdd
 //
 // Returns ConnectData with session UUID and connection status, or error on failure.
 func (a *MT5Account) ConnectEx(ctx context.Context, req *pb.ConnectExRequest) (*pb.ConnectData, error) {
@@ -705,7 +731,7 @@ func (a *MT5Account) Reconnect(ctx context.Context, req *pb.ReconnectRequest) (*
 // #endregion
 
 // ══════════════════════════════════════════════════════════════════════════════
-// #region 2. ACCOUNT INFORMATION 
+// #region ACCOUNT INFORMATION
 // ══════════════════════════════════════════════════════════════════════════════
 
 // AccountSummary retrieves all account information in one call.
@@ -717,16 +743,21 @@ func (a *MT5Account) Reconnect(ctx context.Context, req *pb.ReconnectRequest) (*
 //   - ctx: Context for timeout and cancellation control
 //   - req: AccountSummaryRequest (empty request structure)
 //
-// Returns AccountSummaryData with Balance, Equity, Margin, FreeMargin, MarginLevel, Profit,
-// Credit, Leverage, Currency, Company, Name, Server, StopoutLevel, and other account properties.
+// Returns AccountSummaryData with Login, Balance, Equity, UserName, Leverage, TradeMode,
+// CompanyName, Currency, ServerTime, UtcTimezoneShift, and Credit.
 func (a *MT5Account) AccountSummary(ctx context.Context, req *pb.AccountSummaryRequest) (*pb.AccountSummaryData, error) {
+	// Step 1: Verify gRPC connection is established
 	if !a.isConnected() {
 		return nil, errors.New("not connected")
 	}
+
+	// Step 2: Validate input parameters
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
 	}
 
+	// Step 3: Setup context with default timeout (10s)
+	// If caller didn't provide timeout, we add one to prevent hanging forever
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -736,20 +767,27 @@ func (a *MT5Account) AccountSummary(ctx context.Context, req *pb.AccountSummaryR
 		defer cancel()
 	}
 
+	// Step 4: Prepare gRPC call function with metadata
+	// This closure will be executed by ExecuteWithReconnect with session headers
 	grpcCall := func(headers metadata.MD) (*pb.AccountSummaryReply, error) {
 		c := metadata.NewOutgoingContext(ctx, headers)
 		return a.AccountClient.AccountSummary(c, req)
 	}
 
+	// Step 5: Define error extraction function
+	// ExecuteWithReconnect uses this to check for API errors in the response
 	errorSelector := func(reply *pb.AccountSummaryReply) mrpcError {
 		return reply.GetError()
 	}
 
+	// Step 6: Execute call with automatic retry/reconnect on failure
+	// This handles network errors, session expiration, and MT5 terminal restarts
 	reply, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
 	if err != nil {
 		return nil, err
 	}
 
+	// Step 7: Extract and return data from protobuf response
 	return reply.GetData(), nil
 }
 
@@ -885,7 +923,7 @@ func (a *MT5Account) AccountInfoString(ctx context.Context, req *pb.AccountInfoS
 // #endregion
 
 // ══════════════════════════════════════════════════════════════════════════════
-// #region 3. SYMBOL INFORMATION & OPERATIONS
+// #region SYMBOL INFORMATION & OPERATIONS
 // ══════════════════════════════════════════════════════════════════════════════
 
 // SymbolsTotal returns the number of available symbols.
@@ -1451,7 +1489,7 @@ func (a *MT5Account) SymbolParamsMany(ctx context.Context, req *pb.SymbolParamsM
 // #endregion
 
 // ══════════════════════════════════════════════════════════════════════════════
-// #region 4. POSITIONS & ORDERS INFORMATION 
+// #region POSITIONS & ORDERS INFORMATION
 // ══════════════════════════════════════════════════════════════════════════════
 
 // PositionsTotal returns the number of currently open positions.
@@ -1500,10 +1538,9 @@ func (a *MT5Account) PositionsTotal(ctx context.Context) (*pb.PositionsTotalData
 //
 // Parameters:
 //   - ctx: Context for timeout and cancellation control
-//   - req: OpenedOrdersRequest with optional Symbol filter and Group filter
+//   - req: OpenedOrdersRequest with InputSortMode (sort type: by open time, close time, or ticket ID)
 //
-// Returns OpenedOrdersData with array of Order objects containing Ticket, Symbol, Type, Volume,
-// OpenPrice, CurrentPrice, StopLoss, TakeProfit, Profit, Swap, Commission, Magic, Comment, and timestamps.
+// Returns OpenedOrdersData with arrays of opened_orders (pending orders) and position_infos (open positions) containing full details.
 func (a *MT5Account) OpenedOrders(ctx context.Context, req *pb.OpenedOrdersRequest) (*pb.OpenedOrdersData, error) {
 	if !a.isConnected() {
 		return nil, errors.New("not connected")
@@ -1545,9 +1582,9 @@ func (a *MT5Account) OpenedOrders(ctx context.Context, req *pb.OpenedOrdersReque
 //
 // Parameters:
 //   - ctx: Context for timeout and cancellation control
-//   - req: OpenedOrdersTicketsRequest with optional Symbol filter and Group filter
+//   - req: OpenedOrdersTicketsRequest (empty request structure)
 //
-// Returns OpenedOrdersTicketsData with array of Ticket numbers only.
+// Returns OpenedOrdersTicketsData with arrays of opened_orders_tickets and opened_position_tickets.
 func (a *MT5Account) OpenedOrdersTickets(ctx context.Context, req *pb.OpenedOrdersTicketsRequest) (*pb.OpenedOrdersTicketsData, error) {
 	if !a.isConnected() {
 		return nil, errors.New("not connected")
@@ -1674,7 +1711,7 @@ func (a *MT5Account) PositionsHistory(ctx context.Context, req *pb.PositionsHist
 // #endregion
 
 // ══════════════════════════════════════════════════════════════════════════════
-// #region 5. MARKET DEPTH / DOM
+// #region MARKET DEPTH / DOM
 // ══════════════════════════════════════════════════════════════════════════════
 
 // MarketBookAdd subscribes to Depth of Market (DOM) updates for a symbol.
@@ -1811,7 +1848,7 @@ func (a *MT5Account) MarketBookGet(ctx context.Context, req *pb.MarketBookGetReq
 // #endregion
 
 // ══════════════════════════════════════════════════════════════════════════════
-// #region 6. TRADING OPERATIONS
+// #region TRADING OPERATIONS
 // ══════════════════════════════════════════════════════════════════════════════
 
 // OrderSend places a market or pending order.
@@ -1821,10 +1858,9 @@ func (a *MT5Account) MarketBookGet(ctx context.Context, req *pb.MarketBookGetReq
 //
 // Parameters:
 //   - ctx: Context for timeout and cancellation control
-//   - req: OrderSendRequest with Action, Symbol, Volume, Price, OrderType, StopLoss, TakeProfit, Deviation, Magic, Comment, and other trading parameters
+//   - req: OrderSendRequest with Symbol, Operation, Volume, Price, Slippage, StopLoss, TakeProfit, Comment, ExpertId, StopLimitPrice, ExpirationTimeType, and ExpirationTime
 //
-// Returns OrderSendData with Order ticket number, execution price, volume, and MqlTradeResult structure,
-// or error with rejection reason if order fails.
+// Returns OrderSendData with returned code, deal ticket, order ticket, execution price, volume, bid/ask prices, comment, and request ID.
 func (a *MT5Account) OrderSend(ctx context.Context, req *pb.OrderSendRequest) (*pb.OrderSendData, error) {
 	if !a.isConnected() {
 		return nil, errors.New("not connected")
@@ -1909,9 +1945,9 @@ func (a *MT5Account) OrderModify(ctx context.Context, req *pb.OrderModifyRequest
 //
 // Parameters:
 //   - ctx: Context for timeout and cancellation control
-//   - req: OrderCloseRequest with Ticket, optional Volume (for partial close), Deviation, and Comment
+//   - req: OrderCloseRequest with Ticket, Volume, and Slippage
 //
-// Returns OrderCloseData with close ticket, execution price, volume, and MqlTradeResult structure.
+// Returns OrderCloseData with ReturnedCode, ReturnedStringCode, ReturnedCodeDescription, and CloseMode (market close, partial close, or pending order remove).
 func (a *MT5Account) OrderClose(ctx context.Context, req *pb.OrderCloseRequest) (*pb.OrderCloseData, error) {
 	if !a.isConnected() {
 		return nil, errors.New("not connected")
@@ -1997,7 +2033,7 @@ func (a *MT5Account) OrderCheck(ctx context.Context, req *pb.OrderCheckRequest) 
 //
 // Parameters:
 //   - ctx: Context for timeout and cancellation control
-//   - req: OrderCalcMarginRequest with Action, Symbol, Volume, and Price
+//   - req: OrderCalcMarginRequest with Symbol, OrderType, Volume, and OpenPrice
 //
 // Returns OrderCalcMarginData with Margin value in account currency.
 func (a *MT5Account) OrderCalcMargin(ctx context.Context, req *pb.OrderCalcMarginRequest) (*pb.OrderCalcMarginData, error) {
@@ -2041,7 +2077,7 @@ func (a *MT5Account) OrderCalcMargin(ctx context.Context, req *pb.OrderCalcMargi
 //
 // Parameters:
 //   - ctx: Context for timeout and cancellation control
-//   - req: OrderCalcProfitRequest with Action, Symbol, Volume, PriceOpen, and PriceClose
+//   - req: OrderCalcProfitRequest with OrderType, Symbol, Volume, OpenPrice, and ClosePrice
 //
 // Returns OrderCalcProfitData with Profit value in account currency.
 func (a *MT5Account) OrderCalcProfit(ctx context.Context, req *pb.OrderCalcProfitRequest) (*pb.OrderCalcProfitData, error) {
@@ -2080,7 +2116,7 @@ func (a *MT5Account) OrderCalcProfit(ctx context.Context, req *pb.OrderCalcProfi
 // #endregion
 
 // ══════════════════════════════════════════════════════════════════════════════
-// #region 7. STREAMING METHODS
+// #region STREAMING METHODS
 // ══════════════════════════════════════════════════════════════════════════════
 
 // OnSymbolTick streams real-time tick data for a symbol.

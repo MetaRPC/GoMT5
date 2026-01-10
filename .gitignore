@@ -362,3 +362,39 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /.idea/.idea.mt4rest-iis/.idea
+
+# ============================================
+# Go specific ignores
+# ============================================
+
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# Dependency directories
+vendor/
+
+# ============================================
+# Project specific ignores
+# ============================================
+
+# C# Project
+CSharpMT5/
+
+# Protobuf source files
+mrpc-proto-main/
+
+# Claude AI assistant files
+.claude/

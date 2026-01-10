@@ -1,96 +1,96 @@
-site_name: MetaRPC MT5 Golang Documentation
-site_description: Docs and examples for MetaRPC MT5 in Go (account, market, trading, history)
+site_name: GoMT5 SDK Documentation
+site_url: https://your-repo.github.io/GoMT5/
+site_description: Complete Go SDK for MetaTrader 5 trading automation
+
+repo_name: your-repo/GoMT5
+repo_url: https://github.com/your-repo/GoMT5
+edit_uri: edit/main/docs/
 
 theme:
   name: material
+  language: en
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    logo: material/language-go
+    repo: fontawesome/brands/github
   palette:
-    - scheme: default
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
       primary: indigo
+      accent: indigo
       toggle:
-        icon: material/weather-night
+        icon: material/brightness-7
         name: Switch to dark mode
-    - scheme: slate
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
       primary: indigo
+      accent: indigo
       toggle:
-        icon: material/weather-sunny
+        icon: material/brightness-4
         name: Switch to light mode
   features:
-    - palette.toggle
-    - palette.auto
+    - navigation.tracking
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
     - content.code.copy
-    - content.action.edit
+    - toc.follow
+  custom_dir: docs/includes
 
-nav:
-  - Home: index.md
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/your-repo/GoMT5
+      name: GoMT5 on GitHub
 
-  - Quick Account & Market Info:
-      - Overview: QuickAccount_MarketInfo/MarketInfo_Overview.md
-      - Account Summary: QuickAccount_MarketInfo/AccountSummary.md
-      - Quote: QuickAccount_MarketInfo/Quote.md
-      - Quotes Many: QuickAccount_MarketInfo/QuotesMany.md
-      - Symbol Params: QuickAccount_MarketInfo/SymbolParams.md
-      - Tick Values: QuickAccount_MarketInfo/TickValues.md
-      - All Symbols: QuickAccount_MarketInfo/AllSymbols.md
+extra_css:
+  - styles/custom.css
 
-  - Opened State Snapshot:
-      - Overview: Opened_State_Snapshot/OpenedStateSnapshot_Overview.md
-      - Opened Orders: Opened_State_Snapshot/OpenedOrders.md
-      - Opened Order Tickets: Opened_State_Snapshot/OpenedOrderTickets.md
-      - Show Positions: Opened_State_Snapshot/ShowPositions.md
-      - Has Open Position: Opened_State_Snapshot/HasOpenPosition.md
+extra_javascript:
+  - javascripts/ux.js
 
-  - Calculations & Safety Checks:
-      - Overview: Calculations_And_PreliminaryVerification/Verification_Overview.md
-      - Order Calc Margin: Calculations_And_PreliminaryVerification/OrderCalcMargin.md
-      - Order Calc Profit: Calculations_And_PreliminaryVerification/OrderCalcProfit.md
-      - Order Check: Calculations_And_PreliminaryVerification/ShowOrderCheck.md
-
-  - "Trading Operations (DANGEROUS)":
-      - Overview: "TradingOps(DANGEROUS)/TradingOperations_Overview.md"
-      - Buy Market: "TradingOps(DANGEROUS)/BuyMarket.md"
-      - Sell Market: "TradingOps(DANGEROUS)/SellMarket.md"
-      - Place Buy Limit: "TradingOps(DANGEROUS)/PlaceBuyLimit.md"
-      - Place Sell Limit: "TradingOps(DANGEROUS)/PlaceSellLimit.md"
-      - Place Buy Stop: "TradingOps(DANGEROUS)/PlaceBuyStop.md"
-      - Place Sell Stop: "TradingOps(DANGEROUS)/PlaceSellStop.md"
-      - Place Stop Limit: "TradingOps(DANGEROUS)/PlaceStopLimit.md"
-      - Order Modify Example: "TradingOps(DANGEROUS)/OrderModifyExample.md"
-      - Order Close Example: "TradingOps(DANGEROUS)/OrderCloseExample.md"
-      - Order Delete Example: "TradingOps(DANGEROUS)/OrderDeleteExample.md"
-      - Position Modify: "TradingOps(DANGEROUS)/PositionModify.md"
-      - Position Close: "TradingOps(DANGEROUS)/PositionClose.md"
-      - Set Order Expiration: "TradingOps(DANGEROUS)/SetOrderExpiration.md"
-
-  - History & Simple Statistics:
-      - Overview: History_And_SimpleStatistics/HistoryAndStats_Overview.md
-      - Show Orders History: History_And_SimpleStatistics/ShowOrdersHistory.md
-      - Show Deals Count: History_And_SimpleStatistics/ShowDealsCount.md
-      - Order By Ticket: History_And_SimpleStatistics/OrderByTicket.md
-      - Deal By Ticket: History_And_SimpleStatistics/DealByTicket.md
-      - "History Range (important)": "History_And_SimpleStatistics/History_Range(important).md"
-
-  - Streaming:
-      - Overview: Stream/StreamingMethods_Overview.md
-      - Streaming Quotes: Stream/StreamingQuotes.md
-      - Opened Order Profits: Stream/StreamOpenedOrderProfits.md
-      - Opened Order Tickets: Stream/StreamOpenedOrderTickets.md
-      - Trade Updates: Stream/StreamTradeUpdates.md
-
-  - Guides:
-      - CLI Guide: Using_GoMT5.md
-      - Beginner Run Guide: Beginner_Run_Guide.md
+markdown_extensions:
+  - admonition
+  - md_in_html
+  - tables
+  - attr_list
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - toc:
+      permalink: "¶"
+      toc_depth: 3
 
 plugins:
   - search
 
-markdown_extensions:
-  - admonition
-  - tables
-  - toc:
-      permalink: true
-  - pymdownx.details
-  - pymdownx.superfences
-  - pymdownx.tabbed:
-      alternate_style: true
-  - pymdownx.emoji:
-      emoji_generator: !!python/name:pymdownx.emoji.to_svg
+copyright: >
+  Copyright © 2024–2025 GoMT5. MT5 is a trademark of MetaQuotes Software Corp.
+  This documentation is community-maintained and not affiliated with MetaQuotes.
+
+nav:
+  - Home: index.md
+
+  - Guides:
+    - Getting Started: All_Guides/GETTING_STARTED.md
+    - Your First Project: All_Guides/Your_First_Project.md
+    - Project Map: All_Guides/PROJECT_MAP.md
+    - Glossary: All_Guides/GLOSSARY.md
+    - MT5 for Beginners: All_Guides/MT5_For_Beginners.md
+    - gRPC Streaming: All_Guides/GRPC_STREAM_MANAGEMENT.md
+    - Return Codes: All_Guides/RETURN_CODES_REFERENCE.md
+    - Protobuf Inspector: All_Guides/PROTOBUF_INSPECTOR_GUIDE.md
+    - UserCode Sandbox: All_Guides/USERCODE_SANDBOX_GUIDE.md
+
+  - API Reference:
+    - MT5Account API: API_Reference/MT5Account.md
+    - MT5Service API: API_Reference/MT5Service.md
+    - MT5Sugar API: API_Reference/MT5Sugar.md
+
+  - Orchestrators:
+    - Overview: Orchestrators/Strategies.Master.Overview.md

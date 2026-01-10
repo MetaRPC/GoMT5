@@ -5,5 +5,20 @@
     "googleapis"
   ],
   "proto3.compile_on_save": false,
-  "proto3.protoc": "C:/Tools/bin/protoc.exe"
+  "proto3.protoc": "C:/Tools/bin/protoc.exe",
+
+  // Отключаем ложные ошибки gopls case-insensitive import collision
+  // (на Windows файловая система регистронезависимая, но импорты Go - регистрозависимые)
+  "gopls": {
+    "ui.diagnostic.staticcheck": false,
+    "build.expandWorkspaceToModule": false
+  },
+
+  // Скрываем определенные диагностики
+  "go.lintFlags": [
+    "--disable=all"
+  ],
+
+  // Разрешаем поиск в файлах из .gitignore (для CSharpMT5/RE)
+  "search.useIgnoreFiles": false
 }
