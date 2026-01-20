@@ -478,7 +478,7 @@ docs/
 
 - `google.golang.org/grpc` - gRPC client
 - `google.golang.org/protobuf` - Protocol Buffers runtime
-- `git.mtapi.io/root/mrpc-proto` - MT5 Proto definitions
+- `github.com/MetaRPC/GoMT5/package` - MT5 Proto definitions
 
 **How it works:**
 

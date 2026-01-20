@@ -39,7 +39,7 @@ import (
     "time"
 
     "your-project/examples/mt5"
-    pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
+    pb "github.com/MetaRPC/GoMT5/package"
     "github.com/google/uuid"
 )
 

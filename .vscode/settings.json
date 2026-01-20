@@ -1,7 +1,7 @@
 {
   "proto3.includeDirs": [
     "protos",
-    "protos/git.mtapi.io/root/mrpc-proto.git",
+    "package",
     "googleapis"
   ],
   "proto3.compile_on_save": false,

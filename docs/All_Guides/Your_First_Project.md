@@ -85,7 +85,7 @@ go mod init mymt5project
 go get github.com/MetaRPC/GoMT5/mt5
 
 # Protobuf определения MT5 API
-go get git.mtapi.io/root/mrpc-proto/mt5/libraries/go
+go get github.com/MetaRPC/GoMT5/package
 
 # UUID для идентификаторов
 go get github.com/google/uuid
@@ -98,7 +98,7 @@ go get google.golang.org/protobuf
 **Что включают эти пакеты:**
 
 - `github.com/MetaRPC/GoMT5/mt5` - MT5Account для работы с MT5
-- `git.mtapi.io/root/mrpc-proto` - Protocol Buffers схемы для gRPC API
+- `github.com/MetaRPC/GoMT5/package` - Protocol Buffers схемы для gRPC API
 - `github.com/google/uuid` - генерация UUID для сессий
 - `google.golang.org/grpc` - gRPC клиент
 - `google.golang.org/protobuf` - protobuf runtime
@@ -197,7 +197,7 @@ import (
 	"log"
 	"time"
 
-	pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
+	pb "github.com/MetaRPC/GoMT5/package"
 	"github.com/MetaRPC/GoMT5/mt5"
 	"github.com/google/uuid"
 )
@@ -593,7 +593,7 @@ module mymt5project
 go 1.23
 
 require (
-	git.mtapi.io/root/mrpc-proto v0.0.0-20250812093834-58b4119a2c55
+	github.com/MetaRPC/GoMT5/package v0.0.0
 	github.com/MetaRPC/GoMT5/mt5 v0.0.0
 	github.com/google/uuid v1.6.0
 	google.golang.org/grpc v1.74.2

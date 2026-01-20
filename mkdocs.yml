@@ -1,9 +1,9 @@
 site_name: GoMT5 SDK Documentation
-site_url: https://your-repo.github.io/GoMT5/
+site_url: https://MetaRPC.github.io/GoMT5/
 site_description: Complete Go SDK for MetaTrader 5 trading automation
 
-repo_name: your-repo/GoMT5
-repo_url: https://github.com/your-repo/GoMT5
+repo_name: MetaRPC/GoMT5
+repo_url: https://github.com/MetaRPC/GoMT5
 edit_uri: edit/main/docs/
 
 theme:
@@ -42,7 +42,7 @@ theme:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/your-repo/GoMT5
+      link: https://github.com/MetaRPC/GoMT5
       name: GoMT5 on GitHub
 
 extra_css:

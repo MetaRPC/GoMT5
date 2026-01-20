@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
+	pb "github.com/MetaRPC/GoMT5/package"
 	"github.com/MetaRPC/GoMT5/examples/demos/config"
 	"github.com/MetaRPC/GoMT5/mt5"
 	"github.com/google/uuid"
@@ -58,13 +58,11 @@ func ConnectByServerName(account *mt5.MT5Account, serverName, baseSymbol string,
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds+30)*time.Second)
 	defer cancel()
 
-	timeout := int32(timeoutSeconds)
 	req := &pb.ConnectExRequest{
-		User:                                   account.User,
-		Password:                               account.Password,
-		MtClusterName:                          serverName,
-		BaseChartSymbol:                        &baseSymbol,
-		TerminalReadinessWaitingTimeoutSeconds: &timeout,
+		User:            account.User,
+		Password:        account.Password,
+		MtClusterName:   serverName,
+		BaseChartSymbol: &baseSymbol,
 	}
 
 	// ConnectEx

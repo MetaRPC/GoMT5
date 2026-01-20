@@ -63,7 +63,7 @@ import (
 	"fmt"
 	"time"
 
-	pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
+	pb "github.com/MetaRPC/GoMT5/package"
 	"github.com/MetaRPC/GoMT5/examples/demos/config"
 	"github.com/MetaRPC/GoMT5/examples/demos/helpers"
 	"github.com/MetaRPC/GoMT5/mt5"
@@ -100,17 +100,16 @@ func RunServiceStreaming05() error {
 
 	// Connect
 	fmt.Println("\n📡 Connecting to MT5...")
-	connCtx, connCancel := context.WithTimeout(ctx, 30*time.Second)
+	// Use context timeout for ConnectEx (replaces old TerminalReadinessWaitingTimeoutSeconds)
+	connCtx, connCancel := context.WithTimeout(ctx, 180*time.Second)
 	defer connCancel()
 
 	baseSymbol := cfg.TestSymbol
-	timeoutSec := int32(120)
 	data, err := account.ConnectEx(connCtx, &pb.ConnectExRequest{
-		User:                                   cfg.User,
-		Password:                               cfg.Password,
-		MtClusterName:                          cfg.MtCluster,
-		BaseChartSymbol:                        &baseSymbol,
-		TerminalReadinessWaitingTimeoutSeconds: &timeoutSec,
+		User:            cfg.User,
+		Password:        cfg.Password,
+		MtClusterName:   cfg.MtCluster,
+		BaseChartSymbol: &baseSymbol,
 	})
 	if err != nil {
 		return fmt.Errorf("connection failed: %w", err)

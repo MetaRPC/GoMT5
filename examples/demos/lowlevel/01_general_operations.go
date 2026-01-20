@@ -84,7 +84,7 @@ import (
 	"fmt"
 	"time"
 
-	pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
+	pb "github.com/MetaRPC/GoMT5/package"
 	"github.com/MetaRPC/GoMT5/examples/demos/config"
 	"github.com/MetaRPC/GoMT5/examples/demos/helpers"
 	"github.com/MetaRPC/GoMT5/mt5"
@@ -125,22 +125,20 @@ func RunGeneral01() error {
 	fmt.Println("───────────────────────────────────────────────────────────")
 
 	baseSymbol := cfg.TestSymbol
-	timeoutSec := int32(120) // 120 seconds timeout
 	connectExReq := &pb.ConnectExRequest{
-		User:                                   cfg.User,
-		Password:                               cfg.Password,
-		MtClusterName:                          cfg.MtCluster,
-		BaseChartSymbol:                        &baseSymbol,
-		TerminalReadinessWaitingTimeoutSeconds: &timeoutSec,
+		User:            cfg.User,
+		Password:        cfg.Password,
+		MtClusterName:   cfg.MtCluster,
+		BaseChartSymbol: &baseSymbol,
 	}
 
 	fmt.Printf("  User:          %d\n", cfg.User)
 	fmt.Printf("  Cluster:       %s\n", cfg.MtCluster)
 	fmt.Printf("  Base Symbol:   %s\n", baseSymbol)
-	fmt.Printf("  Timeout:       %d seconds\n", timeoutSec)
+	fmt.Printf("  Context Timeout: 180 seconds\n")
 	fmt.Println()
 
-	// Use longer context timeout for ConnectEx
+	// Use context timeout for ConnectEx (replaces old TerminalReadinessWaitingTimeoutSeconds)
 	connectCtx, connectCancel := context.WithTimeout(context.Background(), 180*time.Second)
 	defer connectCancel()
 

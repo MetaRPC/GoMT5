@@ -120,7 +120,7 @@ fmt.Printf("Price at %s: %.5f\n", tick.Time.Format("15:04:05"), tick.Bid)
 
 ```go
 import (
-    "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
+    pb "github.com/MetaRPC/GoMT5/package"
     "your-project/mt5"
 )
 

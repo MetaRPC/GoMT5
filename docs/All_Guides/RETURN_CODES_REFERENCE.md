@@ -302,7 +302,7 @@ import (
 
     "github.com/MetaRPC/GoMT5/mt5"
     mt5errors "github.com/MetaRPC/GoMT5/examples/errors"
-    pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
+    pb "github.com/MetaRPC/GoMT5/package"
 )
 
 func main() {

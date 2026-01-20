@@ -5,7 +5,7 @@ go 1.23.6
 replace github.com/MetaRPC/GoMT5/examples/errors => ./errors
 
 require (
-	git.mtapi.io/root/mrpc-proto v0.0.0-20250812093834-58b4119a2c55
+	github.com/MetaRPC/GoMT5/package v0.0.0-00010101000000-000000000000
 	github.com/MetaRPC/GoMT5/examples/errors v0.0.0-00010101000000-000000000000
 	github.com/MetaRPC/GoMT5/mt5 v0.0.0
 	github.com/google/uuid v1.6.0
@@ -22,3 +22,5 @@ require (
 )
 
 replace github.com/MetaRPC/GoMT5/mt5 => ./mt5
+
+replace github.com/MetaRPC/GoMT5/package => ../package

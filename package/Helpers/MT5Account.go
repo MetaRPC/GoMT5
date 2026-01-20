@@ -92,7 +92,7 @@ import (
 	"net"
 	"strings"
 
-	pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
+	pb "github.com/MetaRPC/GoMT5/package"
 
 	mt5errors "github.com/MetaRPC/GoMT5/examples/errors"
 	"github.com/google/uuid"
@@ -207,6 +207,14 @@ func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID
 		Port:                     443,
 		ConnectTimeout:           30,
 	}, nil
+}
+
+// NewMT5AccountAuto creates a new MT5Account instance with gRPC connection and auto-generated UUID.
+// Default grpcServer is "mt5.mrpc.pro:443" if empty string is provided.
+// The connection is established with TLS, keepalive, and automatic reconnect configured.
+// A random UUID is automatically generated for the session.
+func NewMT5AccountAuto(user uint64, password string, grpcServer string) (*MT5Account, error) {
+	return NewMT5Account(user, password, grpcServer, uuid.New())
 }
 
 // isConnected checks if the account has an active gRPC connection.
@@ -469,13 +477,13 @@ func ExecuteStreamWithReconnect[TRequest any, TReply any, TData any](
 //
 // This method provides full control over connection settings including:
 //   - MT5 cluster name for connection
-//   - Connection timeout settings
+//   - Connection timeout (via context.Context)
 //   - Base chart symbol selection
 //   - Expert Advisors to add
 //
 // Parameters:
-//   - ctx: Context for timeout and cancellation control
-//   - req: ConnectExRequest with User, Password, MtClusterName, BaseChartSymbol, TerminalReadinessWaitingTimeoutSeconds, ExpertsToAdd
+//   - ctx: Context for timeout and cancellation control (timeout replaces old TerminalReadinessWaitingTimeoutSeconds field)
+//   - req: ConnectExRequest with User, Password, MtClusterName, BaseChartSymbol, ExpertsToAdd
 //
 // Returns ConnectData with session UUID and connection status, or error on failure.
 func (a *MT5Account) ConnectEx(ctx context.Context, req *pb.ConnectExRequest) (*pb.ConnectData, error) {

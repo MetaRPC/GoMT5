@@ -670,7 +670,7 @@ import (
     "google.golang.org/protobuf/types/known/emptypb"
 
     // Protobuf definitions for MT5
-    pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
+    pb "github.com/MetaRPC/GoMT5/package"
 )
 ```
 

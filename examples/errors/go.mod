@@ -2,4 +2,6 @@ module github.com/MetaRPC/GoMT5/examples/errors
 
 go 1.23.6
 
-require git.mtapi.io/root/mrpc-proto v0.0.0-20250812093834-58b4119a2c55
+require github.com/MetaRPC/GoMT5/package v0.0.0-00010101000000-000000000000
+
+replace github.com/MetaRPC/GoMT5/package => ../../package

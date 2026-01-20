@@ -116,7 +116,7 @@ import (
     "fmt"
     "time"
 
-    pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
+    pb "github.com/MetaRPC/GoMT5/package"
     "github.com/MetaRPC/GoMT5/mt5"
 )
 

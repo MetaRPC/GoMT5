@@ -54,8 +54,9 @@ package lowlevel
 import (
 	"context"
 	"fmt"
+	"time"
 
-	pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
+	pb "github.com/MetaRPC/GoMT5/package"
 	"github.com/MetaRPC/GoMT5/examples/demos/config"
 	"github.com/MetaRPC/GoMT5/examples/demos/helpers"
 	"github.com/MetaRPC/GoMT5/mt5"
@@ -95,15 +96,18 @@ func RunTrading02() error {
 
 	// ConnectEx - Connect to MT5 cluster
 	baseSymbol := cfg.TestSymbol
-	timeoutSec := int32(120)
 	connectExReq := &pb.ConnectExRequest{
-		User:                                   cfg.User,
-		Password:                               cfg.Password,
-		MtClusterName:                          cfg.MtCluster,
-		BaseChartSymbol:                        &baseSymbol,
-		TerminalReadinessWaitingTimeoutSeconds: &timeoutSec,
+		User:            cfg.User,
+		Password:        cfg.Password,
+		MtClusterName:   cfg.MtCluster,
+		BaseChartSymbol: &baseSymbol,
 	}
-	connectData, err := account.ConnectEx(ctx, connectExReq)
+
+	// Use context timeout for ConnectEx (replaces old TerminalReadinessWaitingTimeoutSeconds)
+	connectCtx, connectCancel := context.WithTimeout(ctx, 180*time.Second)
+	defer connectCancel()
+
+	connectData, err := account.ConnectEx(connectCtx, connectExReq)
 	helpers.Fatal(err, "ConnectEx failed")
 
 	// CRITICAL: Update account GUID with the one returned by server

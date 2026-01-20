@@ -162,7 +162,7 @@ import (
 	"sort"
 	"strings"
 
-	pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
+	pb "github.com/MetaRPC/GoMT5/package"
 )
 
 // ProtobufInspector provides interactive exploration of MT5 protobuf types
@@ -1754,7 +1754,7 @@ func (pi *ProtobufInspector) printHeader() {
 	fmt.Println("║         Explore MT5 gRPC API Types, Fields & Enums                 ║")
 	fmt.Println("║                                                                    ║")
 	fmt.Println("╚════════════════════════════════════════════════════════════════════╝")
-	fmt.Println("\nPackage: git.mtapi.io/root/mrpc-proto/mt5/libraries/go")
+	fmt.Println("\nPackage: github.com/MetaRPC/GoMT5/package")
 }
 
 func (pi *ProtobufInspector) printQuickStart() {

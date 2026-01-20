@@ -10,7 +10,7 @@ require (
 )
 
 require (
-	git.mtapi.io/root/mrpc-proto v0.0.0-20250812093834-58b4119a2c55 // indirect
+	github.com/MetaRPC/GoMT5/package v0.0.0-00010101000000-000000000000 // indirect
 	github.com/MetaRPC/GoMT5/examples/errors v0.0.0-00010101000000-000000000000 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	golang.org/x/net v0.40.0 // indirect
@@ -22,3 +22,5 @@ require (
 replace github.com/MetaRPC/GoMT5/mt5 => ./examples/mt5
 
 replace github.com/MetaRPC/GoMT5/examples/errors => ./examples/errors
+
+replace github.com/MetaRPC/GoMT5/package => ./package

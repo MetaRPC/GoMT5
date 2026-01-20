@@ -164,7 +164,7 @@ import (
 	"syscall"
 	"time"
 
-	pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
+	pb "github.com/MetaRPC/GoMT5/package"
 	"github.com/MetaRPC/GoMT5/examples/demos/helpers"
 	"github.com/MetaRPC/GoMT5/examples/demos/orchestrators"
 	"github.com/MetaRPC/GoMT5/mt5"
