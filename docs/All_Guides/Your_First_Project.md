@@ -310,7 +310,7 @@ func main() {
 	}
 
 	fmt.Println("\n╔════════════════════════════════════════════════════════╗")
-	fmt.Println("║   🎉 CONGRATULATIONS! YOUR FIRST PROJECT WORKS! 🎉     ║")
+	fmt.Println("║   🎉 CONGRATULATIONS! YOUR FIRST PROJECT WORKS! 🎉    ║")
 	fmt.Println("╚════════════════════════════════════════════════════════╝\n")
 }
 ```
