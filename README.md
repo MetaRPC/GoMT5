@@ -1,4 +1,4 @@
-# GoMT5
+## GoMT5
 
 Go SDK for MetaTrader 5 via gRPC gateway.
 
