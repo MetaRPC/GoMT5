@@ -125,28 +125,34 @@ PositionsHistoryReply {
 
 ---
 
+> **💡 Enum Usage Note:** The tables show simplified constant names for readability.
+> In Go code, use full names with the enum type prefix.
+>
+> Format: `pb.<ENUM_TYPE>_<CONSTANT_NAME>`
+>
+> Example: `pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_ASC`
+
 ### 📘 Enum: AH_ENUM_POSITIONS_HISTORY_SORT_TYPE
 
 | Value | Constant | Description |
 |-------|----------|-------------|
-| 0 | `POSITION_OPEN_TIME_ASC` | Sort by position open time (ascending) |
-| 1 | `POSITION_OPEN_TIME_DESC` | Sort by position open time (descending) |
-| 2 | `POSITION_TICKET_ASC` | Sort by position ticket (ascending) |
-| 3 | `POSITION_TICKET_DESC` | Sort by position ticket (descending) |
+| 0 | `AH_POSITION_OPEN_TIME_ASC` | Sort by position open time (ascending) |
+| 1 | `AH_POSITION_OPEN_TIME_DESC` | Sort by position open time (descending) |
+| 2 | `AH_POSITION_TICKET_ASC` | Sort by position ticket (ascending) |
+| 3 | `AH_POSITION_TICKET_DESC` | Sort by position ticket (descending) |
 
 ### 📘 Enum: AH_ENUM_POSITIONS_HISTORY_ORDER_TYPE
 
 | Value | Constant | Description |
 |-------|----------|-------------|
-| 0 | `ORDER_TYPE_BUY` | Market Buy order |
-| 1 | `ORDER_TYPE_SELL` | Market Sell order |
-| 2 | `ORDER_TYPE_BUY_LIMIT` | Buy Limit pending order |
-| 3 | `ORDER_TYPE_SELL_LIMIT` | Sell Limit pending order |
-| 4 | `ORDER_TYPE_BUY_STOP` | Buy Stop pending order |
-| 5 | `ORDER_TYPE_SELL_STOP` | Sell Stop pending order |
-| 6 | `ORDER_TYPE_BUY_STOP_LIMIT` | Buy Stop Limit (pending Buy Limit order at StopLimit price) |
-| 7 | `ORDER_TYPE_SELL_STOP_LIMIT` | Sell Stop Limit (pending Sell Limit order at StopLimit price) |
-| 8 | `ORDER_TYPE_CLOSE_BY` | Order to close a position by an opposite one |
+| 0 | `AH_ORDER_TYPE_BUY` | Market Buy order |
+| 1 | `AH_ORDER_TYPE_SELL` | Market Sell order |
+| 2 | `AH_ORDER_TYPE_BUY_LIMIT` | Buy Limit pending order |
+| 3 | `AH_ORDER_TYPE_SELL_LIMIT` | Sell Limit pending order |
+| 4 | `AH_ORDER_TYPE_BUY_STOP` | Buy Stop pending order |
+| 5 | `AH_ORDER_TYPE_SELL_STOP` | Sell Stop pending order |
+| 6 | `AH_ORDER_TYPE_BUY_STOP_LIMIT` | Buy Stop Limit (pending Buy Limit order at StopLimit price) |
+| 7 | `AH_ORDER_TYPE_SELL_STOP_LIMIT` | Sell Stop Limit (pending Sell Limit order at StopLimit price) |
 
 ---
 

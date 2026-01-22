@@ -94,6 +94,13 @@ func (a *MT5Account) OrderCalcProfit(
 
 ---
 
+> **💡 Enum Usage Note:** The tables show simplified constant names for readability.
+> In Go code, use full names with the enum type prefix.
+>
+> Format: `pb.<ENUM_TYPE>_<CONSTANT_NAME>`
+>
+> Example: `pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY`
+
 ### 📘 Enum: ENUM_ORDER_TYPE_TF
 
 | Value | Constant | Description |

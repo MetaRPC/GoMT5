@@ -1,126 +1,103 @@
-# Ваш первый проект с нуля
+# Your First Project in 10 Minutes
 
-> **Быстрый старт** - создайте свой собственный MT5 торговый проект за 10 минут, используя только Go модули
-
----
-
-## 🎯 Для кого этот гайд?
-
-Этот документ предназначен для тех, кто хочет:
-
-- **Быстро начать** писать код для MT5 в своем проекте на Go
-- **Не клонировать** весь репозиторий GoMT5
-- **Создать проект с нуля** и подключить минимальные зависимости
-- **Написать первый метод** и увидеть результат немедленно
-
-### Разница между этим гайдом и GETTING_STARTED.md
-
-| Getting Started | Your First Project (этот гайд) |
-|----------------|--------------------------------|
-| Клонируете готовый репозиторий | Создаете проект с нуля |
-| Изучаете архитектуру и примеры | Сразу пишете работающий код |
-| Все 3 уровня API | Только базовый уровень (MT5Account) |
-| Долгий путь обучения | Быстрый результат |
-| Для глубокого погружения | Для быстрого старта |
-
-> 💡 После того как вы пройдете этот гайд и получите первый результат, рекомендуем изучить [GETTING_STARTED.md](./GETTING_STARTED.md) для понимания полной архитектуры SDK.
+> **Practice Before Theory** - create a working MT5 trading project before diving into documentation
 
 ---
 
-## 📋 Что мы будем делать?
+## Why This Guide?
 
-В этом гайде мы создадим минималистичный проект, который:
+I want to show you through a simple example how easy it is to use our gRPC gateway for working with MetaTrader 5.
 
-1. ✅ Подключится к MT5 терминалу через gRPC
-2. ✅ Получит информацию о счете (баланс, эквити, маржу)
-3. ✅ Выведет результат в консоль
+**Before you dive into learning the basics and project fundamentals - let's create your first project.**
 
-**Это займет 10 минут и требует минимум кода.**
+We'll download one Go module `package`, which contains:
+
+- ✅ Protobuf definitions of all MT5 methods
+- ✅ MT5Account - ready-to-use gRPC client
+- ✅ Error handler - ApiError types and return codes
+- ✅ Everything necessary to get started
+
+**This is the foundation** for your future algorithmic trading system.
 
 ---
 
-## Шаг 1: Установите Go 1.21 или выше
 
-Если у вас еще не установлен Go:
+> 💡 After you get your first results, proceed to [GETTING_STARTED.md](./GETTING_STARTED.md) for a deep understanding of the SDK architecture.
 
-**Скачайте и установите:**
+---
+
+## Step 1: Install Go 1.21 or Higher
+
+If you don't have Go installed yet:
+
+**Download and install:**
 
 - [Go Download](https://go.dev/dl/)
 
-**Проверьте установку:**
+**Verify installation:**
 
 ```bash
 go version
-# Должно показать: go version go1.21.x или выше
+# Should show: go version go1.21.x or higher
 ```
 
 ---
 
-## Шаг 2: Создайте новый Go проект
+## Step 2: Create a New Go Project
 
-Откройте терминал (командную строку) и выполните:
+Open terminal (command line) and execute:
 
 ```bash
-# Создаем папку для проекта
+# Create project folder
 mkdir MyMT5Project
 cd MyMT5Project
 
-# Инициализируем Go модуль
+# Initialize Go module
 go mod init mymt5project
 ```
 
-**Что произошло:**
+**What happened:**
 
-- ✅ Создана папка `MyMT5Project`
-- ✅ Внутри создан файл `go.mod` - манифест вашего проекта
-- ✅ Теперь можно добавлять зависимости
+- ✅ Created `MyMT5Project` folder
+- ✅ Created `go.mod` file inside - your project manifest
+- ✅ Now you can add dependencies
 
 ---
 
-## Шаг 3: Установите package модуль GoMT5
+## Step 3: Install the GoMT5 package Module
 
-Это самый важный шаг - устанавливаем **единственный модуль**, который содержит всё необходимое:
+This is the most important step - installing the **single module** that contains everything you need:
 
 ```bash
 go get github.com/MetaRPC/GoMT5/package
 ```
 
-> **📌 Важно для новичков:** После выполнения команды вы **НЕ увидите новых папок** в вашем проекте.
-> Это нормально! Go модули устанавливаются в системный кеш (`C:\Users\<имя>\go\pkg\mod`), а не копируются в проект.
+> **📌 Important for beginners:** After running the command, you will **NOT see new folders** in your project.
+> This is normal! Go modules are installed in the system cache (`C:\Users\<username>\go\pkg\mod`), not copied to the project.
 
-**Как проверить, что установка прошла успешно?**
+**How to verify the installation was successful?**
 
-**Способ 1:** Откройте файл `go.mod` и убедитесь, что там появилась строка:
+**Method 1:** Open the `go.mod` file and make sure a line with the package appeared:
 
 ```go
-github.com/MetaRPC/GoMT5/package v0.0.0-20260120212705-d4be7827736c // indirect
+github.com/MetaRPC/GoMT5/package v0.0.0-XXXXXXXXXXXXXXXX-XXXXXXXXXXXX
 ```
 
-**Способ 2:** Выполните команду проверки:
+(Version may differ - this is normal)
+
+**Method 2:** Run the verification command:
 
 ```bash
 go list -m github.com/MetaRPC/GoMT5/package
 ```
 
-Если видите версию пакета - **всё установлено правильно!** ✅
-
-**Что включает этот модуль:**
-
-- ✅ **MT5Account** - низкоуровневый gRPC клиент (Layer 1)
-- ✅ **Protocol Buffers** - все proto-определения для MT5 API
-- ✅ **gRPC stubs** - сгенерированные gRPC клиенты
-- ✅ **Обработка ошибок** - встроенные типы ApiError и константы RetCode
-- ✅ **Независимый модуль** - работает автономно
-
-Остальные зависимости (gRPC, protobuf, UUID) установятся автоматически.
-
-> **💡 Важно:** Модуль `package` - это ВСЁ что вам нужно для работы с MT5 через Go. Это полностью автономный портируемый модуль!
+If you see the package version - **everything is installed correctly!** ✅
 
 ---
 
-## Шаг 4: Создайте файл конфигурации config.json
+## Step 4: Create config.json Configuration File
 
-Создайте файл `config.json` в корне проекта:
+Create a `config.json` file in the project root:
 
 ```json
 {
@@ -135,31 +112,30 @@ go list -m github.com/MetaRPC/GoMT5/package
 }
 ```
 
-**Объяснение параметров:**
+**Parameter explanations:**
 
-| Параметр | Описание | Где взять |
+| Parameter | Description | Where to Get |
 |----------|----------|-----------|
-| **user** | Номер вашего MT5 счета (логин) | В терминале MT5: Инструменты → Настройки → Логин |
-| **password** | Мастер-пароль от MT5 счета | Тот который вы получили при регистрации |
-| **host** | Хост gRPC шлюза | `mt5.mrpc.pro` (публичный шлюз) |
-| **port** | Порт gRPC шлюза | `443` (стандартный HTTPS порт) |
-| **grpc_server** | Полный адрес gRPC шлюза | `mt5.mrpc.pro:443` (host:port) |
-| **mt_cluster** | Название кластера вашего брокера | В терминале MT5: см. название сервера |
-| **test_symbol** | Торговый символ для примеров | `EURUSD`, `GBPUSD`, `BTCUSD` и т.д. |
-| **test_volume** | Объем для тестовых ордеров | `0.01` (минимальный лот) |
+| **user** | Your MT5 account number (login) | In MT5 terminal: Tools → Options → Login |
+| **password** | Master password for MT5 account | The one you received during registration |
+| **host** | gRPC gateway host | `mt5.mrpc.pro` (public gateway) |
+| **port** | gRPC gateway port | `443` (standard HTTPS port) |
+| **grpc_server** | Full gRPC gateway address | `mt5.mrpc.pro:443` (host:port) |
+| **mt_cluster** | Your broker's cluster name | In MT5 terminal: see server name |
+| **test_symbol** | Trading symbol for examples | `EURUSD`, `GBPUSD`, `BTCUSD`, etc. |
+| **test_volume** | Volume for test orders | `0.01` (minimum lot) |
 
-**Замените:**
+**Replace:**
 
-- `user`, `password`, `mt_cluster` - на данные вашего MT5 демо-счета
-- `grpc_server`, `host`, `port` - можно оставить как есть (публичный шлюз MetaRPC)
+- `user`, `password`, `mt_cluster` - with your MT5 demo account data
+- `grpc_server`, `host`, `port` - can be left as is (MetaRPC public gateway)
 
-> **❓ Нет MT5 аккаунта?** См. раздел FAQ ниже - как создать демо-счет бесплатно.
 
 ---
 
-## Шаг 5: Создайте структуру для конфигурации
+## Step 5: Create Configuration Structure
 
-Создайте файл `config.go` в корне проекта:
+Create a `config.go` file in the project root:
 
 ```go
 package main
@@ -169,7 +145,7 @@ import (
 	"os"
 )
 
-// Config содержит настройки подключения к MT5
+// Config contains MT5 connection settings
 type Config struct {
 	User       uint64  `json:"user"`
 	Password   string  `json:"password"`
@@ -181,7 +157,7 @@ type Config struct {
 	TestVolume float64 `json:"test_volume"`
 }
 
-// LoadConfig загружает конфигурацию из JSON файла
+// LoadConfig loads configuration from JSON file
 func LoadConfig() (*Config, error) {
 	file, err := os.Open("config.json")
 	if err != nil {
@@ -201,9 +177,9 @@ func LoadConfig() (*Config, error) {
 
 ---
 
-## Шаг 6: Напишите код для подключения и получения информации о счете
+## Step 6: Write Code to Connect and Get Account Information
 
-Создайте файл `main.go` в корне проекта:
+Create a `main.go` file in the project root:
 
 ```go
 package main
@@ -220,224 +196,226 @@ import (
 func main() {
 
 	// ============================================================================
-	// ШАГ 1: ЗАГРУЗКА КОНФИГУРАЦИИ
+	// STEP 1: LOAD CONFIGURATION
 	// ============================================================================
 
 	config, err := LoadConfig()
 	if err != nil {
-		log.Fatalf("❌ Ошибка загрузки config.json: %v", err)
+		log.Fatalf("❌ Error loading config.json: %v", err)
 	}
 
-	fmt.Println("📋 Конфигурация подключения:")
+	fmt.Println("📋 Connection configuration:")
 	fmt.Printf("   User: %d\n", config.User)
 	fmt.Printf("   Cluster: %s\n", config.MtCluster)
 	fmt.Printf("   gRPC Server: %s\n", config.GrpcServer)
 	fmt.Printf("   Symbol: %s\n\n", config.TestSymbol)
 
 	// ============================================================================
-	// ШАГ 2: СОЗДАНИЕ MT5ACCOUNT
+	// STEP 2: CREATE MT5ACCOUNT
 	// ============================================================================
 
-	fmt.Println("🔌 Создание MT5Account...")
+	fmt.Println("🔌 Creating MT5Account...")
 
-	// Создаем MT5Account с автогенерацией UUID
+	// Create MT5Account with auto-generated UUID
 	account, err := mt5.NewMT5AccountAuto(
 		config.User,
 		config.Password,
 		config.GrpcServer,
 	)
 	if err != nil {
-		log.Fatalf("❌ Ошибка создания MT5Account: %v", err)
+		log.Fatalf("❌ Error creating MT5Account: %v", err)
 	}
 	defer account.Close()
 
-	fmt.Printf("✅ MT5Account создан (UUID: %s)\n\n", account.Id.String())
+	fmt.Printf("✅ MT5Account created (UUID: %s)\n\n", account.Id.String())
 
 	// ============================================================================
-	// ШАГ 3: ПОДКЛЮЧЕНИЕ К MT5
+	// STEP 3: CONNECT TO MT5
 	// ============================================================================
 
-	fmt.Println("🔗 Подключение к MT5 терминалу...")
+	fmt.Println("🔗 Connecting to MT5 terminal...")
 
 	ctx := context.Background()
 
-	// Подготовка запроса на подключение
+	// Prepare connection request
 	connectReq := &pb.ConnectExRequest{
 		User:          config.User,
 		Password:      config.Password,
 		MtClusterName: config.MtCluster,
 	}
 
-	// Выполняем подключение
+	// Execute connection
 	connectData, err := account.ConnectEx(ctx, connectReq)
 	if err != nil {
-		log.Fatalf("❌ Ошибка подключения: %v", err)
+		log.Fatalf("❌ Connection error: %v", err)
 	}
 
-	fmt.Printf("✅ Подключено успешно!\n")
+	fmt.Printf("✅ Connected successfully!\n")
 	fmt.Printf("   Instance ID: %s\n\n", connectData.TerminalInstanceGuid)
 
 	// ============================================================================
-	// ШАГ 4: ПОЛУЧЕНИЕ ИНФОРМАЦИИ О СЧЕТЕ
+	// STEP 4: GET ACCOUNT INFORMATION
 	// ============================================================================
 
-	// Создаем запрос на получение информации о счете
+	// Create account information request
 	accountReq := &pb.AccountSummaryRequest{}
 
-	// Выполняем запрос
+	// Execute request
 	accountData, err := account.AccountSummary(ctx, accountReq)
 	if err != nil {
-		log.Fatalf("❌ Ошибка получения данных счета: %v", err)
+		log.Fatalf("❌ Error getting account data: %v", err)
 	}
 
 	// ============================================================================
-	// ШАГ 5: ВЫВОД РЕЗУЛЬТАТОВ
+	// STEP 5: OUTPUT RESULTS
 	// ============================================================================
 
 	fmt.Println("\n╔════════════════════════════════════════════════════════╗")
-	fmt.Println("║              ИНФОРМАЦИЯ О СЧЕТЕ                        ║")
+	fmt.Println("║              ACCOUNT INFORMATION                       ║")
 	fmt.Println("╚════════════════════════════════════════════════════════╝")
 	fmt.Println()
-	fmt.Printf("   Логин:              %d\n", accountData.AccountLogin)
-	fmt.Printf("   Имя пользователя:   %s\n", accountData.AccountUserName)
-	fmt.Printf("   Компания:           %s\n", accountData.AccountCompanyName)
-	fmt.Printf("   Валюта:             %s\n", accountData.AccountCurrency)
+	fmt.Printf("   Login:              %d\n", accountData.AccountLogin)
+	fmt.Printf("   Username:           %s\n", accountData.AccountUserName)
+	fmt.Printf("   Company:            %s\n", accountData.AccountCompanyName)
+	fmt.Printf("   Currency:           %s\n", accountData.AccountCurrency)
 	fmt.Println()
-	fmt.Printf("💰 Баланс:             %.2f %s\n", accountData.AccountBalance, accountData.AccountCurrency)
-	fmt.Printf("💎 Эквити:             %.2f %s\n", accountData.AccountEquity, accountData.AccountCurrency)
+	fmt.Printf("💰 Balance:            %.2f %s\n", accountData.AccountBalance, accountData.AccountCurrency)
+	fmt.Printf("💎 Equity:             %.2f %s\n", accountData.AccountEquity, accountData.AccountCurrency)
 	fmt.Println()
-	fmt.Printf("   Кредит:             %.2f %s\n", accountData.AccountCredit, accountData.AccountCurrency)
-	fmt.Printf("   Плечо:              1:%d\n", accountData.AccountLeverage)
+	fmt.Printf("   Credit:             %.2f %s\n", accountData.AccountCredit, accountData.AccountCurrency)
+	fmt.Printf("   Leverage:           1:%d\n", accountData.AccountLeverage)
 	fmt.Println()
 
 	if accountData.ServerTime != nil {
 		serverTime := accountData.ServerTime.AsTime()
-		fmt.Printf("   Время сервера:      %s\n", serverTime.Format("2006-01-02 15:04:05"))
-		fmt.Printf("   Часовой пояс UTC:   %+d минут\n", accountData.UtcTimezoneServerTimeShiftMinutes)
+		fmt.Printf("   Server time:        %s\n", serverTime.Format("2006-01-02 15:04:05"))
+		fmt.Printf("   UTC timezone:       %+d minutes\n", accountData.UtcTimezoneServerTimeShiftMinutes)
 	}
 
 	fmt.Println()
 	fmt.Println("╚════════════════════════════════════════════════════════╝")
 
 	// ============================================================================
-	// ШАГ 6: ОТКЛЮЧЕНИЕ ОТ MT5
+	// STEP 6: DISCONNECT FROM MT5
 	// ============================================================================
 
-	fmt.Println("\n🔌 Отключение от MT5...")
+	fmt.Println("\n🔌 Disconnecting from MT5...")
 
 	disconnectReq := &pb.DisconnectRequest{}
 	_, err = account.Disconnect(ctx, disconnectReq)
 	if err != nil {
-		log.Printf("⚠️  Предупреждение при отключении: %v", err)
+		log.Printf("⚠️  Warning on disconnect: %v", err)
 	} else {
-		fmt.Println("✅ Отключено успешно!")
+		fmt.Println("✅ Disconnected successfully!")
 	}
 
 	fmt.Println("\n╔════════════════════════════════════════════════════════╗")
-	fmt.Println("║   🎉 ПОЗДРАВЛЯЕМ! ВАШ ПЕРВЫЙ ПРОЕКТ РАБОТАЕТ! 🎉      ║")
+	fmt.Println("║   🎉 CONGRATULATIONS! YOUR FIRST PROJECT WORKS! 🎉     ║")
 	fmt.Println("╚════════════════════════════════════════════════════════╝\n")
 }
 ```
 
 ---
 
-## Шаг 7: Запустите проект
+## Step 7: Run the Project
 
-Сохраните все файлы и выполните:
+Save all files and execute:
 
 ```bash
+go mod tidy
 go run .
 ```
 
-**Или соберите исполняемый файл:**
+**What does `go mod tidy` do?**
 
-```bash
-# Windows
-go build -o mymt5project.exe
+This command automatically:
 
-# Linux/Mac
-go build -o mymt5project
-```
+- ✅ Downloads all missing dependencies (gRPC, protobuf, UUID)
+- ✅ Removes unused dependencies from `go.mod`
+- ✅ Updates `go.sum` file with checksums
 
-**Ожидаемый результат:**
+Now, when all code files are created, `go mod tidy` will see the real imports and pull in the necessary dependencies.
+
+
+**Expected result:**
 
 ```
 ╔════════════════════════════════════════════════════════╗
-║         GoMT5 - Ваш первый проект с MT5                ║
+║         GoMT5 - Your First Project with MT5            ║
 ╚════════════════════════════════════════════════════════╝
 
-📋 Конфигурация подключения:
+📋 Connection configuration:
    User: 591129415
    Cluster: FxPro-MT5 Demo
    gRPC Server: mt5.mrpc.pro:443
    Symbol: EURUSD
 
-🔌 Создание MT5Account...
-✅ MT5Account создан (UUID: 12345678-90ab-cdef-1234-567890abcdef)
+🔌 Creating MT5Account...
+✅ MT5Account created (UUID: 12345678-90ab-cdef-1234-567890abcdef)
 
-🔗 Подключение к MT5 терминалу...
-✅ Подключено успешно!
+🔗 Connecting to MT5 terminal...
+✅ Connected successfully!
    Instance ID: 98765432-10ab-cdef-5678-901234567890
 
 
 ╔════════════════════════════════════════════════════════╗
-║              ИНФОРМАЦИЯ О СЧЕТЕ                        ║
+║              ACCOUNT INFORMATION                       ║
 ╚════════════════════════════════════════════════════════╝
 
-   Логин:              591129415
-   Имя пользователя:   Demo User
-   Компания:           FxPro Financial Services Ltd
-   Валюта:             USD
+   Login:              591129415
+   Username:           Demo User
+   Company:            FxPro Financial Services Ltd
+   Currency:           USD
 
-💰 Баланс:             10000.00 USD
-💎 Эквити:             10000.00 USD
+💰 Balance:            10000.00 USD
+💎 Equity:             10000.00 USD
 
-   Кредит:             0.00 USD
-   Плечо:              1:100
+   Credit:             0.00 USD
+   Leverage:           1:100
 
-   Время сервера:      2025-01-22 15:30:45
-   Часовой пояс UTC:   +120 минут
+   Server time:        2025-01-22 15:30:45
+   UTC timezone:       +120 minutes
 
 ╚════════════════════════════════════════════════════════╝
 
-🔌 Отключение от MT5...
-✅ Отключено успешно!
+🔌 Disconnecting from MT5...
+✅ Disconnected successfully!
 
 ╔════════════════════════════════════════════════════════╗
-║   🎉 ПОЗДРАВЛЯЕМ! ВАШ ПЕРВЫЙ ПРОЕКТ РАБОТАЕТ! 🎉      ║
+║   🎉 CONGRATULATIONS! YOUR FIRST PROJECT WORKS! 🎉     ║
 ╚════════════════════════════════════════════════════════╝
 ```
 
 ---
 
-## 🎉 Поздравляем! Вы сделали это!
+## 🎉 Congratulations! You Did It!
 
-Вы только что:
+You just:
 
-✅ Создали новый Go проект с нуля
-✅ Подключили **единственный** Go модуль `package` для работы с MT5
-✅ Настроили конфигурацию подключения
-✅ Подключились к MT5 терминалу через gRPC
-✅ Получили полную информацию о счете программно
+✅ Created a new Go project from scratch
+✅ Integrated the **single** Go module `package` for working with MT5
+✅ Configured connection settings
+✅ Connected to MT5 terminal via gRPC
+✅ Got complete account information programmatically
 
-**Это был низкоуровневый (Low-Level) подход** с прямым использованием `MT5Account` и protobuf.
+**This was a low-level approach** using `MT5Account` and protobuf directly.
 
 ---
 
-## 📁 Структура вашего проекта
+## 📁 Your Project Structure
 
-После завершения всех шагов ваша структура проекта должна выглядеть так:
+After completing all steps, your project structure should look like this:
 
 ```
 MyMT5Project/
-├── config.json          # Конфигурация подключения к MT5
-├── config.go            # Загрузка конфигурации из JSON
-├── main.go              # Главный код приложения
-├── go.mod               # Go модуль с зависимостями
-└── go.sum               # Контрольные суммы зависимостей
+├── config.json          # MT5 connection configuration
+├── config.go            # Load configuration from JSON
+├── main.go              # Main application code
+├── go.mod               # Go module with dependencies
+└── go.sum               # Dependency checksums
 ```
 
-**Содержимое go.mod:**
+**Contents of go.mod:**
 
 ```go
 module mymt5project
@@ -447,21 +425,21 @@ go 1.21
 require (
 	github.com/MetaRPC/GoMT5/package v0.0.0-20260120212705-d4be7827736c // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	// ... другие автоматически установленные зависимости (grpc, protobuf и т.д.)
+	// ... other automatically installed dependencies (grpc, protobuf, etc.)
 )
 ```
 
 ---
 
-## 🚀 Что дальше?
+## 🚀 What's Next?
 
-Теперь, когда у вас есть рабочий проект, вы можете:
+Now that you have a working project, you can:
 
-### 1. Добавить больше функциональности
+### 1. Add More Functionality
 
-**Примеры того что можно сделать:**
+**Examples of what you can do:**
 
-#### Получить текущие котировки
+#### Get Current Quotes
 
 ```go
 tickReq := &pb.SymbolInfoTickRequest{
@@ -474,16 +452,16 @@ if err == nil {
 }
 ```
 
-#### Получить все открытые позиции
+#### Get All Open Positions
 
 ```go
 ordersReq := &pb.OpenedOrdersRequest{
-	InputSortMode: pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_SORT_BY_TIME_OPEN,
+	// InputSortMode is optional (default 0 - sort by open time)
 }
 
 ordersData, err := account.OpenedOrders(ctx, ordersReq)
 if err == nil {
-	fmt.Printf("Открытых позиций: %d\n", len(ordersData.PositionInfos))
+	fmt.Printf("Open positions: %d\n", len(ordersData.PositionInfos))
 	for _, pos := range ordersData.PositionInfos {
 		fmt.Printf("  #%d %s %.2f lots, Profit: %.2f\n",
 			pos.Ticket, pos.Symbol, pos.Volume, pos.Profit)
@@ -491,179 +469,136 @@ if err == nil {
 }
 ```
 
-#### Открыть рыночный ордер
+**Optional:** If you need sorting, use `InputSortMode`:
+```go
+ordersReq := &pb.OpenedOrdersRequest{
+	InputSortMode: 0, // 0 = by time (ASC), 1 = by time (DESC), 2 = by ticket (ASC), 3 = by ticket (DESC)
+}
+```
+
+#### Open a Market Order
 
 ```go
+comment := "GoMT5 Test Order"
 orderReq := &pb.OrderSendRequest{
-	Symbol:       config.TestSymbol,
-	Operation:    pb.BMT5_ENUM_ORDER_TYPE_BUY,
-	Volume:       0.01, // 0.01 лот
-	Comment:      "GoMT5 Test Order",
+	Symbol:    config.TestSymbol,
+	Operation: pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_BUY,
+	Volume:    0.01, // 0.01 lot
+	Comment:   &comment,
 }
 
 orderData, err := account.OrderSend(ctx, orderReq)
 if err == nil {
-	fmt.Printf("Ордер открыт: #%d\n", orderData.DealTicket)
+	fmt.Printf("Order opened: Deal #%d, Order #%d\n", orderData.Deal, orderData.Order)
 }
 ```
 
-#### Потоковые данные (streaming)
+#### Streaming Data
 
 ```go
-// Подписка на тики в реальном времени
+// Subscribe to real-time ticks (with limit: 5 seconds or 10 events)
 tickReq := &pb.OnSymbolTickRequest{
 	SymbolNames: []string{config.TestSymbol},
 }
 
 dataChan, errChan := account.OnSymbolTick(ctx, tickReq)
 
+// Create context with 5-second timeout
+streamCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+defer cancel()
+
+eventCount := 0
+maxEvents := 10
+
+fmt.Println("🔄 Receiving tick stream (maximum 5 seconds or 10 events)...")
+
 for {
 	select {
 	case data := <-dataChan:
 		tick := data.SymbolTick
-		fmt.Printf("%s - Bid: %.5f, Ask: %.5f\n",
-			time.Now().Format("15:04:05"), tick.Bid, tick.Ask)
+		eventCount++
+		fmt.Printf("[%d] %s - Bid: %.5f, Ask: %.5f\n",
+			eventCount, time.Now().Format("15:04:05"), tick.Bid, tick.Ask)
+
+		if eventCount >= maxEvents {
+			fmt.Println("✅ Received maximum number of events")
+			return
+		}
 	case err := <-errChan:
-		log.Printf("Stream error: %v", err)
+		log.Printf("❌ Stream error: %v", err)
 		return
-	case <-ctx.Done():
+	case <-streamCtx.Done():
+		fmt.Printf("✅ Received %d events in 5 seconds\n", eventCount)
 		return
 	}
 }
 ```
 
-### 2. Изучить полную архитектуру SDK
+### 2. Learn the Complete SDK Architecture
 
-В репозитории GoMT5 есть **три уровня API**:
+The GoMT5 repository has **three API layers**:
 
 ```
 ┌─────────────────────────────────────────────┐
-│  MT5Sugar (Layer 3) - Удобный API           │
+│  MT5Sugar (Layer 3) - Convenient API       │
 │  examples/mt5/MT5Sugar.go                   │
 │  sugar.BuyMarket("EURUSD", 0.01)            │
 └─────────────────────────────────────────────┘
-              ↓ использует
+              ↓ uses
 ┌─────────────────────────────────────────────┐
-│  MT5Service (Layer 2) - Обёртки             │
+│  MT5Service (Layer 2) - Wrappers            │
 │  examples/mt5/MT5Service.go                 │
 │  service.GetBalance()                       │
 └─────────────────────────────────────────────┘
-              ↓ использует
+              ↓ uses
 ┌─────────────────────────────────────────────┐
-│  MT5Account (Layer 1) - Базовый gRPC ⭐     │
+│  MT5Account (Layer 1) - Base gRPC ⭐        │
 │  package/Helpers/MT5Account.go              │
 │  account.AccountSummary(ctx, req)           │
 └─────────────────────────────────────────────┘
 ```
 
-**Вы только что использовали Layer 1 (MT5Account)** - это фундамент всего!
+**You just used Layer 1 (MT5Account)** - this is the foundation of everything!
 
-Чтобы использовать слои 2 и 3:
-- Склонируйте репозиторий GoMT5
-- Изучите [GETTING_STARTED.md](./GETTING_STARTED.md)
-- Посмотрите примеры в `examples/demos/`
+To use layers 2 and 3:
 
-### 3. Изучить готовые примеры
+- Clone the GoMT5 repository
+- Study [GETTING_STARTED.md](./GETTING_STARTED.md)
+- Look at examples in `examples/demos/`
 
-В репозитории GoMT5 есть множество примеров:
+### 3. Study Ready-Made Examples
 
-- `examples/demos/lowlevel/` - примеры с MT5Account (то что вы использовали)
-- `examples/demos/service/` - примеры с MT5Service
-- `examples/demos/sugar/` - примеры с MT5Sugar
+The GoMT5 repository has many examples:
 
-### 4. Прочитать документацию
+- `examples/demos/lowlevel/` - examples with MT5Account (what you used)
+- `examples/demos/service/` - examples with MT5Service
+- `examples/demos/sugar/` - examples with MT5Sugar
 
-- [MT5Account API Reference](../API_Reference/MT5Account.md) - ⭐ полный справочник базового уровня
-- [PROJECT_MAP.md](./PROJECT_MAP.md) - карта проекта и архитектура
-- [GRPC_STREAM_MANAGEMENT.md](./GRPC_STREAM_MANAGEMENT.md) - работа с потоковыми данными
-- [RETURN_CODES_REFERENCE.md](./RETURN_CODES_REFERENCE.md) - коды возврата операций
+### 4. Read Documentation
+
+- [MT5Account API Reference](../API_Reference/MT5Account.md) - ⭐ complete reference for the base level
+- [PROJECT_MAP.md](./PROJECT_MAP.md) - project map and architecture
+- [GRPC_STREAM_MANAGEMENT.md](./GRPC_STREAM_MANAGEMENT.md) - working with streaming data
+- [RETURN_CODES_REFERENCE.md](./RETURN_CODES_REFERENCE.md) - operation return codes
 
 ---
 
-## ❓ Частые вопросы (FAQ)
 
-### Где взять доступ к gRPC шлюзу?
+### What is the `package` Module?
 
-В примере используется публичный шлюз MetaRPC:
+`package` is an **independent Go module** that contains:
 
-```
-Host: mt5.mrpc.pro
-Port: 443
-```
+- MT5Account (base gRPC client)
+- All protobuf definitions of MT5 API
+- gRPC stubs for all methods
+- Helper types and structures
 
-Этот шлюз доступен всем для тестирования и разработки.
+This is a **portable module** - you can use it in any Go project!
 
-> Если у вас есть вопросы по работе шлюза, посетите [GitHub Issues](https://github.com/MetaRPC/GoMT5/issues).
 
-### Могу ли я использовать свой собственный шлюз?
+### How to Work with Environment Variables Instead of config.json?
 
-Да! Если у вас есть собственная инстанция шлюза, просто измените параметр `GrpcServer` в `config.json`.
-
-### Как получить MT5 демо-счет бесплатно?
-
-**Шаг 1:** Выберите брокера с MT5 терминалом
-
-- FxPro: [https://www.fxpro.com/](https://www.fxpro.com/)
-- Alpari: [https://alpari.com/](https://alpari.com/)
-- RoboForex: [https://roboforex.com/](https://roboforex.com/)
-- Любой другой брокер с MT5
-
-**Шаг 2:** Скачайте и установите MT5 терминал
-
-**Шаг 3:** Откройте демо-счет
-
-1. Запустите MT5 терминал
-2. Выберите "Файл" → "Открыть счет"
-3. Выберите "Демо-счет" и следуйте инструкциям
-4. Запишите:
-   - Логин (User)
-   - Пароль (Password)
-   - Название сервера (MtCluster)
-
-**Шаг 4:** Используйте эти данные в `config.json`
-
-### Что если я получаю ошибку подключения?
-
-**Проверьте:**
-
-1. ✅ Правильность логина/пароля/кластера в `config.json`
-2. ✅ Интернет-соединение
-3. ✅ Что брокер поддерживает удаленный доступ к MT5
-4. ✅ Firewall не блокирует порт 443
-
-**Типичные ошибки:**
-
-```
-❌ "connection refused" → проверьте grpc_server
-❌ "invalid credentials" → проверьте user/password/mt_cluster
-❌ "timeout" → проверьте интернет-соединение
-```
-
-### Нужно ли устанавливать MT5 терминал на мою машину?
-
-**НЕТ!** Шлюз MetaRPC сам подключается к серверам MT5.
-
-Вам нужны только:
-- ✅ Логин/пароль от MT5 счета
-- ✅ Название кластера брокера
-- ✅ Доступ к gRPC шлюзу (mt5.mrpc.pro:443)
-
-### Что такое `package` модуль?
-
-`package` - это **независимый Go модуль**, который содержит:
-
-- MT5Account (базовый gRPC клиент)
-- Все protobuf определения MT5 API
-- gRPC stubs для всех методов
-- Вспомогательные типы и структуры
-
-Это **портируемый модуль** - вы можете использовать его в любом Go проекте!
-
-Подробнее см. [PROJECT_MAP.md](./PROJECT_MAP.md)
-
-### Как работать с переменными окружения вместо config.json?
-
-Вы можете использовать переменные окружения:
+You can use environment variables:
 
 ```go
 import (
@@ -681,13 +616,13 @@ func LoadConfigFromEnv() (*Config, error) {
 	portStr := os.Getenv("MT5_PORT")
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		port = 443 // значение по умолчанию
+		port = 443 // default value
 	}
 
 	volumeStr := os.Getenv("MT5_TEST_VOLUME")
 	volume, err := strconv.ParseFloat(volumeStr, 64)
 	if err != nil {
-		volume = 0.01 // значение по умолчанию
+		volume = 0.01 // default value
 	}
 
 	return &Config{
@@ -703,18 +638,9 @@ func LoadConfigFromEnv() (*Config, error) {
 }
 ```
 
-**Установите переменные:**
+**Set variables:**
 
 ```bash
-# Linux/Mac
-export MT5_USER=591129415
-export MT5_PASSWORD="YourPassword123"
-export MT5_HOST="mt5.mrpc.pro"
-export MT5_PORT="443"
-export MT5_GRPC_SERVER="mt5.mrpc.pro:443"
-export MT5_CLUSTER="FxPro-MT5 Demo"
-export MT5_TEST_SYMBOL="EURUSD"
-export MT5_TEST_VOLUME="0.01"
 
 # Windows (PowerShell)
 $env:MT5_USER="591129415"
@@ -727,20 +653,23 @@ $env:MT5_TEST_SYMBOL="EURUSD"
 $env:MT5_TEST_VOLUME="0.01"
 ```
 
-### Как использовать Layer 2 (MT5Service) и Layer 3 (MT5Sugar)?
+### How to Use Layer 2 (MT5Service) and Layer 3 (MT5Sugar)?
 
-Эти уровни находятся в **основном репозитории GoMT5**:
+These layers are in the **main GoMT5 repository**:
 
-1. Склонируйте репозиторий:
+1. Clone the repository:
+
    ```bash
    git clone https://github.com/MetaRPC/GoMT5.git
    ```
 
-2. Скопируйте нужные файлы в свой проект:
+2. Copy needed files to your project:
+
    - `examples/mt5/MT5Service.go` (Layer 2)
    - `examples/mt5/MT5Sugar.go` (Layer 3)
 
-3. Используйте удобные методы:
+3. Use convenient methods:
+
    ```go
    // Layer 2 - Service
    service := mt5.NewMT5Service(account)
@@ -751,37 +680,31 @@ $env:MT5_TEST_VOLUME="0.01"
    ticket, _ := sugar.BuyMarket("EURUSD", 0.01)
    ```
 
-Подробнее см. [GETTING_STARTED.md](./GETTING_STARTED.md)
+See details in [GETTING_STARTED.md](./GETTING_STARTED.md)
 
 ---
 
-## 📝 Резюме: Что мы сделали
+## 📝 Summary: What We Did
 
-В этом гайде вы создали минималистичный проект, который:
+In this guide, you created a minimalist project that:
 
-1. ✅ **Использует только Go модули** - не требует клонирования репозитория
-2. ✅ **Импортирует package модуль** - единственная зависимость для MT5
-3. ✅ **Подключается к MT5** через gRPC шлюз
-4. ✅ **Читает конфигурацию** из `config.json`
-5. ✅ **Использует MT5Account** (Layer 1 - базовый уровень)
-6. ✅ **Получает информацию о счете** и выводит в консоль
+1. ✅ **Uses only Go modules** - doesn't require cloning the repository
 
-**Это основа** для любого вашего MT5 проекта на Go.
+2. ✅ **Imports the package module** - the only dependency for MT5
 
----
+3. ✅ **Connects to MT5** via gRPC gateway
 
-## 🎯 Следующие шаги
+4. ✅ **Reads configuration** from `config.json`
 
-Теперь вы готовы к:
+5. ✅ **Uses MT5Account** (Layer 1 - base level)
 
-- 📖 [GETTING_STARTED.md](./GETTING_STARTED.md) - Полное изучение архитектуры SDK (3 уровня)
-- 📖 [PROJECT_MAP.md](./PROJECT_MAP.md) - Карта проекта и структура
-- 📖 [MT5Account API Reference](../API_Reference/MT5Account.md) - ⭐ Подробный справочник
-- 📖 [GRPC_STREAM_MANAGEMENT.md](./GRPC_STREAM_MANAGEMENT.md) - Потоковые данные
-- 🎯 Изучению готовых примеров в `examples/demos/`
+6. ✅ **Gets account information** and outputs to console
+
+**This is the foundation** for any of your MT5 projects in Go.
 
 ---
 
-**Удачи в разработке торговых систем! 🚀**
+
+**Good luck developing trading systems! 🚀**
 
 "Trade safely, code cleanly, and may your gRPC connections always be stable."

@@ -115,6 +115,13 @@ defer cancel()
 
 ## 🧱 Related enums (from proto)
 
+> **💡 Enum Usage Note:** The tables show simplified constant names for readability.
+> In Go code, use full names with the enum type prefix.
+>
+> Format: `pb.<ENUM_TYPE>_<CONSTANT_NAME>`
+>
+> Example: `pb.AccountInfoDoublePropertyType_ACCOUNT_BALANCE`
+
 ### `AccountInfoDoublePropertyType`
 
 Defined in `mt5-term-api-account-information.proto`:

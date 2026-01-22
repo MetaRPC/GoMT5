@@ -124,21 +124,37 @@ OpenedOrdersReply {
 
 ---
 
-### 📘 Enum: Position/Order Type
+> **💡 Enum Usage Note:** The tables show simplified constant names for readability.
+> In Go code, use full names with the enum type prefix.
+>
+> Format: `pb.<ENUM_TYPE>_<CONSTANT_NAME>`
+>
+> Example: `pb.BMT5_ENUM_ORDER_TYPE_BMT5_ORDER_TYPE_BUY`
+
+### 📘 Enum: BMT5_ENUM_ORDER_TYPE
 
 | Value | Constant | Description |
 |-------|----------|-------------|
-| 0 | `BUY` | Market Buy order (long position) |
-| 1 | `SELL` | Market Sell order (short position) |
-| 2 | `BUY_LIMIT` | Buy Limit pending order |
-| 3 | `SELL_LIMIT` | Sell Limit pending order |
-| 4 | `BUY_STOP` | Buy Stop pending order |
-| 5 | `SELL_STOP` | Sell Stop pending order |
-| 6 | `BUY_STOP_LIMIT` | Buy Stop Limit (pending Buy Limit order at StopLimit price) |
-| 7 | `SELL_STOP_LIMIT` | Sell Stop Limit (pending Sell Limit order at StopLimit price) |
-| 8 | `CLOSE_BY` | Order to close a position by an opposite one |
+| 0 | `BMT5_ORDER_TYPE_BUY` | Market Buy order (long position) |
+| 1 | `BMT5_ORDER_TYPE_SELL` | Market Sell order (short position) |
+| 2 | `BMT5_ORDER_TYPE_BUY_LIMIT` | Buy Limit pending order |
+| 3 | `BMT5_ORDER_TYPE_SELL_LIMIT` | Sell Limit pending order |
+| 4 | `BMT5_ORDER_TYPE_BUY_STOP` | Buy Stop pending order |
+| 5 | `BMT5_ORDER_TYPE_SELL_STOP` | Sell Stop pending order |
+| 6 | `BMT5_ORDER_TYPE_BUY_STOP_LIMIT` | Buy Stop Limit (pending Buy Limit order at StopLimit price) |
+| 7 | `BMT5_ORDER_TYPE_SELL_STOP_LIMIT` | Sell Stop Limit (pending Sell Limit order at StopLimit price) |
+| 8 | `BMT5_ORDER_TYPE_CLOSE_BY` | Order to close a position by an opposite one |
 
 **Note:** For open positions (PositionInfo), typically only values 0 (BUY) and 1 (SELL) are used. For pending orders (OrderData), all types 2-8 can be present.
+
+### 📘 Enum: BMT5_ENUM_OPENED_ORDER_SORT_TYPE
+
+| Value | Constant | Description |
+|-------|----------|-------------|
+| 0 | `BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC` | Sort by open time (ascending) |
+| 1 | `BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_DESC` | Sort by open time (descending) |
+| 2 | `BMT5_OPENED_ORDER_SORT_BY_ORDER_TICKET_ID_ASC` | Sort by order ticket ID (ascending) |
+| 3 | `BMT5_OPENED_ORDER_SORT_BY_ORDER_TICKET_ID_DESC` | Sort by order ticket ID (descending) |
 
 
 ---

@@ -65,6 +65,13 @@ MarketBookGetRequest {
 
 ---
 
+> **💡 Enum Usage Note:** The tables show simplified constant names for readability.
+> In Go code, use full names with the enum type prefix.
+>
+> Format: `pb.<ENUM_TYPE>_<CONSTANT_NAME>`
+>
+> Example: `pb.BookType_BOOK_TYPE_SELL`
+
 ### 📘 Enum: BookType
 
 | Value | Constant | Description |

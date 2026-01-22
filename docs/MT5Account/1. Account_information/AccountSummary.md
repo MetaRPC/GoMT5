@@ -117,6 +117,13 @@ defer cancel()
 
 ## 🧱 Related enums (from proto)
 
+> **💡 Enum Usage Note:** The tables show simplified constant names for readability.
+> In Go code, use full names with the enum type prefix.
+>
+> Format: `pb.<ENUM_TYPE>_<CONSTANT_NAME>`
+>
+> Example: `pb.MrpcEnumAccountTradeMode_MRPC_ACCOUNT_TRADE_MODE_DEMO`
+
 ### `MrpcEnumAccountTradeMode`
 
 Defined in `mt5-term-api-account-helper.proto`:

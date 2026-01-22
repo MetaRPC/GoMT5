@@ -386,3 +386,4 @@ go.work
 # Dependency directories
 vendor/
 
+.claude

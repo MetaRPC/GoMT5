@@ -112,6 +112,13 @@ OrderModifyRequest {
 
 ---
 
+> **💡 Enum Usage Note:** The tables show simplified constant names for readability.
+> In Go code, use full names with the enum type prefix.
+>
+> Format: `pb.<ENUM_TYPE>_<CONSTANT_NAME>`
+>
+> Example: `pb.TMT5_ENUM_ORDER_TYPE_TIME_TMT5_ORDER_TIME_GTC`
+
 ### 📘 Enum: TMT5_ENUM_ORDER_TYPE_TIME
 
 | Value | Constant | Description |
