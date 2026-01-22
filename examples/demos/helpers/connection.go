@@ -7,7 +7,7 @@ import (
 
 	pb "github.com/MetaRPC/GoMT5/package"
 	"github.com/MetaRPC/GoMT5/examples/demos/config"
-	"github.com/MetaRPC/GoMT5/mt5"
+	mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
 	"github.com/google/uuid"
 )
 

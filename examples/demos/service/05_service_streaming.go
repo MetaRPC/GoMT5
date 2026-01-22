@@ -39,11 +39,13 @@
       • All trade transaction details
       • Order/deal/position states
 
- 💡 STREAMING vs POLLING:
-   STREAMING (this demo):  Server pushes → instant updates, efficient
-   POLLING (file 04):      Client pulls → delayed, resource-intensive
+ ⚠️  IMPORTANT - Stream Timing:
+   • Start streams BEFORE triggering events you want to catch
+   • Streams capture real-time events only (not historical)
+   • Add small delay after starting stream (500ms recommended)
+   • This demo opens positions AFTER starting streams to demonstrate this
 
- ⚠️  IMPORTANT:
+ ⚠️  IMPORTANT - General:
    • Streams are high-frequency (especially ticks)
    • Always use context cancellation or timeout
    • Handle both data and error channels
@@ -66,7 +68,8 @@ import (
 	pb "github.com/MetaRPC/GoMT5/package"
 	"github.com/MetaRPC/GoMT5/examples/demos/config"
 	"github.com/MetaRPC/GoMT5/examples/demos/helpers"
-	"github.com/MetaRPC/GoMT5/mt5"
+	helpers_mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+	mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
 	"github.com/google/uuid"
 )
 
@@ -90,7 +93,7 @@ func RunServiceStreaming05() error {
 	// Create account and service
 	ctx := context.Background()
 
-	account, err := mt5.NewMT5Account(cfg.User, cfg.Password, cfg.GrpcServer, uuid.New())
+	account, err := helpers_mt5.NewMT5Account(cfg.User, cfg.Password, cfg.GrpcServer, uuid.New())
 	if err != nil {
 		return fmt.Errorf("failed to create MT5Account: %w", err)
 	}
@@ -178,30 +181,35 @@ stream2:
 	//      Use for: Monitoring trade execution, order lifecycle
 	// ══════════════════════════════════════════════════════════════
 
-	// Open a test position to generate trade events
-	fmt.Println("\nOpening test position to generate trade events...")
+	streamCtx2, cancel2 := context.WithTimeout(ctx, MAX_STREAM_SECONDS*time.Second)
+	defer cancel2()
+
+	// Start streaming BEFORE opening position
+	tradeCh, tradeErrCh := service.StreamTradeUpdates(streamCtx2)
+
+	fmt.Printf("\nStreaming trade events (max %d events or %d seconds)...\n",
+		MAX_STREAM_EVENTS, MAX_STREAM_SECONDS)
+	fmt.Println("  ℹ️  Stream started, waiting for subscription...")
+
+	// Give stream time to establish connection
+	time.Sleep(500 * time.Millisecond)
+
+	// Now open a test position to generate trade events
+	fmt.Println("  📤 Opening test position to trigger events...")
 	placeReq := &pb.OrderSendRequest{
 		Symbol:    cfg.TestSymbol,
 		Operation: pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_BUY,
 		Volume:    0.01,
 	}
 
+	var testTicket uint64
 	placeResult, err := service.PlaceOrder(ctx, placeReq)
 	if helpers.PrintShortError(err, "Failed to place test order") {
 		// Error already printed
 	} else if placeResult.ReturnedCode == 10009 {
-		testTicket := placeResult.Order
+		testTicket = placeResult.Order
 		fmt.Printf("  ✓ Test position opened: #%d\n", testTicket)
 	}
-
-	streamCtx2, cancel2 := context.WithTimeout(ctx, MAX_STREAM_SECONDS*time.Second)
-	defer cancel2()
-
-	tradeCh, tradeErrCh := service.StreamTradeUpdates(streamCtx2)
-
-	fmt.Printf("\nStreaming trade events (max %d events or %d seconds)...\n",
-		MAX_STREAM_EVENTS, MAX_STREAM_SECONDS)
-	fmt.Println("  ℹ️  Trade events appear when orders/positions change")
 
 	eventCount = 0
 	for eventCount < MAX_STREAM_EVENTS {
@@ -358,11 +366,43 @@ stream5:
 	streamCtx5, cancel5 := context.WithTimeout(ctx, MAX_STREAM_SECONDS*time.Second)
 	defer cancel5()
 
+	// Start streaming BEFORE making trades
 	txCh, txErrCh := service.StreamTransactions(streamCtx5)
 
 	fmt.Printf("\nStreaming transactions (max %d events or %d seconds)...\n",
 		MAX_STREAM_EVENTS, MAX_STREAM_SECONDS)
-	fmt.Println("  ℹ️  Most detailed stream - includes all transaction types")
+	fmt.Println("  ℹ️  Stream started, waiting for subscription...")
+
+	// Give stream time to establish connection
+	time.Sleep(500 * time.Millisecond)
+
+	// Modify an existing position to generate transaction events
+	openedData2, err := service.GetOpenedOrders(ctx,
+		pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC)
+	if err == nil && len(openedData2.PositionInfos) > 0 {
+		pos := openedData2.PositionInfos[0]
+		fmt.Printf("  📤 Modifying position #%d to trigger transaction events...\n", pos.Ticket)
+
+		// Get current price to calculate SL/TP
+		tick2, _ := service.GetSymbolTick(ctx, cfg.TestSymbol)
+		newSL := tick2.Bid - 0.001
+		newTP := tick2.Bid + 0.002
+
+		modifyReq := &pb.OrderModifyRequest{
+			Ticket:     pos.Ticket,
+			StopLoss:   &newSL,
+			TakeProfit: &newTP,
+		}
+
+		_, modifyErr := service.ModifyOrder(ctx, modifyReq)
+		if modifyErr == nil {
+			fmt.Printf("  ✓ Position modified (SL/TP updated)\n")
+		} else {
+			fmt.Printf("  ⚠️  Modification may have failed: %v\n", modifyErr)
+		}
+	} else {
+		fmt.Println("  ℹ️  No open positions to modify, events may be limited")
+	}
 
 	eventCount = 0
 	for eventCount < MAX_STREAM_EVENTS {
@@ -465,7 +505,12 @@ cleanup:
 	fmt.Println("  • For simple P&L: use StreamPositionProfits")
 	fmt.Println("  • For detailed analysis: use StreamTransactions")
 
-	fmt.Println("\n✅ All 5 streaming methods demonstrated successfully!")
+	fmt.Println("\n⚠️  Important: Stream Timing")
+	fmt.Println("  • Start streams BEFORE triggering events you want to catch")
+	fmt.Println("  • Streams capture real-time events only (not historical)")
+	fmt.Println("  • Add small delay after starting stream (500ms recommended)")
+
+	fmt.Println("\n✅ All 5 streaming methods demonstrated!")
 
 	return nil
 }

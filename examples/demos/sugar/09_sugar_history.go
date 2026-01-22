@@ -54,7 +54,7 @@ import (
 
 	"github.com/MetaRPC/GoMT5/examples/demos/config"
 	"github.com/MetaRPC/GoMT5/examples/demos/helpers"
-	"github.com/MetaRPC/GoMT5/mt5"
+	mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
 )
 
 // RunSugarHistoryDemo demonstrates MT5Sugar history methods:
@@ -353,8 +353,8 @@ func RunSugarHistoryDemo() {
 	fmt.Println("\n✅ All history operations demonstrated!")
 	fmt.Println("\n📚 SUGAR API COMPLETE!")
 	fmt.Println("   You've now seen all 4 demo categories:")
-	fmt.Println("   • 05_sugar_basics.go - Connection, Balance, Prices (read-only)")
-	fmt.Println("   • 06_sugar_trading.go - Market & Pending Orders")
-	fmt.Println("   • 07_sugar_positions.go - Position Management & Info")
-	fmt.Println("   • 08_sugar_history.go - Historical Deals & Profits ✅")
+	fmt.Println("   • 06_sugar_basics.go - Connection, Balance, Prices (read-only)")
+	fmt.Println("   • 07_sugar_trading.go - Market & Pending Orders")
+	fmt.Println("   • 08_sugar_positions.go - Position Management & Info")
+	fmt.Println("   • 09_sugar_history.go - Historical Deals & Profits ✅")
 }

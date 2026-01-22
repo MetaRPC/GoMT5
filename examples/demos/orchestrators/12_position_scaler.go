@@ -101,7 +101,7 @@ import (
 	"time"
 
 	pb "github.com/MetaRPC/GoMT5/package"
-	"github.com/MetaRPC/GoMT5/mt5"
+	mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
 )
 
 // ══════════════════════════════════════════════════════════════════════════════

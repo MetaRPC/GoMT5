@@ -59,7 +59,7 @@ import (
 	pb "github.com/MetaRPC/GoMT5/package"
 	"github.com/MetaRPC/GoMT5/examples/demos/config"
 	"github.com/MetaRPC/GoMT5/examples/demos/helpers"
-	"github.com/MetaRPC/GoMT5/mt5"
+	mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
 )
 
 // RunSugarPositionsDemo demonstrates MT5Sugar position management:
@@ -427,5 +427,5 @@ func RunSugarPositionsDemo() {
 	fmt.Println("  • Closing: ClosePosition, ClosePositionPartial, CloseAllBySymbol, CloseAllPositions")
 	fmt.Println("  • Quick checks: HasOpenPosition, GetTotalProfit")
 	fmt.Println("\n✅ All position management operations demonstrated!")
-	fmt.Println("   Next: Run 08_sugar_history.go for historical data")
+	fmt.Println("   Next: Run demo 09 - sugar_history.go for historical data")
 }

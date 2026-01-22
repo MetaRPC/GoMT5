@@ -1,6 +1,6 @@
 # MT5Account API Reference
 
-> **Note:** This documentation is auto-generated from [`examples/mt5/MT5Account.go`](../../examples/mt5/MT5Account.go) with enhanced navigation for easier browsing. For those who prefer viewing the complete API in a single-page reference format.
+> **Note:** This documentation is auto-generated from [`package/Helpers/MT5Account.go`](../../package/Helpers/MT5Account.go) with enhanced navigation for easier browsing. For those who prefer viewing the complete API in a single-page reference format.
 
 MT5Account represents a low-level gRPC client for MetaTrader 5 terminal. All methods accept protobuf Request objects and return protobuf Data objects. This is the foundation layer that directly communicates with the MT5 gRPC server.
 
@@ -8,6 +8,7 @@ MT5Account represents a low-level gRPC client for MetaTrader 5 terminal. All met
 
 ### 🏗️ Constructor & Connection
 - [NewMT5Account](#newmt5account)
+- [NewMT5AccountAuto](#newmt5accountauto)
 - [Connect](#connect)
 - [ConnectEx](#connectex)
 - [ConnectProxy](#connectproxy)
@@ -92,6 +93,39 @@ func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID
 **Returns**
 
 Returns `*MT5Account` instance with established gRPC connection, or error if connection fails.
+
+---
+
+## NewMT5AccountAuto
+
+Creates a new MT5Account instance with gRPC connection and auto-generated UUID. This is a convenience wrapper around NewMT5Account that automatically generates a random UUID for the session. Default grpcServer is "mt5.mrpc.pro:443" if empty string is provided. The connection is established with TLS, keepalive, and automatic reconnect configured.
+
+**Signature**
+```go
+func NewMT5AccountAuto(user uint64, password string, grpcServer string) (*MT5Account, error)
+```
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| user | uint64 | MT5 account login number |
+| password | string | MT5 account password |
+| grpcServer | string | gRPC server address (e.g., "mt5.mrpc.pro:443", empty for default) |
+
+**Returns**
+
+Returns `*MT5Account` instance with established gRPC connection and auto-generated UUID, or error if connection fails.
+
+**Example**
+```go
+// Create account with auto-generated UUID
+account, err := mt5.NewMT5AccountAuto(12345678, "password", "")
+if err != nil {
+    log.Fatal(err)
+}
+defer account.Close()
+```
 
 ---
 

@@ -56,7 +56,7 @@ import (
 	pb "github.com/MetaRPC/GoMT5/package"
 	"github.com/MetaRPC/GoMT5/examples/demos/config"
 	"github.com/MetaRPC/GoMT5/examples/demos/helpers"
-	"github.com/MetaRPC/GoMT5/mt5"
+	mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
 )
 
 // RunSugarTradingDemo demonstrates MT5Sugar trading methods:
@@ -386,5 +386,5 @@ func RunSugarTradingDemo() {
 	fmt.Println("  • SL/TP variants: BuyMarketWithSLTP, SellMarketWithSLTP")
 	fmt.Println("  • Direct ticket returns: ticket, err := sugar.BuyMarket(...)")
 	fmt.Println("\n✅ All trading operations demonstrated!")
-	fmt.Println("   Next: Run 07_sugar_positions.go for position management")
+	fmt.Println("   Next: Run demo 08 - sugar_positions.go for position management")
 }

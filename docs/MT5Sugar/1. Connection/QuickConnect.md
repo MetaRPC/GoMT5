@@ -125,7 +125,7 @@ package main
 
 import (
     "fmt"
-    "github.com/MetaRPC/GoMT5/mt5"
+    "github.com/MetaRPC/GoMT5/package/Helpers"
 )
 
 func main() {

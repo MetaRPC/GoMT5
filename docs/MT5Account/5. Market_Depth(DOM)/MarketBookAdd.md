@@ -4,11 +4,15 @@
 
 **API Information:**
 
-* **SDK wrapper:** `MT5Account.MarketBookAdd(...)` (from Go package `github.com/MetaRPC/GoMT5/mt5`)
+* **Low-level API:** `MT5Account.MarketBookAdd(...)` (from Go package `github.com/MetaRPC/GoMT5/package/Helpers`)
 * **gRPC service:** `mt5_term_api.MarketInfo`
 * **Proto definition:** `MarketBookAdd` (defined in `mt5-term-api-market-info.proto`)
 
 ### RPC
+
+* **Service:** `mt5_term_api.MarketInfo`
+* **Method:** `MarketBookAdd(MarketBookAddRequest) → MarketBookAddReply`
+* **Low‑level client (generated):** `MarketInfoClient.MarketBookAdd(ctx, request, opts...)`
 
 ```go
 // MarketBookAdd subscribes to Depth of Market (DOM) updates for a symbol.
@@ -107,7 +111,7 @@ import (
     "time"
 
     pb "github.com/MetaRPC/GoMT5/package"
-    "github.com/MetaRPC/GoMT5/mt5"
+    "github.com/MetaRPC/GoMT5/package/Helpers"
 )
 
 func main() {

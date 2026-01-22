@@ -13,8 +13,9 @@
 
  📚 WHAT THIS DEMO COVERS (3 Categories):
 
-   1. CONNECTION METHODS (3 methods)
-      • NewMT5Sugar() - Create and connect in one call
+   1. CONNECTION METHODS (4 methods)
+      • NewMT5Sugar() - Create Sugar instance
+      • QuickConnect() - Connect to MT5 terminal
       • IsConnected() - Check connection status
       • Ping() - Verify connection health
 
@@ -54,7 +55,7 @@ import (
 
 	"github.com/MetaRPC/GoMT5/examples/demos/config"
 	"github.com/MetaRPC/GoMT5/examples/demos/helpers"
-	"github.com/MetaRPC/GoMT5/mt5"
+	mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
 )
 
 func RunSugarBasicsDemo() {
@@ -315,7 +316,7 @@ func RunSugarBasicsDemo() {
 	fmt.Println("✅ DEMO COMPLETED SUCCESSFULLY!")
 	fmt.Println(strings.Repeat("=", 80))
 
-	fmt.Println("\n📊 METHODS DEMONSTRATED (14 total):")
+	fmt.Println("\n📊 METHODS DEMONSTRATED (15 total):")
 	fmt.Println("   CONNECTION (4):    NewMT5Sugar, QuickConnect, IsConnected, Ping")
 	fmt.Println("   BALANCE (6):       GetBalance, GetEquity, GetMargin, GetFreeMargin,")
 	fmt.Println("                      GetMarginLevel, GetProfit")

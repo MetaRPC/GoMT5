@@ -190,7 +190,7 @@ The project consists of **three interconnected files** in the `examples/mt5/` di
 
 **[📖 MT5Account Master Overview](../MT5Account/MT5Account.Master.Overview.md)**
 
-**File:** `examples/mt5/MT5Account.go` (2300+ lines)
+**File:** `package/Helpers/MT5Account.go` (2300+ lines)
 
 - Raw protocol buffer messages and gRPC communication
 - Maximum control and flexibility over each request/response
@@ -200,6 +200,7 @@ The project consists of **three interconnected files** in the `examples/mt5/` di
 - **Best for:** Advanced users who need granular control
 
 **Key features:**
+
 - Context-based timeout management
 - Two-channel streaming (dataChan, errChan)
 - Built-in retry logic for network failures
@@ -746,7 +747,7 @@ go run main.go 18
 
 GoMT5 has comprehensive error handling:
 
-**File:** `examples/errors/errors.go`
+**File:** `package/Helpers/errors.go`
 
 Features:
 

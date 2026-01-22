@@ -4,7 +4,7 @@
 
 **API Information:**
 
-* **SDK wrapper:** `MT5Account.SymbolInfoString(...)` (from Go package `github.com/MetaRPC/GoMT5/mt5`)
+* **Low-level API:** `MT5Account.SymbolInfoString(...)` (from Go package `github.com/MetaRPC/GoMT5/package/Helpers`)
 * **gRPC service:** `mt5_term_api.MarketInfo`
 * **Proto definition:** `SymbolInfoString` (defined in `mt5-term-api-market-info.proto`)
 
@@ -13,7 +13,6 @@
 * **Service:** `mt5_term_api.MarketInfo`
 * **Method:** `SymbolInfoString(SymbolInfoStringRequest) → SymbolInfoStringReply`
 * **Low‑level client (generated):** `MarketInfoClient.SymbolInfoString(ctx, request, opts...)`
-* **SDK wrapper (MT5Account):**
 
 ## 💬 Just the essentials
 
@@ -148,7 +147,7 @@ import (
     "time"
 
     pb "github.com/MetaRPC/GoMT5/package"
-    "github.com/MetaRPC/GoMT5/mt5"
+    "github.com/MetaRPC/GoMT5/package/Helpers"
 )
 
 func main() {

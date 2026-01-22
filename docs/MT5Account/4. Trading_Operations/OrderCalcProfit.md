@@ -4,7 +4,7 @@
 
 **API Information:**
 
-* **SDK wrapper:** `MT5Account.OrderCalcProfit(...)` (from Go package `github.com/MetaRPC/GoMT5/mt5`)
+* **Low-level API:** `MT5Account.OrderCalcProfit(...)` (from Go package `github.com/MetaRPC/GoMT5/package/Helpers`)
 * **gRPC service:** `mt5_term_api.TradeFunctions`
 * **Proto definition:** `OrderCalcProfit` (defined in `mt5-term-api-trade-functions.proto`)
 
@@ -39,6 +39,10 @@ For a detailed line-by-line explanation with examples, see:
 ---
 
 ### RPC
+
+* **Service:** `mt5_term_api.TradeFunctions`
+* **Method:** `OrderCalcProfit(OrderCalcProfitRequest) → OrderCalcProfitReply`
+* **Low‑level client (generated):** `TradeFunctionsClient.OrderCalcProfit(ctx, request, opts...)`
 
 ```go
 // OrderCalcProfit calculates potential profit for a trade.
@@ -130,7 +134,7 @@ import (
     "time"
 
     pb "github.com/MetaRPC/GoMT5/package"
-    "github.com/MetaRPC/GoMT5/mt5"
+    "github.com/MetaRPC/GoMT5/package/Helpers"
 )
 
 func main() {

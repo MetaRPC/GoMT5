@@ -4,11 +4,15 @@
 
 **API Information:**
 
-* **SDK wrapper:** `MT5Account.MarketBookRelease(...)` (from Go package `github.com/MetaRPC/GoMT5/mt5`)
+* **Low-level API:** `MT5Account.MarketBookRelease(...)` (from Go package `github.com/MetaRPC/GoMT5/package/Helpers`)
 * **gRPC service:** `mt5_term_api.MarketInfo`
 * **Proto definition:** `MarketBookRelease` (defined in `mt5-term-api-market-info.proto`)
 
 ### RPC
+
+* **Service:** `mt5_term_api.MarketInfo`
+* **Method:** `MarketBookRelease(MarketBookReleaseRequest) → MarketBookReleaseReply`
+* **Low‑level client (generated):** `MarketInfoClient.MarketBookRelease(ctx, request, opts...)`
 
 ```go
 // MarketBookRelease unsubscribes from Depth of Market (DOM) updates.
@@ -105,7 +109,7 @@ import (
     "time"
 
     pb "github.com/MetaRPC/GoMT5/package"
-    "github.com/MetaRPC/GoMT5/mt5"
+    "github.com/MetaRPC/GoMT5/package/Helpers"
 )
 
 func main() {

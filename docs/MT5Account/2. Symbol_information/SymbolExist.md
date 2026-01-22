@@ -4,7 +4,7 @@
 
 **API Information:**
 
-* **SDK wrapper:** `MT5Account.SymbolExist(...)` (from Go package `github.com/MetaRPC/GoMT5/mt5`)
+* **Low-level API:** `MT5Account.SymbolExist(...)` (from Go package `github.com/MetaRPC/GoMT5/package/Helpers`)
 * **gRPC service:** `mt5_term_api.MarketInfo`
 * **Proto definition:** `SymbolExist` (defined in `mt5-term-api-market-info.proto`)
 
@@ -13,7 +13,6 @@
 * **Service:** `mt5_term_api.MarketInfo`
 * **Method:** `SymbolExist(SymbolExistRequest) → SymbolExistReply`
 * **Low‑level client (generated):** `MarketInfoClient.SymbolExist(ctx, request, opts...)`
-* **SDK wrapper (MT5Account):**
 
 ---
 
@@ -126,7 +125,7 @@ import (
     "time"
 
     pb "github.com/MetaRPC/GoMT5/package"
-    "github.com/MetaRPC/GoMT5/mt5"
+    "github.com/MetaRPC/GoMT5/package/Helpers"
 )
 
 func main() {

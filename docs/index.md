@@ -19,7 +19,7 @@
 </a>
 
 <!-- Middle Row (2-3) - Yellow-Blue & Purple -->
-<a href="PROJECT_MAP/" class="card card-2">
+<a href="All_Guides/PROJECT_MAP/" class="card card-2">
   <span class="material-symbols-rounded">map</span>
   <h3>Project Map</h3>
   <p>Architecture overview</p>

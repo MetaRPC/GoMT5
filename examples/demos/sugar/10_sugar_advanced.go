@@ -19,12 +19,10 @@
       • CanOpenPosition(symbol, volume) - Pre-trade validation
       • CalculateRequiredMargin(symbol, volume) - Margin calculation
 
-   2. SYMBOL INFORMATION METHODS (5 methods + struct)
-      • GetSymbolInfo(symbol) - Complete symbol data in one call
+   2. SYMBOL INFORMATION METHODS (3 methods + struct)
+      • GetSymbolInfo(symbol) - Complete symbol data (includes digits, stop level)
       • GetAllSymbols() - List all available symbols
       • IsSymbolAvailable(symbol) - Check symbol tradability
-      • GetMinStopLevel(symbol) - Minimum SL/TP distance
-      • GetSymbolDigits(symbol) - Price decimal precision
 
    3. TRADING HELPERS (3 methods)
       • CalculateSLTP(symbol, direction, entry, SL_pips, TP_pips)
@@ -67,7 +65,7 @@ import (
 
 	"github.com/MetaRPC/GoMT5/examples/demos/config"
 	"github.com/MetaRPC/GoMT5/examples/demos/helpers"
-	"github.com/MetaRPC/GoMT5/mt5"
+	mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
 )
 
 // RunSugarAdvancedDemo demonstrates advanced Sugar API features

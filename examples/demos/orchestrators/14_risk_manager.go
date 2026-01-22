@@ -51,7 +51,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/MetaRPC/GoMT5/mt5"
+	mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
 )
 
 // ══════════════════════════════════════════════════════════════════════════════

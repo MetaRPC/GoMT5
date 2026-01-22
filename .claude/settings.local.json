@@ -3,7 +3,13 @@
     "allow": [
       "Bash(find:*)",
       "Bash(dir:*)",
-      "Bash(mkdocs serve:*)"
+      "Bash(mkdocs serve:*)",
+      "Bash(go build:*)",
+      "Bash(grep:*)",
+      "Bash(go clean:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(go run:*)",
+      "Bash(go mod tidy:*)"
     ],
     "deny": [],
     "ask": []

@@ -87,7 +87,7 @@ import (
 	pb "github.com/MetaRPC/GoMT5/package"
 	"github.com/MetaRPC/GoMT5/examples/demos/config"
 	"github.com/MetaRPC/GoMT5/examples/demos/helpers"
-	"github.com/MetaRPC/GoMT5/mt5"
+	mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -116,7 +116,9 @@ func RunGeneral01() error {
 	fmt.Printf("✓ MT5Account created (UUID: %s)\n", account.Id)
 	defer account.Close()
 
-	ctx := context.Background()
+	// Create cancellable context for proper cleanup
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// ═══════════════════════════════════════════════════════════════════════
 	// STEP 2: CONNECTION TO MT5 SERVER

@@ -4,7 +4,7 @@
 
 **API Information:**
 
-* **SDK wrapper:** `MT5Account.AccountSummary(...)` (from Go package `github.com/MetaRPC/GoMT5/mt5`)
+* **Low-level API:** `MT5Account.AccountSummary(...)` (from Go package `github.com/MetaRPC/GoMT5/package/Helpers`)
 * **gRPC service:** `mt5_term_api.AccountHelper`
 * **Proto definition:** `AccountSummary` (defined in `mt5-term-api-account-helper.proto`)
 
@@ -13,7 +13,6 @@
 * **Service:** `mt5_term_api.AccountHelper`
 * **Method:** `AccountSummary(AccountSummaryRequest) → AccountSummaryReply`
 * **Low‑level client (generated):** `AccountHelperClient.AccountSummary(ctx, request, opts...)`
-* **SDK wrapper (MT5Account):**
 
 
 ## 💬 Just the essentials
@@ -182,7 +181,7 @@ import (
     "time"
 
     pb "github.com/MetaRPC/GoMT5/package"
-    "github.com/MetaRPC/GoMT5/mt5"
+    "github.com/MetaRPC/GoMT5/package/Helpers"
     "github.com/google/uuid"
 )
 

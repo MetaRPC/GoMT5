@@ -110,7 +110,8 @@ import (
 	pb "github.com/MetaRPC/GoMT5/package"
 	"github.com/MetaRPC/GoMT5/examples/demos/config"
 	"github.com/MetaRPC/GoMT5/examples/demos/helpers"
-	"github.com/MetaRPC/GoMT5/mt5"
+	helpers_mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+	mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
 	"github.com/google/uuid"
 )
 
@@ -142,7 +143,7 @@ func RunService04() error {
 	fmt.Println("───────────────────────────────────────────────────────────")
 
 	// Create low-level MT5Account first
-	account, err := mt5.NewMT5Account(cfg.User, cfg.Password, cfg.GrpcServer, uuid.New())
+	account, err := helpers_mt5.NewMT5Account(cfg.User, cfg.Password, cfg.GrpcServer, uuid.New())
 	if err != nil {
 		return fmt.Errorf("failed to create MT5Account: %w", err)
 	}
@@ -1136,7 +1137,11 @@ streamLoop:
 	fmt.Println("\n\nFINAL: Disconnect")
 	fmt.Println("───────────────────────────────────────────────────────────")
 
-	_, err = service.GetAccount().Disconnect(ctx, &pb.DisconnectRequest{})
+	// Create separate context with longer timeout for disconnect
+	disconnectCtx, disconnectCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer disconnectCancel()
+
+	_, err = service.GetAccount().Disconnect(disconnectCtx, &pb.DisconnectRequest{})
 	if !helpers.PrintShortError(err, "Disconnect failed") {
 		fmt.Println("✓ Disconnected successfully")
 	}
@@ -1146,13 +1151,13 @@ streamLoop:
 	fmt.Println("═══════════════════════════════════════════════════════════")
 	fmt.Println()
 	fmt.Println("SUMMARY:")
-	fmt.Println("  • Demonstrated 19 MT5Service methods (excluding streams)")
+	fmt.Println("  • Demonstrated 31 MT5Service methods (excluding streams)")
 	fmt.Println("  • MT5Service provides cleaner API than low-level MT5Account")
 	fmt.Println("  • Native Go types (time.Time, float64, int64, string)")
 	fmt.Println("  • 30-80% less code for common operations")
 	fmt.Println("  • Better separation (positions/orders/deals in separate slices)")
 	fmt.Println("  • Direct value returns (no Data struct extraction)")
-	fmt.Println("  • No Request object creation needed for most methods")
+	fmt.Println("  • Simplified Request objects for trading operations")
 	fmt.Println()
 	fmt.Println("KEY ADVANTAGES SHOWN:")
 	fmt.Println("  ✓ Account: GetAccountInteger/String return direct values")

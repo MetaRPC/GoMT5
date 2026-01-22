@@ -4,7 +4,7 @@
 
 **API Information:**
 
-* **SDK wrapper:** `MT5Account.OnPositionsAndPendingOrdersTickets(...)` (from Go package `github.com/MetaRPC/GoMT5/mt5`)
+* **Low-level API:** `MT5Account.OnPositionsAndPendingOrdersTickets(...)` (from Go package `github.com/MetaRPC/GoMT5/package/Helpers`)
 * **gRPC service:** `mt5_term_api.SubscriptionService`
 * **Proto definition:** `OnPositionsAndPendingOrdersTickets` (defined in `mt5-term-api-subscription.proto`)
 
@@ -13,7 +13,6 @@
 * **Service:** `mt5_term_api.SubscriptionService`
 * **Method:** `OnPositionsAndPendingOrdersTickets(OnPositionsAndPendingOrdersTicketsRequest) → stream OnPositionsAndPendingOrdersTicketsReply`
 * **Low‑level client (generated):** `SubscriptionServiceClient.OnPositionsAndPendingOrdersTickets(ctx, request, opts...)`
-* **SDK wrapper (MT5Account):**
 
 ```go
 package mt5
@@ -111,7 +110,7 @@ import (
     "time"
 
     pb "github.com/MetaRPC/GoMT5/package"
-    "github.com/MetaRPC/GoMT5/mt5"
+    "github.com/MetaRPC/GoMT5/package/Helpers"
 )
 
 func main() {

@@ -4,7 +4,7 @@
 
 **API Information:**
 
-* **SDK wrapper:** `MT5Account.SymbolInfoSessionTrade(...)` (from Go package `github.com/MetaRPC/GoMT5/mt5`)
+* **Low-level API:** `MT5Account.SymbolInfoSessionTrade(...)` (from Go package `github.com/MetaRPC/GoMT5/package/Helpers`)
 * **gRPC service:** `mt5_term_api.MarketInfo`
 * **Proto definition:** `SymbolInfoSessionTrade` (defined in `mt5-term-api-market-info.proto`)
 
@@ -13,7 +13,6 @@
 * **Service:** `mt5_term_api.MarketInfo`
 * **Method:** `SymbolInfoSessionTrade(SymbolInfoSessionTradeRequest) → SymbolInfoSessionTradeReply`
 * **Low‑level client (generated):** `MarketInfoClient.SymbolInfoSessionTrade(ctx, request, opts...)`
-* **SDK wrapper (MT5Account):**
 
 ## 💬 Just the essentials
 
@@ -141,7 +140,7 @@ import (
     "time"
 
     pb "github.com/MetaRPC/GoMT5/package"
-    "github.com/MetaRPC/GoMT5/mt5"
+    "github.com/MetaRPC/GoMT5/package/Helpers"
 )
 
 func main() {

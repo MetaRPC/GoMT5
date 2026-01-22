@@ -19,7 +19,7 @@ These codes are:
 - **Unified across all languages** (C#, Python, Java, Node.js, Go, PHP)
 - **Unified with MT5 terminal** - returned directly from the trading server
 - **Defined in protobuf** - enum `MqlErrorTradeCode` in the API proto contract
-- **Available as Go constants** - defined in `examples/errors/errors.go`
+- **Available as Go constants** - defined in `package/Helpers/errors.go`
 
 ---
 
@@ -31,15 +31,15 @@ RetCode is returned in **all trading operations** that modify positions or order
 
 ```go
 import (
-    "github.com/MetaRPC/GoMT5/mt5"
-    mt5errors "github.com/MetaRPC/GoMT5/examples/errors"
+    "github.com/MetaRPC/GoMT5/package/Helpers"
+    mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
 )
 
 // Using Sugar API
 ticket, err := sugar.BuyMarket("EURUSD", 0.01)
 if err != nil {
     // Check if it's an ApiError with RetCode
-    var apiErr *mt5errors.ApiError
+    var apiErr *mt5.ApiError
     if errors.As(err, &apiErr) {
         fmt.Printf("RetCode: %d\n", apiErr.MqlErrorTradeIntCode())
         fmt.Printf("Description: %s\n", apiErr.MqlErrorTradeDescription())
@@ -54,11 +54,11 @@ if err != nil {
 }
 
 // IMPORTANT: Always check ReturnedCode!
-if sendData.ReturnedCode == mt5errors.TradeRetCodeDone {
+if sendData.ReturnedCode == mt5.TradeRetCodeDone {
     fmt.Printf("✅ Order opened! Ticket: %d\n", sendData.OrderTicket)
 } else {
     fmt.Printf("❌ Order failed: %s\n",
-        mt5errors.GetRetCodeMessage(sendData.ReturnedCode))
+        mt5.GetRetCodeMessage(sendData.ReturnedCode))
 }
 ```
 
@@ -76,11 +76,11 @@ if err != nil {
     return
 }
 
-if mt5errors.IsRetCodeSuccess(modifyData.ReturnedCode) {
+if mt5.IsRetCodeSuccess(modifyData.ReturnedCode) {
     fmt.Println("✅ SL/TP modified successfully")
 } else {
     fmt.Printf("❌ Modification failed: %s\n",
-        mt5errors.GetRetCodeMessage(modifyData.ReturnedCode))
+        mt5.GetRetCodeMessage(modifyData.ReturnedCode))
 }
 ```
 
@@ -90,7 +90,7 @@ if mt5errors.IsRetCodeSuccess(modifyData.ReturnedCode) {
 // Using Sugar API
 err := sugar.ClosePosition(ticket)
 if err != nil {
-    var apiErr *mt5errors.ApiError
+    var apiErr *mt5.ApiError
     if errors.As(err, &apiErr) {
         if apiErr.MqlErrorTradeIntCode() == 10036 {
             fmt.Println("⚠️ Position already closed")
@@ -103,7 +103,7 @@ closeData, err := account.PositionClose(ctx, &pb.PositionCloseRequest{
     Ticket: ticket,
 })
 
-if closeData.ReturnedCode == mt5errors.TradeRetCodeDone {
+if closeData.ReturnedCode == mt5.TradeRetCodeDone {
     fmt.Println("✅ Position closed")
 }
 ```
@@ -146,7 +146,7 @@ if closeData.ReturnedCode == mt5errors.TradeRetCodeDone {
 
 **Helper function:**
 ```go
-if mt5errors.IsRetCodeRequote(retCode) {
+if mt5.IsRetCodeRequote(retCode) {
     // Retry with updated price
 }
 ```
@@ -202,7 +202,7 @@ if mt5errors.IsRetCodeRequote(retCode) {
 
 **Helper function:**
 ```go
-if mt5errors.IsRetCodeRetryable(retCode) {
+if mt5.IsRetCodeRetryable(retCode) {
     // Safe to retry with exponential backoff
     time.Sleep(time.Second * 2)
     // Retry operation...
@@ -230,7 +230,7 @@ if mt5errors.IsRetCodeRetryable(retCode) {
 
 ## Go Helper Functions
 
-The `examples/errors` package provides helper functions for working with RetCodes:
+The `package/Helpers` (mt5 package) provides helper functions for working with RetCodes:
 
 ### IsRetCodeSuccess()
 
@@ -238,7 +238,7 @@ The `examples/errors` package provides helper functions for working with RetCode
 func IsRetCodeSuccess(retCode uint32) bool
 
 // Usage
-if mt5errors.IsRetCodeSuccess(sendData.ReturnedCode) {
+if mt5.IsRetCodeSuccess(sendData.ReturnedCode) {
     fmt.Println("Trade successful!")
 }
 
@@ -251,7 +251,7 @@ if mt5errors.IsRetCodeSuccess(sendData.ReturnedCode) {
 func IsRetCodeRequote(retCode uint32) bool
 
 // Usage
-if mt5errors.IsRetCodeRequote(sendData.ReturnedCode) {
+if mt5.IsRetCodeRequote(sendData.ReturnedCode) {
     fmt.Println("Price changed, retrying...")
     // Retry with updated price
 }
@@ -265,7 +265,7 @@ if mt5errors.IsRetCodeRequote(sendData.ReturnedCode) {
 func IsRetCodeRetryable(retCode uint32) bool
 
 // Usage
-if mt5errors.IsRetCodeRetryable(sendData.ReturnedCode) {
+if mt5.IsRetCodeRetryable(sendData.ReturnedCode) {
     // These errors are temporary, retry with delay
     time.Sleep(time.Second * 2)
     // Retry operation
@@ -280,8 +280,8 @@ if mt5errors.IsRetCodeRetryable(sendData.ReturnedCode) {
 func GetRetCodeMessage(retCode uint32) string
 
 // Usage
-if sendData.ReturnedCode != mt5errors.TradeRetCodeDone {
-    fmt.Printf("Error: %s\n", mt5errors.GetRetCodeMessage(sendData.ReturnedCode))
+if sendData.ReturnedCode != mt5.TradeRetCodeDone {
+    fmt.Printf("Error: %s\n", mt5.GetRetCodeMessage(sendData.ReturnedCode))
 }
 
 // Returns human-readable description for any RetCode
@@ -300,8 +300,8 @@ import (
     "context"
     "fmt"
 
-    "github.com/MetaRPC/GoMT5/mt5"
-    mt5errors "github.com/MetaRPC/GoMT5/examples/errors"
+    "github.com/MetaRPC/GoMT5/package/Helpers"
+    mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
     pb "github.com/MetaRPC/GoMT5/package"
 )
 
@@ -329,7 +329,7 @@ func main() {
     }
 
     // Check RetCode
-    if sendData.ReturnedCode == mt5errors.TradeRetCodeDone {
+    if sendData.ReturnedCode == mt5.TradeRetCodeDone {
         fmt.Printf("✅ Order opened successfully!\n")
         fmt.Printf("   Ticket: #%d\n", sendData.OrderTicket)
         fmt.Printf("   Volume: %.2f lots\n", sendData.Volume)
@@ -338,7 +338,7 @@ func main() {
         fmt.Printf("❌ Order failed!\n")
         fmt.Printf("   RetCode: %d\n", sendData.ReturnedCode)
         fmt.Printf("   Description: %s\n",
-            mt5errors.GetRetCodeMessage(sendData.ReturnedCode))
+            mt5.GetRetCodeMessage(sendData.ReturnedCode))
     }
 }
 ```
@@ -348,27 +348,27 @@ func main() {
 ```go
 ticket, err := sugar.BuyMarket("GBPUSD", 0.5)
 if err != nil {
-    var apiErr *mt5errors.ApiError
+    var apiErr *mt5.ApiError
     if errors.As(err, &apiErr) {
         retCode := apiErr.MqlErrorTradeIntCode()
 
         switch retCode {
-        case mt5errors.TradeRetCodeDone:
+        case mt5.TradeRetCodeDone:
             fmt.Printf("Order #%d opened\n", ticket)
 
-        case mt5errors.TradeRetCodeNoMoney:
+        case mt5.TradeRetCodeNoMoney:
             fmt.Println("⚠️ Insufficient funds!")
             fmt.Println("   Solution: Reduce volume or add margin")
 
-        case mt5errors.TradeRetCodeMarketClosed:
+        case mt5.TradeRetCodeMarketClosed:
             fmt.Println("⚠️ Market closed")
             fmt.Println("   Solution: Try during trading hours")
 
-        case mt5errors.TradeRetCodeInvalidStops:
+        case mt5.TradeRetCodeInvalidStops:
             fmt.Println("⚠️ SL/TP too close to market price")
             fmt.Println("   Solution: Increase distance (check StopLevel)")
 
-        case mt5errors.TradeRetCodeInvalidVolume:
+        case mt5.TradeRetCodeInvalidVolume:
             fmt.Println("⚠️ Invalid volume")
             // Get symbol limits
             minVol, _ := sugar.GetSymbolMinVolume("GBPUSD")
@@ -377,8 +377,8 @@ if err != nil {
             fmt.Printf("   Min: %.2f, Max: %.2f, Step: %.2f\n",
                 minVol, maxVol, step)
 
-        case mt5errors.TradeRetCodeRequote,
-             mt5errors.TradeRetCodePriceChanged:
+        case mt5.TradeRetCodeRequote,
+             mt5.TradeRetCodePriceChanged:
             fmt.Println("⚠️ Price changed, retrying...")
             time.Sleep(time.Millisecond * 100)
             // Retry order
@@ -409,19 +409,19 @@ func PlaceOrderWithRetry(
         }
 
         // Check if retryable
-        var apiErr *mt5errors.ApiError
+        var apiErr *mt5.ApiError
         if errors.As(err, &apiErr) {
             retCode := apiErr.MqlErrorTradeIntCode()
 
             // Requote - retry immediately
-            if mt5errors.IsRetCodeRequote(retCode) {
+            if mt5.IsRetCodeRequote(retCode) {
                 fmt.Printf("Requote on attempt %d, retrying...\n", attempt)
                 time.Sleep(time.Millisecond * 100)
                 continue
             }
 
             // Retryable error - exponential backoff
-            if mt5errors.IsRetCodeRetryable(retCode) {
+            if mt5.IsRetCodeRetryable(retCode) {
                 waitTime := time.Second * time.Duration(attempt)
                 fmt.Printf("Temporary error on attempt %d, waiting %v...\n",
                     attempt, waitTime)
@@ -487,16 +487,16 @@ if err != nil {
 }
 
 switch modifyData.ReturnedCode {
-case mt5errors.TradeRetCodeDone:
+case mt5.TradeRetCodeDone:
     fmt.Println("✅ SL/TP updated successfully")
 
-case mt5errors.TradeRetCodeNoChanges:
+case mt5.TradeRetCodeNoChanges:
     fmt.Println("⚠️ New SL/TP same as current - no action taken")
 
-case mt5errors.TradeRetCodePositionClosed:
+case mt5.TradeRetCodePositionClosed:
     fmt.Println("⚠️ Position already closed by SL/TP or manually")
 
-case mt5errors.TradeRetCodeInvalidStops:
+case mt5.TradeRetCodeInvalidStops:
     fmt.Println("❌ Invalid SL/TP distance")
     // Get symbol stop level
     stopLevel, _ := sugar.GetSymbolStopLevel("EURUSD")
@@ -504,7 +504,7 @@ case mt5errors.TradeRetCodeInvalidStops:
 
 default:
     fmt.Printf("❌ Modification failed: %s\n",
-        mt5errors.GetRetCodeMessage(modifyData.ReturnedCode))
+        mt5.GetRetCodeMessage(modifyData.ReturnedCode))
 }
 ```
 
@@ -516,20 +516,20 @@ default:
 
 1. **Always check ReturnedCode** after trading operations
    ```go
-   if sendData.ReturnedCode == mt5errors.TradeRetCodeDone {
+   if sendData.ReturnedCode == mt5.TradeRetCodeDone {
        // Success
    }
    ```
 
 2. **Use helper functions** for cleaner code
    ```go
-   if mt5errors.IsRetCodeSuccess(retCode) { ... }
-   if mt5errors.IsRetCodeRequote(retCode) { ... }
+   if mt5.IsRetCodeSuccess(retCode) { ... }
+   if mt5.IsRetCodeRequote(retCode) { ... }
    ```
 
 3. **Retry requotes** (10004, 10020)
    ```go
-   if mt5errors.IsRetCodeRequote(retCode) {
+   if mt5.IsRetCodeRequote(retCode) {
        // Retry with updated price
    }
    ```
@@ -565,7 +565,7 @@ default:
    if retCode == 10009 { ... }
 
    // CORRECT:
-   if retCode == mt5errors.TradeRetCodeDone { ... }
+   if retCode == mt5.TradeRetCodeDone { ... }
    ```
 
 3. **Don't retry permanent errors** (insufficient margin, market closed)
@@ -581,7 +581,7 @@ default:
    }
    if sendData.ReturnedCode != 10009 {
        return fmt.Errorf("trade failed: %s",
-           mt5errors.GetRetCodeMessage(sendData.ReturnedCode))
+           mt5.GetRetCodeMessage(sendData.ReturnedCode))
    }
    ```
 
@@ -605,10 +605,10 @@ default:
 
 ## Constants Reference
 
-All RetCode constants are defined in `examples/errors/errors.go`:
+All RetCode constants are defined in `package/Helpers/errors.go`:
 
 ```go
-package errors
+package mt5
 
 const (
     // Success codes

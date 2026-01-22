@@ -59,7 +59,7 @@ import (
 	pb "github.com/MetaRPC/GoMT5/package"
 	"github.com/MetaRPC/GoMT5/examples/demos/config"
 	"github.com/MetaRPC/GoMT5/examples/demos/helpers"
-	"github.com/MetaRPC/GoMT5/mt5"
+	mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
 	"github.com/google/uuid"
 )
 
@@ -89,10 +89,10 @@ func RunTrading02() error {
 
 	helpers.Fatal(err, "Failed to create MT5Account")
 	fmt.Printf("✓ MT5Account created (UUID: %s)\n", account.Id)
-	
-	defer account.Close()
 
-	ctx := context.Background()
+	// Create cancellable context for proper cleanup
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// ConnectEx - Connect to MT5 cluster
 	baseSymbol := cfg.TestSymbol
@@ -373,11 +373,12 @@ func RunTrading02() error {
 	fmt.Println("\n\nFinal: Disconnecting...")
 	fmt.Println("───────────────────────────────────────────────────────────")
 
-	disconnectReq := &pb.DisconnectRequest{}
-	_, err = account.Disconnect(ctx, disconnectReq)
-	if !helpers.PrintShortError(err, "Disconnect failed") {
-		fmt.Println("✓ Disconnected successfully")
-	}
+	// Disconnect and close connection
+	disconnectCtx, disconnectCancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer disconnectCancel()
+	account.Disconnect(disconnectCtx, &pb.DisconnectRequest{})
+	account.Close()
+	fmt.Println("✓ Connection closed")
 
 	fmt.Println("\n═══════════════════════════════════════════════════════════")
 	fmt.Println("✓ DEMO COMPLETED SUCCESSFULLY")

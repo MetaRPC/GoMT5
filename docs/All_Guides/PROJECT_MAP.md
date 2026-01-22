@@ -8,7 +8,15 @@
 
 ```
 GoMT5/
-├── 📦 Core API (Internal - 3 layers)
+├── 📦 package/ - Independent module (portable)
+│   ├── Helpers/MT5Account.go (Layer 1 - Foundation)
+│   ├── Proto definitions (*.pb.go)
+│   └── gRPC stubs (*_grpc.pb.go)
+│
+├── 📦 examples/mt5/ - High-level API layers
+│   ├── MT5Service.go (Layer 2 - Wrappers)
+│   └── MT5Sugar.go (Layer 3 - Convenience)
+│
 ├── 🎯 User Code (Orchestrators, Presets, Examples)
 ├── 📚 Documentation
 └── ⚙️ Configuration and build
@@ -19,21 +27,22 @@ External dependencies:
 
 ---
 
-## 📦 Core API (Internal - examples/mt5/)
+## 📦 Core API (Three-layer architecture)
 
 **What:** Three-tier architecture for MT5 trading automation.
 
 **User interaction:** Import and use, but typically don't modify.
 
 ```
+package/Helpers/
+└── MT5Account.go              ← LAYER 1: Low-level gRPC ⭐ FOUNDATION
+    └── Direct gRPC calls to MT5 terminal
+    └── Connection management with retry logic
+    └── Proto Request/Response handling
+    └── Built-in connection resilience
+    └── Independent Go module (portable)
+
 examples/mt5/
-├── MT5Account.go              ← LAYER 1: Low-level gRPC
-│   └── Direct gRPC calls to MT5 terminal
-│   └── Connection management with retry logic
-│   └── Proto Request/Response handling
-│   └── Async/Sync method variants
-│   └── Built-in connection resilience
-│
 ├── MT5Service.go              ← LAYER 2: Wrapper methods
 │   └── Simplified signatures (no proto objects)
 │   └── Type conversion (proto → Go primitives)
@@ -54,11 +63,32 @@ go.mod / go.sum                ← Module dependencies
 **Architecture flow:**
 ```
 MT5Sugar → uses → MT5Service → uses → MT5Account → gRPC → MT5 Terminal
+       ↓                ↓                    ↓
+examples/mt5/    examples/mt5/      package/Helpers/
 ```
+
+**💡 Creating Your Own Project:**
+
+For your own standalone project using GoMT5, you only need to import the `package` module:
+
+```go
+import pb "github.com/MetaRPC/GoMT5/package"
+```
+
+The `package` module contains **everything you need to start**:
+
+- ✅ All protobuf definitions (proto-generated code)
+- ✅ gRPC stubs and service contracts
+- ✅ MT5Account (Layer 1 - Foundation)
+- ✅ Independent Go module (can be used without examples/)
+
+This makes the package **portable** and easy to integrate into any Go project!
 
 **User decision:**
 
-- **95% of cases:** Start with `MT5Sugar` (highest level, easiest)
+- **Building your own app:** Import `package` and use MT5Account directly
+- **Learning/Examples:** Use the full GoMT5 repo with all 3 layers
+- **95% of demo cases:** Start with `MT5Sugar` (highest level, easiest)
 - **Need wrappers:** Move to `MT5Service` (without auto-normalization)
 - **Need raw proto:** Move to `MT5Account` (full control)
 
@@ -312,11 +342,10 @@ docs/
 ├── PROJECT_MAP.md                     ← ⭐ This file - complete structure
 │
 ├── API_Reference/                     ← Concise API documentation
-│   │                                     (auto-generated from examples/mt5/*.go)
 │   │                                     (slightly enhanced for better navigation)
-│   ├── MT5Account.md                  ← ⭐ Layer 1 API (foundation of everything) → from MT5Account.go
-│   ├── MT5Service.md                  ← Layer 2 API → from MT5Service.go
-│   └── MT5Sugar.md                    ← Layer 3 API → from MT5Sugar.go
+│   ├── MT5Account.md                  ← ⭐ Layer 1 API (foundation of everything) → from package/Helpers/MT5Account.go
+│   ├── MT5Service.md                  ← Layer 2 API → from examples/mt5/MT5Service.go
+│   └── MT5Sugar.md                    ← Layer 3 API → from examples/mt5/MT5Sugar.go
 │
 ├── MT5Account/                        ← ⭐ FOUNDATION OF EVERYTHING - Detailed Layer 1 documentation
 │   ├── MT5Account.Master.Overview.md  ← ⭐ Complete API reference
@@ -478,14 +507,27 @@ docs/
 
 - `google.golang.org/grpc` - gRPC client
 - `google.golang.org/protobuf` - Protocol Buffers runtime
-- `github.com/MetaRPC/GoMT5/package` - MT5 Proto definitions
+- `github.com/MetaRPC/GoMT5/package` - MT5 Proto definitions (independent module)
+
+**Package structure:**
+
+```
+package/
+├── Helpers/
+│   └── MT5Account.go          ← Layer 1 implementation
+├── *.pb.go                    ← Generated protobuf code
+├── *_grpc.pb.go               ← Generated gRPC stubs
+├── go.mod                     ← Independent module
+└── go.sum                     ← Module dependencies
+```
 
 **How it works:**
 
-1. Go modules restore packages at build time
-2. Proto files are compiled (if present)
-3. Generated Go types available for import
-4. MT5Account layer uses proto-generated types
+1. `package/` is an independent Go module
+2. Contains both proto-generated code and MT5Account implementation
+3. Can be imported separately: `github.com/MetaRPC/GoMT5/package`
+4. MT5Service and MT5Sugar import from package module
+5. All layers use proto-generated types from package
 
 **Proto-generated types:**
 
@@ -529,10 +571,12 @@ MT5Service (Layer 2 - Wrappers)
                   │ uses
                   ↓
 MT5Account (Layer 1 - Low level) ⭐ FOUNDATION
+  📍 Location: package/Helpers/MT5Account.go
   ├─ Proto Request/Response
   ├─ gRPC communication
   ├─ Connection management
-  └─ Auto-reconnection
+  ├─ Auto-reconnection
+  └─ Independent Go module (portable)
                   │
                   │ gRPC
                   ↓
@@ -544,11 +588,14 @@ MT5 Gateway (mt5term) or MT5 Terminal
 
 ## 🔍 File Naming Conventions
 
-### Core API (examples/mt5/)
+### Core API (Multi-location)
 
-- `MT5Account.go` - Layer 1 (low-level gRPC)
-- `MT5Service.go` - Layer 2 (wrapper methods)
-- `MT5Sugar.go` - Layer 3 (convenience API)
+**Layer 1 (Foundation):**
+- `package/Helpers/MT5Account.go` - Low-level gRPC (independent module)
+
+**Layers 2-3 (High-level wrappers):**
+- `examples/mt5/MT5Service.go` - Wrapper methods
+- `examples/mt5/MT5Sugar.go` - Convenience API
 - `go.mod / go.sum` - Dependencies
 
 ### User Code (examples/demos/)
@@ -592,7 +639,7 @@ README.md                      ← Update with your changes
 ### 📖 READ (Core API)
 
 ```
-examples/mt5/MT5Account.go     ← Use but don't modify (import and call)
+package/Helpers/MT5Account.go  ← Use but don't modify (import and call) ⭐ FOUNDATION
 examples/mt5/MT5Service.go     ← Use but don't modify
 examples/mt5/MT5Sugar.go       ← Use but don't modify
 docs/                          ← Reference documentation

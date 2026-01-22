@@ -94,7 +94,6 @@ import (
 
 	pb "github.com/MetaRPC/GoMT5/package"
 
-	mt5errors "github.com/MetaRPC/GoMT5/examples/errors"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -335,7 +334,7 @@ func ExecuteWithReconnect[T any](
 			}
 			// Convert mrpcError to *pb.Error and wrap in ApiError
 			if pbErr, ok := apiErr.(*pb.Error); ok {
-				return zeroT, mt5errors.NewApiError(pbErr)
+				return zeroT, NewApiError(pbErr)
 			}
 			return zeroT, fmt.Errorf("API error (code=%s): unknown error type", code)
 		}
@@ -435,7 +434,7 @@ func ExecuteStreamWithReconnect[TRequest any, TReply any, TData any](
 					}
 					// Convert mrpcError to *pb.Error and wrap in ApiError
 					if pbErr, ok := apiErr.(*pb.Error); ok {
-						errCh <- mt5errors.NewApiError(pbErr)
+						errCh <- NewApiError(pbErr)
 					} else {
 						errCh <- fmt.Errorf("API error: unknown error type")
 					}

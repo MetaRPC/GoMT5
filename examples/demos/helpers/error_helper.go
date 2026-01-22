@@ -33,7 +33,7 @@ import (
 	"fmt"
 	"log"
 
-	mt5errors "github.com/MetaRPC/GoMT5/examples/errors"
+	mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
 )
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -52,7 +52,7 @@ func Fatal(err error, context string) {
 	}
 
 	// Check if this is an ApiError from MT5 server
-	var apiErr *mt5errors.ApiError
+	var apiErr *mt5.ApiError
 	if errors.As(err, &apiErr) {
 		log.Fatalf("❌ FATAL: %s\n%s", context, FormatApiError(apiErr))
 	}
@@ -83,7 +83,7 @@ func PrintIfError(err error, context string) bool {
 	}
 
 	// Check if this is an ApiError from MT5 server
-	var apiErr *mt5errors.ApiError
+	var apiErr *mt5.ApiError
 	if errors.As(err, &apiErr) {
 		fmt.Printf("  ⚠️  %s\n", context)
 
@@ -120,7 +120,7 @@ func PrintShortError(err error, context string) bool {
 		return false
 	}
 
-	var apiErr *mt5errors.ApiError
+	var apiErr *mt5.ApiError
 	if errors.As(err, &apiErr) {
 		// For trade errors, show the trade error description (most user-friendly)
 		if apiErr.MqlErrorTradeIntCode() != 0 {
@@ -157,10 +157,10 @@ func PrintShortError(err error, context string) bool {
 // Use when you need full error details for logging or debugging.
 //
 // Example:
-//   if apiErr, ok := err.(*mt5errors.ApiError); ok {
+//   if apiErr, ok := err.(*mt5.ApiError); ok {
 //       log.Println(helpers.FormatApiError(apiErr))
 //   }
-func FormatApiError(apiErr *mt5errors.ApiError) string {
+func FormatApiError(apiErr *mt5.ApiError) string {
 	if apiErr == nil {
 		return "ApiError{nil}"
 	}
@@ -207,25 +207,25 @@ func FormatApiError(apiErr *mt5errors.ApiError) string {
 //       fmt.Printf("Order ticket: %d\n", placeData.OrderTicket)
 //   }
 func CheckRetCode(retCode uint32, operation string) bool {
-	if mt5errors.IsRetCodeSuccess(retCode) {
+	if mt5.IsRetCodeSuccess(retCode) {
 		fmt.Printf("  ✓ %s successful (RetCode: %d)\n", operation, retCode)
 		return true
 	}
 
 	fmt.Printf("  ❌ %s failed (RetCode: %d)\n", operation, retCode)
-	fmt.Printf("     %s\n", mt5errors.GetRetCodeMessage(retCode))
+	fmt.Printf("     %s\n", mt5.GetRetCodeMessage(retCode))
 
 	// Provide helpful hints for common errors
 	switch retCode {
-	case mt5errors.TradeRetCodeNoMoney:
+	case mt5.TradeRetCodeNoMoney:
 		fmt.Println("     💡 Hint: Check account margin - insufficient funds")
-	case mt5errors.TradeRetCodeInvalidStops:
+	case mt5.TradeRetCodeInvalidStops:
 		fmt.Println("     💡 Hint: SL/TP too close to market price - check SYMBOL_TRADE_STOPS_LEVEL")
-	case mt5errors.TradeRetCodeInvalidVolume:
+	case mt5.TradeRetCodeInvalidVolume:
 		fmt.Println("     💡 Hint: Check SYMBOL_VOLUME_MIN, SYMBOL_VOLUME_MAX, SYMBOL_VOLUME_STEP")
-	case mt5errors.TradeRetCodeMarketClosed:
+	case mt5.TradeRetCodeMarketClosed:
 		fmt.Println("     💡 Hint: Market is closed - check trading hours")
-	case mt5errors.TradeRetCodeRequote, mt5errors.TradeRetCodePriceChanged:
+	case mt5.TradeRetCodeRequote, mt5.TradeRetCodePriceChanged:
 		fmt.Println("     💡 Hint: Price changed - retry with updated price")
 	}
 
@@ -236,10 +236,10 @@ func CheckRetCode(retCode uint32, operation string) bool {
 // Use when operation partially succeeded or requires retry.
 //
 // Example:
-//   if mt5errors.IsRetCodeRequote(retCode) {
+//   if mt5.IsRetCodeRequote(retCode) {
 //       helpers.PrintRetCodeWarning(retCode, "Price changed - retrying...")
 //   }
 func PrintRetCodeWarning(retCode uint32, context string) {
 	fmt.Printf("  ⚠️  %s (RetCode: %d)\n", context, retCode)
-	fmt.Printf("     %s\n", mt5errors.GetRetCodeMessage(retCode))
+	fmt.Printf("     %s\n", mt5.GetRetCodeMessage(retCode))
 }

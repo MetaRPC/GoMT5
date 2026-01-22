@@ -174,6 +174,7 @@ import (
 	"time"
 
 	pb "github.com/MetaRPC/GoMT5/package"
+	helpers "github.com/MetaRPC/GoMT5/package/Helpers"
 	"github.com/google/uuid"
 )
 
@@ -224,7 +225,7 @@ type PriceInfo struct {
 // RETURNS:
 //   *MT5Sugar instance ready for connection, or error if initialization fails
 func NewMT5Sugar(user uint64, password string, grpcServer string) (*MT5Sugar, error) {
-	account, err := NewMT5Account(user, password, grpcServer, uuid.New())
+	account, err := helpers.NewMT5Account(user, password, grpcServer, uuid.New())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create MT5Account: %w", err)
 	}
@@ -255,7 +256,7 @@ func (s *MT5Sugar) GetService() *MT5Service {
 //
 // RETURNS:
 //   *MT5Account instance used by the underlying Service layer
-func (s *MT5Sugar) GetAccount() *MT5Account {
+func (s *MT5Sugar) GetAccount() *helpers.MT5Account {
 	return s.service.account
 }
 

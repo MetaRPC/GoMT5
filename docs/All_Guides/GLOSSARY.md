@@ -33,7 +33,7 @@ Base layer providing direct access to MT5 terminal via gRPC protocol.
 
 **When to use:** Custom integrations, need proto-level control, building custom wrappers.
 
-**Location:** `examples/mt5/MT5Account.go` (2300+ lines)
+**Location:** `package/Helpers/MT5Account.go` (2300+ lines)
 
 **Documentation:** [MT5Account.Master.Overview.md](../MT5Account/MT5Account.Master.Overview.md)
 
@@ -435,17 +435,17 @@ Protobuf return codes indicating operation success/failure.
 
 **Helper functions:**
 ```go
-import "your-project/examples/errors"
+import mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
 
-if errors.IsRetCodeSuccess(result.ReturnedCode) {
+if mt5.IsRetCodeSuccess(result.ReturnedCode) {
     fmt.Println("Trade successful!")
 }
 
-if errors.IsRetCodeRetryable(result.ReturnedCode) {
+if mt5.IsRetCodeRetryable(result.ReturnedCode) {
     // Retry with exponential backoff
 }
 
-message := errors.GetRetCodeMessage(result.ReturnedCode)
+message := mt5.GetRetCodeMessage(result.ReturnedCode)
 ```
 
 **Documentation:** [Return Codes Reference](RETURN_CODES_REFERENCE.md)

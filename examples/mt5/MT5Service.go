@@ -65,6 +65,7 @@ import (
 	"time"
 
 	pb "github.com/MetaRPC/GoMT5/package"
+	helpers "github.com/MetaRPC/GoMT5/package/Helpers"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -75,7 +76,7 @@ import (
 // MT5Service provides mid-level API wrapping MT5Account with Go native types.
 // This layer unwraps protobuf and provides convenient request builders.
 type MT5Service struct {
-	account *MT5Account
+	account *helpers.MT5Account
 }
 
 // NewMT5Service creates a new MT5Service wrapping an MT5Account instance.
@@ -84,14 +85,14 @@ type MT5Service struct {
 //   - account: MT5Account instance (low-level gRPC client)
 //
 // Returns new MT5Service instance.
-func NewMT5Service(account *MT5Account) *MT5Service {
+func NewMT5Service(account *helpers.MT5Account) *MT5Service {
 	return &MT5Service{
 		account: account,
 	}
 }
 
 // GetAccount returns the underlying MT5Account for direct low-level access.
-func (s *MT5Service) GetAccount() *MT5Account {
+func (s *MT5Service) GetAccount() *helpers.MT5Account {
 	return s.account
 }
 
