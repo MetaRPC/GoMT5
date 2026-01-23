@@ -1,6 +1,6 @@
 # MT5Account API Reference
 
-> **Note:** This documentation is auto-generated from [`package/Helpers/MT5Account.go`](../../package/Helpers/MT5Account.go) with enhanced navigation for easier browsing. For those who prefer viewing the complete API in a single-page reference format.
+> **Note:** Complete API reference for package/Helpers/MT5Account.go with enhanced navigation. Single-page format for easy browsing.
 
 MT5Account represents a low-level gRPC client for MetaTrader 5 terminal. All methods accept protobuf Request objects and return protobuf Data objects. This is the foundation layer that directly communicates with the MT5 gRPC server.
 

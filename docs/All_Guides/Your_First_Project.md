@@ -393,9 +393,13 @@ Now, when all code files are created, `go mod tidy` will see the real imports an
 You just:
 
 ✅ Created a new Go project from scratch
+
 ✅ Integrated the **single** Go module `package` for working with MT5
+
 ✅ Configured connection settings
+
 ✅ Connected to MT5 terminal via gRPC
+
 ✅ Got complete account information programmatically
 
 **This was a low-level approach** using `MT5Account` and protobuf directly.

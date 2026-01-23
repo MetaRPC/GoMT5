@@ -1,6 +1,6 @@
 # MT5Service API Reference
 
-> **Note:** This documentation is auto-generated from [`examples/mt5/MT5Service.go`](../../examples/mt5/MT5Service.go) with enhanced navigation for easier browsing. For those who prefer viewing the complete API in a single-page reference format.
+> **Note:** Complete API reference for examples/mt5/MT5Service.go with enhanced navigation. Single-page format for easy browsing.
 
 MT5Service is the mid-level API wrapper that bridges MT5Account (low-level gRPC) and MT5Sugar (high-level convenience). It unwraps protobuf structures and provides Go native types while maintaining full control over request parameters and contexts.
 

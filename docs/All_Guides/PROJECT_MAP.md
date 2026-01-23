@@ -10,6 +10,7 @@
 GoMT5/
 ├── 📦 package/ - Independent module (portable)
 │   ├── Helpers/MT5Account.go (Layer 1 - Foundation)
+│   ├── Helpers/errors.go (Error handling & trade return codes)
 │   ├── Proto definitions (*.pb.go)
 │   └── gRPC stubs (*_grpc.pb.go)
 │

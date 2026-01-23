@@ -1,6 +1,6 @@
 # MT5Sugar API Reference
 
-> **Note:** This documentation is auto-generated from [`examples/mt5/MT5Sugar.go`](../../examples/mt5/MT5Sugar.go) with enhanced navigation for easier browsing. For those who prefer viewing the complete API in a single-page reference format.
+> **Note:** Complete API reference for examples/mt5/MT5Sugar.go with enhanced navigation. Single-page format for easy browsing.
 
 MT5Sugar is the high-level API wrapper providing ultra-simple one-liner methods for all common MT5 operations. It automatically handles contexts, timeouts, and provides smart defaults for all parameters.
 
