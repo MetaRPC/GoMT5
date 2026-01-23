@@ -543,23 +543,23 @@ for {
 The GoMT5 repository has **three API layers**:
 
 ```
-┌─────────────────────────────────────────────┐
-│  MT5Sugar (Layer 3) - Convenient API       │
-│  examples/mt5/MT5Sugar.go                   │
-│  sugar.BuyMarket("EURUSD", 0.01)            │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────
+│  MT5Sugar (Layer 3) - Convenient API       
+│  examples/mt5/MT5Sugar.go                   
+│  sugar.BuyMarket("EURUSD", 0.01)            
+└─────────────────────────────────────────────
               ↓ uses
-┌─────────────────────────────────────────────┐
-│  MT5Service (Layer 2) - Wrappers            │
-│  examples/mt5/MT5Service.go                 │
-│  service.GetBalance()                       │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────
+│  MT5Service (Layer 2) - Wrappers            
+│  examples/mt5/MT5Service.go                 
+│  service.GetBalance()                       
+└─────────────────────────────────────────────
               ↓ uses
-┌─────────────────────────────────────────────┐
-│  MT5Account (Layer 1) - Base gRPC ⭐        │
-│  package/Helpers/MT5Account.go              │
-│  account.AccountSummary(ctx, req)           │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────
+│  MT5Account (Layer 1) - Base gRPC ⭐        
+│  package/Helpers/MT5Account.go              
+│  account.AccountSummary(ctx, req)          
+└─────────────────────────────────────────────
 ```
 
 **You just used Layer 1 (MT5Account)** - this is the foundation of everything!
