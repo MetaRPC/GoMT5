@@ -367,30 +367,36 @@ pb.<ENUM_TYPE>_<CONSTANT_NAME>
 ### ⚠️ Special Cases
 
 **1. AccountInfoInteger and SymbolInfoInteger:**
+
 - Some properties return values that **represent ENUMs**, but are returned as `int64`
 - These are **NOT typed ENUMs**, just numbers!
 - You need to manually compare with known values
 
 **2. PositionsHistory:**
+
 - Does NOT return Deal ENUMs (BMT5_ENUM_DEAL_TYPE, BMT5_ENUM_DEAL_REASON, BMT5_ENUM_DEAL_ENTRY_TYPE)
 - Returns only POSITION information, not deals
 - Output ENUM: only AH_ENUM_POSITIONS_HISTORY_ORDER_TYPE
 
 **3. OrderModify:**
+
 - Uses Input ENUM for ExpirationTimeType
 - Does NOT use ENUMs in response (only ReturnedCode as uint32)
 
 **4. ReturnedCode:**
+
 - ReturnedCode field in all trading operations is **NOT an ENUM**
 - It's a plain uint32 operation return code
 - See [RETURN_CODES_REFERENCE.md](./RETURN_CODES_REFERENCE.md) for code list
 
 **5. Streaming Methods - OnPositionProfit:**
+
 - OnPositionProfit USES Output ENUM: `MT5_SUB_ENUM_EVENT_GROUP_TYPE` (in Type field of OnPositionProfitData structure)
 - This same ENUM is used in OnTrade and OnTradeTransaction
 - Represents event type in stream (OrderProfit, OrderPlaced, OrderModified, TradeTransaction, etc.)
 
 **6. OnTradeTransaction - most complex:**
+
 - Uses **11 fields with ENUMs** (9 unique types) in four nested structures:
   - `OnTradeTransactionData.Type` - MT5_SUB_ENUM_EVENT_GROUP_TYPE
   - `MqlTradeTransaction` - 5 ENUMs (Type, OrderType, OrderState, DealType, OrderTimeType)
@@ -399,6 +405,7 @@ pb.<ENUM_TYPE>_<CONSTANT_NAME>
 - Some ENUM types are reused in different structures (SUB_ENUM_ORDER_TYPE, SUB_ENUM_ORDER_TYPE_TIME)
 
 **7. Methods with Multiple Nested ENUMs:**
+
 - **OrderHistory** returns 7 different ENUMs (4 in OrderHistoryData + 3 in DealHistoryData)
 - **OpenedOrders** returns 6 different ENUMs (3 in PositionInfo + 3 in OpenedOrderInfo)
 
@@ -407,6 +414,7 @@ pb.<ENUM_TYPE>_<CONSTANT_NAME>
 ## 🔗 See Also
 
 ### Documentation by Group:
+
 - [Account Information Overview](../MT5Account/1.%20Account_information/Account_Information.Overview.md)
 - [Symbol Information Overview](../MT5Account/2.%20Symbol_information/Symbol_Information.Overview.md)
 - [Positions & Orders Overview](../MT5Account/3.%20Position_Orders_Information/Position_Orders.Overview.md)
@@ -414,5 +422,6 @@ pb.<ENUM_TYPE>_<CONSTANT_NAME>
 - [Trading Operations Overview](../MT5Account/4.%20Trading_Operations/Trading_Operations.Overview.md)
 
 ### Other References:
+
 - [Return Codes Reference](./RETURN_CODES_REFERENCE.md) - trading operation return codes
 - [Error Handling Guide](./ERROR_HANDLING_GUIDE.md) - error handling
