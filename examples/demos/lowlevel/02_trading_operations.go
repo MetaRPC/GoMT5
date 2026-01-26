@@ -300,9 +300,9 @@ func RunTrading02() error {
 		}
 		fmt.Printf("    Comment:                     %s\n", sendData.Comment)
 
-		// Check if order executed successfully (10009 = DONE)
-		if sendData.ReturnedCode == 10009 {
-			fmt.Printf("    ✓ Order EXECUTED successfully!\n")
+		// Check if order executed successfully using helper
+		// This demonstrates proper ReturnedCode validation
+		if helpers.CheckRetCode(sendData.ReturnedCode, "Order execution") {
 			orderTicket := sendData.Order
 
 			// ══════════════════════════════════════════════════════════════
@@ -332,9 +332,8 @@ func RunTrading02() error {
 				fmt.Printf("    Take Profit:                 %.5f\n", takeProfit)
 				fmt.Printf("    Comment:                     %s\n", modifyData.Comment)
 
-				if modifyData.ReturnedCode == 10009 {
-					fmt.Printf("    ✓ Position MODIFIED successfully!\n")
-				}
+				// Check modification result using helper
+				helpers.CheckRetCode(modifyData.ReturnedCode, "Position modification")
 			}
 
 			// ══════════════════════════════════════════════════════════════
@@ -358,9 +357,8 @@ func RunTrading02() error {
 				fmt.Printf("    Description:                 %s\n", closeData.ReturnedCodeDescription)
 				fmt.Printf("    Close Mode:                  %v\n", closeData.CloseMode)
 
-				if closeData.ReturnedCode == 10009 {
-					fmt.Printf("    ✓ Position CLOSED successfully!\n")
-				}
+				// Check close result using helper
+				helpers.CheckRetCode(closeData.ReturnedCode, "Position close")
 			}
 		} else {
 			fmt.Printf("    ✗ Order execution FAILED - check return code and comment\n")

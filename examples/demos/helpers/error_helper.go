@@ -243,3 +243,27 @@ func PrintRetCodeWarning(retCode uint32, context string) {
 	fmt.Printf("  ⚠️  %s (RetCode: %d)\n", context, retCode)
 	fmt.Printf("     %s\n", mt5.GetRetCodeMessage(retCode))
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CONNECTION ERROR HANDLING - ErrNotConnected
+// ══════════════════════════════════════════════════════════════════════════════
+
+// CheckConnection checks if error is ErrNotConnected and prints appropriate message.
+// Returns true if connection error was detected.
+//
+// This function demonstrates proper usage of errors.Is() with sentinel errors.
+//
+// Example:
+//   data, err := account.OrderSend(ctx, req)
+//   if helpers.CheckConnection(err) {
+//       // Handle reconnection logic here
+//       return fmt.Errorf("connection lost, please reconnect")
+//   }
+func CheckConnection(err error) bool {
+	if errors.Is(err, mt5.ErrNotConnected) {
+		fmt.Println("  ⚠️  Connection Error: Not connected to MT5 terminal")
+		fmt.Println("     Please ensure you called Connect() or ConnectEx() first")
+		return true
+	}
+	return false
+}

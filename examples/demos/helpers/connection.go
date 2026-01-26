@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -68,6 +69,11 @@ func ConnectByServerName(account *mt5.MT5Account, serverName, baseSymbol string,
 	// ConnectEx
 	reply, err := account.ConnectEx(ctx, req)
 	if err != nil {
+		// Check for specific error types using errors.Is()
+		// This demonstrates proper handling of ErrNotConnected sentinel error
+		if errors.Is(err, mt5.ErrNotConnected) {
+			return fmt.Errorf("gRPC connection not established - check NewMT5Account() succeeded: %w", err)
+		}
 		return fmt.Errorf("ConnectEx failed: %w", err)
 	}
 

@@ -36,6 +36,7 @@
       • SymbolInfoSessionQuote() - Quote session times
       • SymbolInfoSessionTrade() - Trade session times
       • SymbolParamsMany() - Detailed parameters for multiple symbols
+      • TickValueWithSize() - Tick value and size info
 
    STEP 5: POSITIONS & ORDERS INFORMATION
       • PositionsTotal() - Count open positions
@@ -679,6 +680,32 @@ func RunGeneral01() error {
 			fmt.Printf("    Volume Step:                 %.2f\n", info.VolumeStep)
 			fmt.Printf("    Contract Size:               %.2f\n", info.TradeContractSize)
 			fmt.Printf("    Point:                       %.5f\n", info.Point)
+		}
+	}
+
+	// ══════════════════════════════════════════════════════════════
+	// 4.14. TICK VALUE WITH SIZE
+	//      Get tick value and tick size information for symbols.
+	//      Returns: TradeTickValue, TradeTickSize, TradeContractSize, etc.
+	//      Useful for calculating position value and P&L accurately.
+	// ══════════════════════════════════════════════════════════════
+	fmt.Println("\n4.14. TickValueWithSize() - Get tick value and size info")
+
+	tickValueReq := &pb.TickValueWithSizeRequest{
+		SymbolNames: []string{cfg.TestSymbol}, // Array of symbol names
+	}
+	tickValueData, err := account.TickValueWithSize(ctx, tickValueReq)
+	if err != nil {
+		helpers.PrintShortError(err, "TickValueWithSize failed")
+	} else {
+		fmt.Printf("  Retrieved tick value/size data for %d symbols:\n", len(tickValueData.SymbolTickSizeInfos))
+		for _, info := range tickValueData.SymbolTickSizeInfos {
+			fmt.Printf("\n  Symbol: %s (Index: %d)\n", info.Name, info.Index)
+			fmt.Printf("    Trade Tick Value:        %.5f\n", info.TradeTickValue)
+			fmt.Printf("    Trade Tick Value Profit: %.5f\n", info.TradeTickValueProfit)
+			fmt.Printf("    Trade Tick Value Loss:   %.5f\n", info.TradeTickValueLoss)
+			fmt.Printf("    Trade Tick Size:         %.5f\n", info.TradeTickSize)
+			fmt.Printf("    Trade Contract Size:     %.2f\n", info.TradeContractSize)
 		}
 	}
 
