@@ -30,8 +30,13 @@ if !helpers.PrintShortError(err, "OrderModify failed") {
     fmt.Printf("    Take Profit:                 %.5f\n", takeProfit)
     fmt.Printf("    Comment:                     %s\n", modifyData.Comment)
 
-    if modifyData.ReturnedCode == 10009 {
+    // Check if modification was successful using helper from errors.go
+    if mt5.IsRetCodeSuccess(modifyData.ReturnedCode) {
         fmt.Printf("    ✓ Position MODIFIED successfully!\n")
+    } else {
+        fmt.Printf("    ❌ Modification failed: %s (code: %d)\n",
+            mt5.GetRetCodeMessage(modifyData.ReturnedCode),
+            modifyData.ReturnedCode)
     }
 }
 ```
@@ -112,14 +117,32 @@ Key fields:
 ### 5️. Verify Operation Success
 
 ```go
-if modifyData.ReturnedCode == 10009 {
+// Check if modification was successful using helper from errors.go
+if mt5.IsRetCodeSuccess(modifyData.ReturnedCode) {
     fmt.Printf("    ✓ Position MODIFIED successfully!\n")
+} else {
+    fmt.Printf("    ❌ Modification failed: %s (code: %d)\n",
+        mt5.GetRetCodeMessage(modifyData.ReturnedCode),
+        modifyData.ReturnedCode)
 }
 ```
 
-Code `10009` (`TRADE_RETCODE_DONE`) means the changes were applied.
+**Why use `mt5.IsRetCodeSuccess()` instead of checking `== 10009` manually?**
 
-If the code is different — the broker may have rejected the request (e.g., SL/TP levels too close or order already closed).
+1. **Self-Documenting**: The function name clearly explains what is being validated
+2. **Centralized Logic**: Single source of truth for success validation in `package/Helpers/errors.go`
+3. **Better Error Messages**: `mt5.GetRetCodeMessage()` automatically provides human-readable descriptions for common errors like:
+   - `TRADE_RETCODE_INVALID_STOPS` - SL/TP levels too close to market price
+   - `TRADE_RETCODE_INVALID_ORDER` - Order already closed or doesn't exist
+   - `TRADE_RETCODE_REQUOTE` - Price changed, need to retry
+4. **Consistency**: All code examples use the same error checking pattern
+
+Code `10009` (`TRADE_RETCODE_DONE`) means the changes were applied successfully.
+
+If the code is different — the broker rejected the request. The helper functions provide detailed error descriptions to understand why. Common reasons include:
+- SL/TP levels too close (violating `SYMBOL_TRADE_STOPS_LEVEL`)
+- Order already closed
+- Invalid ticket number
 
 ---
 

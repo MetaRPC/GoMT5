@@ -60,8 +60,7 @@ func (a *MT5Account) OpenedOrders(
 
 ```protobuf
 OpenedOrdersRequest {
-  string Symbol = 1;  // Optional symbol filter (empty = all symbols)
-  string Group = 2;   // Optional group filter
+  BMT5_ENUM_OPENED_ORDER_SORT_TYPE InputSortMode = 1;  // Sort order for results
 }
 ```
 
@@ -83,44 +82,72 @@ OpenedOrdersReply {
 | Parameter | Type                         | Description                                   |
 | --------- | ---------------------------- | --------------------------------------------- |
 | `ctx`     | `context.Context`            | Context for deadline/timeout and cancellation |
-| `req`     | `*pb.OpenedOrdersRequest`    | Request with optional Symbol and Group filter |
+| `req`     | `*pb.OpenedOrdersRequest`    | Request with sort mode parameter              |
 
 **Request fields:**
 
-| Field    | Type     | Description                                        |
-| -------- | -------- | -------------------------------------------------- |
-| `Symbol` | `string` | Optional symbol filter (empty string = all symbols) |
-| `Group`  | `string` | Optional group filter                               |
+| Field          | Type                                 | Description                                        |
+| -------------- | ------------------------------------ | -------------------------------------------------- |
+| `InputSortMode` | `BMT5_ENUM_OPENED_ORDER_SORT_TYPE` | Sort order for returned orders and positions       |
 
 ---
 
 ## ⬆️ Output — `OpenedOrdersData`
 
-| Field           | Type              | Go Type                | Description                          |
-| --------------- | ----------------- | ---------------------- | ------------------------------------ |
-| `OpenedOrders`  | `OrderData[]`     | `[]*pb.OrderData`      | Array of pending orders              |
-| `PositionInfos` | `PositionInfo[]`  | `[]*pb.PositionInfo`   | Array of open positions              |
+| Field           | Type                  | Go Type                    | Description                          |
+| --------------- | --------------------- | -------------------------- | ------------------------------------ |
+| `OpenedOrders`  | `OpenedOrderInfo[]`   | `[]*pb.OpenedOrderInfo`    | Array of pending orders              |
+| `PositionInfos` | `PositionInfo[]`      | `[]*pb.PositionInfo`       | Array of open positions              |
 
 **PositionInfo structure includes:**
 
+- `Index` - Position index
 - `Ticket` - Position ticket number
-- `Symbol` - Trading symbol
-- `Type` - Position type (see enum below)
+- `OpenTime` - Position open time (timestamp)
 - `Volume` - Position volume
 - `PriceOpen` - Open price
-- `PriceCurrent` - Current market price
 - `StopLoss` - Stop loss level
 - `TakeProfit` - Take profit level
-- `Profit` - Current profit/loss
+- `PriceCurrent` - Current market price
 - `Swap` - Swap charges
-- `Commission` - Commission
-- `Magic` - Magic number
+- `Profit` - Current profit/loss
+- `LastUpdateTime` - Last update timestamp
+- `Type` - Position type (BMT5_ENUM_POSITION_TYPE)
+- `MagicNumber` - Magic number
+- `Identifier` - Position identifier
+- `Reason` - Position open reason (BMT5_ENUM_POSITION_REASON)
+- `Symbol` - Trading symbol
+- `Comment` - Position comment
+- `ExternalId` - External identifier
+- `PositionCommission` - Position commission
+- `AccountLogin` - Account login
+
+**OpenedOrderInfo structure (pending orders):**
+
+- `Index` - Order index
+- `Ticket` - Order ticket number
+- `PriceCurrent` - Current market price
+- `PriceOpen` - Order open price
+- `StopLimit` - Stop limit price (for stop-limit orders)
+- `StopLoss` - Stop loss level
+- `TakeProfit` - Take profit level
+- `VolumeCurrent` - Current volume (for partially filled orders)
+- `VolumeInitial` - Initial volume
+- `MagicNumber` - Magic number
+- `Reason` - Order creation reason
+- `Type` - Order type (BMT5_ENUM_ORDER_TYPE)
+- `State` - Order state (BMT5_ENUM_ORDER_STATE)
+- `TimeExpiration` - Expiration time (timestamp)
+- `TimeSetup` - Setup time (timestamp)
+- `TimeDone` - Done time (timestamp)
+- `TypeFilling` - Order filling type (BMT5_ENUM_ORDER_TYPE_FILLING)
+- `TypeTime` - Order time type (BMT5_ENUM_ORDER_TYPE_TIME)
+- `PositionId` - Position ID
+- `PositionById` - Position by ID
+- `Symbol` - Trading symbol
+- `ExternalId` - External identifier
 - `Comment` - Order comment
-- `Time` - Open timestamp
-
-**OrderData structure (pending orders):**
-
-- Similar fields for pending orders (see ORDER_TYPE enum below for all types)
+- `AccountLogin` - Account login
 
 ---
 
@@ -145,7 +172,69 @@ OpenedOrdersReply {
 | 7 | `BMT5_ORDER_TYPE_SELL_STOP_LIMIT` | Sell Stop Limit (pending Sell Limit order at StopLimit price) |
 | 8 | `BMT5_ORDER_TYPE_CLOSE_BY` | Order to close a position by an opposite one |
 
-**Note:** For open positions (PositionInfo), typically only values 0 (BUY) and 1 (SELL) are used. For pending orders (OrderData), all types 2-8 can be present.
+**Note:** For open positions (PositionInfo), use BMT5_ENUM_POSITION_TYPE instead. For pending orders (OpenedOrderInfo), all types 0-8 can be present.
+
+### 📘 Enum: BMT5_ENUM_POSITION_TYPE
+
+| Value | Constant | Description |
+|-------|----------|-------------|
+| 0 | `BMT5_POSITION_TYPE_BUY` | Long position (Buy) |
+| 1 | `BMT5_POSITION_TYPE_SELL` | Short position (Sell) |
+
+**Used in:** PositionInfo.Type
+
+### 📘 Enum: BMT5_ENUM_POSITION_REASON
+
+| Value | Constant | Description |
+|-------|----------|-------------|
+| 0 | `BMT5_POSITION_REASON_CLIENT` | Position opened from desktop terminal |
+| 1 | `BMT5_POSITION_REASON_MOBILE` | Position opened from mobile application |
+| 2 | `BMT5_POSITION_REASON_WEB` | Position opened from web platform |
+| 3 | `BMT5_POSITION_REASON_EXPERT` | Position opened by Expert Advisor or script |
+| 4 | `ORDER_REASON_SL` | Position closed by Stop Loss |
+| 5 | `ORDER_REASON_TP` | Position closed by Take Profit |
+| 6 | `ORDER_REASON_SO` | Position closed by Stop Out |
+
+**Used in:** PositionInfo.Reason
+
+### 📘 Enum: BMT5_ENUM_ORDER_STATE
+
+| Value | Constant | Description |
+|-------|----------|-------------|
+| 0 | `BMT5_ORDER_STATE_STARTED` | Order checked, but not yet accepted by broker |
+| 1 | `BMT5_ORDER_STATE_PLACED` | Order accepted |
+| 2 | `BMT5_ORDER_STATE_CANCELED` | Order canceled by client |
+| 3 | `BMT5_ORDER_STATE_PARTIAL` | Order partially executed |
+| 4 | `BMT5_ORDER_STATE_FILLED` | Order fully executed |
+| 5 | `BMT5_ORDER_STATE_REJECTED` | Order rejected |
+| 6 | `BMT5_ORDER_STATE_EXPIRED` | Order expired |
+| 7 | `BMT5_ORDER_STATE_REQUEST_ADD` | Order is being registered (placing to the trading system) |
+| 8 | `BMT5_ORDER_STATE_REQUEST_MODIFY` | Order is being modified (changing its parameters) |
+| 9 | `BMT5_ORDER_STATE_REQUEST_CANCEL` | Order is being deleted (deleting from the trading system) |
+
+**Used in:** OpenedOrderInfo.State
+
+### 📘 Enum: BMT5_ENUM_ORDER_TYPE_FILLING
+
+| Value | Constant | Description |
+|-------|----------|-------------|
+| 0 | `BMT5_ORDER_FILLING_FOK` | Fill or Kill - order must be filled completely or not at all |
+| 1 | `BMT5_ORDER_FILLING_IOC` | Immediate or Cancel - fill available volume, cancel the rest |
+| 2 | `BMT5_ORDER_FILLING_RETURN` | Return - order is placed with the broker for execution |
+| 3 | `BMT5_ORDER_FILLING_BOC` | Book or Cancel - order must be placed as a passive order (limit) |
+
+**Used in:** OpenedOrderInfo.TypeFilling
+
+### 📘 Enum: BMT5_ENUM_ORDER_TYPE_TIME
+
+| Value | Constant | Description |
+|-------|----------|-------------|
+| 0 | `BMT5_ORDER_TIME_GTC` | Good Till Cancelled - order stays until explicitly cancelled |
+| 1 | `BMT5_ORDER_TIME_DAY` | Good Till Day - order valid until end of trading day |
+| 2 | `BMT5_ORDER_TIME_SPECIFIED` | Good Till Specified - order valid until specified date/time |
+| 3 | `BMT5_ORDER_TIME_SPECIFIED_DAY` | Good Till Specified Day - order valid until end of specified day |
+
+**Used in:** OpenedOrderInfo.TypeTime
 
 ### 📘 Enum: BMT5_ENUM_OPENED_ORDER_SORT_TYPE
 
@@ -164,7 +253,7 @@ OpenedOrdersReply {
 * **Automatic reconnection:** All `MT5Account` methods have built-in protection against transient gRPC errors with automatic reconnection via `ExecuteWithReconnect`.
 * **Default timeout:** If context has no deadline, a default `10s` timeout is applied automatically.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
-* **Symbol filter:** Use Symbol field to get positions for specific instrument only.
+* **Sorting:** Use InputSortMode to control the order of returned results (by open time or ticket ID, ascending or descending).
 * **Performance:** For large accounts, consider using OpenedOrdersTickets for lightweight checks.
 
 ---
@@ -193,7 +282,7 @@ func main() {
     defer cancel()
 
     data, err := account.OpenedOrders(ctx, &pb.OpenedOrdersRequest{
-        Symbol: "", // All symbols
+        InputSortMode: pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC,
     })
     if err != nil {
         panic(err)
@@ -217,14 +306,14 @@ func main() {
 }
 ```
 
-### 2) Get positions for specific symbol
+### 2) Get positions sorted by ticket ID
 
 ```go
-func GetSymbolPositions(account *mt5.MT5Account, symbol string) ([]*pb.PositionInfo, error) {
+func GetPositionsSortedByTicket(account *mt5.MT5Account) ([]*pb.PositionInfo, error) {
     ctx := context.Background()
 
     data, err := account.OpenedOrders(ctx, &pb.OpenedOrdersRequest{
-        Symbol: symbol,
+        InputSortMode: pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_ORDER_TICKET_ID_ASC,
     })
     if err != nil {
         return nil, fmt.Errorf("failed to get positions: %w", err)
@@ -234,8 +323,8 @@ func GetSymbolPositions(account *mt5.MT5Account, symbol string) ([]*pb.PositionI
 }
 
 // Usage:
-// positions, _ := GetSymbolPositions(account, "EURUSD")
-// fmt.Printf("EURUSD positions: %d\n", len(positions))
+// positions, _ := GetPositionsSortedByTicket(account)
+// fmt.Printf("Positions sorted by ticket: %d\n", len(positions))
 ```
 
 ### 3) Calculate total profit
@@ -244,7 +333,9 @@ func GetSymbolPositions(account *mt5.MT5Account, symbol string) ([]*pb.PositionI
 func GetTotalProfit(account *mt5.MT5Account) (float64, error) {
     ctx := context.Background()
 
-    data, err := account.OpenedOrders(ctx, &pb.OpenedOrdersRequest{})
+    data, err := account.OpenedOrders(ctx, &pb.OpenedOrdersRequest{
+        InputSortMode: pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC,
+    })
     if err != nil {
         return 0, err
     }
@@ -268,7 +359,9 @@ func GetTotalProfit(account *mt5.MT5Account) (float64, error) {
 func GetLosingPositions(account *mt5.MT5Account) ([]*pb.PositionInfo, error) {
     ctx := context.Background()
 
-    data, err := account.OpenedOrders(ctx, &pb.OpenedOrdersRequest{})
+    data, err := account.OpenedOrders(ctx, &pb.OpenedOrdersRequest{
+        InputSortMode: pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC,
+    })
     if err != nil {
         return nil, err
     }
@@ -296,7 +389,9 @@ func GetLosingPositions(account *mt5.MT5Account) ([]*pb.PositionInfo, error) {
 func DisplayPositionDetails(account *mt5.MT5Account) {
     ctx := context.Background()
 
-    data, err := account.OpenedOrders(ctx, &pb.OpenedOrdersRequest{})
+    data, err := account.OpenedOrders(ctx, &pb.OpenedOrdersRequest{
+        InputSortMode: pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC,
+    })
     if err != nil {
         fmt.Printf("Error: %v\n", err)
         return
@@ -315,11 +410,11 @@ func DisplayPositionDetails(account *mt5.MT5Account) {
 
         totalProfit += pos.Profit
         totalSwap += pos.Swap
-        totalCommission += pos.Commission
+        totalCommission += pos.PositionCommission
 
-        if pos.Type == 0 { // Buy
+        if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
             buyVolume += pos.Volume
-        } else if pos.Type == 1 { // Sell
+        } else if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_SELL {
             sellVolume += pos.Volume
         }
     }
@@ -340,14 +435,16 @@ func DisplayPositionDetails(account *mt5.MT5Account) {
 func GetPositionsByMagic(account *mt5.MT5Account, magic int64) ([]*pb.PositionInfo, error) {
     ctx := context.Background()
 
-    data, err := account.OpenedOrders(ctx, &pb.OpenedOrdersRequest{})
+    data, err := account.OpenedOrders(ctx, &pb.OpenedOrdersRequest{
+        InputSortMode: pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC,
+    })
     if err != nil {
         return nil, err
     }
 
     positions := []*pb.PositionInfo{}
     for _, pos := range data.PositionInfos {
-        if pos.Magic == magic {
+        if pos.MagicNumber == magic {
             positions = append(positions, pos)
         }
     }
@@ -367,13 +464,20 @@ func HasPositionsForSymbol(account *mt5.MT5Account, symbol string) (bool, error)
     ctx := context.Background()
 
     data, err := account.OpenedOrders(ctx, &pb.OpenedOrdersRequest{
-        Symbol: symbol,
+        InputSortMode: pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC,
     })
     if err != nil {
         return false, err
     }
 
-    return len(data.PositionInfos) > 0, nil
+    // Filter by symbol
+    for _, pos := range data.PositionInfos {
+        if pos.Symbol == symbol {
+            return true, nil
+        }
+    }
+
+    return false, nil
 }
 ```
 
@@ -384,16 +488,19 @@ func GetSymbolExposure(account *mt5.MT5Account, symbol string) (buyVolume, sellV
     ctx := context.Background()
 
     data, err := account.OpenedOrders(ctx, &pb.OpenedOrdersRequest{
-        Symbol: symbol,
+        InputSortMode: pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC,
     })
     if err != nil {
         return 0, 0, err
     }
 
     for _, pos := range data.PositionInfos {
-        if pos.Type == 0 { // Buy
+        if pos.Symbol != symbol {
+            continue
+        }
+        if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
             buyVolume += pos.Volume
-        } else if pos.Type == 1 { // Sell
+        } else if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_SELL {
             sellVolume += pos.Volume
         }
     }

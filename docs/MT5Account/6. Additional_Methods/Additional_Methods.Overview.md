@@ -10,6 +10,7 @@
 * **[SymbolInfoSessionQuote](./SymbolInfoSessionQuote.md)** - quote session times.
 * **[SymbolInfoSessionTrade](./SymbolInfoSessionTrade.md)** - trade session times.
 * **[SymbolParamsMany](./SymbolParamsMany.md)** - detailed parameters for multiple symbols (112 fields!).
+* **[TickValueWithSize](./TickValueWithSize.md)** - tick value and size information for symbols.
 
 ---
 
@@ -21,6 +22,7 @@ Want detailed explanations with line-by-line code breakdown? Check these guides:
 * **[SymbolInfoSessionQuote - How it works](../HOW_IT_WORK/6.%20Additional_Methods_HOW/SymbolInfoSessionQuote_HOW.md)**
 * **[SymbolInfoSessionTrade - How it works](../HOW_IT_WORK/6.%20Additional_Methods_HOW/SymbolInfoSessionTrade_HOW.md)**
 * **[SymbolParamsMany - How it works](../HOW_IT_WORK/6.%20Additional_Methods_HOW/SymbolParamsMany_HOW.md)**
+* **[TickValueWithSize - How it works](../HOW_IT_WORK/6.%20Additional_Methods_HOW/TickValueWithSize_HOW.md)**
 
 ---
 
@@ -30,8 +32,9 @@ Want detailed explanations with line-by-line code breakdown? Check these guides:
 * **SymbolInfoSessionQuote** → get **quote session** times (when quotes are available).
 * **SymbolInfoSessionTrade** → get **trading session** times (when trading is allowed).
 * **SymbolParamsMany** → get **complete symbol specifications** for multiple symbols in one call (most efficient).
+* **TickValueWithSize** → get **tick value and contract size** for position value and P&L calculations.
 
-> Rule of thumb: need **session times** → use Session methods; need **complete symbol data** → use `SymbolParamsMany`; need **margin rates** → use `SymbolInfoMarginRate`.
+> Rule of thumb: need **session times** → use Session methods; need **complete symbol data** → use `SymbolParamsMany`; need **margin rates** → use `SymbolInfoMarginRate`; need **tick value/P&L data** → use `TickValueWithSize`.
 
 ---
 
@@ -43,6 +46,7 @@ Want detailed explanations with line-by-line code breakdown? Check these guides:
 | Quote session times                              | `SymbolInfoSessionQuote`    | SessionInfo                | Symbol, day of week, session index  |
 | Trading session times                            | `SymbolInfoSessionTrade`    | SessionInfo                | Symbol, day of week, session index  |
 | Complete specs for multiple symbols              | `SymbolParamsMany`          | Array of SymbolParams      | Symbol list, optional filters       |
+| Tick value and size for P&L calculations         | `TickValueWithSize`         | TickSizeSymbol array       | Symbol names array                  |
 
 ---
 

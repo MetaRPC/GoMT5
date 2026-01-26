@@ -33,7 +33,8 @@ func (a *MT5Account) OnPositionProfit(
 
 ```protobuf
 OnPositionProfitRequest {
-  string Symbol = 1;  // Optional symbol filter (empty = all symbols)
+  int32 TimerPeriodMilliseconds = 1;  // Update interval in milliseconds
+  bool IgnoreEmptyData = 2;           // Skip empty updates (no changes)
 }
 ```
 
@@ -44,7 +45,9 @@ OnPositionProfitRequest {
 | Parameter | Type                           | Description                                   |
 | --------- | ------------------------------ | --------------------------------------------- |
 | `ctx`     | `context.Context`              | Context for cancellation (cancel to stop stream) |
-| `req`     | `*pb.OnPositionProfitRequest`  | Request with optional Symbol filter           |
+| `req`     | `*pb.OnPositionProfitRequest`  | Request with update interval settings          |
+| `req.TimerPeriodMilliseconds` | `int32` | Update interval in milliseconds (e.g., 1000 = 1 second) |
+| `req.IgnoreEmptyData` | `bool` | If true, skip updates when no positions changed |
 
 ---
 
@@ -59,10 +62,21 @@ OnPositionProfitRequest {
 
 | Field          | Type     | Go Type   | Description                    |
 | -------------- | -------- | --------- | ------------------------------ |
-| `Ticket`       | `uint64` | `uint64`  | Position ticket number         |
-| `Symbol`       | `string` | `string`  | Trading symbol                 |
+| `Type` | `MT5_SUB_ENUM_EVENT_GROUP_TYPE` (enum) | `int32` | Event type (always OrderProfit) - **ENUM!** |
+| `NewPositions` | `repeated OnPositionProfitPositionInfo` | `[]*OnPositionProfitPositionInfo` | Newly opened positions |
+| `UpdatedPositions` | `repeated OnPositionProfitPositionInfo` | `[]*OnPositionProfitPositionInfo` | Positions with P&L changes |
+| `DeletedPositions` | `repeated OnPositionProfitPositionInfo` | `[]*OnPositionProfitPositionInfo` | Closed positions |
+| `AccountInfo` | `OnEventAccountInfo` | `*OnEventAccountInfo` | Account snapshot (balance, equity, etc.) |
+| `TerminalInstanceGuidId` | `string` | `string` | Terminal instance ID |
+
+**OnPositionProfitPositionInfo fields:**
+
+| Field          | Type     | Go Type   | Description                    |
+| -------------- | -------- | --------- | ------------------------------ |
+| `Index`        | `int32` | `int32`  | Position index         |
+| `Ticket`       | `int64` | `int64`  | Position ticket number         |
 | `Profit`       | `double` | `float64` | Current profit/loss            |
-| `CurrentPrice` | `double` | `float64` | Current market price           |
+| `PositionSymbol` | `string` | `string` | Trading symbol           |
 
 ---
 
@@ -94,6 +108,43 @@ For a detailed line-by-line explanation with examples, see:
 
 ---
 
+## 🧱 ENUMs used in OnPositionProfit
+
+### Output ENUM
+
+| ENUM Type | Field Name | Purpose | Values |
+|-----------|------------|---------|--------|
+| `MT5_SUB_ENUM_EVENT_GROUP_TYPE` | `Type` | Indicates the event type | `OrderProfit` (0) - Position profit/loss update event |
+
+**Usage in code:**
+
+```go
+profitStream, _ := account.OnPositionProfit(ctx, &pb.OnPositionProfitRequest{
+    TimerPeriodMilliseconds: 1000,
+    IgnoreEmptyData:         true,
+})
+
+for {
+    event, err := profitStream.Recv()
+    if err != nil {
+        break
+    }
+
+    // Check event type (always OrderProfit for this stream)
+    switch event.Type {
+    case pb.MT5_SUB_ENUM_EVENT_GROUP_TYPE_OrderProfit:
+        fmt.Printf("Position profit updates: %d new, %d updated, %d deleted\n",
+            len(event.NewPositions),
+            len(event.UpdatedPositions),
+            len(event.DeletedPositions))
+    }
+}
+```
+
+**Note:** The `Type` field will always be `OrderProfit` for OnPositionProfit stream. This ENUM is shared across all streaming methods (OnTrade, OnPositionProfit, OnTradeTransaction) to maintain consistent event identification.
+
+---
+
 ## 🧩 Notes & Tips
 
 * **Automatic reconnection:** All `MT5Account` methods have built-in protection against transient gRPC errors with automatic reconnection via `ExecuteWithReconnect`.
@@ -101,9 +152,11 @@ For a detailed line-by-line explanation with examples, see:
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
 * **Channel buffering:** Data channel is buffered (default 100), error channel is buffered (default 10).
 * **Goroutine required:** You MUST consume the channels in a separate goroutine to avoid blocking.
-* **Symbol filter:** Use Symbol parameter to filter specific symbol, or empty string for all positions.
-* **Price-driven:** Updates trigger on price changes that affect position profit.
+* **Timer interval:** Use `TimerPeriodMilliseconds` to control update frequency (e.g., 1000 = update every 1 second).
+* **Ignore empty data:** Set `IgnoreEmptyData` to true to skip updates when no positions changed.
+* **Three arrays:** `NewPositions` (opened), `UpdatedPositions` (profit changed), `DeletedPositions` (closed).
 * **Real-time:** Very low latency updates for position monitoring.
+* **ENUM type:** Always check the `Type` field (MT5_SUB_ENUM_EVENT_GROUP_TYPE) to identify event type.
 
 ---
 
@@ -121,17 +174,24 @@ import (
 
     pb "github.com/MetaRPC/GoMT5/package"
     "github.com/MetaRPC/GoMT5/package/Helpers"
+    "github.com/google/uuid"
 )
 
 func main() {
     account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
     defer account.Close()
 
+    err := account.Connect()
+    if err != nil {
+        panic(err)
+    }
+
     ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
     defer cancel()
 
     dataChan, errChan := account.OnPositionProfit(ctx, &pb.OnPositionProfitRequest{
-        Symbol: "", // All symbols
+        TimerPeriodMilliseconds: 1000, // Update every 1 second
+        IgnoreEmptyData:         true, // Skip empty updates
     })
 
     go func() {
@@ -141,12 +201,27 @@ func main() {
                 if update == nil {
                     return
                 }
-                fmt.Printf("[%s] Position %d (%s): P&L=%.2f, Price=%.5f\n",
-                    time.Now().Format("15:04:05"),
-                    update.Ticket,
-                    update.Symbol,
-                    update.Profit,
-                    update.CurrentPrice)
+
+                // Check event type (ENUM!)
+                if update.Type == pb.MT5_SUB_ENUM_EVENT_GROUP_TYPE_OrderProfit {
+                    // Process new positions
+                    for _, pos := range update.NewPositions {
+                        fmt.Printf("[NEW] Position %d (%s): P&L=%.2f\n",
+                            pos.Ticket, pos.PositionSymbol, pos.Profit)
+                    }
+
+                    // Process updated positions
+                    for _, pos := range update.UpdatedPositions {
+                        fmt.Printf("[UPD] Position %d (%s): P&L=%.2f\n",
+                            pos.Ticket, pos.PositionSymbol, pos.Profit)
+                    }
+
+                    // Process closed positions
+                    for _, pos := range update.DeletedPositions {
+                        fmt.Printf("[DEL] Position %d (%s): Final P&L=%.2f\n",
+                            pos.Ticket, pos.PositionSymbol, pos.Profit)
+                    }
+                }
 
             case err := <-errChan:
                 if err != nil {
@@ -168,9 +243,12 @@ func RealTimePnLDashboard(account *mt5.MT5Account) {
     ctx, cancel := context.WithCancel(context.Background())
     defer cancel()
 
-    positionProfits := make(map[uint64]float64) // ticket -> profit
+    positionProfits := make(map[int64]float64) // ticket -> profit
 
-    dataChan, errChan := account.OnPositionProfit(ctx, &pb.OnPositionProfitRequest{})
+    dataChan, errChan := account.OnPositionProfit(ctx, &pb.OnPositionProfitRequest{
+        TimerPeriodMilliseconds: 500,  // Update every 500ms
+        IgnoreEmptyData:         false, // Get all updates
+    })
 
     go func() {
         ticker := time.NewTicker(1 * time.Second)
@@ -182,7 +260,22 @@ func RealTimePnLDashboard(account *mt5.MT5Account) {
                 if update == nil {
                     return
                 }
-                positionProfits[update.Ticket] = update.Profit
+
+                // Check event type
+                if update.Type == pb.MT5_SUB_ENUM_EVENT_GROUP_TYPE_OrderProfit {
+                    // Update profit for new and updated positions
+                    for _, pos := range update.NewPositions {
+                        positionProfits[pos.Ticket] = pos.Profit
+                    }
+                    for _, pos := range update.UpdatedPositions {
+                        positionProfits[pos.Ticket] = pos.Profit
+                    }
+
+                    // Remove closed positions
+                    for _, pos := range update.DeletedPositions {
+                        delete(positionProfits, pos.Ticket)
+                    }
+                }
 
             case <-ticker.C:
                 var totalProfit float64
@@ -210,14 +303,17 @@ func RealTimePnLDashboard(account *mt5.MT5Account) {
 }
 ```
 
-### 3) Auto stop-loss on profit target
+### 3) Auto take profit monitor
 
 ```go
 func AutoTakeProfitMonitor(account *mt5.MT5Account, targetProfit float64) {
     ctx, cancel := context.WithCancel(context.Background())
     defer cancel()
 
-    dataChan, errChan := account.OnPositionProfit(ctx, &pb.OnPositionProfitRequest{})
+    dataChan, errChan := account.OnPositionProfit(ctx, &pb.OnPositionProfitRequest{
+        TimerPeriodMilliseconds: 1000,
+        IgnoreEmptyData:         true,
+    })
 
     go func() {
         for {
@@ -227,23 +323,26 @@ func AutoTakeProfitMonitor(account *mt5.MT5Account, targetProfit float64) {
                     return
                 }
 
-                if update.Profit >= targetProfit {
-                    fmt.Printf("\n🎯 Target profit reached for position %d: %.2f\n",
-                        update.Ticket, update.Profit)
+                // Check only updated positions
+                for _, pos := range update.UpdatedPositions {
+                    if pos.Profit >= targetProfit {
+                        fmt.Printf("\n🎯 Target profit reached for position %d (%s): %.2f\n",
+                            pos.Ticket, pos.PositionSymbol, pos.Profit)
 
-                    // Close position
-                    _, err := account.OrderClose(context.Background(), &pb.OrderCloseRequest{
-                        Ticket:    update.Ticket,
-                        Volume:    0, // Close all
-                        Deviation: 20,
-                        Comment:   "Auto TP",
-                    })
+                        // Close position
+                        _, err := account.OrderClose(context.Background(), &pb.OrderCloseRequest{
+                            Ticket:    uint64(pos.Ticket),
+                            Volume:    0, // Close all
+                            Deviation: 20,
+                            Comment:   "Auto TP",
+                        })
 
-                    if err != nil {
-                        fmt.Printf("Failed to close position: %v\n", err)
-                    } else {
-                        fmt.Printf("Position %d closed at profit %.2f\n",
-                            update.Ticket, update.Profit)
+                        if err != nil {
+                            fmt.Printf("Failed to close position: %v\n", err)
+                        } else {
+                            fmt.Printf("Position %d closed at profit %.2f\n",
+                                pos.Ticket, pos.Profit)
+                        }
                     }
                 }
 
@@ -264,120 +363,6 @@ func AutoTakeProfitMonitor(account *mt5.MT5Account, targetProfit float64) {
 
 // Usage:
 // AutoTakeProfitMonitor(account, 100.0) // Close when profit >= $100
-```
-
-### 4) Loss limit protection
-
-```go
-func LossLimitProtection(account *mt5.MT5Account, maxLossPerPosition float64) {
-    ctx, cancel := context.WithCancel(context.Background())
-    defer cancel()
-
-    dataChan, errChan := account.OnPositionProfit(ctx, &pb.OnPositionProfitRequest{})
-
-    go func() {
-        for {
-            select {
-            case update := <-dataChan:
-                if update == nil {
-                    return
-                }
-
-                if update.Profit < -maxLossPerPosition {
-                    fmt.Printf("\n⚠️  Loss limit exceeded for position %d: %.2f\n",
-                        update.Ticket, update.Profit)
-
-                    // Emergency close
-                    account.OrderClose(context.Background(), &pb.OrderCloseRequest{
-                        Ticket:    update.Ticket,
-                        Volume:    0,
-                        Deviation: 50, // Allow higher slippage for emergency
-                        Comment:   "Emergency stop",
-                    })
-
-                    fmt.Printf("Emergency close executed for position %d\n", update.Ticket)
-                }
-
-            case err := <-errChan:
-                if err != nil {
-                    fmt.Printf("Error: %v\n", err)
-                    return
-                }
-
-            case <-ctx.Done():
-                return
-            }
-        }
-    }()
-
-    select {}
-}
-
-// Usage:
-// LossLimitProtection(account, 50.0) // Close if loss > $50
-```
-
-### 5) P&L statistics tracker
-
-```go
-type PnLStats struct {
-    MaxProfit  float64
-    MaxLoss    float64
-    UpdateCount int64
-}
-
-func TrackPnLStats(account *mt5.MT5Account, duration time.Duration) {
-    ctx, cancel := context.WithTimeout(context.Background(), duration)
-    defer cancel()
-
-    stats := make(map[uint64]*PnLStats) // ticket -> stats
-
-    dataChan, errChan := account.OnPositionProfit(ctx, &pb.OnPositionProfitRequest{})
-
-    for {
-        select {
-        case update := <-dataChan:
-            if update == nil {
-                break
-            }
-
-            if _, exists := stats[update.Ticket]; !exists {
-                stats[update.Ticket] = &PnLStats{
-                    MaxProfit: update.Profit,
-                    MaxLoss:   update.Profit,
-                }
-            }
-
-            s := stats[update.Ticket]
-            s.UpdateCount++
-
-            if update.Profit > s.MaxProfit {
-                s.MaxProfit = update.Profit
-            }
-            if update.Profit < s.MaxLoss {
-                s.MaxLoss = update.Profit
-            }
-
-        case err := <-errChan:
-            if err != nil {
-                fmt.Printf("Error: %v\n", err)
-            }
-
-        case <-ctx.Done():
-            fmt.Println("\nP&L Statistics:")
-            for ticket, s := range stats {
-                fmt.Printf("  Position %d:\n", ticket)
-                fmt.Printf("    Max profit: %.2f\n", s.MaxProfit)
-                fmt.Printf("    Max loss: %.2f\n", s.MaxLoss)
-                fmt.Printf("    Updates: %d\n", s.UpdateCount)
-            }
-            return
-        }
-    }
-}
-
-// Usage:
-// TrackPnLStats(account, 10*time.Minute)
 ```
 
 ---

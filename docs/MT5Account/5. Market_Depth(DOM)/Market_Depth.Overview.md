@@ -191,7 +191,7 @@ for range ticker.C {
 
 ---
 
-## See also
+## 📚 See also
 
 * **Symbol management:** [SymbolSelect](../2.%20Symbol_information/SymbolSelect.md) - add symbol to Market Watch
 * **Current prices:** [SymbolInfoTick](../2.%20Symbol_information/SymbolInfoTick.md) - get bid/ask quotes

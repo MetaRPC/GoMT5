@@ -38,6 +38,7 @@ MT5Account represents a low-level gRPC client for MetaTrader 5 terminal. All met
 - [SymbolInfoSessionQuote](#symbolinfosessionquote)
 - [SymbolInfoSessionTrade](#symbolinfosessiontrade)
 - [SymbolParamsMany](#symbolparamsmany)
+- [TickValueWithSize](#tickvaluewithsize)
 
 ### 📊 Positions & Orders
 - [PositionsTotal](#positionstotal)
@@ -666,6 +667,28 @@ func (a *MT5Account) SymbolParamsMany(ctx context.Context, req *pb.SymbolParamsM
 **Returns**
 
 Returns `*pb.SymbolParamsManyData` with array of SymbolParams containing Bid, Ask, Digits, Spread, VolumeMin, VolumeMax, VolumeStep, ContractSize, Point, margins, and other trading parameters for each symbol.
+
+---
+
+## TickValueWithSize
+
+Retrieves tick value and size information for multiple symbols. Use this method to get tick values for profit/loss calculations and contract size data.
+
+**Signature**
+```go
+func (a *MT5Account) TickValueWithSize(ctx context.Context, req *pb.TickValueWithSizeRequest) (*pb.TickValueWithSizeData, error)
+```
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| ctx | context.Context | Context for timeout and cancellation control |
+| req | *pb.TickValueWithSizeRequest | Request with array of SymbolNames |
+
+**Returns**
+
+Returns `*pb.TickValueWithSizeData` with array of TickSizeSymbol containing tick values, tick size, and contract size for each symbol.
 
 ---
 

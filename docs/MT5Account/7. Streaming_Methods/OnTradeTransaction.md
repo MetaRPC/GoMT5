@@ -47,19 +47,58 @@ func (a *MT5Account) OnTradeTransaction(
 | Data Channel | `<-chan *pb.OnTradeTransactionData` | Receives transaction event updates       |
 | Error Channel| `<-chan error`                      | Receives errors (closed on ctx cancel)   |
 
-**OnTradeTransactionData contains MqlTradeTransaction with key fields:**
+**OnTradeTransactionData structure:**
 
-| Field         | Type     | Go Type   | Description                        |
-| ------------- | -------- | --------- | ---------------------------------- |
-| `Type`        | `int32`  | `int32`   | Transaction type (order, deal)     |
-| `OrderState`  | `int32`  | `int32`   | Order state                        |
-| `DealTicket`  | `uint64` | `uint64`  | Deal ticket number                 |
-| `OrderTicket` | `uint64` | `uint64`  | Order ticket number                |
-| `Symbol`      | `string` | `string`  | Trading symbol                     |
-| `Price`       | `double` | `float64` | Transaction price                  |
-| `Volume`      | `double` | `float64` | Transaction volume                 |
+| Field                   | Type                             | Description                                    |
+| ----------------------- | -------------------------------- | ---------------------------------------------- |
+| `Type`                  | `MT5_SUB_ENUM_EVENT_GROUP_TYPE`  | Event group type (always TradeTransaction)     |
+| `TradeTransaction`      | `*MqlTradeTransaction`           | Transaction details (order, deal info)         |
+| `TradeRequest`          | `*MqlTradeRequest`               | Original trade request (may be nil)            |
+| `TradeResult`           | `*MqlTradeResult`                | Trade operation result (may be nil)            |
+| `TerminalInstanceGuidId`| `string`                         | Terminal instance ID                           |
+| `AccountInfo`           | `*OnEventAccountInfo`            | Account information snapshot                   |
 
-**Plus many more fields** - see MT5 MqlTradeTransaction documentation for complete structure.
+**MqlTradeTransaction - key fields:**
+
+| Field                   | Type                                | Description                        |
+| ----------------------- | ----------------------------------- | ---------------------------------- |
+| `Type`                  | `SUB_ENUM_TRADE_TRANSACTION_TYPE`   | Transaction type (order add/remove, deal add, etc.) |
+| `OrderType`             | `SUB_ENUM_ORDER_TYPE`               | Order type (BUY, SELL, BUY_LIMIT, etc.) |
+| `OrderState`            | `SUB_ENUM_ORDER_STATE`              | Order state (STARTED, PLACED, FILLED, etc.) |
+| `DealType`              | `SUB_ENUM_DEAL_TYPE`                | Deal type (BUY, SELL, BALANCE, etc.) |
+| `OrderTimeType`         | `SUB_ENUM_ORDER_TYPE_TIME`          | Order lifetime (GTC, DAY, SPECIFIED, etc.) |
+| `DealTicket`            | `uint64`                            | Deal ticket number                 |
+| `OrderTicket`           | `uint64`                            | Order ticket number                |
+| `Symbol`                | `string`                            | Trading symbol                     |
+| `Price`                 | `float64`                           | Transaction price                  |
+| `Volume`                | `float64`                           | Transaction volume                 |
+| `PriceStopLoss`         | `float64`                           | Stop Loss level                    |
+| `PriceTakeProfit`       | `float64`                           | Take Profit level                  |
+
+**MqlTradeRequest - key fields:**
+
+| Field                   | Type                                | Description                        |
+| ----------------------- | ----------------------------------- | ---------------------------------- |
+| `TradeOperationType`    | `SUB_ENUM_TRADE_REQUEST_ACTIONS`    | Trade action (DEAL, PENDING, SLTP, etc.) |
+| `OrderType`             | `SUB_ENUM_ORDER_TYPE`               | Order type (BUY, SELL, BUY_LIMIT, etc.) |
+| `OrderTypeFilling`      | `SUB_ENUM_ORDER_TYPE_FILLING`       | Filling mode (FOK, IOC, RETURN, etc.) |
+| `TypeTime`              | `SUB_ENUM_ORDER_TYPE_TIME`          | Order lifetime (GTC, DAY, SPECIFIED, etc.) |
+| `Symbol`                | `string`                            | Trade symbol                       |
+| `RequestedDealVolumeLots`| `float64`                          | Requested volume in lots           |
+| `Price`                 | `float64`                           | Price                              |
+| `StopLoss`              | `float64`                           | Stop Loss level                    |
+| `TakeProfit`            | `float64`                           | Take Profit level                  |
+
+**MqlTradeResult - key fields:**
+
+| Field                   | Type                                | Description                        |
+| ----------------------- | ----------------------------------- | ---------------------------------- |
+| `TradeReturnCode`       | `MqlErrorTradeCode`                 | Operation return code (DONE, REJECT, etc.) |
+| `DealTicket`            | `uint64`                            | Deal ticket if executed            |
+| `OrderTicket`           | `uint64`                            | Order ticket if placed             |
+| `DealVolume`            | `float64`                           | Actual deal volume                 |
+| `DealPrice`             | `float64`                           | Actual deal price                  |
+| `BrokerCommentToOperation`| `string`                          | Broker comment                     |
 
 ---
 
@@ -106,7 +145,7 @@ For a detailed line-by-line explanation with examples, see:
 
 ## 🔗 Usage Examples
 
-### 1) Basic transaction monitoring
+### 1) Basic transaction monitoring with ENUM checks
 
 ```go
 package main
@@ -136,11 +175,33 @@ func main() {
                 if event == nil {
                     return
                 }
-                fmt.Printf("[%s] Transaction: Type=%d, Symbol=%s, Price=%.5f\n",
-                    time.Now().Format("15:04:05"),
-                    event.Transaction.Type,
-                    event.Transaction.Symbol,
-                    event.Transaction.Price)
+
+                // Check event type (MT5_SUB_ENUM_EVENT_GROUP_TYPE)
+                if event.Type == pb.MT5_SUB_ENUM_EVENT_GROUP_TYPE_TradeTransaction {
+                    if tx := event.TradeTransaction; tx != nil {
+                        // Check transaction type (SUB_ENUM_TRADE_TRANSACTION_TYPE)
+                        var txType string
+                        switch tx.Type {
+                        case pb.SUB_ENUM_TRADE_TRANSACTION_TYPE_SUB_TRADE_TRANSACTION_ORDER_ADD:
+                            txType = "ORDER_ADD"
+                        case pb.SUB_ENUM_TRADE_TRANSACTION_TYPE_SUB_TRADE_TRANSACTION_ORDER_UPDATE:
+                            txType = "ORDER_UPDATE"
+                        case pb.SUB_ENUM_TRADE_TRANSACTION_TYPE_SUB_TRADE_TRANSACTION_ORDER_DELETE:
+                            txType = "ORDER_DELETE"
+                        case pb.SUB_ENUM_TRADE_TRANSACTION_TYPE_SUB_TRADE_TRANSACTION_DEAL_ADD:
+                            txType = "DEAL_ADD"
+                        default:
+                            txType = fmt.Sprintf("OTHER(%d)", tx.Type)
+                        }
+
+                        fmt.Printf("[%s] %s: Symbol=%s, Price=%.5f, Volume=%.2f\n",
+                            time.Now().Format("15:04:05"),
+                            txType,
+                            tx.Symbol,
+                            tx.Price,
+                            tx.Volume)
+                    }
+                }
 
             case err := <-errChan:
                 if err != nil {
@@ -210,7 +271,7 @@ func TransactionLogger(account *mt5.MT5Account, logFile string) {
 // TransactionLogger(account, "transactions.log")
 ```
 
-### 3) Deal execution notifier
+### 3) Deal execution notifier with ENUM checks
 
 ```go
 func DealExecutionNotifier(account *mt5.MT5Account) {
@@ -227,15 +288,53 @@ func DealExecutionNotifier(account *mt5.MT5Account) {
                     return
                 }
 
-                // Check if this is a deal execution
-                if event.Transaction.DealTicket > 0 {
-                    fmt.Printf("\n💰 DEAL EXECUTED\n")
-                    fmt.Printf("  Deal: %d\n", event.Transaction.DealTicket)
-                    fmt.Printf("  Order: %d\n", event.Transaction.OrderTicket)
-                    fmt.Printf("  Symbol: %s\n", event.Transaction.Symbol)
-                    fmt.Printf("  Price: %.5f\n", event.Transaction.Price)
-                    fmt.Printf("  Volume: %.2f\n", event.Transaction.Volume)
-                    fmt.Printf("  Time: %s\n", time.Now().Format("2006-01-02 15:04:05"))
+                if tx := event.TradeTransaction; tx != nil {
+                    // Check if this is a deal execution (SUB_ENUM_TRADE_TRANSACTION_TYPE)
+                    if tx.Type == pb.SUB_ENUM_TRADE_TRANSACTION_TYPE_SUB_TRADE_TRANSACTION_DEAL_ADD {
+                        // Determine deal type (SUB_ENUM_DEAL_TYPE)
+                        var dealTypeStr string
+                        switch tx.DealType {
+                        case pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_BUY:
+                            dealTypeStr = "BUY"
+                        case pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_SELL:
+                            dealTypeStr = "SELL"
+                        case pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_BALANCE:
+                            dealTypeStr = "BALANCE"
+                        case pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_CREDIT:
+                            dealTypeStr = "CREDIT"
+                        default:
+                            dealTypeStr = fmt.Sprintf("OTHER(%d)", tx.DealType)
+                        }
+
+                        // Determine order type (SUB_ENUM_ORDER_TYPE)
+                        var orderTypeStr string
+                        switch tx.OrderType {
+                        case pb.SUB_ENUM_ORDER_TYPE_SUB_ORDER_TYPE_BUY:
+                            orderTypeStr = "BUY"
+                        case pb.SUB_ENUM_ORDER_TYPE_SUB_ORDER_TYPE_SELL:
+                            orderTypeStr = "SELL"
+                        case pb.SUB_ENUM_ORDER_TYPE_SUB_ORDER_TYPE_BUY_LIMIT:
+                            orderTypeStr = "BUY_LIMIT"
+                        case pb.SUB_ENUM_ORDER_TYPE_SUB_ORDER_TYPE_SELL_LIMIT:
+                            orderTypeStr = "SELL_LIMIT"
+                        case pb.SUB_ENUM_ORDER_TYPE_SUB_ORDER_TYPE_BUY_STOP:
+                            orderTypeStr = "BUY_STOP"
+                        case pb.SUB_ENUM_ORDER_TYPE_SUB_ORDER_TYPE_SELL_STOP:
+                            orderTypeStr = "SELL_STOP"
+                        default:
+                            orderTypeStr = fmt.Sprintf("OTHER(%d)", tx.OrderType)
+                        }
+
+                        fmt.Printf("\n💰 DEAL EXECUTED\n")
+                        fmt.Printf("  Deal Type: %s\n", dealTypeStr)
+                        fmt.Printf("  Order Type: %s\n", orderTypeStr)
+                        fmt.Printf("  Deal: %d\n", tx.DealTicket)
+                        fmt.Printf("  Order: %d\n", tx.OrderTicket)
+                        fmt.Printf("  Symbol: %s\n", tx.Symbol)
+                        fmt.Printf("  Price: %.5f\n", tx.Price)
+                        fmt.Printf("  Volume: %.2f\n", tx.Volume)
+                        fmt.Printf("  Time: %s\n", time.Now().Format("2006-01-02 15:04:05"))
+                    }
                 }
 
             case err := <-errChan:
@@ -328,7 +427,7 @@ func TrackTransactionStats(account *mt5.MT5Account, duration time.Duration) {
 // TrackTransactionStats(account, 10*time.Minute)
 ```
 
-### 5) Order state change monitor
+### 5) Order state change monitor with ENUMs
 
 ```go
 func MonitorOrderStateChanges(account *mt5.MT5Account) {
@@ -336,19 +435,6 @@ func MonitorOrderStateChanges(account *mt5.MT5Account) {
     defer cancel()
 
     dataChan, errChan := account.OnTradeTransaction(ctx, &pb.OnTradeTransactionRequest{})
-
-    orderStates := map[int32]string{
-        0: "STARTED",
-        1: "PLACED",
-        2: "CANCELED",
-        3: "PARTIAL",
-        4: "FILLED",
-        5: "REJECTED",
-        6: "EXPIRED",
-        7: "REQUEST_ADD",
-        8: "REQUEST_MODIFY",
-        9: "REQUEST_CANCEL",
-    }
 
     go func() {
         for {
@@ -358,16 +444,56 @@ func MonitorOrderStateChanges(account *mt5.MT5Account) {
                     return
                 }
 
-                if event.Transaction.OrderTicket > 0 {
-                    stateName := orderStates[event.Transaction.OrderState]
-                    if stateName == "" {
-                        stateName = fmt.Sprintf("UNKNOWN(%d)", event.Transaction.OrderState)
-                    }
+                if tx := event.TradeTransaction; tx != nil {
+                    if tx.OrderTicket > 0 {
+                        // Check order state using ENUM (SUB_ENUM_ORDER_STATE)
+                        var stateName string
+                        switch tx.OrderState {
+                        case pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_STARTED:
+                            stateName = "STARTED"
+                        case pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_PLACED:
+                            stateName = "PLACED"
+                        case pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_CANCELED:
+                            stateName = "CANCELED"
+                        case pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_PARTIAL:
+                            stateName = "PARTIAL"
+                        case pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_FILLED:
+                            stateName = "FILLED"
+                        case pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_REJECTED:
+                            stateName = "REJECTED"
+                        case pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_EXPIRED:
+                            stateName = "EXPIRED"
+                        case pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_REQUEST_ADD:
+                            stateName = "REQUEST_ADD"
+                        case pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_REQUEST_MODIFY:
+                            stateName = "REQUEST_MODIFY"
+                        case pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_REQUEST_CANCEL:
+                            stateName = "REQUEST_CANCEL"
+                        default:
+                            stateName = fmt.Sprintf("UNKNOWN(%d)", tx.OrderState)
+                        }
 
-                    fmt.Printf("[%s] Order %d state: %s\n",
-                        time.Now().Format("15:04:05"),
-                        event.Transaction.OrderTicket,
-                        stateName)
+                        // Check order time type (SUB_ENUM_ORDER_TYPE_TIME)
+                        var timeType string
+                        switch tx.OrderTimeType {
+                        case pb.SUB_ENUM_ORDER_TYPE_TIME_SUB_ORDER_TIME_GTC:
+                            timeType = "GTC"
+                        case pb.SUB_ENUM_ORDER_TYPE_TIME_SUB_ORDER_TIME_DAY:
+                            timeType = "DAY"
+                        case pb.SUB_ENUM_ORDER_TYPE_TIME_SUB_ORDER_TIME_SPECIFIED:
+                            timeType = "SPECIFIED"
+                        case pb.SUB_ENUM_ORDER_TYPE_TIME_SUB_ORDER_TIME_SPECIFIED_DAY:
+                            timeType = "SPECIFIED_DAY"
+                        default:
+                            timeType = fmt.Sprintf("UNKNOWN(%d)", tx.OrderTimeType)
+                        }
+
+                        fmt.Printf("[%s] Order %d: State=%s, TimeType=%s\n",
+                            time.Now().Format("15:04:05"),
+                            tx.OrderTicket,
+                            stateName,
+                            timeType)
+                    }
                 }
 
             case err := <-errChan:

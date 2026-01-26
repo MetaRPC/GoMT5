@@ -49,10 +49,15 @@ if !helpers.PrintShortError(err, "OrderSend failed") {
 
     fmt.Printf("    Comment:                     %s\n", sendData.Comment)
 
-    if sendData.ReturnedCode == 10009 {
+    // Check if order executed successfully using helper from errors.go
+    if mt5.IsRetCodeSuccess(sendData.ReturnedCode) {
         fmt.Printf("    ✓ Order EXECUTED successfully!\n")
         orderTicket := sendData.Order
         _ = orderTicket // example placeholder
+    } else {
+        fmt.Printf("    ❌ Order failed: %s (code: %d)\n",
+            mt5.GetRetCodeMessage(sendData.ReturnedCode),
+            sendData.ReturnedCode)
     }
 }
 ```
@@ -135,12 +140,26 @@ MetaTrader may return current market prices at the moment of execution. If the b
 ### 6️. Verify Execution Success
 
 ```go
-if sendData.ReturnedCode == 10009 {
+// Check if order executed successfully using helper from errors.go
+if mt5.IsRetCodeSuccess(sendData.ReturnedCode) {
     fmt.Printf("    ✓ Order EXECUTED successfully!\n")
+    orderTicket := sendData.Order
+    _ = orderTicket // example placeholder
+} else {
+    fmt.Printf("    ❌ Order failed: %s (code: %d)\n",
+        mt5.GetRetCodeMessage(sendData.ReturnedCode),
+        sendData.ReturnedCode)
 }
 ```
 
-Code `10009` (`TRADE_RETCODE_DONE`) means the order was executed successfully and the position is open.
+**Why use `mt5.IsRetCodeSuccess()` instead of checking `== 10009` manually?**
+
+1. **Readability**: `IsRetCodeSuccess()` is self-documenting - you immediately understand what's being checked
+2. **Maintainability**: If MT5 adds more success codes in the future, we update one place instead of all manual checks
+3. **Error Messages**: `mt5.GetRetCodeMessage()` provides human-readable descriptions for all 40+ return codes
+4. **Type Safety**: The helper function is defined in `package/Helpers/errors.go` with proper type checking
+
+Code `10009` (`TRADE_RETCODE_DONE`) means the order was executed successfully and the position is open. The helper functions are defined in [errors.go](../../../package/Helpers/errors.go) and provide a cleaner, more maintainable way to validate trade operations.
 
 ---
 

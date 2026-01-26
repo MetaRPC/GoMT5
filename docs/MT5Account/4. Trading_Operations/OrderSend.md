@@ -223,10 +223,13 @@ func main() {
         panic(err)
     }
 
-    if data.ReturnedCode == 10009 {
+    // Check if order executed successfully using helper from errors.go
+    if mt5.IsRetCodeSuccess(data.ReturnedCode) {
         fmt.Printf("Order placed! Ticket: %d, Price: %.5f\n", data.Order, data.Price)
     } else {
-        fmt.Printf("Order failed: %s\n", data.ReturnedCodeDescription)
+        fmt.Printf("Order failed: %s (code: %d)\n",
+            mt5.GetRetCodeMessage(data.ReturnedCode),
+            data.ReturnedCode)
     }
 }
 ```
@@ -364,12 +367,15 @@ func PlaceMarketOrder(account *mt5.MT5Account, symbol string, volume float64, is
         return 0, err
     }
 
-    if data.ReturnedCode == 10009 {
-        fmt.Printf("Order placed: %d at %.5f\n", data.Order, data.Price)
-        return data.Order, nil
+    // Validate trade result using helper from errors.go
+    if !mt5.IsRetCodeSuccess(data.ReturnedCode) {
+        return 0, fmt.Errorf("order failed: %s (code: %d)",
+            mt5.GetRetCodeMessage(data.ReturnedCode),
+            data.ReturnedCode)
     }
 
-    return 0, fmt.Errorf("order failed: %s", data.ReturnedCodeDescription)
+    fmt.Printf("Order placed: %d at %.5f\n", data.Order, data.Price)
+    return data.Order, nil
 }
 ```
 
@@ -410,7 +416,7 @@ func PlaceMarketOrderWithRetry(account *mt5.MT5Account, symbol string, volume fl
             Slippage:  &slippage,
         })
 
-        if err == nil && data.ReturnedCode == 10009 {
+        if err == nil && mt5.IsRetCodeSuccess(data.ReturnedCode) {
             return data.Order, nil
         }
 

@@ -151,10 +151,13 @@ func main() {
         panic(err)
     }
 
-    if data.ReturnedCode == 10009 {
+    // Check close result using helper from errors.go
+    if mt5.IsRetCodeSuccess(data.ReturnedCode) {
         fmt.Printf("Position %d closed successfully\n", ticket)
     } else {
-        fmt.Printf("Close failed: %s\n", data.ReturnedCodeDescription)
+        fmt.Printf("Close failed: %s (code: %d)\n",
+            mt5.GetRetCodeMessage(data.ReturnedCode),
+            data.ReturnedCode)
     }
 }
 ```
@@ -174,8 +177,11 @@ func PartialClose(account *mt5.MT5Account, ticket uint64, closeVolume float64) e
         return fmt.Errorf("failed to close: %w", err)
     }
 
-    if data.ReturnedCode != 10009 {
-        return fmt.Errorf("close unsuccessful: %s", data.ReturnedCodeDescription)
+    // Validate close result using helper from errors.go
+    if !mt5.IsRetCodeSuccess(data.ReturnedCode) {
+        return fmt.Errorf("close unsuccessful: %s (code: %d)",
+            mt5.GetRetCodeMessage(data.ReturnedCode),
+            data.ReturnedCode)
     }
 
     fmt.Printf("Partially closed position %d (%.2f lots)\n", ticket, closeVolume)
@@ -208,10 +214,14 @@ func CloseAllPositions(account *mt5.MT5Account) error {
             fmt.Printf("Failed to close %d: %v\n", order.Ticket, err)
             continue
         }
-        if data.ReturnedCode == 10009 {
+        // Check close result using helper from errors.go
+        if mt5.IsRetCodeSuccess(data.ReturnedCode) {
             fmt.Printf("Closed position %d\n", order.Ticket)
         } else {
-            fmt.Printf("Failed to close %d: %s\n", order.Ticket, data.ReturnedCodeDescription)
+            fmt.Printf("Failed to close %d: %s (code: %d)\n",
+                order.Ticket,
+                mt5.GetRetCodeMessage(data.ReturnedCode),
+                data.ReturnedCode)
         }
         time.Sleep(100 * time.Millisecond) // Small delay between closes
     }

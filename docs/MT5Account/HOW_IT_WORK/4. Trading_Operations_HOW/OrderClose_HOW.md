@@ -24,8 +24,13 @@ if !helpers.PrintShortError(err, "OrderClose failed") {
     fmt.Printf("    Description:                 %s\n", closeData.ReturnedCodeDescription)
     fmt.Printf("    Close Mode:                  %v\n", closeData.CloseMode)
 
-    if closeData.ReturnedCode == 10009 {
+    // Check if position closed successfully using helper from errors.go
+    if mt5.IsRetCodeSuccess(closeData.ReturnedCode) {
         fmt.Printf("    ✓ Position CLOSED successfully!\n")
+    } else {
+        fmt.Printf("    ❌ Close failed: %s (code: %d)\n",
+            mt5.GetRetCodeMessage(closeData.ReturnedCode),
+            closeData.ReturnedCode)
     }
 } else {
     fmt.Printf("    ✗ Order execution FAILED - check return code and comment\n")
@@ -89,14 +94,30 @@ fmt.Printf("    Close Mode:  %v\n", closeData.CloseMode)
 ### 4️. Verify Operation Success
 
 ```go
-if closeData.ReturnedCode == 10009 {
+// Check if position closed successfully using helper from errors.go
+if mt5.IsRetCodeSuccess(closeData.ReturnedCode) {
     fmt.Printf("    ✓ Position CLOSED successfully!\n")
+} else {
+    fmt.Printf("    ❌ Close failed: %s (code: %d)\n",
+        mt5.GetRetCodeMessage(closeData.ReturnedCode),
+        closeData.ReturnedCode)
 }
 ```
 
+**Why use `mt5.IsRetCodeSuccess()` instead of checking `== 10009` manually?**
+
+1. **Code Clarity**: Function name `IsRetCodeSuccess()` immediately tells you what is being validated, unlike magic number `10009`
+2. **Automatic Error Descriptions**: `mt5.GetRetCodeMessage()` provides ready-to-use error messages for all 40+ return codes
+3. **Common Errors Covered**: The helper automatically handles typical close operation errors:
+   - `TRADE_RETCODE_MARKET_CLOSED` - Market closed, cannot close position
+   - `TRADE_RETCODE_INVALID_VOLUME` - Invalid volume specified
+   - `TRADE_RETCODE_REQUOTE` - Price changed, retry needed
+   - `TRADE_RETCODE_POSITION_CLOSED` - Position already closed
+4. **Maintainability**: Centralized logic in `package/Helpers/errors.go` - one place to update for all projects
+
 Code **`10009` (`TRADE_RETCODE_DONE`)** — standard confirmation of successful trading request execution.
 
-If the code is different, check `ReturnedCodeDescription` — the broker will indicate the rejection reason (e.g., "Market closed", "Invalid volume", etc.).
+If the code is different, the helper functions automatically provide the rejection reason without manually checking `ReturnedCodeDescription`. This makes error handling consistent across all trading operations.
 
 ---
 

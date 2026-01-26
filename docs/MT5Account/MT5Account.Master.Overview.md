@@ -190,6 +190,7 @@ Every method follows the same shape:
 * [SymbolInfoSessionQuote.md](./6.%20Additional_Methods/SymbolInfoSessionQuote.md) - Quote session times
 * [SymbolInfoSessionTrade.md](./6.%20Additional_Methods/SymbolInfoSessionTrade.md) - Trade session times
 * [SymbolParamsMany.md](./6.%20Additional_Methods/SymbolParamsMany.md) - Detailed parameters for multiple symbols (112 fields!)
+* [TickValueWithSize.md](./6.%20Additional_Methods/TickValueWithSize.md) - Tick value and size information for symbols
 
 ---
 
@@ -230,6 +231,7 @@ Every method follows the same shape:
 | Get symbol digits (decimal places) | [SymbolInfoInteger](./2.%20Symbol_information/SymbolInfoInteger.md) (DIGITS) |
 | Get point size for symbol | [SymbolInfoDouble](./2.%20Symbol_information/SymbolInfoDouble.md) (POINT) |
 | Get complete symbol data (batch) | [SymbolParamsMany](./6.%20Additional_Methods/SymbolParamsMany.md) |
+| Get tick value for P&L calculations | [TickValueWithSize](./6.%20Additional_Methods/TickValueWithSize.md) |
 | **POSITIONS & ORDERS** |
 | Count open positions | [PositionsTotal](./3.%20Position_Orders_Information/PositionsTotal.md) |
 | Get all open positions (full details) | [OpenedOrders](./3.%20Position_Orders_Information/OpenedOrders.md) |

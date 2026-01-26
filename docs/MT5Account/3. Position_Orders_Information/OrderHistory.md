@@ -115,15 +115,50 @@ OrderHistoryReply {
 - `HistoryOrder` (*OrderHistoryData) - Order information (if available)
 - `HistoryDeal` (*DealHistoryData) - Deal information (if available)
 
-**OrderHistoryData main fields:**
+**OrderHistoryData complete structure:**
 
 - `Ticket` (uint64) - Order ticket number
-- `Symbol` (string) - Trading symbol
-- `Type` (BMT5_ENUM_ORDER_TYPE) - Order type
-- `VolumeInitial` (double) - Initial volume
-- `PriceOpen` (double) - Open price
-- `SetupTime`, `DoneTime` (google.protobuf.Timestamp) - Setup and completion time
+- `SetupTime` (*timestamppb.Timestamp) - Time when order was placed
+- `DoneTime` (*timestamppb.Timestamp) - Time when order was executed/cancelled
 - `State` (BMT5_ENUM_ORDER_STATE) - Order state
+- `PriceCurrent` (float64) - Current market price
+- `PriceOpen` (float64) - Order open price
+- `StopLimit` (float64) - Stop limit price
+- `StopLoss` (float64) - Stop loss level
+- `TakeProfit` (float64) - Take profit level
+- `VolumeCurrent` (float64) - Current volume (for partially filled orders)
+- `VolumeInitial` (float64) - Initial volume
+- `MagicNumber` (int64) - Magic number
+- `Type` (BMT5_ENUM_ORDER_TYPE) - Order type
+- `TimeExpiration` (*timestamppb.Timestamp) - Expiration time
+- `TypeFilling` (BMT5_ENUM_ORDER_TYPE_FILLING) - Order filling type
+- `TypeTime` (BMT5_ENUM_ORDER_TYPE_TIME) - Order time type
+- `PositionId` (uint64) - Position ID
+- `Symbol` (string) - Trading symbol
+- `ExternalId` (string) - External identifier
+- `Comment` (string) - Order comment
+- `AccountLogin` (int64) - Account login
+
+**DealHistoryData complete structure:**
+
+- `Ticket` (uint64) - Deal ticket number
+- `Profit` (float64) - Deal profit
+- `Commission` (float64) - Commission
+- `Fee` (float64) - Additional fee
+- `Price` (float64) - Execution price
+- `StopLoss` (float64) - Stop loss level
+- `TakeProfit` (float64) - Take profit level
+- `Swap` (float64) - Swap charges
+- `Volume` (float64) - Deal volume
+- `EntryType` (BMT5_ENUM_DEAL_ENTRY_TYPE) - Deal entry type
+- `Time` (*timestamppb.Timestamp) - Deal execution time
+- `Type` (BMT5_ENUM_DEAL_TYPE) - Deal type
+- `Reason` (BMT5_ENUM_DEAL_REASON) - Deal execution reason
+- `PositionId` (uint64) - Position ID
+- `Comment` (string) - Deal comment
+- `Symbol` (string) - Trading symbol
+- `ExternalId` (string) - External identifier
+- `AccountLogin` (int64) - Account login
 
 ---
 
@@ -174,6 +209,83 @@ OrderHistoryReply {
 | 8 | `BMT5_ORDER_STATE_REQUEST_MODIFY` | Order is being modified (changing parameters) |
 | 9 | `BMT5_ORDER_STATE_REQUEST_CANCEL` | Order is being deleted (deleting from trading system) |
 
+**Used in:** OrderHistoryData.State
+
+### 📘 Enum: BMT5_ENUM_ORDER_TYPE_FILLING
+
+| Value | Constant | Description |
+|-------|----------|-------------|
+| 0 | `BMT5_ORDER_FILLING_FOK` | Fill or Kill - order must be filled completely or not at all |
+| 1 | `BMT5_ORDER_FILLING_IOC` | Immediate or Cancel - fill available volume, cancel the rest |
+| 2 | `BMT5_ORDER_FILLING_RETURN` | Return - order is placed with the broker for execution |
+| 3 | `BMT5_ORDER_FILLING_BOC` | Book or Cancel - order must be placed as a passive order (limit) |
+
+**Used in:** OrderHistoryData.TypeFilling
+
+### 📘 Enum: BMT5_ENUM_ORDER_TYPE_TIME
+
+| Value | Constant | Description |
+|-------|----------|-------------|
+| 0 | `BMT5_ORDER_TIME_GTC` | Good Till Cancelled - order stays until explicitly cancelled |
+| 1 | `BMT5_ORDER_TIME_DAY` | Good Till Day - order valid until end of trading day |
+| 2 | `BMT5_ORDER_TIME_SPECIFIED` | Good Till Specified - order valid until specified date/time |
+| 3 | `BMT5_ORDER_TIME_SPECIFIED_DAY` | Good Till Specified Day - order valid until end of specified day |
+
+**Used in:** OrderHistoryData.TypeTime
+
+### 📘 Enum: BMT5_ENUM_DEAL_TYPE
+
+| Value | Constant | Description |
+|-------|----------|-------------|
+| 0 | `BMT5_DEAL_TYPE_BUY` | Buy deal |
+| 1 | `BMT5_DEAL_TYPE_SELL` | Sell deal |
+| 2 | `BMT5_DEAL_TYPE_BALANCE` | Balance operation |
+| 3 | `BMT5_DEAL_TYPE_CREDIT` | Credit operation |
+| 4 | `BMT5_DEAL_TYPE_CHARGE` | Additional charge |
+| 5 | `BMT5_DEAL_TYPE_CORRECTION` | Correction |
+| 6 | `BMT5_DEAL_TYPE_BONUS` | Bonus |
+| 7 | `BMT5_DEAL_TYPE_COMMISSION` | Additional commission |
+| 8 | `BMT5_DEAL_TYPE_COMMISSION_DAILY` | Daily commission |
+| 9 | `BMT5_DEAL_TYPE_COMMISSION_MONTHLY` | Monthly commission |
+| 10 | `BMT5_DEAL_TYPE_COMMISSION_AGENT_DAILY` | Daily agent commission |
+| 11 | `BMT5_DEAL_TYPE_COMMISSION_AGENT_MONTHLY` | Monthly agent commission |
+| 12 | `BMT5_DEAL_TYPE_INTEREST` | Interest rate |
+| 13 | `BMT5_DEAL_TYPE_BUY_CANCELED` | Canceled buy deal |
+| 14 | `BMT5_DEAL_TYPE_SELL_CANCELED` | Canceled sell deal |
+| 15 | `BMT5_DEAL_DIVIDEND` | Dividend operations |
+| 16 | `BMT5_DEAL_DIVIDEND_FRANKED` | Franked (non-taxable) dividend operations |
+| 17 | `BMT5_DEAL_TAX` | Tax charges |
+
+**Used in:** DealHistoryData.Type
+
+### 📘 Enum: BMT5_ENUM_DEAL_REASON
+
+| Value | Constant | Description |
+|-------|----------|-------------|
+| 0 | `BMT5_DEAL_REASON_CLIENT` | Deal executed from desktop terminal |
+| 1 | `BMT5_DEAL_REASON_MOBILE` | Deal executed from mobile application |
+| 2 | `BMT5_DEAL_REASON_WEB` | Deal executed from web platform |
+| 3 | `BMT5_DEAL_REASON_EXPERT` | Deal executed by Expert Advisor or script |
+| 4 | `BMT5_DEAL_REASON_SL` | Deal executed by Stop Loss |
+| 5 | `BMT5_DEAL_REASON_TP` | Deal executed by Take Profit |
+| 6 | `BMT5_DEAL_REASON_SO` | Deal executed by Stop Out |
+| 7 | `BMT5_DEAL_REASON_ROLLOVER` | Deal executed due to rollover |
+| 8 | `BMT5_DEAL_REASON_VMARGIN` | Deal executed after variation margin |
+| 9 | `BMT5_DEAL_REASON_SPLIT` | Deal executed after split |
+| 10 | `BMT5_DEAL_REASON_CORPORATE_ACTION` | Deal executed due to corporate action |
+
+**Used in:** DealHistoryData.Reason
+
+### 📘 Enum: BMT5_ENUM_DEAL_ENTRY_TYPE
+
+| Value | Constant | Description |
+|-------|----------|-------------|
+| 0 | `BMT5_DEAL_ENTRY_IN` | Entry into the market |
+| 1 | `BMT5_DEAL_ENTRY_OUT` | Exit from the market |
+| 2 | `BMT5_DEAL_ENTRY_INOUT` | Reverse (close and open opposite position) |
+| 3 | `BMT5_DEAL_ENTRY_OUT_BY` | Close position by an opposite one |
+
+**Used in:** DealHistoryData.EntryType
 
 ---
 
@@ -202,6 +314,7 @@ import (
 
     pb "github.com/MetaRPC/GoMT5/package"
     "github.com/MetaRPC/GoMT5/package/Helpers"
+    "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func main() {
@@ -215,10 +328,11 @@ func main() {
     weekAgo := now.Add(-7 * 24 * time.Hour)
 
     data, err := account.OrderHistory(ctx, &pb.OrderHistoryRequest{
-        InputFrom:    timestamppb.New(weekAgo),
-        InputTo:      timestamppb.New(now),
-        PageNumber:   0,
-        ItemsPerPage: 100,
+        InputFrom:     timestamppb.New(weekAgo),
+        InputTo:       timestamppb.New(now),
+        InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_BMT5_SORT_BY_OPEN_TIME_DESC,
+        PageNumber:    0,
+        ItemsPerPage:  100,
     })
     if err != nil {
         panic(err)
@@ -228,20 +342,21 @@ func main() {
 }
 ```
 
-### 2) Get history for specific symbol
+### 2) Get history with sorting
 
 ```go
-func GetSymbolHistory(account *mt5.MT5Account, days int) ([]*pb.HistoryData, error) {
+func GetHistoryWithSorting(account *mt5.MT5Account, days int) ([]*pb.HistoryData, error) {
     ctx := context.Background()
 
     now := time.Now()
     fromDate := now.Add(-time.Duration(days) * 24 * time.Hour)
 
     data, err := account.OrderHistory(ctx, &pb.OrderHistoryRequest{
-        InputFrom:    timestamppb.New(fromDate),
-        InputTo:      timestamppb.New(now),
-        PageNumber:   0,
-        ItemsPerPage: 0, // All orders
+        InputFrom:     timestamppb.New(fromDate),
+        InputTo:       timestamppb.New(now),
+        InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_BMT5_SORT_BY_CLOSE_TIME_DESC,
+        PageNumber:    0,
+        ItemsPerPage:  0, // All orders
     })
     if err != nil {
         return nil, err
@@ -251,8 +366,8 @@ func GetSymbolHistory(account *mt5.MT5Account, days int) ([]*pb.HistoryData, err
 }
 
 // Usage:
-// orders, _ := GetSymbolHistory(account, "EURUSD", 30)
-// fmt.Printf("EURUSD orders last 30 days: %d\n", len(orders))
+// orders, _ := GetHistoryWithSorting(account, 30)
+// fmt.Printf("Orders last 30 days (sorted by close time): %d\n", len(orders))
 ```
 
 ### 3) Paginated history retrieval
@@ -266,10 +381,11 @@ func GetAllHistoryPaginated(account *mt5.MT5Account, fromDate, toDate time.Time,
 
     for {
         data, err := account.OrderHistory(ctx, &pb.OrderHistoryRequest{
-            InputFrom:    timestamppb.New(fromDate),
-            InputTo:      timestamppb.New(toDate),
-            PageNumber:   pageNumber,
-            ItemsPerPage: pageSize,
+            InputFrom:     timestamppb.New(fromDate),
+            InputTo:       timestamppb.New(toDate),
+            InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_BMT5_SORT_BY_OPEN_TIME_ASC,
+            PageNumber:    pageNumber,
+            ItemsPerPage:  pageSize,
         })
         if err != nil {
             return nil, err
@@ -308,10 +424,11 @@ func GetMonthlyStats(account *mt5.MT5Account, year, month int) {
     endDate := startDate.AddDate(0, 1, 0).Add(-time.Second)
 
     data, err := account.OrderHistory(ctx, &pb.OrderHistoryRequest{
-        InputFrom:    timestamppb.New(startDate),
-        InputTo:      timestamppb.New(endDate),
-        PageNumber:   0,
-        ItemsPerPage: 0,
+        InputFrom:     timestamppb.New(startDate),
+        InputTo:       timestamppb.New(endDate),
+        InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_BMT5_SORT_BY_OPEN_TIME_ASC,
+        PageNumber:    0,
+        ItemsPerPage:  0,
     })
     if err != nil {
         fmt.Printf("Error: %v\n", err)
@@ -359,10 +476,11 @@ func FindOrdersByDateRange(account *mt5.MT5Account, startDate, endDate string) (
     end = end.Add(24 * time.Hour).Add(-time.Second)
 
     data, err := account.OrderHistory(ctx, &pb.OrderHistoryRequest{
-        InputFrom:    timestamppb.New(start),
-        InputTo:      timestamppb.New(end),
-        PageNumber:   0,
-        ItemsPerPage: 0,
+        InputFrom:     timestamppb.New(start),
+        InputTo:       timestamppb.New(end),
+        InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_BMT5_SORT_BY_OPEN_TIME_ASC,
+        PageNumber:    0,
+        ItemsPerPage:  0,
     })
     if err != nil {
         return nil, err
@@ -389,10 +507,11 @@ func GetTodayHistory(account *mt5.MT5Account) ([]*pb.HistoryData, error) {
     startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
     data, err := account.OrderHistory(ctx, &pb.OrderHistoryRequest{
-        InputFrom:    timestamppb.New(startOfDay),
-        InputTo:      timestamppb.New(now),
-        PageNumber:   0,
-        ItemsPerPage: 0,
+        InputFrom:     timestamppb.New(startOfDay),
+        InputTo:       timestamppb.New(now),
+        InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_BMT5_SORT_BY_OPEN_TIME_ASC,
+        PageNumber:    0,
+        ItemsPerPage:  0,
     })
     if err != nil {
         return nil, err
@@ -409,10 +528,11 @@ func CalculatePeriodProfit(account *mt5.MT5Account, fromDate, toDate time.Time) 
     ctx := context.Background()
 
     data, err := account.OrderHistory(ctx, &pb.OrderHistoryRequest{
-        InputFrom:    timestamppb.New(fromDate),
-        InputTo:      timestamppb.New(toDate),
-        PageNumber:   0,
-        ItemsPerPage: 0,
+        InputFrom:     timestamppb.New(fromDate),
+        InputTo:       timestamppb.New(toDate),
+        InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_BMT5_SORT_BY_OPEN_TIME_ASC,
+        PageNumber:    0,
+        ItemsPerPage:  0,
     })
     if err != nil {
         return 0, err

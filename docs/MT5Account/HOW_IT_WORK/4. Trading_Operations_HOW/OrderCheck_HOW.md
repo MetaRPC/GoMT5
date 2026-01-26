@@ -42,10 +42,14 @@ if err != nil {
     fmt.Printf("     Free Margin After:  %.2f\n", result.FreeMargin)
     fmt.Printf("     Margin Level:       %.2f%%\n\n", result.MarginLevel)
 
+    // OrderCheck returns 0 on successful validation (unlike OrderSend which returns 10009)
     if result.ReturnedCode == 0 {
         fmt.Println("  ✓ Order validation PASSED – safe to proceed with OrderSend()")
     } else {
-        fmt.Printf("  ⚠️  Validation returned code %d – review before trading\n", result.ReturnedCode)
+        // Use helper from errors.go to get human-readable error description
+        fmt.Printf("  ⚠️  Validation failed: %s (code: %d)\n",
+            mt5.GetRetCodeMessage(uint32(result.ReturnedCode)),
+            result.ReturnedCode)
     }
 }
 ```
@@ -105,8 +109,35 @@ fmt.Printf("     Margin Level:       %.2f%%\n", result.MarginLevel)
 
 ### 4️. Interpret the Result
 
-If `ReturnedCode == 0` → the order passed validation.
-Any other value is a warning or error (e.g., insufficient funds or invalid volume).
+```go
+// OrderCheck returns 0 on successful validation (unlike OrderSend which returns 10009)
+if result.ReturnedCode == 0 {
+    fmt.Println("  ✓ Order validation PASSED – safe to proceed with OrderSend()")
+} else {
+    // Use helper from errors.go to get human-readable error description
+    fmt.Printf("  ⚠️  Validation failed: %s (code: %d)\n",
+        mt5.GetRetCodeMessage(uint32(result.ReturnedCode)),
+        result.ReturnedCode)
+}
+```
+
+**Important: OrderCheck uses different success code than trading operations**
+
+1. **OrderCheck success**: `ReturnedCode == 0` means validation passed
+2. **Trading operations success**: `ReturnedCode == 10009` (checked with `mt5.IsRetCodeSuccess()`)
+
+**Why use `mt5.GetRetCodeMessage()` for errors?**
+
+1. **Automatic Error Descriptions**: Instead of just showing a number, get human-readable messages for common validation errors:
+   - `TRADE_RETCODE_INVALID_VOLUME` - Volume doesn't meet broker requirements
+   - `TRADE_RETCODE_NO_MONEY` - Insufficient funds for the trade
+   - `TRADE_RETCODE_INVALID_STOPS` - SL/TP levels violate broker rules
+   - `TRADE_RETCODE_INVALID_PRICE` - Price out of valid range
+2. **Consistency**: Same error handling pattern used across all trading operations
+3. **Centralized**: All 40+ error codes defined in `package/Helpers/errors.go`
+
+If `ReturnedCode == 0` → the order passed validation and it's safe to proceed with `OrderSend()`.
+Any other value indicates a validation error that should be fixed before attempting to send the order.
 
 ---
 

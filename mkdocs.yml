@@ -84,6 +84,7 @@ nav:
     - MT5 for Beginners: All_Guides/MT5_For_Beginners.md
     - gRPC Streaming: All_Guides/GRPC_STREAM_MANAGEMENT.md
     - Return Codes: All_Guides/RETURN_CODES_REFERENCE.md
+    - ENUMs Reference: All_Guides/ENUMS_USAGE_REFERENCE.md
     - Protobuf Inspector: All_Guides/PROTOBUF_INSPECTOR_GUIDE.md
     - UserCode Sandbox: All_Guides/USERCODE_SANDBOX_GUIDE.md
 

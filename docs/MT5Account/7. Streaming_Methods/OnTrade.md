@@ -47,7 +47,14 @@ func (a *MT5Account) OnTrade(
 | Data Channel | `<-chan *pb.OnTradeData`  | Receives trade event updates             |
 | Error Channel| `<-chan error`            | Receives errors (closed on ctx cancel)   |
 
-**OnTradeData contains trade event information including positions, orders, and deals.**
+**OnTradeData fields:**
+
+| Field          | Type     | Go Type   | Description                    |
+| -------------- | -------- | --------- | ------------------------------ |
+| `Type` | `MT5_SUB_ENUM_EVENT_GROUP_TYPE` (enum) | `int32` | Event type (always OnTrade) - **ENUM!** |
+| `EventData` | `OnTadeEventData` | `*OnTadeEventData` | Trade event data (positions, orders, deals) |
+| `AccountInfo` | `OnEventAccountInfo` | `*OnEventAccountInfo` | Account snapshot (balance, equity, etc.) |
+| `TerminalInstanceGuidId` | `string` | `string` | Terminal instance ID |
 
 ---
 
@@ -89,6 +96,34 @@ For a detailed line-by-line explanation with examples, see:
 * **Context cancellation:** Use `context.WithCancel()` or `context.WithTimeout()` to stop streaming.
 * **All events:** Receives events for ALL trading operations (positions, orders, deals).
 * **Empty request:** OnTradeRequest is an empty structure (no parameters needed).
+* **ENUM type:** Always check the `Type` field (MT5_SUB_ENUM_EVENT_GROUP_TYPE) to identify event type.
+
+---
+
+## 🧱 ENUMs used in OnTrade
+
+### Output ENUM
+
+| ENUM Type | Field Name | Purpose | Values |
+|-----------|------------|---------|--------|
+| `MT5_SUB_ENUM_EVENT_GROUP_TYPE` | `Type` | Indicates the event type | `OnTrade` (1) - Trade event notification |
+
+**Usage in code:**
+
+```go
+tradeStream, errChan := account.OnTrade(ctx, &pb.OnTradeRequest{})
+
+for event := range tradeStream {
+    // Check event type (always OnTrade for this stream)
+    switch event.Type {
+    case pb.MT5_SUB_ENUM_EVENT_GROUP_TYPE_OnTrade:
+        fmt.Println("Trade event received")
+        // Process trade event data
+    }
+}
+```
+
+**Note:** The `Type` field will always be `OnTrade` for OnTrade stream. This ENUM is shared across all streaming methods (OnTrade, OnPositionProfit, OnTradeTransaction) to maintain consistent event identification.
 
 ---
 

@@ -8,7 +8,7 @@ MT5Account - Low-Level MetaTrader 5 gRPC Client
 This file implements the low-level MT5 API client with direct protobuf message
 handling. All methods accept protobuf Request objects and return protobuf Data.
 
-TOTAL METHODS: 43 (38 unary RPCs + 5 streaming RPCs)
+TOTAL METHODS: 44 (39 unary RPCs + 5 streaming RPCs)
 
 METHOD GROUPS:
 ──────────────────────────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ METHOD GROUPS:
    • SymbolInfoSessionQuote     - Get quote session times
    • SymbolInfoSessionTrade     - Get trade session times
    • SymbolParamsMany           - Get detailed parameters for multiple symbols
-   • TickValueWithSize          - DEPRECATED - use SymbolInfoDouble instead
+   • TickValueWithSize          - Get tick value and tick size information for symbols
 
 4. POSITIONS & ORDERS INFORMATION (5 methods)
    • PositionsTotal             - Count open positions
@@ -88,36 +88,36 @@ import (
 	"io"
 	"log"
 	"math/rand"
-	"time"
 	"net"
 	"strings"
+	"time"
 
 	pb "github.com/MetaRPC/GoMT5/package"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/grpc/keepalive"
-	"google.golang.org/grpc/backoff"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // MT5Account represents a low-level gRPC client for MetaTrader 5 terminal.
 // All methods accept protobuf Request objects and return protobuf Data objects.
 type MT5Account struct {
-	User                 uint64
-	Password             string
-	Host                 string
-	Port                 int
-	ServerName           string
-	BaseChartSymbol      string
-	ConnectTimeout       int
-	GrpcServer           string
-	GrpcConn             *grpc.ClientConn
-	AccountInfoData      *pb.AccountSummaryReply
+	User                     uint64
+	Password                 string
+	Host                     string
+	Port                     int
+	ServerName               string
+	BaseChartSymbol          string
+	ConnectTimeout           int
+	GrpcServer               string
+	GrpcConn                 *grpc.ClientConn
+	AccountInfoData          *pb.AccountSummaryReply
 	ConnectionClient         pb.ConnectionClient
 	SubscriptionClient       pb.SubscriptionServiceClient
 	AccountClient            pb.AccountHelperClient
@@ -487,7 +487,7 @@ func ExecuteStreamWithReconnect[TRequest any, TReply any, TData any](
 // Returns ConnectData with session UUID and connection status, or error on failure.
 func (a *MT5Account) ConnectEx(ctx context.Context, req *pb.ConnectExRequest) (*pb.ConnectData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -531,7 +531,7 @@ func (a *MT5Account) ConnectEx(ctx context.Context, req *pb.ConnectExRequest) (*
 // Returns ConnectData with session UUID and connection status, or error on failure.
 func (a *MT5Account) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.ConnectData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -574,7 +574,7 @@ func (a *MT5Account) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.C
 // Returns ConnectProxyData with session UUID and connection status, or error on failure.
 func (a *MT5Account) ConnectProxy(ctx context.Context, req *pb.ConnectProxyRequest) (*pb.ConnectProxyData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -617,7 +617,7 @@ func (a *MT5Account) ConnectProxy(ctx context.Context, req *pb.ConnectProxyReque
 // Returns CheckConnectData with connection status flag, or error on failure.
 func (a *MT5Account) CheckConnect(ctx context.Context, req *pb.CheckConnectRequest) (*pb.CheckConnectData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -660,7 +660,7 @@ func (a *MT5Account) CheckConnect(ctx context.Context, req *pb.CheckConnectReque
 // Returns DisconnectData with disconnection status, or error on failure.
 func (a *MT5Account) Disconnect(ctx context.Context, req *pb.DisconnectRequest) (*pb.DisconnectData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -704,7 +704,7 @@ func (a *MT5Account) Disconnect(ctx context.Context, req *pb.DisconnectRequest) 
 // Returns ReconnectData with new session UUID, or error on failure.
 func (a *MT5Account) Reconnect(ctx context.Context, req *pb.ReconnectRequest) (*pb.ReconnectData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -735,6 +735,7 @@ func (a *MT5Account) Reconnect(ctx context.Context, req *pb.ReconnectRequest) (*
 
 	return reply.GetData(), nil
 }
+
 // #endregion
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -755,7 +756,7 @@ func (a *MT5Account) Reconnect(ctx context.Context, req *pb.ReconnectRequest) (*
 func (a *MT5Account) AccountSummary(ctx context.Context, req *pb.AccountSummaryRequest) (*pb.AccountSummaryData, error) {
 	// Step 1: Verify gRPC connection is established
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 
 	// Step 2: Validate input parameters
@@ -810,7 +811,7 @@ func (a *MT5Account) AccountSummary(ctx context.Context, req *pb.AccountSummaryR
 // Returns AccountInfoDoubleData with the requested double value.
 func (a *MT5Account) AccountInfoDouble(ctx context.Context, req *pb.AccountInfoDoubleRequest) (*pb.AccountInfoDoubleData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -853,7 +854,7 @@ func (a *MT5Account) AccountInfoDouble(ctx context.Context, req *pb.AccountInfoD
 // Returns AccountInfoIntegerData with the requested int64 value.
 func (a *MT5Account) AccountInfoInteger(ctx context.Context, req *pb.AccountInfoIntegerRequest) (*pb.AccountInfoIntegerData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -896,7 +897,7 @@ func (a *MT5Account) AccountInfoInteger(ctx context.Context, req *pb.AccountInfo
 // Returns AccountInfoStringData with the requested string value.
 func (a *MT5Account) AccountInfoString(ctx context.Context, req *pb.AccountInfoStringRequest) (*pb.AccountInfoStringData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -927,6 +928,7 @@ func (a *MT5Account) AccountInfoString(ctx context.Context, req *pb.AccountInfoS
 
 	return reply.GetData(), nil
 }
+
 // #endregion
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -944,7 +946,7 @@ func (a *MT5Account) AccountInfoString(ctx context.Context, req *pb.AccountInfoS
 // Returns SymbolsTotalData with total count of symbols.
 func (a *MT5Account) SymbolsTotal(ctx context.Context, req *pb.SymbolsTotalRequest) (*pb.SymbolsTotalData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -987,7 +989,7 @@ func (a *MT5Account) SymbolsTotal(ctx context.Context, req *pb.SymbolsTotalReque
 // Returns SymbolExistData with Exist flag and IsCustom flag indicating if it's a custom symbol.
 func (a *MT5Account) SymbolExist(ctx context.Context, req *pb.SymbolExistRequest) (*pb.SymbolExistData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1030,7 +1032,7 @@ func (a *MT5Account) SymbolExist(ctx context.Context, req *pb.SymbolExistRequest
 // Returns SymbolNameData with symbol name at the specified position.
 func (a *MT5Account) SymbolName(ctx context.Context, req *pb.SymbolNameRequest) (*pb.SymbolNameData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1073,7 +1075,7 @@ func (a *MT5Account) SymbolName(ctx context.Context, req *pb.SymbolNameRequest) 
 // Returns SymbolSelectData with success status of the operation.
 func (a *MT5Account) SymbolSelect(ctx context.Context, req *pb.SymbolSelectRequest) (*pb.SymbolSelectData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1116,7 +1118,7 @@ func (a *MT5Account) SymbolSelect(ctx context.Context, req *pb.SymbolSelectReque
 // Returns SymbolIsSynchronizedData with IsSynchronized flag.
 func (a *MT5Account) SymbolIsSynchronized(ctx context.Context, req *pb.SymbolIsSynchronizedRequest) (*pb.SymbolIsSynchronizedData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1159,7 +1161,7 @@ func (a *MT5Account) SymbolIsSynchronized(ctx context.Context, req *pb.SymbolIsS
 // Returns SymbolInfoDoubleData with the requested double value.
 func (a *MT5Account) SymbolInfoDouble(ctx context.Context, req *pb.SymbolInfoDoubleRequest) (*pb.SymbolInfoDoubleData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1202,7 +1204,7 @@ func (a *MT5Account) SymbolInfoDouble(ctx context.Context, req *pb.SymbolInfoDou
 // Returns SymbolInfoIntegerData with the requested int64 value.
 func (a *MT5Account) SymbolInfoInteger(ctx context.Context, req *pb.SymbolInfoIntegerRequest) (*pb.SymbolInfoIntegerData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1245,7 +1247,7 @@ func (a *MT5Account) SymbolInfoInteger(ctx context.Context, req *pb.SymbolInfoIn
 // Returns SymbolInfoStringData with the requested string value.
 func (a *MT5Account) SymbolInfoString(ctx context.Context, req *pb.SymbolInfoStringRequest) (*pb.SymbolInfoStringData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1288,7 +1290,7 @@ func (a *MT5Account) SymbolInfoString(ctx context.Context, req *pb.SymbolInfoStr
 // Returns SymbolInfoMarginRateData with InitialMarginRate and MaintenanceMarginRate values.
 func (a *MT5Account) SymbolInfoMarginRate(ctx context.Context, req *pb.SymbolInfoMarginRateRequest) (*pb.SymbolInfoMarginRateData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1331,7 +1333,7 @@ func (a *MT5Account) SymbolInfoMarginRate(ctx context.Context, req *pb.SymbolInf
 // Returns MrpcMqlTick with Bid, Ask, Last, Volume, Time, TimeMS, Flags, VolumReal and spread values.
 func (a *MT5Account) SymbolInfoTick(ctx context.Context, req *pb.SymbolInfoTickRequest) (*pb.MrpcMqlTick, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1374,7 +1376,7 @@ func (a *MT5Account) SymbolInfoTick(ctx context.Context, req *pb.SymbolInfoTickR
 // Returns SymbolInfoSessionQuoteData with session From and To times in seconds from day start.
 func (a *MT5Account) SymbolInfoSessionQuote(ctx context.Context, req *pb.SymbolInfoSessionQuoteRequest) (*pb.SymbolInfoSessionQuoteData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1417,7 +1419,7 @@ func (a *MT5Account) SymbolInfoSessionQuote(ctx context.Context, req *pb.SymbolI
 // Returns SymbolInfoSessionTradeData with session From and To times in seconds from day start.
 func (a *MT5Account) SymbolInfoSessionTrade(ctx context.Context, req *pb.SymbolInfoSessionTradeRequest) (*pb.SymbolInfoSessionTradeData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1462,7 +1464,7 @@ func (a *MT5Account) SymbolInfoSessionTrade(ctx context.Context, req *pb.SymbolI
 // VolumeMin, VolumeMax, VolumeStep, ContractSize, Point, margins, and other trading parameters for each symbol.
 func (a *MT5Account) SymbolParamsMany(ctx context.Context, req *pb.SymbolParamsManyRequest) (*pb.SymbolParamsManyData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1493,6 +1495,55 @@ func (a *MT5Account) SymbolParamsMany(ctx context.Context, req *pb.SymbolParamsM
 
 	return reply.GetData(), nil
 }
+
+// TickValueWithSize returns tick value and size information for multiple symbols.
+//
+// This method retrieves comprehensive tick value and size data including:
+//   - TradeTickValue: Standard tick value in account currency
+//   - TradeTickValueProfit: Tick value for profitable positions
+//   - TradeTickValueLoss: Tick value for losing positions
+//   - TradeTickSize: Minimum price change (tick size)
+//   - TradeContractSize: Contract size for the symbol
+//
+// Parameters:
+//   - ctx: Context for timeout and cancellation control
+//   - req: TickValueWithSizeRequest containing symbol names to query
+//
+// Returns TickValueWithSizeData with tick value and size information for each symbol.
+func (a *MT5Account) TickValueWithSize(ctx context.Context, req *pb.TickValueWithSizeRequest) (*pb.TickValueWithSizeData, error) {
+	if !a.isConnected() {
+		return nil, ErrNotConnected
+	}
+	if req == nil {
+		return nil, fmt.Errorf("nil request")
+	}
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+	}
+
+	grpcCall := func(headers metadata.MD) (*pb.TickValueWithSizeReply, error) {
+		c := metadata.NewOutgoingContext(ctx, headers)
+		return a.AccountClient.TickValueWithSize(c, req)
+	}
+
+	errorSelector := func(reply *pb.TickValueWithSizeReply) mrpcError {
+		return reply.GetError()
+	}
+
+	reply, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
+	if err != nil {
+		return nil, err
+	}
+
+	return reply.GetData(), nil
+}
+
 // #endregion
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1509,7 +1560,7 @@ func (a *MT5Account) SymbolParamsMany(ctx context.Context, req *pb.SymbolParamsM
 // Returns PositionsTotalData with Total count of open positions.
 func (a *MT5Account) PositionsTotal(ctx context.Context) (*pb.PositionsTotalData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 
 	if ctx == nil {
@@ -1550,7 +1601,7 @@ func (a *MT5Account) PositionsTotal(ctx context.Context) (*pb.PositionsTotalData
 // Returns OpenedOrdersData with arrays of opened_orders (pending orders) and position_infos (open positions) containing full details.
 func (a *MT5Account) OpenedOrders(ctx context.Context, req *pb.OpenedOrdersRequest) (*pb.OpenedOrdersData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1594,7 +1645,7 @@ func (a *MT5Account) OpenedOrders(ctx context.Context, req *pb.OpenedOrdersReque
 // Returns OpenedOrdersTicketsData with arrays of opened_orders_tickets and opened_position_tickets.
 func (a *MT5Account) OpenedOrdersTickets(ctx context.Context, req *pb.OpenedOrdersTicketsRequest) (*pb.OpenedOrdersTicketsData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1639,7 +1690,7 @@ func (a *MT5Account) OpenedOrdersTickets(ctx context.Context, req *pb.OpenedOrde
 // prices, volumes, and final status.
 func (a *MT5Account) OrderHistory(ctx context.Context, req *pb.OrderHistoryRequest) (*pb.OrdersHistoryData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1684,7 +1735,7 @@ func (a *MT5Account) OrderHistory(ctx context.Context, req *pb.OrderHistoryReque
 // volumes, swap, commission, net profit, and close timestamps.
 func (a *MT5Account) PositionsHistory(ctx context.Context, req *pb.PositionsHistoryRequest) (*pb.PositionsHistoryData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1715,6 +1766,7 @@ func (a *MT5Account) PositionsHistory(ctx context.Context, req *pb.PositionsHist
 
 	return reply.GetData(), nil
 }
+
 // #endregion
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1733,7 +1785,7 @@ func (a *MT5Account) PositionsHistory(ctx context.Context, req *pb.PositionsHist
 // Returns MarketBookAddData with subscription status.
 func (a *MT5Account) MarketBookAdd(ctx context.Context, req *pb.MarketBookAddRequest) (*pb.MarketBookAddData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1776,7 +1828,7 @@ func (a *MT5Account) MarketBookAdd(ctx context.Context, req *pb.MarketBookAddReq
 // Returns MarketBookReleaseData with unsubscription status.
 func (a *MT5Account) MarketBookRelease(ctx context.Context, req *pb.MarketBookReleaseRequest) (*pb.MarketBookReleaseData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1821,7 +1873,7 @@ func (a *MT5Account) MarketBookRelease(ctx context.Context, req *pb.MarketBookRe
 // Price, Volume, and VolumeDouble for each price level in the order book.
 func (a *MT5Account) MarketBookGet(ctx context.Context, req *pb.MarketBookGetRequest) (*pb.MarketBookGetData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1852,6 +1904,7 @@ func (a *MT5Account) MarketBookGet(ctx context.Context, req *pb.MarketBookGetReq
 
 	return reply.GetData(), nil
 }
+
 // #endregion
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1870,7 +1923,7 @@ func (a *MT5Account) MarketBookGet(ctx context.Context, req *pb.MarketBookGetReq
 // Returns OrderSendData with returned code, deal ticket, order ticket, execution price, volume, bid/ask prices, comment, and request ID.
 func (a *MT5Account) OrderSend(ctx context.Context, req *pb.OrderSendRequest) (*pb.OrderSendData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1914,7 +1967,7 @@ func (a *MT5Account) OrderSend(ctx context.Context, req *pb.OrderSendRequest) (*
 // Returns OrderModifyData with modification status and MqlTradeResult structure.
 func (a *MT5Account) OrderModify(ctx context.Context, req *pb.OrderModifyRequest) (*pb.OrderModifyData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -1957,7 +2010,7 @@ func (a *MT5Account) OrderModify(ctx context.Context, req *pb.OrderModifyRequest
 // Returns OrderCloseData with ReturnedCode, ReturnedStringCode, ReturnedCodeDescription, and CloseMode (market close, partial close, or pending order remove).
 func (a *MT5Account) OrderClose(ctx context.Context, req *pb.OrderCloseRequest) (*pb.OrderCloseData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -2002,7 +2055,7 @@ func (a *MT5Account) OrderClose(ctx context.Context, req *pb.OrderCloseRequest) 
 // and MqlTradeCheckResult structure with validation status and possible error codes.
 func (a *MT5Account) OrderCheck(ctx context.Context, req *pb.OrderCheckRequest) (*pb.OrderCheckData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -2045,7 +2098,7 @@ func (a *MT5Account) OrderCheck(ctx context.Context, req *pb.OrderCheckRequest) 
 // Returns OrderCalcMarginData with Margin value in account currency.
 func (a *MT5Account) OrderCalcMargin(ctx context.Context, req *pb.OrderCalcMarginRequest) (*pb.OrderCalcMarginData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -2089,7 +2142,7 @@ func (a *MT5Account) OrderCalcMargin(ctx context.Context, req *pb.OrderCalcMargi
 // Returns OrderCalcProfitData with Profit value in account currency.
 func (a *MT5Account) OrderCalcProfit(ctx context.Context, req *pb.OrderCalcProfitRequest) (*pb.OrderCalcProfitData, error) {
 	if !a.isConnected() {
-		return nil, errors.New("not connected")
+		return nil, ErrNotConnected
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
@@ -2120,6 +2173,7 @@ func (a *MT5Account) OrderCalcProfit(ctx context.Context, req *pb.OrderCalcProfi
 
 	return reply.GetData(), nil
 }
+
 // #endregion
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -2305,4 +2359,5 @@ func (a *MT5Account) OnTradeTransaction(ctx context.Context, req *pb.OnTradeTran
 
 	return ExecuteStreamWithReconnect(ctx, a, req, streamInvoker, getError, getData, newReply)
 }
+
 // #endregion

@@ -13,6 +13,124 @@ ERROR TYPES:
   3. Trade return codes - Constants for checking trading operation results
 
 ══════════════════════════════════════════════════════════════════════════════
+WHERE AND HOW THESE ERRORS ARE USED
+══════════════════════════════════════════════════════════════════════════════
+
+1. ErrNotConnected - CONNECTION STATE VALIDATION
+   ────────────────────────────────────────────
+   WHERE: All 43 methods in MT5Account check connection before execution
+
+   METHODS THAT USE IT:
+   • ConnectEx, Connect, ConnectProxy, CheckConnect, Disconnect, Reconnect
+   • AccountSummary, AccountInfoDouble, AccountInfoInteger, AccountInfoString
+   • SymbolsTotal, SymbolExist, SymbolName, SymbolSelect, SymbolIsSynchronized
+   • SymbolInfoDouble, SymbolInfoInteger, SymbolInfoString, SymbolInfoMarginRate
+   • SymbolInfoTick, SymbolInfoSessionQuote, SymbolInfoSessionTrade, SymbolParamsMany
+   • PositionsTotal, OpenedOrders, OpenedOrdersTickets, OrderHistory, PositionsHistory
+   • MarketBookAdd, MarketBookRelease, MarketBookGet
+   • OrderSend, OrderModify, OrderClose, OrderCheck, OrderCalcMargin, OrderCalcProfit
+
+   HOW TO HANDLE:
+     result, err := account.OrderSend(ctx, req)
+     if errors.Is(err, mt5.ErrNotConnected) {
+         // Reconnect to MT5
+         _, err = account.Connect(ctx, connectReq)
+         if err != nil {
+             return err
+         }
+         // Retry the operation
+         result, err = account.OrderSend(ctx, req)
+     }
+
+2. ApiError - SERVER-SIDE API ERRORS
+   ──────────────────────────────────
+   WHERE: ExecuteWithReconnect and ExecuteStreamWithReconnect convert protobuf errors
+
+   WHEN IT OCCURS:
+   • MT5 server returns error in reply.Error field
+   • MQL script execution error on server side
+   • Invalid request parameters
+   • Forbidden operations (e.g., trading disabled)
+
+   CONTAINS THREE LEVELS OF ERROR INFORMATION:
+   • API-level: ErrorCode, ErrorMessage, ErrorType
+   • MQL-level: MqlErrorCode, MqlErrorIntCode, MqlErrorDescription
+   • Trade-level: MqlErrorTradeCode, MqlErrorTradeIntCode, MqlErrorTradeDescription
+
+   HOW TO HANDLE:
+     data, err := account.SymbolInfoTick(ctx, &pb.SymbolInfoTickRequest{Symbol: "INVALID"})
+     if err != nil {
+         var apiErr *mt5.ApiError
+         if errors.As(err, &apiErr) {
+             fmt.Printf("API Error: %s\n", apiErr.ErrorCode())
+             fmt.Printf("MQL Error: %s (code: %d)\n",
+                 apiErr.MqlErrorDescription(),
+                 apiErr.MqlErrorIntCode())
+             fmt.Printf("Trade Error: %s (code: %d)\n",
+                 apiErr.MqlErrorTradeDescription(),
+                 apiErr.MqlErrorTradeIntCode())
+         }
+         return err
+     }
+
+3. Trade Return Codes - TRADING OPERATION RESULTS
+   ────────────────────────────────────────────────
+   WHERE: User must manually check ReturnedCode field after trading operations
+
+   METHODS THAT RETURN ReturnedCode:
+   • OrderSend → OrderSendData.ReturnedCode
+   • OrderClose → OrderCloseData.ReturnedCode
+   • OrderModify → OrderModifyData contains MqlTradeResult with RetCode
+
+   CRITICAL: Success is ONLY code 10009 (TradeRetCodeDone)!
+   Even if err == nil, you MUST check ReturnedCode.
+
+   HOW TO HANDLE:
+     result, err := account.OrderSend(ctx, req)
+     if err != nil {
+         return err  // API/network error
+     }
+
+     // Check trade execution result
+     if result.ReturnedCode != mt5.TradeRetCodeDone {
+         if mt5.IsRetCodeRetryable(result.ReturnedCode) {
+             // Retry: timeout, locked, no quotes, etc.
+             time.Sleep(500 * time.Millisecond)
+             return retryOrder()
+         }
+         return fmt.Errorf("order failed: %s (code: %d)",
+             mt5.GetRetCodeMessage(result.ReturnedCode),
+             result.ReturnedCode)
+     }
+
+     fmt.Printf("Order placed: ticket=%d, price=%.5f\n", result.Order, result.Price)
+
+══════════════════════════════════════════════════════════════════════════════
+ERROR FLOW DIAGRAM
+══════════════════════════════════════════════════════════════════════════════
+
+User calls method (e.g., OrderSend)
+    ↓
+MT5Account.OrderSend() checks isConnected()
+    ↓
+    ├─ Not connected? → return ErrNotConnected
+    ↓
+    └─ Connected → calls ExecuteWithReconnect()
+          ↓
+          ExecuteWithReconnect() makes gRPC call
+          ↓
+          ├─ gRPC error? → retry with backoff
+          ↓
+          ├─ reply.Error present? → return ApiError
+          ↓
+          └─ Success → return reply.Data
+                ↓
+                User receives Data and checks ReturnedCode
+                ↓
+                ├─ ReturnedCode == 10009? → Success!
+                └─ Other code? → Trade rejected/failed
+
+══════════════════════════════════════════════════════════════════════════════
 */
 
 import (

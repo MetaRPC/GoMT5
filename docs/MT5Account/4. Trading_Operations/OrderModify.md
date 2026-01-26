@@ -177,10 +177,13 @@ func main() {
         panic(err)
     }
 
-    if data.ReturnedCode == 10009 {
+    // Check modification result using helper from errors.go
+    if mt5.IsRetCodeSuccess(data.ReturnedCode) {
         fmt.Printf("Order %d modified: SL=%.5f, TP=%.5f\n", ticket, newSL, newTP)
     } else {
-        fmt.Printf("Modification failed: %s\n", data.ReturnedCodeDescription)
+        fmt.Printf("Modification failed: %s (code: %d)\n",
+            mt5.GetRetCodeMessage(data.ReturnedCode),
+            data.ReturnedCode)
     }
 }
 ```
@@ -200,8 +203,11 @@ func MoveToBreakeven(account *mt5.MT5Account, ticket uint64, openPrice float64) 
         return fmt.Errorf("failed to move to breakeven: %w", err)
     }
 
-    if data.ReturnedCode != 10009 {
-        return fmt.Errorf("modification unsuccessful: %s", data.ReturnedCodeDescription)
+    // Validate modification result using helper from errors.go
+    if !mt5.IsRetCodeSuccess(data.ReturnedCode) {
+        return fmt.Errorf("modification unsuccessful: %s (code: %d)",
+            mt5.GetRetCodeMessage(data.ReturnedCode),
+            data.ReturnedCode)
     }
 
     fmt.Printf("Moved order %d to breakeven\n", ticket)
@@ -257,7 +263,8 @@ func TrailingStop(account *mt5.MT5Account, ticket uint64, trailDistance float64)
         return err
     }
 
-    if data.ReturnedCode == 10009 {
+    // Check modification result using helper from errors.go
+    if mt5.IsRetCodeSuccess(data.ReturnedCode) {
         fmt.Printf("Trailing stop updated for %d: new SL=%.5f\n", ticket, newSL)
     }
 
