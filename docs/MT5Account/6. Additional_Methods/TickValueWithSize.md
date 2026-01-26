@@ -1,4 +1,4 @@
-# Get Tick Value and Size Information
+# ✅ Get Tick Value and Size Information
 
 > **Request:** get comprehensive tick value and size data for multiple symbols at once.
 
@@ -14,7 +14,7 @@
 * **Method:** `TickValueWithSize(TickValueWithSizeRequest) -> TickValueWithSizeReply`
 * **Low-level client (generated):** `AccountHelperClient.TickValueWithSize(ctx, request, opts...)`
 
-## Just the essentials
+## 💬 Just the essentials
 
 * **What it is.** Returns tick value and size data for symbols including profit/loss calculations.
 * **Why you need it.** Calculate position value, P&L, risk management, lot size calculations.
@@ -22,7 +22,7 @@
 
 ---
 
-## Purpose
+## 🎯 Purpose
 
 Use it to:
 
@@ -60,7 +60,7 @@ TickValueWithSizeRequest {
 
 ---
 
-## Input
+## 🔽 Input
 
 | Parameter | Type                                | Description                                   |
 | --------- | ----------------------------------- | --------------------------------------------- |
@@ -75,7 +75,7 @@ TickValueWithSizeRequest {
 
 ---
 
-## Output — TickValueWithSizeData
+## ⬆️ Output — TickValueWithSizeData
 
 | Field                  | Type                    | Description                                    |
 | ---------------------- | ----------------------- | ---------------------------------------------- |
@@ -95,7 +95,7 @@ TickValueWithSizeRequest {
 
 ---
 
-## Tutorial
+## 📚 Tutorial
 
 For a detailed line-by-line explanation with examples, see:
 **-> [TickValueWithSize - How it works](../HOW_IT_WORK/6.%20Additional_Methods_HOW/TickValueWithSize_HOW.md)**
@@ -103,7 +103,7 @@ For a detailed line-by-line explanation with examples, see:
 ---
 
 
-## Notes & Tips
+## 🧩 Notes & Tips
 
 * **Automatic reconnection:** All `MT5Account` methods have built-in protection against transient gRPC errors with automatic reconnection via `ExecuteWithReconnect`.
 * **Default timeout:** If context has no deadline, a default `5s` timeout is applied automatically.
@@ -116,7 +116,7 @@ For a detailed line-by-line explanation with examples, see:
 
 ---
 
-## Usage Examples
+## 🔗 Usage Examples
 
 ### 1) Get tick value for single symbol
 
@@ -278,7 +278,7 @@ func RiskCalculator(account *mt5.MT5Account, symbol string, accountBalance float
 
 ---
 
-## See Also
+## 📚 See Also
 
 * [SymbolInfoDouble](../2.%20Symbol_information/SymbolInfoDouble.md) - Get individual symbol properties
 * [SymbolParamsMany](./SymbolParamsMany.md) - Get comprehensive symbol parameters
