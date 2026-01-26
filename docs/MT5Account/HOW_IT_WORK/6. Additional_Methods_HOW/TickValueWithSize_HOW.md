@@ -6,7 +6,7 @@
 
 ---
 
-## Code example
+## 🧩 Code example
 
 ```go
 tickValueReq := &pb.TickValueWithSizeRequest{
@@ -30,7 +30,7 @@ if err != nil {
 
 ---
 
-### Detailed Code Explanation
+### 🟢 Detailed Code Explanation
 
 ```go
 tickValueReq := &pb.TickValueWithSizeRequest{
@@ -99,7 +99,7 @@ Print additional parameters:
 
 ---
 
-## What the Server Returns
+## 📦 What the Server Returns
 
 ```protobuf
 message TickValueWithSizeData {
@@ -119,7 +119,7 @@ message TickSizeSymbol {
 
 ---
 
-## Example Output
+## 💡 Example Output
 
 ```
 Retrieved tick value/size data for 1 symbols:
@@ -139,7 +139,7 @@ This means:
 
 ---
 
-### Why Tick Value Matters
+###  Why Tick Value Matters
 
 The tick value is critical for:
 
@@ -184,7 +184,7 @@ Always use `TradeTickValueProfit` for buy positions and `TradeTickValueLoss` for
 
 ---
 
-### What It's Used For
+### 🧠 What It's Used For
 
 The `TickValueWithSize()` method is used:
 
@@ -197,7 +197,7 @@ The `TickValueWithSize()` method is used:
 
 ---
 
-### In Simple Terms
+### 💬 In Simple Terms
 
 > `TickValueWithSize()` tells you **how much money you make or lose per tick** for each symbol.
 > It provides all the data needed to calculate position sizes, risk amounts, and profit/loss accurately in your account currency.
