@@ -409,19 +409,3 @@ pb.<ENUM_TYPE>_<CONSTANT_NAME>
 - **OrderHistory** returns 7 different ENUMs (4 in OrderHistoryData + 3 in DealHistoryData)
 - **OpenedOrders** returns 6 different ENUMs (3 in PositionInfo + 3 in OpenedOrderInfo)
 
----
-
-## 🔗 See Also
-
-### Documentation by Group:
-
-- [Account Information Overview](../MT5Account/1.%20Account_information/Account_Information.Overview.md)
-- [Symbol Information Overview](../MT5Account/2.%20Symbol_information/Symbol_Information.Overview.md)
-- [Positions & Orders Overview](../MT5Account/3.%20Position_Orders_Information/Position_Orders.Overview.md)
-- [Market Depth Overview](../MT5Account/5.%20Market_Depth(DOM)/Market_Depth.Overview.md)
-- [Trading Operations Overview](../MT5Account/4.%20Trading_Operations/Trading_Operations.Overview.md)
-
-### Other References:
-
-- [Return Codes Reference](./RETURN_CODES_REFERENCE.md) - trading operation return codes
-- [Error Handling Guide](./ERROR_HANDLING_GUIDE.md) - error handling
