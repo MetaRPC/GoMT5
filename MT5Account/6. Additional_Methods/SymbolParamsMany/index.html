@@ -1,0 +1,3589 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Complete Go SDK for MetaTrader 5 trading automation">
+      
+      
+      
+        <link rel="canonical" href="https://MetaRPC.github.io/GoMT5/MT5Account/6.%20Additional_Methods/SymbolParamsMany/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>✅ Get Parameters for Multiple Symbols - GoMT5 SDK Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../styles/custom.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#get-parameters-for-multiple-symbols" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="GoMT5 SDK Documentation" class="md-header__button md-logo" aria-label="GoMT5 SDK Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m2.64 10.33-.02-.06.22-.27.12-.08H6.8l.03.08-.18.26-.11.06zm-1.61.98L1 11.26l.22-.29.12-.06h4.9l.05.09-.08.24-.1.07zm2.6.99-.04-.06.16-.28.1-.06H6l.07.07-.02.25-.08.08zm11.15-2.16-1.78.47c-.19.04-.2.05-.34-.11-.16-.18-.27-.29-.5-.4-.66-.34-1.33-.24-1.94.15-.72.48-1.11 1.17-1.1 2.05.01.86.6 1.57 1.45 1.7.73.09 1.34-.17 1.83-.72l.29-.39h-2.07c-.22 0-.27-.14-.2-.32l.55-1.18c.03-.06.11-.17.27-.17h3.44c.15-.5.41-.96.75-1.41.78-1.03 1.73-1.57 3-1.81 1.07-.18 2.13-.07 3.07.57.84.58 1.37 1.36 1.5 2.39.19 1.45-.24 2.63-1.24 3.65-.71.72-1.58 1.17-2.57 1.39l-.86.08c-.98-.02-1.87-.3-2.62-.95-.52-.45-.88-.99-1.06-1.63-.15.24-.27.47-.44.7-.77 1.02-1.78 1.65-3.06 1.8-1.05.16-2.03-.05-2.89-.69-.79-.6-1.26-1.4-1.36-2.39-.14-1.17.2-2.22.91-3.14.76-1 1.77-1.63 3.01-1.86 1-.18 1.97-.06 2.84.52.57.38.97.9 1.24 1.52q.06.135-.12.18m6.11 1.6-.03-.36c-.19-1.06-1.17-1.66-2.19-1.43-1.01.22-1.67.85-1.88 1.86-.19.84.21 1.69.98 2.03.59.26 1.19.22 1.76-.06.84-.43 1.31-1.12 1.36-2.04"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            GoMT5 SDK Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ✅ Get Parameters for Multiple Symbols
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/MetaRPC/GoMT5" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    MetaRPC/GoMT5
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="GoMT5 SDK Documentation" class="md-nav__button md-logo" aria-label="GoMT5 SDK Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m2.64 10.33-.02-.06.22-.27.12-.08H6.8l.03.08-.18.26-.11.06zm-1.61.98L1 11.26l.22-.29.12-.06h4.9l.05.09-.08.24-.1.07zm2.6.99-.04-.06.16-.28.1-.06H6l.07.07-.02.25-.08.08zm11.15-2.16-1.78.47c-.19.04-.2.05-.34-.11-.16-.18-.27-.29-.5-.4-.66-.34-1.33-.24-1.94.15-.72.48-1.11 1.17-1.1 2.05.01.86.6 1.57 1.45 1.7.73.09 1.34-.17 1.83-.72l.29-.39h-2.07c-.22 0-.27-.14-.2-.32l.55-1.18c.03-.06.11-.17.27-.17h3.44c.15-.5.41-.96.75-1.41.78-1.03 1.73-1.57 3-1.81 1.07-.18 2.13-.07 3.07.57.84.58 1.37 1.36 1.5 2.39.19 1.45-.24 2.63-1.24 3.65-.71.72-1.58 1.17-2.57 1.39l-.86.08c-.98-.02-1.87-.3-2.62-.95-.52-.45-.88-.99-1.06-1.63-.15.24-.27.47-.44.7-.77 1.02-1.78 1.65-3.06 1.8-1.05.16-2.03-.05-2.89-.69-.79-.6-1.26-1.4-1.36-2.39-.14-1.17.2-2.22.91-3.14.76-1 1.77-1.63 3.01-1.86 1-.18 1.97-.06 2.84.52.57.38.97.9 1.24 1.52q.06.135-.12.18m6.11 1.6-.03-.36c-.19-1.06-1.17-1.66-2.19-1.43-1.01.22-1.67.85-1.88 1.86-.19.84.21 1.69.98 2.03.59.26 1.19.22 1.76-.06.84-.43 1.31-1.12 1.36-2.04"/></svg>
+
+    </a>
+    GoMT5 SDK Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/MetaRPC/GoMT5" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    MetaRPC/GoMT5
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../All_Guides/GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../All_Guides/Your_First_Project/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Project
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../All_Guides/PROJECT_MAP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Map
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../All_Guides/GLOSSARY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../All_Guides/MT5_For_Beginners/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5 for Beginners
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../All_Guides/GRPC_STREAM_MANAGEMENT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gRPC Streaming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../All_Guides/RETURN_CODES_REFERENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Return Codes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../All_Guides/ENUMS_USAGE_REFERENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ENUMs Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../All_Guides/PROTOBUF_INSPECTOR_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protobuf Inspector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../All_Guides/USERCODE_SANDBOX_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UserCode Sandbox
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../API_Reference/MT5Account/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5Account API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../API_Reference/MT5Service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5Service API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../API_Reference/MT5Sugar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5Sugar API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Orchestrators
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Orchestrators
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../Orchestrators/Strategies.Master.Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#rpc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RPC
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#just-the-essentials" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        💬 Just the essentials
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎯 Purpose
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔽 Input
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-symbolparamsmanydata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⬆️ Output — SymbolParamsManyData
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="⬆️ Output — SymbolParamsManyData">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#symbolparameters-structure-112-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📋 SymbolParameters structure (112 fields)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tutorial" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📚 Tutorial
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes-tips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🧩 Notes &amp; Tips
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔗 Usage Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔗 Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-get-params-for-multiple-symbols" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1) Get params for multiple symbols
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-build-trading-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2) Build trading dashboard
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-validate-trading-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3) Validate trading parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-compare-spreads-across-symbols" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4) Compare spreads across symbols
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-find-symbols-with-low-spreads" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5) Find symbols with low spreads
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enum-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📋 Enum Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📋 Enum Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bmt5_enum_symbol_sector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BMT5_ENUM_SYMBOL_SECTOR
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bmt5_enum_symbol_industry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BMT5_ENUM_SYMBOL_INDUSTRY
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bmt5_enum_symbol_chart_mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BMT5_ENUM_SYMBOL_CHART_MODE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bmt5_enum_symbol_calc_mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BMT5_ENUM_SYMBOL_CALC_MODE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bmt5_enum_symbol_trade_mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BMT5_ENUM_SYMBOL_TRADE_MODE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bmt5_enum_symbol_trade_execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BMT5_ENUM_SYMBOL_TRADE_EXECUTION
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bmt5_enum_symbol_swap_mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BMT5_ENUM_SYMBOL_SWAP_MODE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bmt5_enum_day_of_week" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BMT5_ENUM_DAY_OF_WEEK
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bmt5_enum_symbol_order_gtc_mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BMT5_ENUM_SYMBOL_ORDER_GTC_MODE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bmt5_enum_symbol_option_mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BMT5_ENUM_SYMBOL_OPTION_MODE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bmt5_enum_symbol_option_right" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BMT5_ENUM_SYMBOL_OPTION_RIGHT
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bmt5_enum_order_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BMT5_ENUM_ORDER_TYPE
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bmt5_enum_order_type_filling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BMT5_ENUM_ORDER_TYPE_FILLING
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📚 See Also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="get-parameters-for-multiple-symbols">✅ Get Parameters for Multiple Symbols<a class="headerlink" href="#get-parameters-for-multiple-symbols" title="Permanent link">¶</a></h1>
+<blockquote>
+<p><strong>Request:</strong> get complete trading parameters for multiple symbols in one request. Returns Bid, Ask, Digits, Spread, volumes, contract size and other parameters.</p>
+</blockquote>
+<p><strong>API Information:</strong></p>
+<ul>
+<li><strong>Low-level API:</strong> <code>MT5Account.SymbolParamsMany(...)</code> (from Go package <code>github.com/MetaRPC/GoMT5/package/Helpers</code>)</li>
+<li><strong>gRPC service:</strong> <code>mt5_term_api.AccountHelper</code></li>
+<li><strong>Proto definition:</strong> <code>SymbolParamsMany</code> (defined in <code>mt5-term-api-account-helper.proto</code>)</li>
+</ul>
+<h3 id="rpc">RPC<a class="headerlink" href="#rpc" title="Permanent link">¶</a></h3>
+<ul>
+<li><strong>Service:</strong> <code>mt5_term_api.AccountHelper</code></li>
+<li><strong>Method:</strong> <code>SymbolParamsMany(SymbolParamsManyRequest) → SymbolParamsManyReply</code></li>
+<li><strong>Low‑level client (generated):</strong> <code>AccountHelperClient.SymbolParamsMany(ctx, request, opts...)</code></li>
+</ul>
+<h2 id="just-the-essentials">💬 Just the essentials<a class="headerlink" href="#just-the-essentials" title="Permanent link">¶</a></h2>
+<ul>
+<li><strong>What it is.</strong> Retrieves comprehensive trading parameters for multiple symbols at once.</li>
+<li><strong>Why you need it.</strong> Efficient bulk data retrieval, avoid multiple round-trips.</li>
+<li><strong>Complete data.</strong> Returns all essential symbol properties in one call.</li>
+</ul>
+<hr />
+<h2 id="purpose">🎯 Purpose<a class="headerlink" href="#purpose" title="Permanent link">¶</a></h2>
+<p>Use it to:</p>
+<ul>
+<li>Get complete trading specifications for multiple symbols efficiently</li>
+<li>Build trading dashboards and watchlists</li>
+<li>Validate trading parameters in bulk</li>
+<li>Compare spreads and conditions across symbols</li>
+<li>Reduce network round-trips with batch queries</li>
+</ul>
+<hr />
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">package</span><span class="w"> </span><span class="nx">mt5</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kd">type</span><span class="w"> </span><span class="nx">MT5Account</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="c1">// ...</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">}</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1">// SymbolParamsMany retrieves detailed parameters for multiple symbols in one call.</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1">// This is the recommended method for getting comprehensive symbol data.</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">a</span><span class="w"> </span><span class="o">*</span><span class="nx">MT5Account</span><span class="p">)</span><span class="w"> </span><span class="nx">SymbolParamsMany</span><span class="p">(</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="nx">req</span><span class="w"> </span><span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">SymbolParamsManyRequest</span><span class="p">,</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">SymbolParamsManyData</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Request message:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">SymbolParamsManyRequest</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="k">repeated</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="na">Symbols</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w">  </span><span class="c1">// Array of symbol names</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="p">}</span>
+</code></pre></div>
+<hr />
+<h2 id="input">🔽 Input<a class="headerlink" href="#input" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ctx</code></td>
+<td><code>context.Context</code></td>
+<td>Context for deadline/timeout and cancellation</td>
+</tr>
+<tr>
+<td><code>req</code></td>
+<td><code>*pb.SymbolParamsManyRequest</code></td>
+<td>Request with array of Symbols</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Request fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Symbols</code></td>
+<td><code>string[]</code></td>
+<td>Array of symbol names</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="output-symbolparamsmanydata">⬆️ Output — <code>SymbolParamsManyData</code><a class="headerlink" href="#output-symbolparamsmanydata" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Go Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SymbolInfos</code></td>
+<td><code>SymbolParameters[]</code></td>
+<td><code>[]*SymbolParameters</code></td>
+<td>Array of detailed symbol parameters</td>
+</tr>
+<tr>
+<td><code>SymbolsTotal</code></td>
+<td><code>int32</code></td>
+<td><code>int32</code></td>
+<td>Total number of symbols returned</td>
+</tr>
+<tr>
+<td><code>PageNumber</code></td>
+<td><code>int32</code> (optional)</td>
+<td><code>*int32</code></td>
+<td>Page number (if pagination used)</td>
+</tr>
+<tr>
+<td><code>ItemsPerPage</code></td>
+<td><code>int32</code> (optional)</td>
+<td><code>*int32</code></td>
+<td>Items per page (if pagination used)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="symbolparameters-structure-112-fields">📋 <code>SymbolParameters</code> structure (112 fields)<a class="headerlink" href="#symbolparameters-structure-112-fields" title="Permanent link">¶</a></h3>
+<p>Each symbol contains comprehensive trading information organized in the following categories:</p>
+<h4 id="basic-price-data-14-fields">🔹 <strong>Basic Price Data</strong> (14 fields)<a class="headerlink" href="#basic-price-data-14-fields" title="Permanent link">¶</a></h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Name</code></td>
+<td><code>string</code></td>
+<td>Symbol name (e.g., "EURUSD")</td>
+</tr>
+<tr>
+<td><code>Bid</code></td>
+<td><code>float64</code></td>
+<td>Current bid price</td>
+</tr>
+<tr>
+<td><code>BidHigh</code></td>
+<td><code>float64</code></td>
+<td>Highest bid of the day</td>
+</tr>
+<tr>
+<td><code>BidLow</code></td>
+<td><code>float64</code></td>
+<td>Lowest bid of the day</td>
+</tr>
+<tr>
+<td><code>Ask</code></td>
+<td><code>float64</code></td>
+<td>Current ask price</td>
+</tr>
+<tr>
+<td><code>AskHigh</code></td>
+<td><code>float64</code></td>
+<td>Highest ask of the day</td>
+</tr>
+<tr>
+<td><code>AskLow</code></td>
+<td><code>float64</code></td>
+<td>Lowest ask of the day</td>
+</tr>
+<tr>
+<td><code>Last</code></td>
+<td><code>float64</code></td>
+<td>Last deal price</td>
+</tr>
+<tr>
+<td><code>LastHigh</code></td>
+<td><code>float64</code></td>
+<td>Highest last price of the day</td>
+</tr>
+<tr>
+<td><code>LastLow</code></td>
+<td><code>float64</code></td>
+<td>Lowest last price of the day</td>
+</tr>
+<tr>
+<td><code>VolumeReal</code></td>
+<td><code>float64</code></td>
+<td>Real volume of the day</td>
+</tr>
+<tr>
+<td><code>VolumeHighReal</code></td>
+<td><code>float64</code></td>
+<td>Maximum real volume of the day</td>
+</tr>
+<tr>
+<td><code>VolumeLowReal</code></td>
+<td><code>float64</code></td>
+<td>Minimum real volume of the day</td>
+</tr>
+<tr>
+<td><code>OptionStrike</code></td>
+<td><code>float64</code></td>
+<td>Option strike price</td>
+</tr>
+</tbody>
+</table>
+<h4 id="trading-parameters-13-fields">🔹 <strong>Trading Parameters</strong> (13 fields)<a class="headerlink" href="#trading-parameters-13-fields" title="Permanent link">¶</a></h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Point</code></td>
+<td><code>float64</code></td>
+<td>Point size (minimal price change)</td>
+</tr>
+<tr>
+<td><code>TradeTickValue</code></td>
+<td><code>float64</code></td>
+<td>Tick value for profit calculation</td>
+</tr>
+<tr>
+<td><code>TradeTickValueProfit</code></td>
+<td><code>float64</code></td>
+<td>Tick value for profitable positions</td>
+</tr>
+<tr>
+<td><code>TradeTickValueLoss</code></td>
+<td><code>float64</code></td>
+<td>Tick value for losing positions</td>
+</tr>
+<tr>
+<td><code>TradeTickSize</code></td>
+<td><code>float64</code></td>
+<td>Minimal price change</td>
+</tr>
+<tr>
+<td><code>TradeContractSize</code></td>
+<td><code>float64</code></td>
+<td>Trade contract size</td>
+</tr>
+<tr>
+<td><code>TradeAccruedInterest</code></td>
+<td><code>float64</code></td>
+<td>Accrued interest</td>
+</tr>
+<tr>
+<td><code>TradeFaceValue</code></td>
+<td><code>float64</code></td>
+<td>Face value of the instrument</td>
+</tr>
+<tr>
+<td><code>TradeLiquidityRate</code></td>
+<td><code>float64</code></td>
+<td>Liquidity rate</td>
+</tr>
+<tr>
+<td><code>VolumeMin</code></td>
+<td><code>float64</code></td>
+<td>Minimum volume for a deal</td>
+</tr>
+<tr>
+<td><code>VolumeMax</code></td>
+<td><code>float64</code></td>
+<td>Maximum volume for a deal</td>
+</tr>
+<tr>
+<td><code>VolumeStep</code></td>
+<td><code>float64</code></td>
+<td>Minimal volume change step</td>
+</tr>
+<tr>
+<td><code>VolumeLimit</code></td>
+<td><code>float64</code></td>
+<td>Maximum allowed aggregate volume</td>
+</tr>
+</tbody>
+</table>
+<h4 id="swap-parameters-9-fields">🔹 <strong>Swap Parameters</strong> (9 fields)<a class="headerlink" href="#swap-parameters-9-fields" title="Permanent link">¶</a></h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SwapLong</code></td>
+<td><code>float64</code></td>
+<td>Long position swap value</td>
+</tr>
+<tr>
+<td><code>SwapShort</code></td>
+<td><code>float64</code></td>
+<td>Short position swap value</td>
+</tr>
+<tr>
+<td><code>SwapSunday</code></td>
+<td><code>float64</code></td>
+<td>Sunday swap</td>
+</tr>
+<tr>
+<td><code>SwapMonday</code></td>
+<td><code>float64</code></td>
+<td>Monday swap</td>
+</tr>
+<tr>
+<td><code>SwapTuesday</code></td>
+<td><code>float64</code></td>
+<td>Tuesday swap</td>
+</tr>
+<tr>
+<td><code>SwapWednesday</code></td>
+<td><code>float64</code></td>
+<td>Wednesday swap</td>
+</tr>
+<tr>
+<td><code>SwapThursday</code></td>
+<td><code>float64</code></td>
+<td>Thursday swap</td>
+</tr>
+<tr>
+<td><code>SwapFriday</code></td>
+<td><code>float64</code></td>
+<td>Friday swap</td>
+</tr>
+<tr>
+<td><code>SwapSaturday</code></td>
+<td><code>float64</code></td>
+<td>Saturday swap</td>
+</tr>
+</tbody>
+</table>
+<h4 id="margin-parameters-3-fields">🔹 <strong>Margin Parameters</strong> (3 fields)<a class="headerlink" href="#margin-parameters-3-fields" title="Permanent link">¶</a></h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MarginInitial</code></td>
+<td><code>float64</code></td>
+<td>Initial margin requirement</td>
+</tr>
+<tr>
+<td><code>MarginMaintenance</code></td>
+<td><code>float64</code></td>
+<td>Maintenance margin requirement</td>
+</tr>
+<tr>
+<td><code>MarginHedged</code></td>
+<td><code>float64</code></td>
+<td>Hedged margin</td>
+</tr>
+</tbody>
+</table>
+<h4 id="session-statistics-11-fields">🔹 <strong>Session Statistics</strong> (11 fields)<a class="headerlink" href="#session-statistics-11-fields" title="Permanent link">¶</a></h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SessionVolume</code></td>
+<td><code>float64</code></td>
+<td>Summary volume of the current session</td>
+</tr>
+<tr>
+<td><code>SessionTurnover</code></td>
+<td><code>float64</code></td>
+<td>Summary turnover of the current session</td>
+</tr>
+<tr>
+<td><code>SessionInterest</code></td>
+<td><code>float64</code></td>
+<td>Summary open interest</td>
+</tr>
+<tr>
+<td><code>SessionBuyOrdersVolume</code></td>
+<td><code>float64</code></td>
+<td>Current volume of buy orders</td>
+</tr>
+<tr>
+<td><code>SessionSellOrdersVolume</code></td>
+<td><code>float64</code></td>
+<td>Current volume of sell orders</td>
+</tr>
+<tr>
+<td><code>SessionOpen</code></td>
+<td><code>float64</code></td>
+<td>Session open price</td>
+</tr>
+<tr>
+<td><code>SessionClose</code></td>
+<td><code>float64</code></td>
+<td>Session close price</td>
+</tr>
+<tr>
+<td><code>SessionAw</code></td>
+<td><code>float64</code></td>
+<td>Average weighted price</td>
+</tr>
+<tr>
+<td><code>SessionPriceSettlement</code></td>
+<td><code>float64</code></td>
+<td>Settlement price</td>
+</tr>
+<tr>
+<td><code>SessionPriceLimitMin</code></td>
+<td><code>float64</code></td>
+<td>Minimum price limit</td>
+</tr>
+<tr>
+<td><code>SessionPriceLimitMax</code></td>
+<td><code>float64</code></td>
+<td>Maximum price limit</td>
+</tr>
+</tbody>
+</table>
+<h4 id="options-greeks-price-analytics-10-fields">🔹 <strong>Options Greeks &amp; Price Analytics</strong> (10 fields)<a class="headerlink" href="#options-greeks-price-analytics-10-fields" title="Permanent link">¶</a></h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PriceChange</code></td>
+<td><code>float64</code></td>
+<td>Change of price in %</td>
+</tr>
+<tr>
+<td><code>PriceVolatility</code></td>
+<td><code>float64</code></td>
+<td>Price volatility in %</td>
+</tr>
+<tr>
+<td><code>PriceTheoretical</code></td>
+<td><code>float64</code></td>
+<td>Theoretical option price</td>
+</tr>
+<tr>
+<td><code>PriceDelta</code></td>
+<td><code>float64</code></td>
+<td>Option/warrant delta</td>
+</tr>
+<tr>
+<td><code>PriceTheta</code></td>
+<td><code>float64</code></td>
+<td>Option/warrant theta</td>
+</tr>
+<tr>
+<td><code>PriceGamma</code></td>
+<td><code>float64</code></td>
+<td>Option/warrant gamma</td>
+</tr>
+<tr>
+<td><code>PriceVega</code></td>
+<td><code>float64</code></td>
+<td>Option/warrant vega</td>
+</tr>
+<tr>
+<td><code>PriceRho</code></td>
+<td><code>float64</code></td>
+<td>Option/warrant rho</td>
+</tr>
+<tr>
+<td><code>PriceOmega</code></td>
+<td><code>float64</code></td>
+<td>Option/warrant omega</td>
+</tr>
+<tr>
+<td><code>PriceSensitivity</code></td>
+<td><code>float64</code></td>
+<td>Option/warrant sensitivity</td>
+</tr>
+</tbody>
+</table>
+<h4 id="symbol-properties-9-fields">🔹 <strong>Symbol Properties</strong> (9 fields)<a class="headerlink" href="#symbol-properties-9-fields" title="Permanent link">¶</a></h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Sector</code></td>
+<td><code>enum</code></td>
+<td>Economic sector (enum value)</td>
+</tr>
+<tr>
+<td><code>Industry</code></td>
+<td><code>enum</code></td>
+<td>Industry sector (enum value)</td>
+</tr>
+<tr>
+<td><code>Custom</code></td>
+<td><code>bool</code></td>
+<td>Custom symbol flag</td>
+</tr>
+<tr>
+<td><code>BackgroundColor</code></td>
+<td><code>string</code></td>
+<td>Background color for symbol</td>
+</tr>
+<tr>
+<td><code>ChartMode</code></td>
+<td><code>enum</code></td>
+<td>Chart mode (Bid/Last price)</td>
+</tr>
+<tr>
+<td><code>Exist</code></td>
+<td><code>bool</code></td>
+<td>Symbol exists</td>
+</tr>
+<tr>
+<td><code>Select</code></td>
+<td><code>bool</code></td>
+<td>Symbol selected in Market Watch</td>
+</tr>
+<tr>
+<td><code>SubscriptionDelay</code></td>
+<td><code>int32</code></td>
+<td>Subscription delay in seconds</td>
+</tr>
+<tr>
+<td><code>Visible</code></td>
+<td><code>bool</code></td>
+<td>Symbol visible in Market Watch</td>
+</tr>
+</tbody>
+</table>
+<h4 id="session-counters-8-fields">🔹 <strong>Session Counters</strong> (8 fields)<a class="headerlink" href="#session-counters-8-fields" title="Permanent link">¶</a></h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SessionDeals</code></td>
+<td><code>int64</code></td>
+<td>Number of deals in current session</td>
+</tr>
+<tr>
+<td><code>SessionBuyOrders</code></td>
+<td><code>int64</code></td>
+<td>Number of buy orders</td>
+</tr>
+<tr>
+<td><code>SessionSellOrders</code></td>
+<td><code>int64</code></td>
+<td>Number of sell orders</td>
+</tr>
+<tr>
+<td><code>Volume</code></td>
+<td><code>int64</code></td>
+<td>Volume of the last deal</td>
+</tr>
+<tr>
+<td><code>VolumeHigh</code></td>
+<td><code>int64</code></td>
+<td>Maximum volume of the day</td>
+</tr>
+<tr>
+<td><code>VolumeLow</code></td>
+<td><code>int64</code></td>
+<td>Minimum volume of the day</td>
+</tr>
+<tr>
+<td><code>Time</code></td>
+<td><code>timestamp</code></td>
+<td>Time of the last quote</td>
+</tr>
+<tr>
+<td><code>TimeMsc</code></td>
+<td><code>int64</code></td>
+<td>Time of last quote in milliseconds</td>
+</tr>
+</tbody>
+</table>
+<h4 id="trading-settings-20-fields">🔹 <strong>Trading Settings</strong> (20 fields)<a class="headerlink" href="#trading-settings-20-fields" title="Permanent link">¶</a></h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Digits</code></td>
+<td><code>int32</code></td>
+<td>Number of decimal digits</td>
+</tr>
+<tr>
+<td><code>SpreadFloat</code></td>
+<td><code>bool</code></td>
+<td>Floating spread flag</td>
+</tr>
+<tr>
+<td><code>Spread</code></td>
+<td><code>int32</code></td>
+<td>Current spread in points</td>
+</tr>
+<tr>
+<td><code>TicksBookDepth</code></td>
+<td><code>int32</code></td>
+<td>Maximal number of requests in order book</td>
+</tr>
+<tr>
+<td><code>TradeCalcMode</code></td>
+<td><code>enum</code></td>
+<td>Contract price calculation mode</td>
+</tr>
+<tr>
+<td><code>TradeMode</code></td>
+<td><code>enum</code></td>
+<td>Order execution type</td>
+</tr>
+<tr>
+<td><code>StartTime</code></td>
+<td><code>timestamp</code></td>
+<td>Date of symbol trading start</td>
+</tr>
+<tr>
+<td><code>ExpirationTime</code></td>
+<td><code>timestamp</code></td>
+<td>Date of symbol expiration</td>
+</tr>
+<tr>
+<td><code>TradeStopsLevel</code></td>
+<td><code>int32</code></td>
+<td>Minimal distance from price for stops</td>
+</tr>
+<tr>
+<td><code>TradeFreezeLevel</code></td>
+<td><code>int32</code></td>
+<td>Distance to freeze trade operations</td>
+</tr>
+<tr>
+<td><code>TradeExeMode</code></td>
+<td><code>enum</code></td>
+<td>Deal execution mode</td>
+</tr>
+<tr>
+<td><code>SwapMode</code></td>
+<td><code>enum</code></td>
+<td>Swap calculation method</td>
+</tr>
+<tr>
+<td><code>SwapRollover_3Days</code></td>
+<td><code>enum</code></td>
+<td>Day of week for triple rollover swap</td>
+</tr>
+<tr>
+<td><code>MarginHedgedUseLeg</code></td>
+<td><code>bool</code></td>
+<td>Calculate margin for hedged positions using larger leg</td>
+</tr>
+<tr>
+<td><code>ExpirationMode</code></td>
+<td><code>int32</code></td>
+<td>Flags of allowed order expiration modes</td>
+</tr>
+<tr>
+<td><code>FillingMode</code></td>
+<td><code>enum[]</code></td>
+<td>Flags of allowed order filling modes</td>
+</tr>
+<tr>
+<td><code>OrderMode</code></td>
+<td><code>enum</code></td>
+<td>Flags of allowed order types</td>
+</tr>
+<tr>
+<td><code>OrderGtcMode</code></td>
+<td><code>enum</code></td>
+<td>Expiration mode for pending orders</td>
+</tr>
+<tr>
+<td><code>OptionMode</code></td>
+<td><code>enum</code></td>
+<td>Option type</td>
+</tr>
+<tr>
+<td><code>OptionRight</code></td>
+<td><code>enum</code></td>
+<td>Option right (Call/Put)</td>
+</tr>
+</tbody>
+</table>
+<h4 id="string-metadata-15-fields">🔹 <strong>String Metadata</strong> (15 fields)<a class="headerlink" href="#string-metadata-15-fields" title="Permanent link">¶</a></h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Basis</code></td>
+<td><code>string</code></td>
+<td>Underlying asset for derivative</td>
+</tr>
+<tr>
+<td><code>Category</code></td>
+<td><code>string</code></td>
+<td>Symbol category</td>
+</tr>
+<tr>
+<td><code>Country</code></td>
+<td><code>string</code></td>
+<td>Country of origin</td>
+</tr>
+<tr>
+<td><code>SectorName</code></td>
+<td><code>string</code></td>
+<td>Sector name</td>
+</tr>
+<tr>
+<td><code>IndustryName</code></td>
+<td><code>string</code></td>
+<td>Industry name</td>
+</tr>
+<tr>
+<td><code>CurrencyBase</code></td>
+<td><code>string</code></td>
+<td>Base currency</td>
+</tr>
+<tr>
+<td><code>CurrencyProfit</code></td>
+<td><code>string</code></td>
+<td>Profit currency</td>
+</tr>
+<tr>
+<td><code>CurrencyMargin</code></td>
+<td><code>string</code></td>
+<td>Margin currency</td>
+</tr>
+<tr>
+<td><code>Bank</code></td>
+<td><code>string</code></td>
+<td>Feeder for financial instruments</td>
+</tr>
+<tr>
+<td><code>SymDescription</code></td>
+<td><code>string</code></td>
+<td>Symbol description</td>
+</tr>
+<tr>
+<td><code>Exchange</code></td>
+<td><code>string</code></td>
+<td>Exchange name</td>
+</tr>
+<tr>
+<td><code>Formula</code></td>
+<td><code>string</code></td>
+<td>Formula for custom symbol pricing</td>
+</tr>
+<tr>
+<td><code>Isin</code></td>
+<td><code>string</code></td>
+<td>ISIN identifier</td>
+</tr>
+<tr>
+<td><code>Page</code></td>
+<td><code>string</code></td>
+<td>Web page URL with symbol information</td>
+</tr>
+<tr>
+<td><code>Path</code></td>
+<td><code>string</code></td>
+<td>Path in symbol tree</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="tutorial">📚 Tutorial<a class="headerlink" href="#tutorial" title="Permanent link">¶</a></h2>
+<p>For a detailed line-by-line explanation with examples, see:
+<strong>→ <a href="../../HOW_IT_WORK/6.%20Additional_Methods_HOW/SymbolParamsMany_HOW/">SymbolParamsMany - How it works</a></strong></p>
+<hr />
+<h2 id="notes-tips">🧩 Notes &amp; Tips<a class="headerlink" href="#notes-tips" title="Permanent link">¶</a></h2>
+<ul>
+<li><strong>Automatic reconnection:</strong> All <code>MT5Account</code> methods have built-in protection against transient gRPC errors with automatic reconnection via <code>ExecuteWithReconnect</code>.</li>
+<li><strong>Default timeout:</strong> If context has no deadline, a default <code>3s</code> timeout is applied automatically.</li>
+<li><strong>Nil context:</strong> If you pass <code>nil</code> context, <code>context.Background()</code> is used automatically.</li>
+<li><strong>Most efficient:</strong> This is the recommended method for retrieving comprehensive symbol data.</li>
+<li><strong>Bulk operations:</strong> Can query 100+ symbols in single request.</li>
+<li><strong>112+ fields:</strong> Each SymbolParams contains over 112 different properties.</li>
+<li><strong>Performance:</strong> Much faster than calling individual SymbolInfo* methods repeatedly.</li>
+</ul>
+<hr />
+<h2 id="usage-examples">🔗 Usage Examples<a class="headerlink" href="#usage-examples" title="Permanent link">¶</a></h2>
+<h3 id="1-get-params-for-multiple-symbols">1) Get params for multiple symbols<a class="headerlink" href="#1-get-params-for-multiple-symbols" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">package</span><span class="w"> </span><span class="nx">main</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kn">import</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="s">&quot;context&quot;</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="s">&quot;fmt&quot;</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="s">&quot;time&quot;</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="nx">pb</span><span class="w"> </span><span class="s">&quot;github.com/MetaRPC/GoMT5/package&quot;</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="s">&quot;github.com/MetaRPC/GoMT5/package/Helpers&quot;</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="p">)</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="kd">func</span><span class="w"> </span><span class="nx">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="nx">account</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mt5</span><span class="p">.</span><span class="nx">NewMT5Account</span><span class="p">(</span><span class="mi">12345</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;password&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;mt5.mrpc.pro:443&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">uuid</span><span class="p">.</span><span class="nx">New</span><span class="p">())</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="nx">account</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">    </span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">cancel</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">WithTimeout</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">Background</span><span class="p">(),</span><span class="w"> </span><span class="mi">10</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="nx">cancel</span><span class="p">()</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">    </span><span class="nx">data</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">account</span><span class="p">.</span><span class="nx">SymbolParamsMany</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">pb</span><span class="p">.</span><span class="nx">SymbolParamsManyRequest</span><span class="p">{</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">        </span><span class="nx">Symbols</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;GBPUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;USDJPY&quot;</span><span class="p">},</span>
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">    </span><span class="p">})</span>
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">        </span><span class="nb">panic</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>
+<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">data</span><span class="p">.</span><span class="nx">SymbolInfos</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="w">        </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%s:\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+<a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="w">        </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;  Bid: %.5f, Ask: %.5f\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">Bid</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">Ask</span><span class="p">)</span>
+<a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="w">        </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;  Digits: %d, Spread: %d\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">Digits</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">Spread</span><span class="p">)</span>
+<a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="w">        </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;  Volume: %.2f - %.2f (step: %.2f)\n&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="w">            </span><span class="nx">params</span><span class="p">.</span><span class="nx">VolumeMin</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">VolumeMax</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">VolumeStep</span><span class="p">)</span>
+<a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="w">        </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">()</span>
+<a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="2-build-trading-dashboard">2) Build trading dashboard<a class="headerlink" href="#2-build-trading-dashboard" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">BuildTradingDashboard</span><span class="p">(</span><span class="nx">account</span><span class="w"> </span><span class="o">*</span><span class="nx">mt5</span><span class="p">.</span><span class="nx">MT5Account</span><span class="p">,</span><span class="w"> </span><span class="nx">watchlist</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nx">ctx</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Background</span><span class="p">()</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nx">data</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">account</span><span class="p">.</span><span class="nx">SymbolParamsMany</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">pb</span><span class="p">.</span><span class="nx">SymbolParamsManyRequest</span><span class="p">{</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">        </span><span class="nx">Symbols</span><span class="p">:</span><span class="w"> </span><span class="nx">watchlist</span><span class="p">,</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">    </span><span class="p">})</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">        </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;Error: %v\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">        </span><span class="k">return</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;╔════════════════════════════════════════════════════════════╗&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;║                   TRADING DASHBOARD                        ║&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;╠═══════════╦══════════╦══════════╦════════╦════════════════╣&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;║  Symbol   ║   Bid    ║   Ask    ║ Spread ║ Contract Size  ║&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;╠═══════════╬══════════╬══════════╬════════╬════════════════╣&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">data</span><span class="p">.</span><span class="nx">SymbolInfos</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="w">        </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;║ %-9s ║ %8.5f ║ %8.5f ║ %6d ║ %14.0f ║\n&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="w">            </span><span class="nx">params</span><span class="p">.</span><span class="nx">Name</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">Bid</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">Ask</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">Spread</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">TradeContractSize</span><span class="p">)</span>
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>
+<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;╚═══════════╩══════════╩══════════╩════════╩════════════════╝&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a><span class="p">}</span>
+<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>
+<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a><span class="c1">// Usage:</span>
+<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a><span class="c1">// BuildTradingDashboard(account, []string{&quot;EURUSD&quot;, &quot;GBPUSD&quot;, &quot;USDJPY&quot;, &quot;XAUUSD&quot;})</span>
+</code></pre></div>
+<h3 id="3-validate-trading-parameters">3) Validate trading parameters<a class="headerlink" href="#3-validate-trading-parameters" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">ValidateTradingParams</span><span class="p">(</span><span class="nx">account</span><span class="w"> </span><span class="o">*</span><span class="nx">mt5</span><span class="p">.</span><span class="nx">MT5Account</span><span class="p">,</span><span class="w"> </span><span class="nx">symbol</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">volume</span><span class="w"> </span><span class="kt">float64</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nx">ctx</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Background</span><span class="p">()</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nx">data</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">account</span><span class="p">.</span><span class="nx">SymbolParamsMany</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">pb</span><span class="p">.</span><span class="nx">SymbolParamsManyRequest</span><span class="p">{</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">        </span><span class="nx">Symbols</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{</span><span class="nx">symbol</span><span class="p">},</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="p">})</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">err</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">SymbolInfos</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;symbol %s not found&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">symbol</span><span class="p">)</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a><span class="w">    </span><span class="nx">params</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">data</span><span class="p">.</span><span class="nx">SymbolInfos</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="w">    </span><span class="c1">// Validate volume</span>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">volume</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">VolumeMin</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;volume %.2f below minimum %.2f&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">volume</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">VolumeMin</span><span class="p">)</span>
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">volume</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">VolumeMax</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;volume %.2f above maximum %.2f&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">volume</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">VolumeMax</span><span class="p">)</span>
+<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>
+<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="w">    </span><span class="c1">// Check volume step</span>
+<a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="w">    </span><span class="nx">remainder</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">math</span><span class="p">.</span><span class="nx">Mod</span><span class="p">(</span><span class="nx">volume</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">VolumeStep</span><span class="p">)</span>
+<a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">remainder</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="mf">0.0001</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;volume %.2f not aligned to step %.2f&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">volume</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">VolumeStep</span><span class="p">)</span>
+<a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a>
+<a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;Volume %.2f is valid for %s\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">volume</span><span class="p">,</span><span class="w"> </span><span class="nx">symbol</span><span class="p">)</span>
+<a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span>
+<a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="4-compare-spreads-across-symbols">4) Compare spreads across symbols<a class="headerlink" href="#4-compare-spreads-across-symbols" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">CompareSpreads</span><span class="p">(</span><span class="nx">account</span><span class="w"> </span><span class="o">*</span><span class="nx">mt5</span><span class="p">.</span><span class="nx">MT5Account</span><span class="p">,</span><span class="w"> </span><span class="nx">symbols</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">ctx</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Background</span><span class="p">()</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nx">data</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">account</span><span class="p">.</span><span class="nx">SymbolParamsMany</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">pb</span><span class="p">.</span><span class="nx">SymbolParamsManyRequest</span><span class="p">{</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">        </span><span class="nx">Symbols</span><span class="p">:</span><span class="w"> </span><span class="nx">symbols</span><span class="p">,</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="p">})</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">        </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;Error: %v\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">        </span><span class="k">return</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;Spread comparison:&quot;</span><span class="p">)</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">data</span><span class="p">.</span><span class="nx">SymbolInfos</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">        </span><span class="nx">spreadPips</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">float64</span><span class="p">(</span><span class="nx">params</span><span class="p">.</span><span class="nx">Spread</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">Point</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">10</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">        </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;  %s: %d points (%.1f pips)\n&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">            </span><span class="nx">params</span><span class="p">.</span><span class="nx">Name</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">Spread</span><span class="p">,</span><span class="w"> </span><span class="nx">spreadPips</span><span class="p">)</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="p">}</span>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>
+<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="c1">// Usage:</span>
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="c1">// CompareSpreads(account, []string{&quot;EURUSD&quot;, &quot;GBPUSD&quot;, &quot;EURGBP&quot;})</span>
+</code></pre></div>
+<h3 id="5-find-symbols-with-low-spreads">5) Find symbols with low spreads<a class="headerlink" href="#5-find-symbols-with-low-spreads" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kd">func</span><span class="w"> </span><span class="nx">FindLowSpreadSymbols</span><span class="p">(</span><span class="nx">account</span><span class="w"> </span><span class="o">*</span><span class="nx">mt5</span><span class="p">.</span><span class="nx">MT5Account</span><span class="p">,</span><span class="w"> </span><span class="nx">symbols</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">maxSpreadPips</span><span class="w"> </span><span class="kt">float64</span><span class="p">)</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="nx">ctx</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Background</span><span class="p">()</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="nx">data</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">account</span><span class="p">.</span><span class="nx">SymbolParamsMany</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">pb</span><span class="p">.</span><span class="nx">SymbolParamsManyRequest</span><span class="p">{</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">        </span><span class="nx">Symbols</span><span class="p">:</span><span class="w"> </span><span class="nx">symbols</span><span class="p">,</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="p">})</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">    </span><span class="nx">lowSpreadSymbols</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="p">[]</span><span class="kt">string</span><span class="p">{}</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">data</span><span class="p">.</span><span class="nx">SymbolInfos</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">        </span><span class="nx">spreadPips</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">float64</span><span class="p">(</span><span class="nx">params</span><span class="p">.</span><span class="nx">Spread</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">Point</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">10</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">spreadPips</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="nx">maxSpreadPips</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">            </span><span class="nx">lowSpreadSymbols</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">lowSpreadSymbols</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">Name</span><span class="p">)</span>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="w">            </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%s: %.1f pips\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">params</span><span class="p">.</span><span class="nx">Name</span><span class="p">,</span><span class="w"> </span><span class="nx">spreadPips</span><span class="p">)</span>
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>
+<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">lowSpreadSymbols</span>
+<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a><span class="p">}</span>
+<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a>
+<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a><span class="c1">// Usage:</span>
+<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a><span class="c1">// symbols := []string{&quot;EURUSD&quot;, &quot;GBPUSD&quot;, &quot;USDJPY&quot;, &quot;EURGBP&quot;}</span>
+<a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a><span class="c1">// lowSpread := FindLowSpreadSymbols(account, symbols, 2.0)</span>
+</code></pre></div>
+<hr />
+<h2 id="enum-reference">📋 Enum Reference<a class="headerlink" href="#enum-reference" title="Permanent link">¶</a></h2>
+<h3 id="bmt5_enum_symbol_sector"><code>BMT5_ENUM_SYMBOL_SECTOR</code><a class="headerlink" href="#bmt5_enum_symbol_sector" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Enum Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td><code>UNDEFINED</code></td>
+<td>Undefined</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>BASIC_MATERIALS</code></td>
+<td>Basic materials</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td><code>COMMUNICATION_SERVICES</code></td>
+<td>Communication services</td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td><code>CONSUMER_CYCLICAL</code></td>
+<td>Consumer cyclical</td>
+</tr>
+<tr>
+<td><code>4</code></td>
+<td><code>CONSUMER_DEFENSIVE</code></td>
+<td>Consumer defensive</td>
+</tr>
+<tr>
+<td><code>5</code></td>
+<td><code>CURRENCY</code></td>
+<td>Currencies</td>
+</tr>
+<tr>
+<td><code>6</code></td>
+<td><code>CURRENCY_CRYPTO</code></td>
+<td>Cryptocurrencies</td>
+</tr>
+<tr>
+<td><code>7</code></td>
+<td><code>ENERGY</code></td>
+<td>Energy</td>
+</tr>
+<tr>
+<td><code>8</code></td>
+<td><code>FINANCIAL</code></td>
+<td>Finance</td>
+</tr>
+<tr>
+<td><code>9</code></td>
+<td><code>HEALTHCARE</code></td>
+<td>Healthcare</td>
+</tr>
+<tr>
+<td><code>10</code></td>
+<td><code>INDUSTRIALS</code></td>
+<td>Industrials</td>
+</tr>
+<tr>
+<td><code>11</code></td>
+<td><code>REAL_ESTATE</code></td>
+<td>Real estate</td>
+</tr>
+<tr>
+<td><code>12</code></td>
+<td><code>TECHNOLOGY</code></td>
+<td>Technology</td>
+</tr>
+<tr>
+<td><code>13</code></td>
+<td><code>UTILITIES</code></td>
+<td>Utilities</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bmt5_enum_symbol_industry"><code>BMT5_ENUM_SYMBOL_INDUSTRY</code><a class="headerlink" href="#bmt5_enum_symbol_industry" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Enum Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td><code>UNDEFINED</code></td>
+<td>Undefined</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>AGRICULTURAL_INPUTS</code></td>
+<td>Agricultural inputs</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td><code>ALUMINIUM</code></td>
+<td>Aluminium</td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td><code>BUILDING_MATERIALS</code></td>
+<td>Building materials</td>
+</tr>
+<tr>
+<td><code>4</code></td>
+<td><code>CHEMICALS</code></td>
+<td>Chemicals</td>
+</tr>
+<tr>
+<td><code>5</code></td>
+<td><code>COKING_COAL</code></td>
+<td>Coking coal</td>
+</tr>
+<tr>
+<td><code>6</code></td>
+<td><code>COPPER</code></td>
+<td>Copper</td>
+</tr>
+<tr>
+<td><code>7</code></td>
+<td><code>GOLD</code></td>
+<td>Gold</td>
+</tr>
+<tr>
+<td><code>8</code></td>
+<td><code>LUMBER_WOOD</code></td>
+<td>Lumber and wood production</td>
+</tr>
+<tr>
+<td><code>9</code></td>
+<td><code>INDUSTRIAL_METALS</code></td>
+<td>Other industrial metals and mining</td>
+</tr>
+<tr>
+<td><code>10</code></td>
+<td><code>PRECIOUS_METALS</code></td>
+<td>Other precious metals and mining</td>
+</tr>
+<tr>
+<td><code>11</code></td>
+<td><code>PAPER</code></td>
+<td>Paper and paper products</td>
+</tr>
+<tr>
+<td><code>12</code></td>
+<td><code>SILVER</code></td>
+<td>Silver</td>
+</tr>
+<tr>
+<td><code>13</code></td>
+<td><code>SPECIALTY_CHEMICALS</code></td>
+<td>Specialty chemicals</td>
+</tr>
+<tr>
+<td><code>14</code></td>
+<td><code>STEEL</code></td>
+<td>Steel</td>
+</tr>
+<tr>
+<td><code>15</code></td>
+<td><code>ADVERTISING</code></td>
+<td>Advertising agencies</td>
+</tr>
+<tr>
+<td><code>16</code></td>
+<td><code>BROADCASTING</code></td>
+<td>Broadcasting</td>
+</tr>
+<tr>
+<td><code>17</code></td>
+<td><code>GAMING_MULTIMEDIA</code></td>
+<td>Electronic gaming and multimedia</td>
+</tr>
+<tr>
+<td><code>18</code></td>
+<td><code>ENTERTAINMENT</code></td>
+<td>Entertainment</td>
+</tr>
+<tr>
+<td><code>19</code></td>
+<td><code>INTERNET_CONTENT</code></td>
+<td>Internet content and information</td>
+</tr>
+<tr>
+<td><code>20</code></td>
+<td><code>PUBLISHING</code></td>
+<td>Publishing</td>
+</tr>
+<tr>
+<td><code>21</code></td>
+<td><code>TELECOM</code></td>
+<td>Telecom services</td>
+</tr>
+<tr>
+<td><code>22</code></td>
+<td><code>APPAREL_MANUFACTURING</code></td>
+<td>Apparel manufacturing</td>
+</tr>
+<tr>
+<td><code>23</code></td>
+<td><code>APPAREL_RETAIL</code></td>
+<td>Apparel retail</td>
+</tr>
+<tr>
+<td><code>24</code></td>
+<td><code>AUTO_MANUFACTURERS</code></td>
+<td>Auto manufacturers</td>
+</tr>
+<tr>
+<td><code>25</code></td>
+<td><code>AUTO_PARTS</code></td>
+<td>Auto parts</td>
+</tr>
+<tr>
+<td><code>26</code></td>
+<td><code>AUTO_DEALERSHIP</code></td>
+<td>Auto and truck dealerships</td>
+</tr>
+<tr>
+<td><code>27</code></td>
+<td><code>DEPARTMENT_STORES</code></td>
+<td>Department stores</td>
+</tr>
+<tr>
+<td><code>28</code></td>
+<td><code>FOOTWEAR_ACCESSORIES</code></td>
+<td>Footwear and accessories</td>
+</tr>
+<tr>
+<td><code>29</code></td>
+<td><code>FURNISHINGS</code></td>
+<td>Furnishing, fixtures and appliances</td>
+</tr>
+<tr>
+<td><code>30</code></td>
+<td><code>GAMBLING</code></td>
+<td>Gambling</td>
+</tr>
+<tr>
+<td><code>31</code></td>
+<td><code>HOME_IMPROV_RETAIL</code></td>
+<td>Home improvement retail</td>
+</tr>
+<tr>
+<td><code>32</code></td>
+<td><code>INTERNET_RETAIL</code></td>
+<td>Internet retail</td>
+</tr>
+<tr>
+<td><code>33</code></td>
+<td><code>LEISURE</code></td>
+<td>Leisure</td>
+</tr>
+<tr>
+<td><code>34</code></td>
+<td><code>LODGING</code></td>
+<td>Lodging</td>
+</tr>
+<tr>
+<td><code>35</code></td>
+<td><code>LUXURY_GOODS</code></td>
+<td>Luxury goods</td>
+</tr>
+<tr>
+<td><code>36</code></td>
+<td><code>PACKAGING_CONTAINERS</code></td>
+<td>Packaging and containers</td>
+</tr>
+<tr>
+<td><code>37</code></td>
+<td><code>PERSONAL_SERVICES</code></td>
+<td>Personal services</td>
+</tr>
+<tr>
+<td><code>38</code></td>
+<td><code>RECREATIONAL_VEHICLES</code></td>
+<td>Recreational vehicles</td>
+</tr>
+<tr>
+<td><code>39</code></td>
+<td><code>RESIDENT_CONSTRUCTION</code></td>
+<td>Residential construction</td>
+</tr>
+<tr>
+<td><code>40</code></td>
+<td><code>RESORTS_CASINOS</code></td>
+<td>Resorts and casinos</td>
+</tr>
+<tr>
+<td><code>41</code></td>
+<td><code>RESTAURANTS</code></td>
+<td>Restaurants</td>
+</tr>
+<tr>
+<td><code>42</code></td>
+<td><code>SPECIALTY_RETAIL</code></td>
+<td>Specialty retail</td>
+</tr>
+<tr>
+<td><code>43</code></td>
+<td><code>TEXTILE_MANUFACTURING</code></td>
+<td>Textile manufacturing</td>
+</tr>
+<tr>
+<td><code>44</code></td>
+<td><code>TRAVEL_SERVICES</code></td>
+<td>Travel services</td>
+</tr>
+<tr>
+<td><code>45</code></td>
+<td><code>BEVERAGES_BREWERS</code></td>
+<td>Beverages - Brewers</td>
+</tr>
+<tr>
+<td><code>46</code></td>
+<td><code>BEVERAGES_NON_ALCO</code></td>
+<td>Beverages - Non-alcoholic</td>
+</tr>
+<tr>
+<td><code>47</code></td>
+<td><code>BEVERAGES_WINERIES</code></td>
+<td>Beverages - Wineries and distilleries</td>
+</tr>
+<tr>
+<td><code>48</code></td>
+<td><code>CONFECTIONERS</code></td>
+<td>Confectioners</td>
+</tr>
+<tr>
+<td><code>49</code></td>
+<td><code>DISCOUNT_STORES</code></td>
+<td>Discount stores</td>
+</tr>
+<tr>
+<td><code>50</code></td>
+<td><code>EDUCATION_TRAINIG</code></td>
+<td>Education and training services</td>
+</tr>
+<tr>
+<td><code>51</code></td>
+<td><code>FARM_PRODUCTS</code></td>
+<td>Farm products</td>
+</tr>
+<tr>
+<td><code>52</code></td>
+<td><code>FOOD_DISTRIBUTION</code></td>
+<td>Food distribution</td>
+</tr>
+<tr>
+<td><code>53</code></td>
+<td><code>GROCERY_STORES</code></td>
+<td>Grocery stores</td>
+</tr>
+<tr>
+<td><code>54</code></td>
+<td><code>HOUSEHOLD_PRODUCTS</code></td>
+<td>Household and personal products</td>
+</tr>
+<tr>
+<td><code>55</code></td>
+<td><code>PACKAGED_FOODS</code></td>
+<td>Packaged foods</td>
+</tr>
+<tr>
+<td><code>56</code></td>
+<td><code>TOBACCO</code></td>
+<td>Tobacco</td>
+</tr>
+<tr>
+<td><code>57</code></td>
+<td><code>OIL_GAS_DRILLING</code></td>
+<td>Oil and gas drilling</td>
+</tr>
+<tr>
+<td><code>58</code></td>
+<td><code>OIL_GAS_EP</code></td>
+<td>Oil and gas extraction and processing</td>
+</tr>
+<tr>
+<td><code>59</code></td>
+<td><code>OIL_GAS_EQUIPMENT</code></td>
+<td>Oil and gas equipment and services</td>
+</tr>
+<tr>
+<td><code>60</code></td>
+<td><code>OIL_GAS_INTEGRATED</code></td>
+<td>Oil and gas integrated</td>
+</tr>
+<tr>
+<td><code>61</code></td>
+<td><code>OIL_GAS_MIDSTREAM</code></td>
+<td>Oil and gas midstream</td>
+</tr>
+<tr>
+<td><code>62</code></td>
+<td><code>OIL_GAS_REFINING</code></td>
+<td>Oil and gas refining and marketing</td>
+</tr>
+<tr>
+<td><code>63</code></td>
+<td><code>THERMAL_COAL</code></td>
+<td>Thermal coal</td>
+</tr>
+<tr>
+<td><code>64</code></td>
+<td><code>URANIUM</code></td>
+<td>Uranium</td>
+</tr>
+<tr>
+<td><code>65</code></td>
+<td><code>EXCHANGE_TRADED_FUND</code></td>
+<td>Exchange traded fund</td>
+</tr>
+<tr>
+<td><code>66</code></td>
+<td><code>ASSETS_MANAGEMENT</code></td>
+<td>Assets management</td>
+</tr>
+<tr>
+<td><code>67</code></td>
+<td><code>BANKS_DIVERSIFIED</code></td>
+<td>Banks - Diversified</td>
+</tr>
+<tr>
+<td><code>68</code></td>
+<td><code>BANKS_REGIONAL</code></td>
+<td>Banks - Regional</td>
+</tr>
+<tr>
+<td><code>69</code></td>
+<td><code>CAPITAL_MARKETS</code></td>
+<td>Capital markets</td>
+</tr>
+<tr>
+<td><code>70</code></td>
+<td><code>CLOSE_END_FUND_DEBT</code></td>
+<td>Closed-End fund - Debt</td>
+</tr>
+<tr>
+<td><code>71</code></td>
+<td><code>CLOSE_END_FUND_EQUITY</code></td>
+<td>Closed-end fund - Equity</td>
+</tr>
+<tr>
+<td><code>72</code></td>
+<td><code>CLOSE_END_FUND_FOREIGN</code></td>
+<td>Closed-end fund - Foreign</td>
+</tr>
+<tr>
+<td><code>73</code></td>
+<td><code>CREDIT_SERVICES</code></td>
+<td>Credit services</td>
+</tr>
+<tr>
+<td><code>74</code></td>
+<td><code>FINANCIAL_CONGLOMERATE</code></td>
+<td>Financial conglomerates</td>
+</tr>
+<tr>
+<td><code>75</code></td>
+<td><code>FINANCIAL_DATA_EXCHANGE</code></td>
+<td>Financial data and stock exchange</td>
+</tr>
+<tr>
+<td><code>76</code></td>
+<td><code>INSURANCE_BROKERS</code></td>
+<td>Insurance brokers</td>
+</tr>
+<tr>
+<td><code>77</code></td>
+<td><code>INSURANCE_DIVERSIFIED</code></td>
+<td>Insurance - Diversified</td>
+</tr>
+<tr>
+<td><code>78</code></td>
+<td><code>INSURANCE_LIFE</code></td>
+<td>Insurance - Life</td>
+</tr>
+<tr>
+<td><code>79</code></td>
+<td><code>INSURANCE_PROPERTY</code></td>
+<td>Insurance - Property and casualty</td>
+</tr>
+<tr>
+<td><code>80</code></td>
+<td><code>INSURANCE_REINSURANCE</code></td>
+<td>Insurance - Reinsurance</td>
+</tr>
+<tr>
+<td><code>81</code></td>
+<td><code>INSURANCE_SPECIALTY</code></td>
+<td>Insurance - Specialty</td>
+</tr>
+<tr>
+<td><code>82</code></td>
+<td><code>MORTGAGE_FINANCE</code></td>
+<td>Mortgage finance</td>
+</tr>
+<tr>
+<td><code>83</code></td>
+<td><code>SHELL_COMPANIES</code></td>
+<td>Shell companies</td>
+</tr>
+<tr>
+<td><code>84</code></td>
+<td><code>BIOTECHNOLOGY</code></td>
+<td>Biotechnology</td>
+</tr>
+<tr>
+<td><code>85</code></td>
+<td><code>DIAGNOSTICS_RESEARCH</code></td>
+<td>Diagnostics and research</td>
+</tr>
+<tr>
+<td><code>86</code></td>
+<td><code>DRUGS_MANUFACTURERS</code></td>
+<td>Drugs manufacturers - general</td>
+</tr>
+<tr>
+<td><code>87</code></td>
+<td><code>DRUGS_MANUFACTURERS_SPEC</code></td>
+<td>Drugs manufacturers - Specialty and generic</td>
+</tr>
+<tr>
+<td><code>88</code></td>
+<td><code>HEALTHCARE_PLANS</code></td>
+<td>Healthcare plans</td>
+</tr>
+<tr>
+<td><code>89</code></td>
+<td><code>HEALTH_INFORMATION</code></td>
+<td>Health information services</td>
+</tr>
+<tr>
+<td><code>90</code></td>
+<td><code>MEDICAL_FACILITIES</code></td>
+<td>Medical care facilities</td>
+</tr>
+<tr>
+<td><code>91</code></td>
+<td><code>MEDICAL_DEVICES</code></td>
+<td>Medical devices</td>
+</tr>
+<tr>
+<td><code>92</code></td>
+<td><code>MEDICAL_DISTRIBUTION</code></td>
+<td>Medical distribution</td>
+</tr>
+<tr>
+<td><code>93</code></td>
+<td><code>MEDICAL_INSTRUMENTS</code></td>
+<td>Medical instruments and supplies</td>
+</tr>
+<tr>
+<td><code>94</code></td>
+<td><code>PHARM_RETAILERS</code></td>
+<td>Pharmaceutical retailers</td>
+</tr>
+<tr>
+<td><code>95</code></td>
+<td><code>AEROSPACE_DEFENSE</code></td>
+<td>Aerospace and defense</td>
+</tr>
+<tr>
+<td><code>96</code></td>
+<td><code>AIRLINES</code></td>
+<td>Airlines</td>
+</tr>
+<tr>
+<td><code>97</code></td>
+<td><code>AIRPORTS_SERVICES</code></td>
+<td>Airports and air services</td>
+</tr>
+<tr>
+<td><code>98</code></td>
+<td><code>BUILDING_PRODUCTS</code></td>
+<td>Building products and equipment</td>
+</tr>
+<tr>
+<td><code>99</code></td>
+<td><code>BUSINESS_EQUIPMENT</code></td>
+<td>Business equipment and supplies</td>
+</tr>
+<tr>
+<td><code>100</code></td>
+<td><code>CONGLOMERATES</code></td>
+<td>Conglomerates</td>
+</tr>
+<tr>
+<td><code>101</code></td>
+<td><code>CONSULTING_SERVICES</code></td>
+<td>Consulting services</td>
+</tr>
+<tr>
+<td><code>102</code></td>
+<td><code>ELECTRICAL_EQUIPMENT</code></td>
+<td>Electrical equipment and parts</td>
+</tr>
+<tr>
+<td><code>103</code></td>
+<td><code>ENGINEERING_CONSTRUCTION</code></td>
+<td>Engineering and construction</td>
+</tr>
+<tr>
+<td><code>104</code></td>
+<td><code>FARM_HEAVY_MACHINERY</code></td>
+<td>Farm and heavy construction machinery</td>
+</tr>
+<tr>
+<td><code>105</code></td>
+<td><code>INDUSTRIAL_DISTRIBUTION</code></td>
+<td>Industrial distribution</td>
+</tr>
+<tr>
+<td><code>106</code></td>
+<td><code>INFRASTRUCTURE_OPERATIONS</code></td>
+<td>Infrastructure operations</td>
+</tr>
+<tr>
+<td><code>107</code></td>
+<td><code>FREIGHT_LOGISTICS</code></td>
+<td>Integrated freight and logistics</td>
+</tr>
+<tr>
+<td><code>108</code></td>
+<td><code>MARINE_SHIPPING</code></td>
+<td>Marine shipping</td>
+</tr>
+<tr>
+<td><code>109</code></td>
+<td><code>METAL_FABRICATION</code></td>
+<td>Metal fabrication</td>
+</tr>
+<tr>
+<td><code>110</code></td>
+<td><code>POLLUTION_CONTROL</code></td>
+<td>Pollution and treatment controls</td>
+</tr>
+<tr>
+<td><code>111</code></td>
+<td><code>RAILROADS</code></td>
+<td>Railroads</td>
+</tr>
+<tr>
+<td><code>112</code></td>
+<td><code>RENTAL_LEASING</code></td>
+<td>Rental and leasing services</td>
+</tr>
+<tr>
+<td><code>113</code></td>
+<td><code>SECURITY_PROTECTION</code></td>
+<td>Security and protection services</td>
+</tr>
+<tr>
+<td><code>114</code></td>
+<td><code>SPEALITY_BUSINESS_SERVICES</code></td>
+<td>Specialty business services</td>
+</tr>
+<tr>
+<td><code>115</code></td>
+<td><code>SPEALITY_MACHINERY</code></td>
+<td>Specialty industrial machinery</td>
+</tr>
+<tr>
+<td><code>116</code></td>
+<td><code>STUFFING_EMPLOYMENT</code></td>
+<td>Staffing and employment services</td>
+</tr>
+<tr>
+<td><code>117</code></td>
+<td><code>TOOLS_ACCESSORIES</code></td>
+<td>Tools and accessories</td>
+</tr>
+<tr>
+<td><code>118</code></td>
+<td><code>TRUCKING</code></td>
+<td>Trucking</td>
+</tr>
+<tr>
+<td><code>119</code></td>
+<td><code>WASTE_MANAGEMENT</code></td>
+<td>Waste management</td>
+</tr>
+<tr>
+<td><code>120</code></td>
+<td><code>REAL_ESTATE_DEVELOPMENT</code></td>
+<td>Real estate - Development</td>
+</tr>
+<tr>
+<td><code>121</code></td>
+<td><code>REAL_ESTATE_DIVERSIFIED</code></td>
+<td>Real estate - Diversified</td>
+</tr>
+<tr>
+<td><code>122</code></td>
+<td><code>REAL_ESTATE_SERVICES</code></td>
+<td>Real estate services</td>
+</tr>
+<tr>
+<td><code>123</code></td>
+<td><code>REIT_DIVERSIFIED</code></td>
+<td>REIT - Diversified</td>
+</tr>
+<tr>
+<td><code>124</code></td>
+<td><code>REIT_HEALTCARE</code></td>
+<td>REIT - Healthcare facilities</td>
+</tr>
+<tr>
+<td><code>125</code></td>
+<td><code>REIT_HOTEL_MOTEL</code></td>
+<td>REIT - Hotel and motel</td>
+</tr>
+<tr>
+<td><code>126</code></td>
+<td><code>REIT_INDUSTRIAL</code></td>
+<td>REIT - Industrial</td>
+</tr>
+<tr>
+<td><code>127</code></td>
+<td><code>REIT_MORTAGE</code></td>
+<td>REIT - Mortgage</td>
+</tr>
+<tr>
+<td><code>128</code></td>
+<td><code>REIT_OFFICE</code></td>
+<td>REIT - Office</td>
+</tr>
+<tr>
+<td><code>129</code></td>
+<td><code>REIT_RESIDENTAL</code></td>
+<td>REIT - Residential</td>
+</tr>
+<tr>
+<td><code>130</code></td>
+<td><code>REIT_RETAIL</code></td>
+<td>REIT - Retail</td>
+</tr>
+<tr>
+<td><code>131</code></td>
+<td><code>REIT_SPECIALITY</code></td>
+<td>REIT - Specialty</td>
+</tr>
+<tr>
+<td><code>132</code></td>
+<td><code>COMMUNICATION_EQUIPMENT</code></td>
+<td>Communication equipment</td>
+</tr>
+<tr>
+<td><code>133</code></td>
+<td><code>COMPUTER_HARDWARE</code></td>
+<td>Computer hardware</td>
+</tr>
+<tr>
+<td><code>134</code></td>
+<td><code>CONSUMER_ELECTRONICS</code></td>
+<td>Consumer electronics</td>
+</tr>
+<tr>
+<td><code>135</code></td>
+<td><code>ELECTRONIC_COMPONENTS</code></td>
+<td>Electronic components</td>
+</tr>
+<tr>
+<td><code>136</code></td>
+<td><code>ELECTRONIC_DISTRIBUTION</code></td>
+<td>Electronics and computer distribution</td>
+</tr>
+<tr>
+<td><code>137</code></td>
+<td><code>IT_SERVICES</code></td>
+<td>Information technology services</td>
+</tr>
+<tr>
+<td><code>138</code></td>
+<td><code>SCIENTIFIC_INSTRUMENTS</code></td>
+<td>Scientific and technical instruments</td>
+</tr>
+<tr>
+<td><code>139</code></td>
+<td><code>SEMICONDUCTOR_EQUIPMENT</code></td>
+<td>Semiconductor equipment and materials</td>
+</tr>
+<tr>
+<td><code>140</code></td>
+<td><code>SEMICONDUCTORS</code></td>
+<td>Semiconductors</td>
+</tr>
+<tr>
+<td><code>141</code></td>
+<td><code>SOFTWARE_APPLICATION</code></td>
+<td>Software - Application</td>
+</tr>
+<tr>
+<td><code>142</code></td>
+<td><code>SOFTWARE_INFRASTRUCTURE</code></td>
+<td>Software - Infrastructure</td>
+</tr>
+<tr>
+<td><code>143</code></td>
+<td><code>SOLAR</code></td>
+<td>Solar</td>
+</tr>
+<tr>
+<td><code>144</code></td>
+<td><code>UTILITIES_DIVERSIFIED</code></td>
+<td>Utilities - Diversified</td>
+</tr>
+<tr>
+<td><code>145</code></td>
+<td><code>UTILITIES_POWERPRODUCERS</code></td>
+<td>Utilities - Independent power producers</td>
+</tr>
+<tr>
+<td><code>146</code></td>
+<td><code>UTILITIES_RENEWABLE</code></td>
+<td>Utilities - Renewable</td>
+</tr>
+<tr>
+<td><code>147</code></td>
+<td><code>UTILITIES_REGULATED_ELECTRIC</code></td>
+<td>Utilities - Regulated electric</td>
+</tr>
+<tr>
+<td><code>148</code></td>
+<td><code>UTILITIES_REGULATED_GAS</code></td>
+<td>Utilities - Regulated gas</td>
+</tr>
+<tr>
+<td><code>149</code></td>
+<td><code>UTILITIES_REGULATED_WATER</code></td>
+<td>Utilities - Regulated water</td>
+</tr>
+<tr>
+<td><code>150</code></td>
+<td><code>UTILITIES_FIRST</code></td>
+<td>Start of utilities services enumeration</td>
+</tr>
+<tr>
+<td><code>151</code></td>
+<td><code>UTILITIES_LAST</code></td>
+<td>End of utilities services enumeration</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bmt5_enum_symbol_chart_mode"><code>BMT5_ENUM_SYMBOL_CHART_MODE</code><a class="headerlink" href="#bmt5_enum_symbol_chart_mode" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Enum Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td><code>CHART_MODE_BID</code></td>
+<td>Use Bid prices for chart</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>CHART_MODE_LAST</code></td>
+<td>Use Last deal prices for chart</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bmt5_enum_symbol_calc_mode"><code>BMT5_ENUM_SYMBOL_CALC_MODE</code><a class="headerlink" href="#bmt5_enum_symbol_calc_mode" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Enum Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td><code>FOREX</code></td>
+<td>Forex calculation mode</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>FOREX_NO_LEVERAGE</code></td>
+<td>Forex without leverage</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td><code>FUTURES</code></td>
+<td>Futures calculation</td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td><code>CFD</code></td>
+<td>CFD calculation</td>
+</tr>
+<tr>
+<td><code>4</code></td>
+<td><code>CFDINDEX</code></td>
+<td>CFD by indexes</td>
+</tr>
+<tr>
+<td><code>5</code></td>
+<td><code>CFDLEVERAGE</code></td>
+<td>CFD with leverage</td>
+</tr>
+<tr>
+<td><code>6</code></td>
+<td><code>EXCH_STOCKS</code></td>
+<td>Exchange stocks</td>
+</tr>
+<tr>
+<td><code>7</code></td>
+<td><code>EXCH_FUTURES</code></td>
+<td>Exchange futures</td>
+</tr>
+<tr>
+<td><code>8</code></td>
+<td><code>EXCH_FUTURES_FORTS</code></td>
+<td>FORTS futures</td>
+</tr>
+<tr>
+<td><code>9</code></td>
+<td><code>EXCH_BONDS</code></td>
+<td>Exchange bonds</td>
+</tr>
+<tr>
+<td><code>10</code></td>
+<td><code>EXCH_STOCKS_MOEX</code></td>
+<td>MOEX stocks</td>
+</tr>
+<tr>
+<td><code>11</code></td>
+<td><code>EXCH_BONDS_MOEX</code></td>
+<td>MOEX bonds</td>
+</tr>
+<tr>
+<td><code>12</code></td>
+<td><code>SERV_COLLATERAL</code></td>
+<td>Collateral mode</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bmt5_enum_symbol_trade_mode"><code>BMT5_ENUM_SYMBOL_TRADE_MODE</code><a class="headerlink" href="#bmt5_enum_symbol_trade_mode" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Enum Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td><code>DISABLED</code></td>
+<td>Trade disabled</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>LONGONLY</code></td>
+<td>Only long positions allowed</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td><code>SHORTONLY</code></td>
+<td>Only short positions allowed</td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td><code>CLOSEONLY</code></td>
+<td>Only close operations allowed</td>
+</tr>
+<tr>
+<td><code>4</code></td>
+<td><code>FULL</code></td>
+<td>No trade restrictions</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bmt5_enum_symbol_trade_execution"><code>BMT5_ENUM_SYMBOL_TRADE_EXECUTION</code><a class="headerlink" href="#bmt5_enum_symbol_trade_execution" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Enum Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td><code>REQUEST</code></td>
+<td>Execution by request</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>INSTANT</code></td>
+<td>Instant execution</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td><code>MARKET</code></td>
+<td>Market execution</td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td><code>EXCHANGE</code></td>
+<td>Exchange execution</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bmt5_enum_symbol_swap_mode"><code>BMT5_ENUM_SYMBOL_SWAP_MODE</code><a class="headerlink" href="#bmt5_enum_symbol_swap_mode" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Enum Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td><code>DISABLED</code></td>
+<td>No swaps</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>POINTS</code></td>
+<td>Swaps in points</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td><code>CURRENCY_SYMBOL</code></td>
+<td>Swaps in base currency</td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td><code>CURRENCY_MARGIN</code></td>
+<td>Swaps in margin currency</td>
+</tr>
+<tr>
+<td><code>4</code></td>
+<td><code>CURRENCY_DEPOSIT</code></td>
+<td>Swaps in deposit currency</td>
+</tr>
+<tr>
+<td><code>5</code></td>
+<td><code>CURRENCY_PROFIT</code></td>
+<td>Swaps in profit currency</td>
+</tr>
+<tr>
+<td><code>6</code></td>
+<td><code>INTEREST_CURRENT</code></td>
+<td>Annual interest from current price</td>
+</tr>
+<tr>
+<td><code>7</code></td>
+<td><code>INTEREST_OPEN</code></td>
+<td>Annual interest from open price</td>
+</tr>
+<tr>
+<td><code>8</code></td>
+<td><code>REOPEN_CURRENT</code></td>
+<td>Reopen by close price</td>
+</tr>
+<tr>
+<td><code>9</code></td>
+<td><code>REOPEN_BID</code></td>
+<td>Reopen by Bid price</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bmt5_enum_day_of_week"><code>BMT5_ENUM_DAY_OF_WEEK</code><a class="headerlink" href="#bmt5_enum_day_of_week" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Enum Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td><code>SUNDAY</code></td>
+<td>Sunday</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>MONDAY</code></td>
+<td>Monday</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td><code>TUESDAY</code></td>
+<td>Tuesday</td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td><code>WEDNESDAY</code></td>
+<td>Wednesday</td>
+</tr>
+<tr>
+<td><code>4</code></td>
+<td><code>THURSDAY</code></td>
+<td>Thursday</td>
+</tr>
+<tr>
+<td><code>5</code></td>
+<td><code>FRIDAY</code></td>
+<td>Friday</td>
+</tr>
+<tr>
+<td><code>6</code></td>
+<td><code>SATURDAY</code></td>
+<td>Saturday</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bmt5_enum_symbol_order_gtc_mode"><code>BMT5_ENUM_SYMBOL_ORDER_GTC_MODE</code><a class="headerlink" href="#bmt5_enum_symbol_order_gtc_mode" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Enum Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td><code>GTC</code></td>
+<td>Good till cancelled - unlimited validity</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>DAILY</code></td>
+<td>Valid for one trading day</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td><code>DAILY_EXCLUDING_STOPS</code></td>
+<td>Daily, but SL/TP preserved</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bmt5_enum_symbol_option_mode"><code>BMT5_ENUM_SYMBOL_OPTION_MODE</code><a class="headerlink" href="#bmt5_enum_symbol_option_mode" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Enum Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td><code>EUROPEAN</code></td>
+<td>European option</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>AMERICAN</code></td>
+<td>American option</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bmt5_enum_symbol_option_right"><code>BMT5_ENUM_SYMBOL_OPTION_RIGHT</code><a class="headerlink" href="#bmt5_enum_symbol_option_right" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Enum Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td><code>CALL</code></td>
+<td>Call option (right to buy)</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>PUT</code></td>
+<td>Put option (right to sell)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bmt5_enum_order_type"><code>BMT5_ENUM_ORDER_TYPE</code><a class="headerlink" href="#bmt5_enum_order_type" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Enum Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td><code>BUY</code></td>
+<td>Market buy</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>SELL</code></td>
+<td>Market sell</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td><code>BUY_LIMIT</code></td>
+<td>Buy limit pending</td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td><code>SELL_LIMIT</code></td>
+<td>Sell limit pending</td>
+</tr>
+<tr>
+<td><code>4</code></td>
+<td><code>BUY_STOP</code></td>
+<td>Buy stop pending</td>
+</tr>
+<tr>
+<td><code>5</code></td>
+<td><code>SELL_STOP</code></td>
+<td>Sell stop pending</td>
+</tr>
+<tr>
+<td><code>6</code></td>
+<td><code>BUY_STOP_LIMIT</code></td>
+<td>Buy stop limit</td>
+</tr>
+<tr>
+<td><code>7</code></td>
+<td><code>SELL_STOP_LIMIT</code></td>
+<td>Sell stop limit</td>
+</tr>
+<tr>
+<td><code>8</code></td>
+<td><code>CLOSE_BY</code></td>
+<td>Close by opposite</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bmt5_enum_order_type_filling"><code>BMT5_ENUM_ORDER_TYPE_FILLING</code><a class="headerlink" href="#bmt5_enum_order_type_filling" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Enum Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td><code>FOK</code></td>
+<td>Fill or Kill - all or nothing</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td><code>IOC</code></td>
+<td>Immediate or Cancel - partial fill allowed</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td><code>RETURN</code></td>
+<td>Return order with remaining volume</td>
+</tr>
+<tr>
+<td><code>3</code></td>
+<td><code>BOC</code></td>
+<td>Book or Cancel - only passive execution</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="see-also">📚 See Also<a class="headerlink" href="#see-also" title="Permanent link">¶</a></h2>
+<ul>
+<li><a href="../../2.%20Symbol_information/SymbolInfoDouble/">SymbolInfoDouble</a> - Get individual symbol properties</li>
+<li><a href="../../2.%20Symbol_information/SymbolInfoInteger/">SymbolInfoInteger</a> - Get integer symbol properties</li>
+<li><a href="../../2.%20Symbol_information/SymbolInfoTick/">SymbolInfoTick</a> - Get tick data</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2024–2025 GoMT5. MT5 is a trademark of MetaQuotes Software Corp. This documentation is community-maintained and not affiliated with MetaQuotes.
+
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/MetaRPC/GoMT5" target="_blank" rel="noopener" title="GoMT5 on GitHub" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tracking", "navigation.expand", "navigation.top", "navigation.footer", "content.code.copy", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../../javascripts/ux.js"></script>
+      
+    
+  </body>
+</html>

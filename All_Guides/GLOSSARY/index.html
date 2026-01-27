@@ -1,0 +1,2926 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Complete Go SDK for MetaTrader 5 trading automation">
+      
+      
+      
+        <link rel="canonical" href="https://MetaRPC.github.io/GoMT5/All_Guides/GLOSSARY/">
+      
+      
+        <link rel="prev" href="../PROJECT_MAP/">
+      
+      
+        <link rel="next" href="../MT5_For_Beginners/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Glossary - GoMT5 SDK Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../styles/custom.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#gomt5-glossary" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="GoMT5 SDK Documentation" class="md-header__button md-logo" aria-label="GoMT5 SDK Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m2.64 10.33-.02-.06.22-.27.12-.08H6.8l.03.08-.18.26-.11.06zm-1.61.98L1 11.26l.22-.29.12-.06h4.9l.05.09-.08.24-.1.07zm2.6.99-.04-.06.16-.28.1-.06H6l.07.07-.02.25-.08.08zm11.15-2.16-1.78.47c-.19.04-.2.05-.34-.11-.16-.18-.27-.29-.5-.4-.66-.34-1.33-.24-1.94.15-.72.48-1.11 1.17-1.1 2.05.01.86.6 1.57 1.45 1.7.73.09 1.34-.17 1.83-.72l.29-.39h-2.07c-.22 0-.27-.14-.2-.32l.55-1.18c.03-.06.11-.17.27-.17h3.44c.15-.5.41-.96.75-1.41.78-1.03 1.73-1.57 3-1.81 1.07-.18 2.13-.07 3.07.57.84.58 1.37 1.36 1.5 2.39.19 1.45-.24 2.63-1.24 3.65-.71.72-1.58 1.17-2.57 1.39l-.86.08c-.98-.02-1.87-.3-2.62-.95-.52-.45-.88-.99-1.06-1.63-.15.24-.27.47-.44.7-.77 1.02-1.78 1.65-3.06 1.8-1.05.16-2.03-.05-2.89-.69-.79-.6-1.26-1.4-1.36-2.39-.14-1.17.2-2.22.91-3.14.76-1 1.77-1.63 3.01-1.86 1-.18 1.97-.06 2.84.52.57.38.97.9 1.24 1.52q.06.135-.12.18m6.11 1.6-.03-.36c-.19-1.06-1.17-1.66-2.19-1.43-1.01.22-1.67.85-1.88 1.86-.19.84.21 1.69.98 2.03.59.26 1.19.22 1.76-.06.84-.43 1.31-1.12 1.36-2.04"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            GoMT5 SDK Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Glossary
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/MetaRPC/GoMT5" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    MetaRPC/GoMT5
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="GoMT5 SDK Documentation" class="md-nav__button md-logo" aria-label="GoMT5 SDK Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m2.64 10.33-.02-.06.22-.27.12-.08H6.8l.03.08-.18.26-.11.06zm-1.61.98L1 11.26l.22-.29.12-.06h4.9l.05.09-.08.24-.1.07zm2.6.99-.04-.06.16-.28.1-.06H6l.07.07-.02.25-.08.08zm11.15-2.16-1.78.47c-.19.04-.2.05-.34-.11-.16-.18-.27-.29-.5-.4-.66-.34-1.33-.24-1.94.15-.72.48-1.11 1.17-1.1 2.05.01.86.6 1.57 1.45 1.7.73.09 1.34-.17 1.83-.72l.29-.39h-2.07c-.22 0-.27-.14-.2-.32l.55-1.18c.03-.06.11-.17.27-.17h3.44c.15-.5.41-.96.75-1.41.78-1.03 1.73-1.57 3-1.81 1.07-.18 2.13-.07 3.07.57.84.58 1.37 1.36 1.5 2.39.19 1.45-.24 2.63-1.24 3.65-.71.72-1.58 1.17-2.57 1.39l-.86.08c-.98-.02-1.87-.3-2.62-.95-.52-.45-.88-.99-1.06-1.63-.15.24-.27.47-.44.7-.77 1.02-1.78 1.65-3.06 1.8-1.05.16-2.03-.05-2.89-.69-.79-.6-1.26-1.4-1.36-2.39-.14-1.17.2-2.22.91-3.14.76-1 1.77-1.63 3.01-1.86 1-.18 1.97-.06 2.84.52.57.38.97.9 1.24 1.52q.06.135-.12.18m6.11 1.6-.03-.36c-.19-1.06-1.17-1.66-2.19-1.43-1.01.22-1.67.85-1.88 1.86-.19.84.21 1.69.98 2.03.59.26 1.19.22 1.76-.06.84-.43 1.31-1.12 1.36-2.04"/></svg>
+
+    </a>
+    GoMT5 SDK Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/MetaRPC/GoMT5" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    MetaRPC/GoMT5
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Your_First_Project/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Project
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROJECT_MAP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Map
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#architectural-terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🏗️ Architectural Terms
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🏗️ Architectural Terms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#three-tier-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three-Tier Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mt5account" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MT5Account
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mt5service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MT5Service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mt5sugar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MT5Sugar
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔧 Technical Concepts
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔧 Technical Concepts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#auto-normalization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-Normalization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-based-volume-calculation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk-Based Volume Calculation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#points-vs-pips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Points vs Pips
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pip-based-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pip-Based Methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trailing-stop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trailing Stop
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hedging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hedging
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pending-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pending Order
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#grpc-and-protocol-terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔌 gRPC and Protocol Terms
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔌 gRPC and Protocol Terms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#grpc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gRPC
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#context-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context Pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#channel-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Channel Pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#return-codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Return Codes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#trading-terms-project-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎓 Trading Terms (Project Context)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎓 Trading Terms (Project Context)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-trading-terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Trading Terms
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-amount" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk Amount
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#breakeven" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Breakeven
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grid-trading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grid Trading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scalping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scalping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#news-trading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        News Trading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#volume-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Volume Limits
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#maingo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        main.go
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        config Package
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#protobuf-inspector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protobuf Inspector
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚙️ Configuration Terms
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="⚙️ Configuration Terms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        config.json
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-component-terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔗 Cross-Component Terms
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔗 Cross-Component Terms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#goroutine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goroutine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batch-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch Operations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#history-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        History Queries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#educational-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Educational Project
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📚 See Also
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#go-specific-terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Go-Specific Terms
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Go-Specific Terms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#defer-statement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        defer Statement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#select-statement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        select Statement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interface-composition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interface Composition
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MT5_For_Beginners/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5 for Beginners
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GRPC_STREAM_MANAGEMENT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gRPC Streaming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RETURN_CODES_REFERENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Return Codes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ENUMS_USAGE_REFERENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ENUMs Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROTOBUF_INSPECTOR_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protobuf Inspector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../USERCODE_SANDBOX_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UserCode Sandbox
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_Reference/MT5Account/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5Account API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_Reference/MT5Service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5Service API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_Reference/MT5Sugar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5Sugar API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Orchestrators
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Orchestrators
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../Orchestrators/Strategies.Master.Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#architectural-terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🏗️ Architectural Terms
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🏗️ Architectural Terms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#three-tier-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three-Tier Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mt5account" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MT5Account
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mt5service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MT5Service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mt5sugar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MT5Sugar
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technical-concepts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔧 Technical Concepts
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔧 Technical Concepts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#auto-normalization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Auto-Normalization
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-based-volume-calculation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk-Based Volume Calculation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#points-vs-pips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Points vs Pips
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pip-based-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pip-Based Methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trailing-stop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trailing Stop
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hedging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hedging
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pending-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pending Order
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#grpc-and-protocol-terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔌 gRPC and Protocol Terms
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔌 gRPC and Protocol Terms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#grpc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        gRPC
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#context-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Context Pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#channel-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Channel Pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#return-codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Return Codes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#trading-terms-project-context" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎓 Trading Terms (Project Context)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🎓 Trading Terms (Project Context)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-trading-terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Trading Terms
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-amount" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk Amount
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#breakeven" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Breakeven
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#grid-trading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grid Trading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scalping" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scalping
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#news-trading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        News Trading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#volume-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Volume Limits
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#maingo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        main.go
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config-package" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        config Package
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#protobuf-inspector" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Protobuf Inspector
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚙️ Configuration Terms
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="⚙️ Configuration Terms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configjson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        config.json
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cross-component-terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔗 Cross-Component Terms
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔗 Cross-Component Terms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#goroutine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Goroutine
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batch-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch Operations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#history-queries" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        History Queries
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#educational-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Educational Project
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📚 See Also
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#go-specific-terms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Go-Specific Terms
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Go-Specific Terms">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#defer-statement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        defer Statement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#select-statement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        select Statement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interface-composition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Interface Composition
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="gomt5-glossary">GoMT5 Glossary<a class="headerlink" href="#gomt5-glossary" title="Permanent link">¶</a></h1>
+<blockquote>
+<p>Project-specific terms and concepts. This glossary covers GoMT5 architecture, components, and trading automation terminology used throughout the codebase.</p>
+</blockquote>
+<hr />
+<h2 id="architectural-terms">🏗️ Architectural Terms<a class="headerlink" href="#architectural-terms" title="Permanent link">¶</a></h2>
+<h3 id="three-tier-architecture">Three-Tier Architecture<a class="headerlink" href="#three-tier-architecture" title="Permanent link">¶</a></h3>
+<p>Core design pattern of GoMT5 with three abstraction levels:</p>
+<ul>
+<li><strong>Tier 1 (MT5Account):</strong> Low-level gRPC communication with MT5 terminal</li>
+<li><strong>Tier 2 (MT5Service):</strong> Wrapper methods with simplified signatures</li>
+<li><strong>Tier 3 (MT5Sugar):</strong> High-level convenience methods with auto-normalization</li>
+</ul>
+<hr />
+<h3 id="mt5account">MT5Account<a class="headerlink" href="#mt5account" title="Permanent link">¶</a></h3>
+<p><strong>Tier 1 - Low-Level API</strong></p>
+<p>Base layer providing direct access to MT5 terminal via gRPC protocol.</p>
+<p><strong>Key characteristics:</strong></p>
+<ul>
+<li>Raw gRPC calls to MT5 terminal</li>
+<li>Built-in connection resilience with automatic reconnection</li>
+<li>Works with protobuf Request/Response objects</li>
+<li>Full control, maximum complexity</li>
+<li><strong>40+ methods</strong> for all MT5 operations</li>
+<li>Context-based timeout management</li>
+<li>Two-channel streaming (dataChan, errChan)</li>
+</ul>
+<p><strong>When to use:</strong> Custom integrations, need proto-level control, building custom wrappers.</p>
+<p><strong>Location:</strong> <code>package/Helpers/MT5Account.go</code> (2300+ lines)</p>
+<p><strong>Documentation:</strong> <a href="../../MT5Account/MT5Account.Master.Overview/">MT5Account.Master.Overview.md</a></p>
+<p><strong>Key patterns:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1">// Context with timeout</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">cancel</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">WithTimeout</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">Background</span><span class="p">(),</span><span class="w"> </span><span class="mi">10</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">defer</span><span class="w"> </span><span class="nx">cancel</span><span class="p">()</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1">// Protobuf request/response</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="nx">req</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">pb</span><span class="p">.</span><span class="nx">AccountSummaryRequest</span><span class="p">{}</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="nx">reply</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">account</span><span class="p">.</span><span class="nx">AccountSummary</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">req</span><span class="p">)</span>
+</code></pre></div></p>
+<hr />
+<h3 id="mt5service">MT5Service<a class="headerlink" href="#mt5service" title="Permanent link">¶</a></h3>
+<p><strong>Tier 2 - Wrappers API</strong></p>
+<p>Middle layer providing simplified method signatures without proto complexity.</p>
+<p><strong>Key characteristics:</strong></p>
+<ul>
+<li>Direct data return (no proto objects in signatures)</li>
+<li>Type conversion (proto → Go primitives/structs)</li>
+<li>Simplified method names</li>
+<li>No auto-normalization (you control precision)</li>
+<li><strong>50+ methods</strong> for common scenarios</li>
+<li>Helper functions for common patterns</li>
+</ul>
+<p><strong>When to use:</strong> Need wrappers but not auto-normalization, building custom strategies.</p>
+<p><strong>Location:</strong> <code>examples/mt5/MT5Service.go</code> (1160+ lines)</p>
+<p><strong>Documentation:</strong> <a href="../../MT5Service/MT5Service.Overview/">MT5Service.Overview.md</a></p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1">// Service level - clean Go types</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nx">accountInfo</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">service</span><span class="p">.</span><span class="nx">GetAccountSummary</span><span class="p">(</span><span class="nx">ctx</span><span class="p">)</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;Balance: %.2f\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">accountInfo</span><span class="p">.</span><span class="nx">Balance</span><span class="p">)</span>
+</code></pre></div></p>
+<hr />
+<h3 id="mt5sugar">MT5Sugar<a class="headerlink" href="#mt5sugar" title="Permanent link">¶</a></h3>
+<p><strong>Tier 3 - Convenience API</strong> ⭐</p>
+<p>High-level API for common trading operations.</p>
+<p><strong>Key characteristics:</strong></p>
+<ul>
+<li>Auto-normalization of volumes and prices</li>
+<li>Risk management helpers</li>
+<li>Batch operations (CloseAllPositions, etc.)</li>
+<li>Pip-based helpers (BuyMarketWithPips, etc.)</li>
+<li>One-line operations</li>
+<li>Simplest API, handles edge cases</li>
+<li><strong>Best starting point</strong> for 95% of use cases</li>
+</ul>
+<p><strong>When to use:</strong> Rapid development, prototyping, simple strategies.</p>
+<p><strong>Location:</strong> <code>examples/mt5/MT5Sugar.go</code> (2200+ lines)</p>
+<p><strong>Documentation:</strong> <a href="../../MT5Sugar/MT5Sugar.API_Overview/">MT5Sugar.API_Overview.md</a></p>
+<p><strong>Examples:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1">// One line to get balance</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nx">balance</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">GetBalance</span><span class="p">()</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1">// One line to open position</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">BuyMarket</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">0.01</span><span class="p">)</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1">// Risk-based position sizing (2% with 50 pip SL)</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="nx">lotSize</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">CalculatePositionSize</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">)</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">BuyMarketWithPips</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">lotSize</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">)</span>
+</code></pre></div></p>
+<hr />
+<h2 id="technical-concepts">🔧 Technical Concepts<a class="headerlink" href="#technical-concepts" title="Permanent link">¶</a></h2>
+<h3 id="auto-normalization">Auto-Normalization<a class="headerlink" href="#auto-normalization" title="Permanent link">¶</a></h3>
+<p>Automatic adjustment of trading parameters to broker requirements.</p>
+<p><strong>What gets normalized:</strong></p>
+<ul>
+<li><strong>Volumes:</strong> Rounded to broker's volume step (e.g., 0.01 lot)</li>
+<li><strong>Prices:</strong> Rounded to symbol's tick size/digits (e.g., 5 decimal places for EURUSD)</li>
+<li><strong>Stop Loss / Take Profit:</strong> Adjusted to symbol precision</li>
+</ul>
+<p><strong>Where:</strong> Only MT5Sugar tier (MT5Service does not auto-normalize)</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">// You pass: volume=0.0234, price=1.09876543</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1">// Sugar normalizes to: volume=0.02, price=1.09877</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">BuyMarket</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0234</span><span class="p">)</span>
+</code></pre></div></p>
+<p><strong>Methods:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// Normalize price to symbol digits</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nx">normalizedPrice</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">NormalizePrice</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">1.09876543</span><span class="p">)</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1">// Normalize volume to broker step</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nx">normalizedVolume</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">NormalizeVolume</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0234</span><span class="p">)</span>
+</code></pre></div></p>
+<hr />
+<h3 id="risk-based-volume-calculation">Risk-Based Volume Calculation<a class="headerlink" href="#risk-based-volume-calculation" title="Permanent link">¶</a></h3>
+<p>Calculate position size based on dollar risk rather than fixed lot size.</p>
+<p><strong>Formula:</strong> <code>volume = riskAmount / (stopLossPips × pipValue)</code></p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>riskAmount</code> - Dollar amount you're willing to risk (e.g., $50)</li>
+<li><code>stopLossPips</code> - Distance to SL in pips (e.g., 20 pips)</li>
+<li>Result: Lot size that risks exactly $50 if SL hits</li>
+</ul>
+<p><strong>Methods (MT5Sugar):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">// Calculate volume for given risk</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nx">volume</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">CalculatePositionSize</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1">// 2% risk with 50 pip SL</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="c1">// Buy with risk-based calculation</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="nx">lotSize</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">CalculatePositionSize</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">)</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">BuyMarketWithPips</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">lotSize</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">)</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="c1">// Sell with risk-based calculation</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="nx">lotSize</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">CalculatePositionSize</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">)</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">SellMarketWithPips</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">lotSize</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">)</span>
+</code></pre></div></p>
+<p><strong>Use case:</strong> Consistent risk management across all trades.</p>
+<hr />
+<h3 id="points-vs-pips">Points vs Pips<a class="headerlink" href="#points-vs-pips" title="Permanent link">¶</a></h3>
+<p><strong>Point:</strong> Smallest price movement for a symbol (1 tick).</p>
+<p><strong>Pip:</strong> Traditional forex unit (0.0001 for most pairs).</p>
+<p><strong>Relationship:</strong></p>
+<ul>
+<li><strong>5-digit brokers:</strong> 1 pip = 10 points (EURUSD: 1.10000 → 1.10010 = 1 pip)</li>
+<li><strong>3-digit brokers:</strong> 1 pip = 1 point (USDJPY: 110.00 → 110.01 = 1 pip)</li>
+</ul>
+<p><strong>In GoMT5:</strong> All APIs use <strong>points</strong> for consistency.</p>
+<p><strong>Conversion:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nx">point</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">service</span><span class="p">.</span><span class="nx">GetPoint</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;EURUSD&quot;</span><span class="p">)</span><span class="w">  </span><span class="c1">// 0.00001</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nx">pips</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">points</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mf">10.0</span><span class="w">  </span><span class="c1">// For 5-digit pairs</span>
+</code></pre></div></p>
+<p><strong>Why points?</strong> Universal across all instruments (forex, metals, indices, crypto).</p>
+<hr />
+<h3 id="pip-based-methods">Pip-Based Methods<a class="headerlink" href="#pip-based-methods" title="Permanent link">¶</a></h3>
+<p>Convenience methods that work with pips instead of points for forex traders.</p>
+<p><strong>Methods (MT5Sugar):</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1">// Market orders with SL/TP in pips</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">BuyMarketWithPips</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">0.01</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">)</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="c1">// SL 20 pips, TP 30 pips</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">SellMarketWithPips</span><span class="p">(</span><span class="s">&quot;GBPUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">0.01</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">)</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1">// Pending orders in pips</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">BuyLimitPips</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">0.01</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">)</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="c1">// 20 pips below Ask, SL 15 pips, TP 30 pips</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">BuyStopPips</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">0.01</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">)</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="c1">// 20 pips above Ask</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">SellLimitPips</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">0.01</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">)</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="c1">// 20 pips above Bid</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">SellStopPips</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">0.01</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">)</span>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="c1">// 20 pips below Bid</span>
+</code></pre></div>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>No manual price calculations needed</li>
+<li>Think in pips (familiar for forex traders)</li>
+<li>Automatic normalization</li>
+<li>Fewer errors than absolute prices</li>
+</ul>
+<hr />
+<h3 id="trailing-stop">Trailing Stop<a class="headerlink" href="#trailing-stop" title="Permanent link">¶</a></h3>
+<p>Dynamic Stop Loss that follows price in profit direction.</p>
+<p><strong>How it works:</strong></p>
+<ol>
+<li>Position opens with initial SL</li>
+<li>When profit reaches threshold (e.g., +40 pips)</li>
+<li>SL moves to breakeven or better</li>
+<li>SL continues to follow price at fixed distance</li>
+<li>Locks in profit as price moves favorably</li>
+</ol>
+<p><strong>Implementation example:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nx">currentProfit</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">position</span><span class="p">.</span><span class="nx">Profit</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nx">trailingThreshold</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mf">40.0</span><span class="w"> </span><span class="c1">// pips</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nx">trailingDistance</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mf">200.0</span><span class="w">  </span><span class="c1">// distance in points (20 pips * 10 for 5-digit)</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="k">if</span><span class="w"> </span><span class="nx">currentProfit</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="nx">trailingThreshold</span><span class="o">*</span><span class="nx">pipValue</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="nx">point</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">service</span><span class="p">.</span><span class="nx">GetPoint</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">symbol</span><span class="p">)</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="nx">newSL</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">currentPrice</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">trailingDistance</span><span class="o">*</span><span class="nx">point</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">newSL</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="nx">currentSL</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">        </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">ModifyPosition</span><span class="p">(</span><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">newSL</span><span class="p">,</span><span class="w"> </span><span class="nx">tp</span><span class="p">)</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Use case:</strong> Locking in profit on trending markets.</p>
+<hr />
+<h3 id="hedging">Hedging<a class="headerlink" href="#hedging" title="Permanent link">¶</a></h3>
+<p>Opening opposite position to lock in current profit/loss level.</p>
+<p><strong>How it works:</strong></p>
+<ol>
+<li>Main position open (e.g., BUY EURUSD 0.1 lot)</li>
+<li>Price moves against you (-50 pips)</li>
+<li>Hedge triggered: SELL EURUSD 0.1 lot</li>
+<li>Net position = 0 (loss locked at -50 pips)</li>
+</ol>
+<p><strong>Purpose:</strong></p>
+<ul>
+<li>Lock losses instead of closing at stop-loss</li>
+<li>Protect position during volatility/news</li>
+<li>Wait for better opportunity to exit</li>
+</ul>
+<p><strong>Implementation:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1">// Main position</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nx">buyTicket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">BuyMarket</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">0.1</span><span class="p">)</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1">// ... price moves against you ...</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="c1">// Hedge</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="nx">sellTicket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">SellMarket</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">0.1</span><span class="p">)</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="c1">// Net position = 0, loss locked</span>
+</code></pre></div></p>
+<p><strong>⚠️ Note:</strong> Not all brokers/regulations allow hedging. US brokers typically do not support hedging.</p>
+<hr />
+<h3 id="pending-order">Pending Order<a class="headerlink" href="#pending-order" title="Permanent link">¶</a></h3>
+<p>Order that executes automatically when price reaches specified level.</p>
+<p><strong>Types:</strong></p>
+<ul>
+<li><strong>BUY LIMIT:</strong> Buy at price BELOW current (expect pullback, then up)</li>
+<li><strong>SELL LIMIT:</strong> Sell at price ABOVE current (expect rally, then down)</li>
+<li><strong>BUY STOP:</strong> Buy at price ABOVE current (breakout up)</li>
+<li><strong>SELL STOP:</strong> Sell at price BELOW current (breakout down)</li>
+</ul>
+<p><strong>Methods (absolute price):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">service</span><span class="p">.</span><span class="nx">BuyLimit</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">symbol</span><span class="p">,</span><span class="w"> </span><span class="nx">volume</span><span class="p">,</span><span class="w"> </span><span class="nx">price</span><span class="p">,</span><span class="w"> </span><span class="nx">sl</span><span class="p">,</span><span class="w"> </span><span class="nx">tp</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">service</span><span class="p">.</span><span class="nx">SellLimit</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">symbol</span><span class="p">,</span><span class="w"> </span><span class="nx">volume</span><span class="p">,</span><span class="w"> </span><span class="nx">price</span><span class="p">,</span><span class="w"> </span><span class="nx">sl</span><span class="p">,</span><span class="w"> </span><span class="nx">tp</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">service</span><span class="p">.</span><span class="nx">BuyStop</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">symbol</span><span class="p">,</span><span class="w"> </span><span class="nx">volume</span><span class="p">,</span><span class="w"> </span><span class="nx">price</span><span class="p">,</span><span class="w"> </span><span class="nx">sl</span><span class="p">,</span><span class="w"> </span><span class="nx">tp</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">service</span><span class="p">.</span><span class="nx">SellStop</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">symbol</span><span class="p">,</span><span class="w"> </span><span class="nx">volume</span><span class="p">,</span><span class="w"> </span><span class="nx">price</span><span class="p">,</span><span class="w"> </span><span class="nx">sl</span><span class="p">,</span><span class="w"> </span><span class="nx">tp</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+</code></pre></div></p>
+<p><strong>Methods (pip-based - Sugar):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">BuyLimitPips</span><span class="p">(</span><span class="nx">symbol</span><span class="p">,</span><span class="w"> </span><span class="nx">volume</span><span class="p">,</span><span class="w"> </span><span class="nx">offsetPips</span><span class="p">,</span><span class="w"> </span><span class="nx">slPips</span><span class="p">,</span><span class="w"> </span><span class="nx">tpPips</span><span class="p">)</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">SellStopPips</span><span class="p">(</span><span class="nx">symbol</span><span class="p">,</span><span class="w"> </span><span class="nx">volume</span><span class="p">,</span><span class="w"> </span><span class="nx">offsetPips</span><span class="p">,</span><span class="w"> </span><span class="nx">slPips</span><span class="p">,</span><span class="w"> </span><span class="nx">tpPips</span><span class="p">)</span>
+</code></pre></div></p>
+<hr />
+<h2 id="grpc-and-protocol-terms">🔌 gRPC and Protocol Terms<a class="headerlink" href="#grpc-and-protocol-terms" title="Permanent link">¶</a></h2>
+<h3 id="grpc">gRPC<a class="headerlink" href="#grpc" title="Permanent link">¶</a></h3>
+<p>High-performance RPC (Remote Procedure Call) framework using HTTP/2.</p>
+<p><strong>In GoMT5:</strong></p>
+<ul>
+<li>MT5Account tier sends gRPC requests to MT5 terminal</li>
+<li>Terminal runs gRPC server (configured via gateway)</li>
+<li>Request/Response pattern for all operations</li>
+<li>Context-based timeout management</li>
+</ul>
+<p><strong>Connection setup:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nx">account</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mt5</span><span class="p">.</span><span class="nx">NewMT5Account</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;mt5.mrpc.pro:443&quot;</span><span class="p">)</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">    </span><span class="nx">log</span><span class="p">.</span><span class="nx">Fatal</span><span class="p">(</span><span class="nx">err</span><span class="p">)</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="p">}</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="nx">err</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">account</span><span class="p">.</span><span class="nx">ConnectEx</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">pb</span><span class="p">.</span><span class="nx">ConnectExRequest</span><span class="p">{</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span><span class="nx">Uuid</span><span class="p">:</span><span class="w">      </span><span class="mi">591129415</span><span class="p">,</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">    </span><span class="nx">Password</span><span class="p">:</span><span class="w">  </span><span class="s">&quot;password&quot;</span><span class="p">,</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">    </span><span class="nx">MtCluster</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;FxPro-MT5 Demo&quot;</span><span class="p">,</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="p">})</span>
+</code></pre></div></p>
+<h3 id="context-pattern">Context Pattern<a class="headerlink" href="#context-pattern" title="Permanent link">¶</a></h3>
+<p>Standard Go way to manage request lifetime, deadlines, and cancellation.</p>
+<p><strong>All methods accept context.Context:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1">// Context with timeout</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">cancel</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">WithTimeout</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">Background</span><span class="p">(),</span><span class="w"> </span><span class="mi">10</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="k">defer</span><span class="w"> </span><span class="nx">cancel</span><span class="p">()</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="c1">// Use in API calls</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="nx">result</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">account</span><span class="p">.</span><span class="nx">AccountSummary</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">req</span><span class="p">)</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="c1">// Context with cancellation (for streams)</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">cancel</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">WithCancel</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">Background</span><span class="p">())</span>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="k">defer</span><span class="w"> </span><span class="nx">cancel</span><span class="p">()</span>
+</code></pre></div></p>
+<p><strong>Why context?</strong></p>
+<ul>
+<li>Timeout management</li>
+<li>Cancellation propagation</li>
+<li>Cleanup guarantees with defer</li>
+<li>Standard Go pattern</li>
+</ul>
+<p><strong>Documentation:</strong> <a href="https://pkg.go.dev/context">Go Context Package</a></p>
+<hr />
+<h3 id="channel-pattern">Channel Pattern<a class="headerlink" href="#channel-pattern" title="Permanent link">¶</a></h3>
+<p>Go's built-in mechanism for goroutine communication, used for streaming.</p>
+<p><strong>Streaming returns two channels:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nx">dataChan</span><span class="p">,</span><span class="w"> </span><span class="nx">errChan</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">account</span><span class="p">.</span><span class="nx">OnSymbolTick</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">req</span><span class="p">)</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="k">select</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">data</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">dataChan</span><span class="p">:</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">ok</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">            </span><span class="k">return</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">        </span><span class="c1">// Process tick data</span>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">err</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">errChan</span><span class="p">:</span>
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">ok</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a><span class="w">            </span><span class="k">return</span>
+<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a><span class="w">        </span><span class="c1">// Handle error</span>
+<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a>
+<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nx">Done</span><span class="p">():</span>
+<a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a><span class="w">        </span><span class="k">return</span>
+<a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Critical rules:</strong></p>
+<ul>
+<li><strong>Always read from BOTH channels</strong> (prevents goroutine leaks)</li>
+<li><strong>Always use context cancellation</strong> (cleanup)</li>
+<li><strong>Always defer cancel()</strong> (ensures cleanup)</li>
+</ul>
+<p><strong>Documentation:</strong> <a href="../GRPC_STREAM_MANAGEMENT/">gRPC Stream Management</a></p>
+<hr />
+<h3 id="return-codes">Return Codes<a class="headerlink" href="#return-codes" title="Permanent link">¶</a></h3>
+<p>Protobuf return codes indicating operation success/failure.</p>
+<p><strong>Common codes:</strong></p>
+<ul>
+<li><strong>10009</strong> = Success (TRADE_RETCODE_DONE)</li>
+<li><strong>10008</strong> = Pending order placed (TRADE_RETCODE_PLACED)</li>
+<li><strong>10004</strong> = Requote</li>
+<li><strong>10006</strong> = Request rejected</li>
+<li><strong>10013</strong> = Invalid request</li>
+<li><strong>10014</strong> = Invalid volume</li>
+<li><strong>10015</strong> = Invalid price</li>
+<li><strong>10016</strong> = Invalid stops</li>
+<li><strong>10018</strong> = Market closed</li>
+<li><strong>10019</strong> = Not enough money</li>
+<li><strong>10031</strong> = No connection to trade server</li>
+</ul>
+<p><strong>Always check <code>ReturnedCode</code> in trading operations.</strong></p>
+<p><strong>Helper functions:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">import</span><span class="w"> </span><span class="nx">mt5</span><span class="w"> </span><span class="s">&quot;github.com/MetaRPC/GoMT5/package/Helpers&quot;</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="k">if</span><span class="w"> </span><span class="nx">mt5</span><span class="p">.</span><span class="nx">IsRetCodeSuccess</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">ReturnedCode</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;Trade successful!&quot;</span><span class="p">)</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="p">}</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="k">if</span><span class="w"> </span><span class="nx">mt5</span><span class="p">.</span><span class="nx">IsRetCodeRetryable</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">ReturnedCode</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">    </span><span class="c1">// Retry with exponential backoff</span>
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="p">}</span>
+<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>
+<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a><span class="nx">message</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">mt5</span><span class="p">.</span><span class="nx">GetRetCodeMessage</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">ReturnedCode</span><span class="p">)</span>
+</code></pre></div></p>
+<p><strong>Documentation:</strong> <a href="../RETURN_CODES_REFERENCE/">Return Codes Reference</a></p>
+<hr />
+<h2 id="trading-terms-project-context">🎓 Trading Terms (Project Context)<a class="headerlink" href="#trading-terms-project-context" title="Permanent link">¶</a></h2>
+<h3 id="basic-trading-terms">Basic Trading Terms<a class="headerlink" href="#basic-trading-terms" title="Permanent link">¶</a></h3>
+<p>Core trading concepts that every trader must understand before working with MT5.</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Description</th>
+<th>Example / Details</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Bid</strong></td>
+<td>Price at which broker <strong>buys</strong> from you (you <strong>sell</strong> at Bid)</td>
+<td>EURUSD Bid: 1.10000</td>
+</tr>
+<tr>
+<td><strong>Ask</strong></td>
+<td>Price at which broker <strong>sells</strong> to you (you <strong>buy</strong> at Ask)</td>
+<td>EURUSD Ask: 1.10002</td>
+</tr>
+<tr>
+<td><strong>Spread</strong></td>
+<td>Difference between Ask and Bid (broker's commission)</td>
+<td>Ask 1.10002 - Bid 1.10000 = 2 pips spread</td>
+</tr>
+<tr>
+<td><strong>Long / Buy</strong></td>
+<td>Opening a BUY position (profit when price goes up)</td>
+<td>Buy EURUSD at 1.10000, close at 1.10050 = +50 pips profit</td>
+</tr>
+<tr>
+<td><strong>Short / Sell</strong></td>
+<td>Opening a SELL position (profit when price goes down)</td>
+<td>Sell EURUSD at 1.10000, close at 1.09950 = +50 pips profit</td>
+</tr>
+<tr>
+<td><strong>Position</strong></td>
+<td>Open trade (BUY or SELL) that can result in profit or loss</td>
+<td>BUY 0.1 lot EURUSD at 1.10000 (currently in profit +$50)</td>
+</tr>
+<tr>
+<td><strong>Order</strong></td>
+<td>Command to open a position</td>
+<td>Market Order (immediate), Pending Order (at specific price)</td>
+</tr>
+<tr>
+<td><strong>Market Order</strong></td>
+<td>Order that executes immediately at current price</td>
+<td>BUY EURUSD at current Ask price</td>
+</tr>
+<tr>
+<td><strong>Pending Order</strong></td>
+<td>Order that triggers automatically when price reaches level</td>
+<td>BUY LIMIT at 1.09950 (when price drops to that level)</td>
+</tr>
+<tr>
+<td><strong>Lot / Volume</strong></td>
+<td>Position size (1 lot = 100,000 units of base currency)</td>
+<td>0.01 lot = 1,000 units (micro lot)</td>
+</tr>
+<tr>
+<td><strong>Stop Loss (SL)</strong></td>
+<td>Price level for automatic loss-limiting exit</td>
+<td>SL at 1.09950 limits loss to 50 pips</td>
+</tr>
+<tr>
+<td><strong>Take Profit (TP)</strong></td>
+<td>Price level for automatic profit-taking exit</td>
+<td>TP at 1.10050 locks in 50 pips profit</td>
+</tr>
+<tr>
+<td><strong>Pip</strong></td>
+<td>Standard unit of price movement (0.0001 for most forex)</td>
+<td>EURUSD: 1.10000 → 1.10001 = 1 pip</td>
+</tr>
+<tr>
+<td><strong>Point</strong></td>
+<td>Smallest price movement (1 tick)</td>
+<td>For 5-digit broker: 1 pip = 10 points</td>
+</tr>
+<tr>
+<td><strong>Leverage</strong></td>
+<td>Borrowed capital from broker (e.g., 1:100)</td>
+<td>With 1:100, you control $100,000 with $1,000 margin</td>
+</tr>
+<tr>
+<td><strong>Margin</strong></td>
+<td>Funds locked as collateral for open positions</td>
+<td>Open 1 lot EURUSD with 1:100 leverage = $1,000 margin</td>
+</tr>
+<tr>
+<td><strong>Free Margin</strong></td>
+<td>Available funds for opening new positions</td>
+<td>Balance $10,000 - Margin $1,000 = Free Margin $9,000</td>
+</tr>
+<tr>
+<td><strong>Balance</strong></td>
+<td>Account funds without considering open positions</td>
+<td>Initial deposit + closed trades profit/loss</td>
+</tr>
+<tr>
+<td><strong>Equity</strong></td>
+<td>Current account value (Balance ± floating profit/loss)</td>
+<td>Balance $10,000 + Floating profit $500 = Equity $10,500</td>
+</tr>
+<tr>
+<td><strong>Floating P/L</strong></td>
+<td>Unrealized profit/loss of open positions</td>
+<td>Position currently in +$50 profit (not yet closed)</td>
+</tr>
+<tr>
+<td><strong>Margin Level</strong></td>
+<td>Ratio of Equity to Margin (%)</td>
+<td>Equity $10,500 / Margin $1,000 = 1050%</td>
+</tr>
+<tr>
+<td><strong>Margin Call</strong></td>
+<td>Warning when Margin Level drops below threshold</td>
+<td>Broker warns at 100% Margin Level</td>
+</tr>
+<tr>
+<td><strong>Stop Out</strong></td>
+<td>Forced closure of positions when Margin Level critically low</td>
+<td>Broker closes positions at 50% Margin Level</td>
+</tr>
+<tr>
+<td><strong>Drawdown</strong></td>
+<td>Decline from peak balance/equity</td>
+<td>Peak $11,000 → Current $10,000 = $1,000 drawdown (9.09%)</td>
+</tr>
+<tr>
+<td><strong>Slippage</strong></td>
+<td>Difference between expected and executed price</td>
+<td>Requested 1.10000, executed at 1.10003 = 3 pips slippage</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Critical for API usage:</strong></p>
+<ul>
+<li><code>GetBid()</code> / <code>GetAsk()</code> - Current prices</li>
+<li><code>GetBalance()</code> / <code>GetEquity()</code> / <code>GetMargin()</code> - Account state</li>
+<li><code>BuyMarket()</code> / <code>SellMarket()</code> - Open positions</li>
+<li><code>ClosePosition()</code> - Close positions</li>
+<li><code>ModifyPosition(ticket, sl, tp)</code> - Modify SL/TP</li>
+</ul>
+<hr />
+<h3 id="risk-amount">Risk Amount<a class="headerlink" href="#risk-amount" title="Permanent link">¶</a></h3>
+<p>Dollar amount you're willing to risk if Stop Loss hits.</p>
+<p><strong>Example:</strong> $50 risk per trade means if SL hits, you lose exactly $50.</p>
+<p><strong>Used in:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1">// Calculate volume for 2% risk with 50 pip SL</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nx">volume</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">CalculatePositionSize</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">)</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="c1">// Open with risk-based calculation</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="nx">lotSize</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">CalculatePositionSize</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">)</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">BuyMarketWithPips</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">lotSize</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">)</span>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="c1">// Risk exactly 2% of balance</span>
+</code></pre></div>
+<hr />
+<h3 id="breakeven">Breakeven<a class="headerlink" href="#breakeven" title="Permanent link">¶</a></h3>
+<p>Moving Stop Loss to entry price to eliminate risk.</p>
+<p><strong>Example:</strong></p>
+<ul>
+<li>Entry: BUY at 1.10000</li>
+<li>Price rises to 1.10050 (+50 pips profit)</li>
+<li>Move SL from 1.09950 to 1.10000 (breakeven)</li>
+<li>Now risk-free: worst case = breakeven</li>
+</ul>
+<p><strong>Implementation:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nx">entryPrice</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">position</span><span class="p">.</span><span class="nx">PriceOpen</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="nx">breakevenThreshold</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mf">40.0</span><span class="w"> </span><span class="c1">// pips</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="k">if</span><span class="w"> </span><span class="nx">currentProfit</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="nx">breakevenThreshold</span><span class="o">*</span><span class="nx">pipValue</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="w">    </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">ModifyPosition</span><span class="p">(</span><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">entryPrice</span><span class="p">,</span><span class="w"> </span><span class="nx">tp</span><span class="p">)</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h3 id="grid-trading">Grid Trading<a class="headerlink" href="#grid-trading" title="Permanent link">¶</a></h3>
+<p>Strategy placing multiple pending orders at equal intervals above and below current price.</p>
+<p><strong>How it works:</strong></p>
+<ol>
+<li>Place Buy Limit orders below current price (e.g., every 20 pips)</li>
+<li>Place Sell Limit orders above current price (e.g., every 20 pips)</li>
+<li>As price oscillates, orders trigger and close at TP</li>
+<li>Works best in ranging markets</li>
+</ol>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>Price: 1.10000
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>Buy Limits:  1.09980 (-20 pips), 1.09960 (-40 pips), 1.09940 (-60 pips)
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>Sell Limits: 1.10020 (+20 pips), 1.10040 (+40 pips), 1.10060 (+60 pips)
+</code></pre></div></p>
+<p><strong>Implementation:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="nx">gridStep</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mf">20.0</span><span class="w"> </span><span class="c1">// pips</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="nx">levels</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">5</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="nx">levels</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="o">++</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="w">    </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">BuyLimitPips</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">0.01</span><span class="p">,</span><span class="w"> </span><span class="nb">float64</span><span class="p">(</span><span class="nx">i</span><span class="p">)</span><span class="o">*</span><span class="nx">gridStep</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">)</span>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="w">    </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">SellLimitPips</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">0.01</span><span class="p">,</span><span class="w"> </span><span class="nb">float64</span><span class="p">(</span><span class="nx">i</span><span class="p">)</span><span class="o">*</span><span class="nx">gridStep</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">)</span>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>⚠️ Risk:</strong> High volatility can trigger many orders, increasing exposure.</p>
+<hr />
+<h3 id="scalping">Scalping<a class="headerlink" href="#scalping" title="Permanent link">¶</a></h3>
+<p>Fast trading strategy with small profits (5-25 pips) and tight stops (10-20 pips).</p>
+<p><strong>Characteristics:</strong></p>
+<ul>
+<li>Very short hold times (seconds-minutes)</li>
+<li>High win rate, small profit per trade</li>
+<li>Risk:Reward typically 1:1 to 1:2</li>
+<li>Requires low spreads</li>
+</ul>
+<p><strong>Implementation:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1">// Scalp with 10 pip SL, 15 pip TP</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">BuyMarketWithPips</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">0.01</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">15</span><span class="p">)</span>
+</code></pre></div></p>
+<hr />
+<h3 id="news-trading">News Trading<a class="headerlink" href="#news-trading" title="Permanent link">¶</a></h3>
+<p>Placing orders on both sides of price before major news events.</p>
+<p><strong>How it works:</strong></p>
+<ol>
+<li>Before news: Place Buy Stop above + Sell Stop below</li>
+<li>News releases: Price breaks in one direction</li>
+<li>One order triggers, cancel the other</li>
+<li>Capture volatility spike</li>
+</ol>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>Current price: 1.10000
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>Buy Stop:  1.10030 (+30 pips)
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>Sell Stop: 1.09970 (-30 pips)
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>News → Price spikes to 1.10050 → Buy Stop triggers → Cancel Sell Stop
+</code></pre></div></p>
+<p><strong>Implementation:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="nx">buyTicket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">BuyStopPips</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">0.01</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">40</span><span class="p">)</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="nx">sellTicket</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">SellStopPips</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span><span class="w"> </span><span class="mf">0.01</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">40</span><span class="p">)</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="c1">// ... wait for news ...</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="c1">// Cancel unfilled order</span>
+<a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="nx">sugar</span><span class="p">.</span><span class="nx">DeleteOrder</span><span class="p">(</span><span class="nx">sellTicket</span><span class="p">)</span>
+</code></pre></div></p>
+<p><strong>⚠️ Risk:</strong> Slippage during news can trigger both orders.</p>
+<hr />
+<h3 id="volume-limits">Volume Limits<a class="headerlink" href="#volume-limits" title="Permanent link">¶</a></h3>
+<p>Broker restrictions on position size.</p>
+<p><strong>Get via:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="nx">limits</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">service</span><span class="p">.</span><span class="nx">GetVolumeLimits</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;EURUSD&quot;</span><span class="p">)</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="nx">minVol</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">limits</span><span class="p">.</span><span class="nx">MinVolume</span><span class="w">    </span><span class="c1">// e.g., 0.01</span>
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="nx">maxVol</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">limits</span><span class="p">.</span><span class="nx">MaxVolume</span><span class="w">    </span><span class="c1">// e.g., 100.0</span>
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="nx">stepVol</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">limits</span><span class="p">.</span><span class="nx">VolumeStep</span><span class="w">  </span><span class="c1">// e.g., 0.01</span>
+</code></pre></div></p>
+<p><strong>Used for:</strong> Auto-normalization in MT5Sugar.</p>
+<p><strong>Validation:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="k">if</span><span class="w"> </span><span class="nx">volume</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">minVol</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="w">    </span><span class="nx">volume</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">minVol</span>
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="p">}</span>
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="k">if</span><span class="w"> </span><span class="nx">volume</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="nx">maxVol</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="w">    </span><span class="nx">volume</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">maxVol</span>
+<a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="p">}</span>
+<a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a>
+<a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a><span class="c1">// Round to step</span>
+<a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a><span class="nx">volume</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">math</span><span class="p">.</span><span class="nx">Round</span><span class="p">(</span><span class="nx">volume</span><span class="o">/</span><span class="nx">stepVol</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">stepVol</span>
+</code></pre></div></p>
+<hr />
+<h3 id="maingo">main.go<a class="headerlink" href="#maingo" title="Permanent link">¶</a></h3>
+<p>Main entry point that routes commands to corresponding examples.</p>
+<p><strong>Key characteristics:</strong></p>
+<ul>
+<li>Single entry point for all executable code</li>
+<li>Command routing by number or alias</li>
+<li>Helpful error messages for unknown commands</li>
+<li>Clean shutdown handling</li>
+</ul>
+<p><strong>How it works:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>go run main.go 4
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>    ↓
+<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>main.go routes to
+<a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>    ↓
+<a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>helpers/04_market_orders.go
+<a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>    ↓
+<a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a>RunMarketOrdersDemo()
+</code></pre></div></p>
+<hr />
+<h3 id="config-package">config Package<a class="headerlink" href="#config-package" title="Permanent link">¶</a></h3>
+<p>Configuration loader with support for JSON files and environment variables.</p>
+<p><strong>Methods:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="kn">import</span><span class="w"> </span><span class="s">&quot;your-project/examples/demos/config&quot;</span>
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>
+<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="c1">// Load from config.json or env vars</span>
+<a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="nx">cfg</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">config</span><span class="p">.</span><span class="nx">LoadConfig</span><span class="p">()</span>
+<a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>
+<a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a><span class="c1">// Use configuration</span>
+<a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;Host: %s\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">cfg</span><span class="p">.</span><span class="nx">Host</span><span class="p">)</span>
+<a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;Cluster: %s\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">cfg</span><span class="p">.</span><span class="nx">Cluster</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Priority:</strong>
+1. <code>config/config.json</code> (if exists)
+2. Environment variables (fallback)
+3. Error if nothing found</p>
+<p><strong>Location:</strong> <code>examples/demos/config/config.go</code></p>
+<p><strong>Documentation:</strong> Detailed comments in config.go header</p>
+<hr />
+<h3 id="protobuf-inspector">Protobuf Inspector<a class="headerlink" href="#protobuf-inspector" title="Permanent link">¶</a></h3>
+<p>Interactive tool for exploring MT5 API types.</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Explore 267 protobuf types</li>
+<li>Search types and fields</li>
+<li>View enum values (67 enums)</li>
+<li>Understand message structures</li>
+</ul>
+<p><strong>Commands:</strong></p>
+<ul>
+<li><code>list</code> - Show all types</li>
+<li><code>&lt;TypeName&gt;</code> - Explore type</li>
+<li><code>search &lt;text&gt;</code> - Find types</li>
+<li><code>field &lt;name&gt;</code> - Find types with field</li>
+<li><code>enum &lt;name&gt;</code> - Show enum values</li>
+</ul>
+<p><strong>How to run:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="nb">cd</span><span class="w"> </span>examples/demos
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>go<span class="w"> </span>run<span class="w"> </span>main.go<span class="w"> </span>inspect
+</code></pre></div></p>
+<p><strong>Location:</strong> <code>examples/demos/helpers/17_protobuf_inspector.go</code></p>
+<p><strong>Documentation:</strong> <a href="../PROTOBUF_INSPECTOR_GUIDE/">Protobuf Inspector Guide</a></p>
+<hr />
+<h2 id="configuration-terms">⚙️ Configuration Terms<a class="headerlink" href="#configuration-terms" title="Permanent link">¶</a></h2>
+<h3 id="configjson">config.json<a class="headerlink" href="#configjson" title="Permanent link">¶</a></h3>
+<p>Configuration file for MT5 connection settings.
+Simply put, where you enter your account credentials to run demonstration examples.</p>
+<p><strong>Location:</strong> <code>examples/demos/config/config.json</code></p>
+<p><strong>Format:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="p">{</span>
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="w">  </span><span class="nt">&quot;user&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">591129415</span><span class="p">,</span>
+<a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a><span class="w">  </span><span class="nt">&quot;password&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;YourPassword&quot;</span><span class="p">,</span>
+<a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a><span class="w">  </span><span class="nt">&quot;host&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mt5.mrpc.pro&quot;</span><span class="p">,</span>
+<a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a><span class="w">  </span><span class="nt">&quot;port&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">443</span><span class="p">,</span>
+<a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a><span class="w">  </span><span class="nt">&quot;grpc_server&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mt5.mrpc.pro:443&quot;</span><span class="p">,</span>
+<a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a><span class="w">  </span><span class="nt">&quot;mt_cluster&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;FxPro-MT5 Demo&quot;</span><span class="p">,</span>
+<a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a><span class="w">  </span><span class="nt">&quot;test_symbol&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;EURUSD&quot;</span><span class="p">,</span>
+<a id="__codelineno-28-9" name="__codelineno-28-9" href="#__codelineno-28-9"></a><span class="w">  </span><span class="nt">&quot;test_volume&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.01</span>
+<a id="__codelineno-28-10" name="__codelineno-28-10" href="#__codelineno-28-10"></a><span class="p">}</span>
+</code></pre></div></p>
+<hr />
+<h3 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">¶</a></h3>
+<p>Alternative to config.json for configuration.</p>
+<p><strong>Variables:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="c1"># Required</span>
+<a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a><span class="nv">MT5_USER</span><span class="o">=</span><span class="m">591129415</span>
+<a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a><span class="nv">MT5_PASSWORD</span><span class="o">=</span><span class="s2">&quot;YourPassword&quot;</span>
+<a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a><span class="nv">MT5_HOST</span><span class="o">=</span><span class="s2">&quot;mt5.mrpc.pro&quot;</span>
+<a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a>
+<a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a><span class="c1"># Optional (have defaults)</span>
+<a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a><span class="nv">MT5_PORT</span><span class="o">=</span><span class="m">443</span>
+<a id="__codelineno-29-8" name="__codelineno-29-8" href="#__codelineno-29-8"></a><span class="nv">MT5_CLUSTER</span><span class="o">=</span><span class="s2">&quot;FxPro-MT5 Demo&quot;</span>
+<a id="__codelineno-29-9" name="__codelineno-29-9" href="#__codelineno-29-9"></a><span class="nv">MT5_TEST_SYMBOL</span><span class="o">=</span><span class="s2">&quot;EURUSD&quot;</span>
+<a id="__codelineno-29-10" name="__codelineno-29-10" href="#__codelineno-29-10"></a><span class="nv">MT5_TEST_VOLUME</span><span class="o">=</span><span class="m">0</span>.01
+</code></pre></div>
+<p><strong>Set (Linux/Mac):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">MT5_USER</span><span class="o">=</span><span class="m">591129415</span>
+<a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">MT5_PASSWORD</span><span class="o">=</span><span class="s2">&quot;YourPassword&quot;</span>
+</code></pre></div></p>
+<p><strong>Set (Windows PowerShell):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="nv">$env:MT5_USER</span><span class="p">=</span><span class="s2">&quot;591129415&quot;</span>
+<a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a><span class="nv">$env:MT5_PASSWORD</span><span class="p">=</span><span class="s2">&quot;YourPassword&quot;</span>
+</code></pre></div></p>
+<p><strong>Priority:</strong> config.json takes precedence over env vars.</p>
+<hr />
+<h2 id="cross-component-terms">🔗 Cross-Component Terms<a class="headerlink" href="#cross-component-terms" title="Permanent link">¶</a></h2>
+<h3 id="goroutine">Goroutine<a class="headerlink" href="#goroutine" title="Permanent link">¶</a></h3>
+<p>Lightweight execution thread in Go.</p>
+<p><strong>In GoMT5:</strong></p>
+<ul>
+<li>Streaming methods spawn background goroutines</li>
+<li>Must cancel context to stop goroutines</li>
+<li>Must read from both channels to prevent leaks</li>
+</ul>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="c1">// Streaming spawns goroutine</span>
+<a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a><span class="nx">dataChan</span><span class="p">,</span><span class="w"> </span><span class="nx">errChan</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">account</span><span class="p">.</span><span class="nx">OnSymbolTick</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">req</span><span class="p">)</span>
+<a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>
+<a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a><span class="c1">// Background processing</span>
+<a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a><span class="k">go</span><span class="w"> </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-32-6" name="__codelineno-32-6" href="#__codelineno-32-6"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">data</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">dataChan</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-32-7" name="__codelineno-32-7" href="#__codelineno-32-7"></a><span class="w">        </span><span class="nx">processData</span><span class="p">(</span><span class="nx">data</span><span class="p">)</span>
+<a id="__codelineno-32-8" name="__codelineno-32-8" href="#__codelineno-32-8"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-32-9" name="__codelineno-32-9" href="#__codelineno-32-9"></a><span class="p">}()</span>
+<a id="__codelineno-32-10" name="__codelineno-32-10" href="#__codelineno-32-10"></a>
+<a id="__codelineno-32-11" name="__codelineno-32-11" href="#__codelineno-32-11"></a><span class="c1">// Stop goroutine</span>
+<a id="__codelineno-32-12" name="__codelineno-32-12" href="#__codelineno-32-12"></a><span class="nx">cancel</span><span class="p">()</span><span class="w">  </span><span class="c1">// Triggers ctx.Done()</span>
+</code></pre></div></p>
+<p><strong>Critical:</strong> Always <code>defer cancel()</code> to prevent goroutine leaks.</p>
+<p><strong>Documentation:</strong> <a href="../GRPC_STREAM_MANAGEMENT/">gRPC Stream Management</a></p>
+<hr />
+<h3 id="batch-operations">Batch Operations<a class="headerlink" href="#batch-operations" title="Permanent link">¶</a></h3>
+<p>Executing action across multiple positions/orders at once.</p>
+<p><strong>Methods (MT5Sugar):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="c1">// Close positions</span>
+<a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a><span class="nx">count</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">CloseAllPositions</span><span class="p">(</span><span class="s">&quot;&quot;</span><span class="p">)</span><span class="w">          </span><span class="c1">// All positions</span>
+<a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a><span class="nx">count</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">CloseAllPositions</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">)</span><span class="w">    </span><span class="c1">// By symbol</span>
+<a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a>
+<a id="__codelineno-33-5" name="__codelineno-33-5" href="#__codelineno-33-5"></a><span class="c1">// Delete orders</span>
+<a id="__codelineno-33-6" name="__codelineno-33-6" href="#__codelineno-33-6"></a><span class="nx">count</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">DeleteAllOrders</span><span class="p">(</span><span class="s">&quot;&quot;</span><span class="p">)</span><span class="w">            </span><span class="c1">// All pending orders</span>
+<a id="__codelineno-33-7" name="__codelineno-33-7" href="#__codelineno-33-7"></a><span class="nx">count</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">DeleteAllOrders</span><span class="p">(</span><span class="s">&quot;EURUSD&quot;</span><span class="p">)</span><span class="w">      </span><span class="c1">// By symbol</span>
+</code></pre></div></p>
+<p><strong>Use case:</strong> Emergency exits, end-of-session cleanup, strategy resets.</p>
+<hr />
+<h3 id="history-queries">History Queries<a class="headerlink" href="#history-queries" title="Permanent link">¶</a></h3>
+<p>Retrieving past orders and positions for analysis.</p>
+<p><strong>Methods (MT5Account):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="c1">// Get order history with pagination</span>
+<a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a><span class="nx">req</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">pb</span><span class="p">.</span><span class="nx">OrderHistoryRequest</span><span class="p">{</span>
+<a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a><span class="w">    </span><span class="nx">FromDate</span><span class="p">:</span><span class="w"> </span><span class="nx">fromTimestamp</span><span class="p">,</span>
+<a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a><span class="w">    </span><span class="nx">ToDate</span><span class="p">:</span><span class="w">   </span><span class="nx">toTimestamp</span><span class="p">,</span>
+<a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a><span class="w">    </span><span class="nx">Offset</span><span class="p">:</span><span class="w">   </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-34-6" name="__codelineno-34-6" href="#__codelineno-34-6"></a><span class="w">    </span><span class="nx">Limit</span><span class="p">:</span><span class="w">    </span><span class="mi">100</span><span class="p">,</span>
+<a id="__codelineno-34-7" name="__codelineno-34-7" href="#__codelineno-34-7"></a><span class="p">}</span>
+<a id="__codelineno-34-8" name="__codelineno-34-8" href="#__codelineno-34-8"></a><span class="nx">history</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">account</span><span class="p">.</span><span class="nx">OrderHistory</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">req</span><span class="p">)</span>
+<a id="__codelineno-34-9" name="__codelineno-34-9" href="#__codelineno-34-9"></a>
+<a id="__codelineno-34-10" name="__codelineno-34-10" href="#__codelineno-34-10"></a><span class="c1">// Get position history</span>
+<a id="__codelineno-34-11" name="__codelineno-34-11" href="#__codelineno-34-11"></a><span class="nx">req</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">pb</span><span class="p">.</span><span class="nx">PositionsHistoryRequest</span><span class="p">{</span>
+<a id="__codelineno-34-12" name="__codelineno-34-12" href="#__codelineno-34-12"></a><span class="w">    </span><span class="nx">FromDate</span><span class="p">:</span><span class="w"> </span><span class="nx">fromTimestamp</span><span class="p">,</span>
+<a id="__codelineno-34-13" name="__codelineno-34-13" href="#__codelineno-34-13"></a><span class="w">    </span><span class="nx">ToDate</span><span class="p">:</span><span class="w">   </span><span class="nx">toTimestamp</span><span class="p">,</span>
+<a id="__codelineno-34-14" name="__codelineno-34-14" href="#__codelineno-34-14"></a><span class="w">    </span><span class="nx">Offset</span><span class="p">:</span><span class="w">   </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-34-15" name="__codelineno-34-15" href="#__codelineno-34-15"></a><span class="w">    </span><span class="nx">Limit</span><span class="p">:</span><span class="w">    </span><span class="mi">100</span><span class="p">,</span>
+<a id="__codelineno-34-16" name="__codelineno-34-16" href="#__codelineno-34-16"></a><span class="p">}</span>
+<a id="__codelineno-34-17" name="__codelineno-34-17" href="#__codelineno-34-17"></a><span class="nx">positions</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">account</span><span class="p">.</span><span class="nx">PositionsHistory</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">req</span><span class="p">)</span>
+</code></pre></div></p>
+<p><strong>Use case:</strong> Performance analysis, trade logs, strategy validation.</p>
+<hr />
+<h3 id="educational-project">Educational Project<a class="headerlink" href="#educational-project" title="Permanent link">¶</a></h3>
+<p>GoMT5 examples and helpers are educational materials and API demonstrations, NOT production trading systems.</p>
+<p><strong>Implications:</strong></p>
+<ul>
+<li>✅ Study code and patterns</li>
+<li>✅ Modify for your needs</li>
+<li>✅ Test on demo accounts</li>
+<li>✅ Use as templates for building your strategies</li>
+<li>❌ Don't use as-is with real money</li>
+<li>❌ Don't expect production-grade risk management</li>
+<li>❌ Don't expect proper error handling for all edge cases</li>
+</ul>
+<p><strong>Remember:</strong> These are educational examples, not battle-tested production systems.</p>
+<hr />
+<h2 id="see-also">📚 See Also<a class="headerlink" href="#see-also" title="Permanent link">¶</a></h2>
+<ul>
+<li><strong><a href="../../MT5Account/MT5Account.Master.Overview/">MT5Account Master Overview</a></strong> - Complete low-level API reference</li>
+<li><strong><a href="../../MT5Service/MT5Service.Overview/">MT5Service API Overview</a></strong> - Mid-level wrappers API</li>
+<li><strong><a href="../../MT5Sugar/MT5Sugar.API_Overview/">MT5Sugar API Overview</a></strong> - High-level Sugar API</li>
+<li><strong><a href="../GRPC_STREAM_MANAGEMENT/">gRPC Stream Management</a></strong> - Guide to streaming subscriptions</li>
+<li><strong><a href="../RETURN_CODES_REFERENCE/">Return Codes Reference</a></strong> - Complete return codes reference</li>
+<li><strong><a href="../USERCODE_SANDBOX_GUIDE/">User Code Sandbox Guide</a></strong> - How to write custom code</li>
+<li><strong><a href="../GETTING_STARTED/">Getting Started</a></strong> - Setup and quick start guide</li>
+</ul>
+<hr />
+<h2 id="go-specific-terms">Go-Specific Terms<a class="headerlink" href="#go-specific-terms" title="Permanent link">¶</a></h2>
+<h3 id="defer-statement">defer Statement<a class="headerlink" href="#defer-statement" title="Permanent link">¶</a></h3>
+<p>Go's cleanup mechanism that executes when function returns.</p>
+<p><strong>Critical pattern:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">cancel</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">WithCancel</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">Background</span><span class="p">())</span>
+<a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a><span class="k">defer</span><span class="w"> </span><span class="nx">cancel</span><span class="p">()</span><span class="w">  </span><span class="c1">// ✅ ALWAYS cleanup</span>
+</code></pre></div></p>
+<p><strong>Why important:</strong> Guarantees goroutine cleanup and resource release.</p>
+<hr />
+<h3 id="select-statement">select Statement<a class="headerlink" href="#select-statement" title="Permanent link">¶</a></h3>
+<p>Go's multiplexer for channel operations.</p>
+<p><strong>Use in streaming:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-36-2" name="__codelineno-36-2" href="#__codelineno-36-2"></a><span class="w">    </span><span class="k">select</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-36-3" name="__codelineno-36-3" href="#__codelineno-36-3"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">data</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">dataChan</span><span class="p">:</span>
+<a id="__codelineno-36-4" name="__codelineno-36-4" href="#__codelineno-36-4"></a><span class="w">        </span><span class="c1">// Process data</span>
+<a id="__codelineno-36-5" name="__codelineno-36-5" href="#__codelineno-36-5"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">errChan</span><span class="p">:</span>
+<a id="__codelineno-36-6" name="__codelineno-36-6" href="#__codelineno-36-6"></a><span class="w">        </span><span class="c1">// Handle error</span>
+<a id="__codelineno-36-7" name="__codelineno-36-7" href="#__codelineno-36-7"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">ctx</span><span class="p">.</span><span class="nx">Done</span><span class="p">():</span>
+<a id="__codelineno-36-8" name="__codelineno-36-8" href="#__codelineno-36-8"></a><span class="w">        </span><span class="k">return</span><span class="w">  </span><span class="c1">// Cleanup</span>
+<a id="__codelineno-36-9" name="__codelineno-36-9" href="#__codelineno-36-9"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-36-10" name="__codelineno-36-10" href="#__codelineno-36-10"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Why important:</strong> Read from multiple channels simultaneously.</p>
+<hr />
+<h3 id="interface-composition">Interface Composition<a class="headerlink" href="#interface-composition" title="Permanent link">¶</a></h3>
+<p>Go's way of combining types.</p>
+<p><strong>In GoMT5:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">MT5Sugar</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a><span class="w">    </span><span class="o">*</span><span class="nx">MT5Service</span><span class="w">  </span><span class="c1">// Embeds MT5Service</span>
+<a id="__codelineno-37-3" name="__codelineno-37-3" href="#__codelineno-37-3"></a><span class="p">}</span>
+<a id="__codelineno-37-4" name="__codelineno-37-4" href="#__codelineno-37-4"></a>
+<a id="__codelineno-37-5" name="__codelineno-37-5" href="#__codelineno-37-5"></a><span class="kd">type</span><span class="w"> </span><span class="nx">MT5Service</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-37-6" name="__codelineno-37-6" href="#__codelineno-37-6"></a><span class="w">    </span><span class="nx">account</span><span class="w"> </span><span class="o">*</span><span class="nx">MT5Account</span><span class="w">  </span><span class="c1">// Uses MT5Account</span>
+<a id="__codelineno-37-7" name="__codelineno-37-7" href="#__codelineno-37-7"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Result:</strong> Sugar has all Service methods + its own methods.</p>
+<p>"Trade safely, code cleanly, and may your contexts always cancel gracefully."</p>
+<hr />
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../PROJECT_MAP/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Project Map">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Project Map
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../MT5_For_Beginners/" class="md-footer__link md-footer__link--next" aria-label="Next: MT5 for Beginners">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                MT5 for Beginners
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2024–2025 GoMT5. MT5 is a trademark of MetaQuotes Software Corp. This documentation is community-maintained and not affiliated with MetaQuotes.
+
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/MetaRPC/GoMT5" target="_blank" rel="noopener" title="GoMT5 on GitHub" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tracking", "navigation.expand", "navigation.top", "navigation.footer", "content.code.copy", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/ux.js"></script>
+      
+    
+  </body>
+</html>

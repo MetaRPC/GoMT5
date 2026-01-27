@@ -1,0 +1,2830 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Complete Go SDK for MetaTrader 5 trading automation">
+      
+      
+      
+        <link rel="canonical" href="https://MetaRPC.github.io/GoMT5/Orchestrators/16_AdaptiveOrchestratorPreset/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>🧩 Adaptive Orchestrator Preset — Intelligent Multi-Strategy System - GoMT5 SDK Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../styles/custom.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adaptive-orchestrator-preset-intelligent-multi-strategy-system" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="GoMT5 SDK Documentation" class="md-header__button md-logo" aria-label="GoMT5 SDK Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m2.64 10.33-.02-.06.22-.27.12-.08H6.8l.03.08-.18.26-.11.06zm-1.61.98L1 11.26l.22-.29.12-.06h4.9l.05.09-.08.24-.1.07zm2.6.99-.04-.06.16-.28.1-.06H6l.07.07-.02.25-.08.08zm11.15-2.16-1.78.47c-.19.04-.2.05-.34-.11-.16-.18-.27-.29-.5-.4-.66-.34-1.33-.24-1.94.15-.72.48-1.11 1.17-1.1 2.05.01.86.6 1.57 1.45 1.7.73.09 1.34-.17 1.83-.72l.29-.39h-2.07c-.22 0-.27-.14-.2-.32l.55-1.18c.03-.06.11-.17.27-.17h3.44c.15-.5.41-.96.75-1.41.78-1.03 1.73-1.57 3-1.81 1.07-.18 2.13-.07 3.07.57.84.58 1.37 1.36 1.5 2.39.19 1.45-.24 2.63-1.24 3.65-.71.72-1.58 1.17-2.57 1.39l-.86.08c-.98-.02-1.87-.3-2.62-.95-.52-.45-.88-.99-1.06-1.63-.15.24-.27.47-.44.7-.77 1.02-1.78 1.65-3.06 1.8-1.05.16-2.03-.05-2.89-.69-.79-.6-1.26-1.4-1.36-2.39-.14-1.17.2-2.22.91-3.14.76-1 1.77-1.63 3.01-1.86 1-.18 1.97-.06 2.84.52.57.38.97.9 1.24 1.52q.06.135-.12.18m6.11 1.6-.03-.36c-.19-1.06-1.17-1.66-2.19-1.43-1.01.22-1.67.85-1.88 1.86-.19.84.21 1.69.98 2.03.59.26 1.19.22 1.76-.06.84-.43 1.31-1.12 1.36-2.04"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            GoMT5 SDK Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              🧩 Adaptive Orchestrator Preset — Intelligent Multi-Strategy System
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/MetaRPC/GoMT5" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    MetaRPC/GoMT5
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="GoMT5 SDK Documentation" class="md-nav__button md-logo" aria-label="GoMT5 SDK Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m2.64 10.33-.02-.06.22-.27.12-.08H6.8l.03.08-.18.26-.11.06zm-1.61.98L1 11.26l.22-.29.12-.06h4.9l.05.09-.08.24-.1.07zm2.6.99-.04-.06.16-.28.1-.06H6l.07.07-.02.25-.08.08zm11.15-2.16-1.78.47c-.19.04-.2.05-.34-.11-.16-.18-.27-.29-.5-.4-.66-.34-1.33-.24-1.94.15-.72.48-1.11 1.17-1.1 2.05.01.86.6 1.57 1.45 1.7.73.09 1.34-.17 1.83-.72l.29-.39h-2.07c-.22 0-.27-.14-.2-.32l.55-1.18c.03-.06.11-.17.27-.17h3.44c.15-.5.41-.96.75-1.41.78-1.03 1.73-1.57 3-1.81 1.07-.18 2.13-.07 3.07.57.84.58 1.37 1.36 1.5 2.39.19 1.45-.24 2.63-1.24 3.65-.71.72-1.58 1.17-2.57 1.39l-.86.08c-.98-.02-1.87-.3-2.62-.95-.52-.45-.88-.99-1.06-1.63-.15.24-.27.47-.44.7-.77 1.02-1.78 1.65-3.06 1.8-1.05.16-2.03-.05-2.89-.69-.79-.6-1.26-1.4-1.36-2.39-.14-1.17.2-2.22.91-3.14.76-1 1.77-1.63 3.01-1.86 1-.18 1.97-.06 2.84.52.57.38.97.9 1.24 1.52q.06.135-.12.18m6.11 1.6-.03-.36c-.19-1.06-1.17-1.66-2.19-1.43-1.01.22-1.67.85-1.88 1.86-.19.84.21 1.69.98 2.03.59.26 1.19.22 1.76-.06.84-.43 1.31-1.12 1.36-2.04"/></svg>
+
+    </a>
+    GoMT5 SDK Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/MetaRPC/GoMT5" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    MetaRPC/GoMT5
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/Your_First_Project/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Project
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/PROJECT_MAP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Map
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/GLOSSARY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/MT5_For_Beginners/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5 for Beginners
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/GRPC_STREAM_MANAGEMENT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gRPC Streaming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/RETURN_CODES_REFERENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Return Codes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/ENUMS_USAGE_REFERENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ENUMs Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/PROTOBUF_INSPECTOR_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protobuf Inspector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/USERCODE_SANDBOX_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UserCode Sandbox
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_Reference/MT5Account/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5Account API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_Reference/MT5Service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5Service API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_Reference/MT5Sugar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5Sugar API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Orchestrators
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Orchestrators
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Strategies.Master.Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Description
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Description">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#strategy-principle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strategy Principle
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-an-adaptive-preset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Is an Adaptive Preset?
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What Is an Adaptive Preset?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#simple-explanation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Simple Explanation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#market-modes-and-strategy-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        💡 Market Modes and Strategy Selection
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="💡 Market Modes and Strategy Selection">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mode-1-grid-mode-low-volatility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode 1: Grid Mode (Low Volatility)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mode-2-managed-mode-medium-volatility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode 2: Managed Mode (Medium Volatility)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mode-3-protection-mode-high-volatility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode 3: Protection Mode (High Volatility)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mode-4-portfolio-mode-multi-symbol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode 4: Portfolio Mode (Multi-Symbol)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mode-5-trending-mode-strong-directional-movement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode 5: TRENDING MODE (Strong Directional Movement)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuration-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to Run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🟢 Algorithm
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🟢 Algorithm">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#complete-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complete Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mode-selection-priority" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode Selection Priority
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mode Selection Priority">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#priority-order-highest-to-lowest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Priority Order (Highest to Lowest)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-this-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why This Order?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#volatility-calculation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Volatility Calculation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Volatility Calculation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#simplified-method-demo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Simplified Method (Demo)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#production-alternatives" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production Alternatives
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#safety-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Safety Features
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Safety Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-stop-loss-protection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Stop-Loss Protection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-daily-loss-limit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Daily Loss Limit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-daily-profit-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Daily Profit Target
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-maximum-concurrent-orchestrators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Maximum Concurrent Orchestrators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-graceful-shutdown" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Graceful Shutdown
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#critical-warnings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚙️ Critical Warnings
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="⚙️ Critical Warnings">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-simplified-volatility-calculation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Simplified Volatility Calculation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-trend-detection-is-placeholder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Trend Detection Is Placeholder
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-continuous-operation-risks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Continuous Operation Risks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-mode-switching-overhead" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Mode Switching Overhead
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-multiple-orchestrators-complexity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Multiple Orchestrators Complexity
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best Practices
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#start-with-demo-account" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Start with Demo Account
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#customize-thresholds-for-your-market" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Customize Thresholds for Your Market
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monitor-first-10-cycles-manually" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitor First 10 Cycles Manually
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#set-conservative-safety-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Set Conservative Safety Limits
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#improve-market-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improve Market Analysis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#log-all-mode-switches" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Log All Mode Switches
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#regular-performance-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Regular Performance Review
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-to-use-this-preset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔧 When to Use This Preset
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔧 When to Use This Preset">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ideal-use-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ideal Use Cases
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#avoid-using-when" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Avoid Using When
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#monitoring-and-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitoring and Control
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Monitoring and Control">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#checking-status-during-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checking Status During Execution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#accessing-metrics-programmatically" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Accessing Metrics Programmatically
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#final-results-display" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        💡 Final Results Display
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#problem-preset-never-enters-grid-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem: Preset Never Enters Grid Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#problem-switches-modes-every-cycle-unstable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem: Switches Modes Every Cycle (Unstable)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#problem-always-in-protection-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem: Always in Protection Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#problem-hit-max-daily-loss-quickly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem: Hit Max Daily Loss Quickly
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#problem-orchestrator-errors-during-execution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem: Orchestrator Errors During Execution
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#improving-the-preset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Improving the Preset
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Improving the Preset">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#custom-market-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Market Analysis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-time-of-day-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding Time-of-Day Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mode-specific-optimization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mode-Specific Optimization
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#integration-with-other-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration with Other Systems
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Integration with Other Systems">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#with-external-signals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With External Signals
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-custom-risk-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With Custom Risk Management
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="adaptive-orchestrator-preset-intelligent-multi-strategy-system">🧩 Adaptive Orchestrator Preset — Intelligent Multi-Strategy System<a class="headerlink" href="#adaptive-orchestrator-preset-intelligent-multi-strategy-system" title="Permanent link">¶</a></h1>
+<h2 id="description">Description<a class="headerlink" href="#description" title="Permanent link">¶</a></h2>
+<p><strong>Adaptive Orchestrator Preset</strong> is an intelligent trading system that automatically selects and executes the most appropriate orchestrator based on real-time market condition analysis.</p>
+<p>It combines <strong>all five orchestrators</strong> into a single adaptive system that dynamically switches strategies every cycle.</p>
+<h3 id="strategy-principle">Strategy Principle<a class="headerlink" href="#strategy-principle" title="Permanent link">¶</a></h3>
+<p>Continuously analyzes market conditions and adapts the trading approach:</p>
+<ul>
+<li><strong>Market Analysis</strong> — calculates volatility, detects trends, and counts active positions</li>
+<li><strong>Strategy Selection</strong> — chooses the best orchestrator for current conditions</li>
+<li><strong>Dynamic Execution</strong> — runs the selected orchestrator in 5-minute cycles</li>
+<li><strong>Continuous Adaptation</strong> — repeats analysis and switches strategies as markets change</li>
+<li><strong>Safety Controls</strong> — built-in stop-loss, daily limits, and risk management</li>
+</ul>
+<p><strong>File:</strong> <code>examples/demos/pesets/16_AdaptiveOrchestratorPreset.go</code></p>
+<blockquote>
+<p><strong>IMPORTANT DISCLAIMER — EDUCATIONAL EXAMPLE ONLY</strong></p>
+<p>This preset demonstrates advanced orchestrator composition and adaptive strategy selection.
+<strong>NOT production-ready!</strong>
+Market analysis is simplified for demonstration purposes. Always test extensively on demo accounts and customize for your specific market knowledge and risk tolerance.</p>
+</blockquote>
+<hr />
+<h2 id="what-is-an-adaptive-preset">What Is an Adaptive Preset?<a class="headerlink" href="#what-is-an-adaptive-preset" title="Permanent link">¶</a></h2>
+<h3 id="simple-explanation">Simple Explanation<a class="headerlink" href="#simple-explanation" title="Permanent link">¶</a></h3>
+<p>Instead of running one fixed strategy, the <strong>Adaptive Orchestrator Preset</strong> acts like an intelligent trading manager that:</p>
+<ol>
+<li>Looks at the market every 5 minutes</li>
+<li>Decides which strategy fits best (grid, trailing, risk protection, etc.)</li>
+<li>Runs that strategy for one cycle</li>
+<li>Repeats with continuous market analysis</li>
+</ol>
+<p><strong>Analogy:</strong> Like a professional trader who switches between different strategies:</p>
+<ul>
+<li><strong>Quiet market</strong> (low volatility) → Grid trading</li>
+<li><strong>Normal market</strong> → Trailing stops with position scaling</li>
+<li><strong>Volatile market</strong> → Risk protection mode</li>
+<li><strong>Trending market</strong> → Pyramiding into winning positions</li>
+<li><strong>Multiple symbols</strong> → Portfolio balancing</li>
+</ul>
+<h3 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">¶</a></h3>
+<ul>
+<li><strong>MT5 Suga</strong> — high-level convenience API</li>
+<li><strong>All 5 Orchestrators</strong> — GridTrade, TrailingStopManage, PositionScale, RiskManage, PortfolioRebalance</li>
+<li><strong>Helpers</strong> — progress bar and utility helpers</li>
+</ul>
+<hr />
+<h2 id="market-modes-and-strategy-selection">💡 Market Modes and Strategy Selection<a class="headerlink" href="#market-modes-and-strategy-selection" title="Permanent link">¶</a></h2>
+<h3 id="mode-1-grid-mode-low-volatility">Mode 1: Grid Mode (Low Volatility)<a class="headerlink" href="#mode-1-grid-mode-low-volatility" title="Permanent link">¶</a></h3>
+<p><strong>Condition:</strong> Volatility &lt; 25 points</p>
+<p><strong>Why:</strong> Range-bound markets are perfect for grid strategies.</p>
+<p><strong>Orchestrator Used:</strong> GridTrade</p>
+<p><strong>Configuration:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nx">GridTradeConfig</span><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="nx">Symbol</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nx">GridSize</span><span class="p">:</span><span class="w">      </span><span class="mi">5</span><span class="p">,</span><span class="w">      </span><span class="c1">// 5 grid levels</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nx">GridStep</span><span class="p">:</span><span class="w">      </span><span class="mi">100</span><span class="p">,</span><span class="w">    </span><span class="c1">// 100 points spacing</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nx">LotSize</span><span class="p">:</span><span class="w">       </span><span class="mf">0.01</span><span class="p">,</span><span class="w">   </span><span class="c1">// Micro-lots</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nx">MaxPositions</span><span class="p">:</span><span class="w">  </span><span class="mi">10</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nx">CheckInterval</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Expected Behavior:</strong></p>
+<ul>
+<li>Places a grid of buy/sell orders</li>
+<li>Profits from small price oscillations</li>
+<li>Works best in sideways markets</li>
+</ul>
+<hr />
+<h3 id="mode-2-managed-mode-medium-volatility">Mode 2: Managed Mode (Medium Volatility)<a class="headerlink" href="#mode-2-managed-mode-medium-volatility" title="Permanent link">¶</a></h3>
+<p><strong>Condition:</strong> 25–50 points volatility</p>
+<p><strong>Why:</strong> Normal conditions suit position management with scaling.</p>
+<p><strong>Orchestrators Used:</strong></p>
+<ol>
+<li>TrailingStopManage (profit protection)</li>
+<li>PositionScale (pyramiding)</li>
+</ol>
+<p><strong>Configuration:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1">// Trailing Stop</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nx">TrailingStopConfig</span><span class="p">{</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nx">TrailingDistance</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="c1">// 200 points trail</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">ActivationProfit</span><span class="p">:</span><span class="w"> </span><span class="mi">300</span><span class="p">,</span><span class="w"> </span><span class="c1">// Activate at 300 points profit</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nx">UpdateInterval</span><span class="p">:</span><span class="w">   </span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">}</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="c1">// Position Scaling</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nx">PositionScaleConfig</span><span class="p">{</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="nx">Mode</span><span class="p">:</span><span class="w">            </span><span class="nx">Pyramiding</span><span class="p">,</span><span class="w"> </span><span class="c1">// Add to winners</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="nx">TriggerDistance</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w">        </span><span class="c1">// 200 points trigger</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="nx">MaxScales</span><span class="p">:</span><span class="w">       </span><span class="mi">3</span><span class="p">,</span><span class="w">          </span><span class="c1">// Max 3 additions</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Expected Behavior:</strong></p>
+<ul>
+<li>Protects profits with trailing stops</li>
+<li>Scales into winning positions</li>
+<li>Balanced approach for normal markets</li>
+</ul>
+<hr />
+<h3 id="mode-3-protection-mode-high-volatility">Mode 3: Protection Mode (High Volatility)<a class="headerlink" href="#mode-3-protection-mode-high-volatility" title="Permanent link">¶</a></h3>
+<p><strong>Condition:</strong> Volatility &gt; 50 points</p>
+<p><strong>Why:</strong> Volatile markets require strict risk control.</p>
+<p><strong>Orchestrator Used:</strong> RiskManage</p>
+<p><strong>Configuration:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nx">RiskManageConfig</span><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="nx">MaxDrawdownPercent</span><span class="p">:</span><span class="w"> </span><span class="mf">5.0</span><span class="p">,</span><span class="w">  </span><span class="c1">// 5% max drawdown</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="nx">EnableAutoClose</span><span class="p">:</span><span class="w">    </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="c1">// Auto-close on breach</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">    </span><span class="nx">CheckInterval</span><span class="p">:</span><span class="w">      </span><span class="mi">5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Expected Behavior:</strong></p>
+<ul>
+<li>Continuously monitors risk limits</li>
+<li>Closes positions if drawdown exceeds 5%</li>
+<li>Defensive mode to prevent blow-ups</li>
+</ul>
+<hr />
+<h3 id="mode-4-portfolio-mode-multi-symbol">Mode 4: Portfolio Mode (Multi-Symbol)<a class="headerlink" href="#mode-4-portfolio-mode-multi-symbol" title="Permanent link">¶</a></h3>
+<p><strong>Condition:</strong> Two or more different symbols have open positions</p>
+<p><strong>Why:</strong> Multiple symbols require balanced exposure.</p>
+<p><strong>Orchestrator Used:</strong> PortfolioRebalance</p>
+<p><strong>Configuration:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nx">PortfolioRebalanceConfig</span><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="nx">Allocations</span><span class="p">:</span><span class="w"> </span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">float64</span><span class="p">{</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">        </span><span class="s">&quot;EURUSD&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.25</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">        </span><span class="s">&quot;GBPUSD&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.25</span><span class="p">,</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">        </span><span class="s">&quot;USDJPY&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.25</span><span class="p">,</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">        </span><span class="s">&quot;XAUUSD&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.25</span><span class="p">,</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nx">TotalExposure</span><span class="p">:</span><span class="w">     </span><span class="mf">10000.0</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="nx">RebalanceThreshold</span><span class="p">:</span><span class="w"> </span><span class="mf">10.0</span><span class="p">,</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Expected Behavior</strong>:</p>
+<ul>
+<li>Maintains balanced allocation</li>
+<li>Rebalances when deviation &gt; 10%</li>
+<li>Diversification management</li>
+</ul>
+<hr />
+<h3 id="mode-5-trending-mode-strong-directional-movement">Mode 5: TRENDING MODE (Strong Directional Movement)<a class="headerlink" href="#mode-5-trending-mode-strong-directional-movement" title="Permanent link">¶</a></h3>
+<p><strong>Condition</strong>: Trend strength &gt; 70%</p>
+<p><strong>Why</strong>: Strong trends are perfect for pyramiding strategies</p>
+<p><strong>Orchestrator Used</strong>: PositionScale (pyramiding mode)</p>
+<p><strong>Configuration</strong>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nx">PositionScaleConfig</span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nx">Mode</span><span class="p">:</span><span class="w">            </span><span class="nx">Pyramiding</span><span class="p">,</span><span class="w"> </span><span class="c1">// Add to winners</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nx">TriggerDistance</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w">        </span><span class="c1">// 200 points trigger</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="nx">MaxScales</span><span class="p">:</span><span class="w">       </span><span class="mi">3</span><span class="p">,</span><span class="w">          </span><span class="c1">// Max 3 scales</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Expected Behavior</strong>:</p>
+<ul>
+<li>Adds to winning positions</li>
+<li>Rides strong trends</li>
+<li>Maximizes profit in directional markets</li>
+</ul>
+<hr />
+<h2 id="configuration-parameters">Configuration Parameters<a class="headerlink" href="#configuration-parameters" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Symbol</code></td>
+<td>string</td>
+<td><code>"EURUSD"</code></td>
+<td>Primary trading symbol</td>
+</tr>
+<tr>
+<td><code>BaseRiskAmount</code></td>
+<td>float64</td>
+<td><code>20.0</code></td>
+<td>Risk per trade in dollars</td>
+</tr>
+<tr>
+<td><code>LowVolatilityThreshold</code></td>
+<td>float64</td>
+<td><code>25.0</code></td>
+<td>Max points for grid mode</td>
+</tr>
+<tr>
+<td><code>HighVolatilityThreshold</code></td>
+<td>float64</td>
+<td><code>50.0</code></td>
+<td>Min points for protection mode</td>
+</tr>
+<tr>
+<td><code>CycleDuration</code></td>
+<td>time.Duration</td>
+<td><code>5m</code></td>
+<td>Duration of one cycle</td>
+</tr>
+<tr>
+<td><code>EnablePortfolioMode</code></td>
+<td>bool</td>
+<td><code>false</code></td>
+<td>Enable multi-symbol management</td>
+</tr>
+<tr>
+<td><code>PortfolioSymbols</code></td>
+<td>[]string</td>
+<td>4 symbols</td>
+<td>Symbols for portfolio mode</td>
+</tr>
+<tr>
+<td><code>MaxConcurrentOrchestrators</code></td>
+<td>int</td>
+<td><code>2</code></td>
+<td>Max orchestrators at once</td>
+</tr>
+<tr>
+<td><code>MaxDailyLoss</code></td>
+<td>float64</td>
+<td><code>500.0</code></td>
+<td>Maximum daily loss allowed</td>
+</tr>
+<tr>
+<td><code>MaxDailyProfit</code></td>
+<td>float64</td>
+<td><code>1000.0</code></td>
+<td>Daily profit target</td>
+</tr>
+</tbody>
+</table>
+<h3 id="configuration-example">Configuration Example<a class="headerlink" href="#configuration-example" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nx">preset</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">presets</span><span class="p">.</span><span class="nx">NewAdaptiveOrchestratorPreset</span><span class="p">(</span><span class="nx">suga</span><span class="p">)</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1">// Customize parameters</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nx">preset</span><span class="p">.</span><span class="nx">Symbol</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;EURUSD&quot;</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="nx">preset</span><span class="p">.</span><span class="nx">BaseRiskAmount</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">20.0</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="nx">preset</span><span class="p">.</span><span class="nx">LowVolatilityThreshold</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">25.0</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="nx">preset</span><span class="p">.</span><span class="nx">HighVolatilityThreshold</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">50.0</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="nx">preset</span><span class="p">.</span><span class="nx">CycleDuration</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Minute</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="nx">preset</span><span class="p">.</span><span class="nx">EnablePortfolioMode</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="nx">preset</span><span class="p">.</span><span class="nx">MaxDailyLoss</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">500.0</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="nx">preset</span><span class="p">.</span><span class="nx">MaxDailyProfit</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">1000.0</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="c1">// Execute</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="nx">totalProfit</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">preset</span><span class="p">.</span><span class="nx">Execute</span><span class="p">()</span>
+</code></pre></div>
+<hr />
+<h2 id="how-to-run">How to Run<a class="headerlink" href="#how-to-run" title="Permanent link">¶</a></h2>
+<p>You can execute this preset using several command variations:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Navigate to examples directory</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">cd</span><span class="w"> </span>examples/demos
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Option 1: By number</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>go<span class="w"> </span>run<span class="w"> </span>main.go<span class="w"> </span><span class="m">16</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1"># Option 2: By keyword</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>go<span class="w"> </span>run<span class="w"> </span>main.go<span class="w"> </span>adaptive
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="c1"># Option 3: By category</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>go<span class="w"> </span>run<span class="w"> </span>main.go<span class="w"> </span>preset
+</code></pre></div>
+<p>All commands launch the <strong>Adaptive Orchestrator Preset</strong> with default configuration.
+To stop execution, press <code>Ctrl+C</code>.</p>
+<hr />
+<h2 id="algorithm">🟢 Algorithm<a class="headerlink" href="#algorithm" title="Permanent link">¶</a></h2>
+<h3 id="complete-flow">Complete Flow<a class="headerlink" href="#complete-flow" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>START
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>|
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>Initialize Preset
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>- Get starting balance
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>- Set thresholds
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>- Setup signal handling
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>|
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>INFINITE CYCLE LOOP:
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>|
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>+-- CYCLE #N START
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>|
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>+-- STEP 1: ANALYZE MARKET
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>|   - Get price info for primary symbol
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>|   - Calculate volatility (spread × 10)
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>|   - Count open positions and symbols
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>|   - Estimate trend strength
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>|
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>| SELECT MODE (priority order):
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>|   1. Portfolio mode? (2+ symbols)
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>|   2. High volatility? (&gt;50 pts) → Protection Mode
+<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>|   3. Low volatility? (&lt;25 pts) → Grid Mode
+<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>|   4. Strong trend? (&gt;70%) → Trending Mode
+<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>|   5. Otherwise → Managed Mode
+<a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>|
+<a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a>+-- STEP 2: STOP PREVIOUS ORCHESTRATORS
+<a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a>|   - Stop all orchestrators from last cycle
+<a id="__codelineno-7-27" name="__codelineno-7-27" href="#__codelineno-7-27"></a>|   - Clear active orchestrators list
+<a id="__codelineno-7-28" name="__codelineno-7-28" href="#__codelineno-7-28"></a>|
+<a id="__codelineno-7-29" name="__codelineno-7-29" href="#__codelineno-7-29"></a>+-- STEP 3: EXECUTE SELECTED MODE
+<a id="__codelineno-7-30" name="__codelineno-7-30" href="#__codelineno-7-30"></a>|   - Grid Mode → Start GridTrade
+<a id="__codelineno-7-31" name="__codelineno-7-31" href="#__codelineno-7-31"></a>|   - Managed Mode → Start TrailingStop + PositionScale
+<a id="__codelineno-7-32" name="__codelineno-7-32" href="#__codelineno-7-32"></a>|   - Protection Mode → Start RiskManage
+<a id="__codelineno-7-33" name="__codelineno-7-33" href="#__codelineno-7-33"></a>|   - Portfolio Mode → Start PortfolioRebalance
+<a id="__codelineno-7-34" name="__codelineno-7-34" href="#__codelineno-7-34"></a>|   - Trending Mode → Start PositionScale (pyramiding)
+<a id="__codelineno-7-35" name="__codelineno-7-35" href="#__codelineno-7-35"></a>|
+<a id="__codelineno-7-36" name="__codelineno-7-36" href="#__codelineno-7-36"></a>+-- STEP 4: MONITOR CYCLE
+<a id="__codelineno-7-37" name="__codelineno-7-37" href="#__codelineno-7-37"></a>|   - Wait for CycleDuration (5 minutes)
+<a id="__codelineno-7-38" name="__codelineno-7-38" href="#__codelineno-7-38"></a>|   - Show progress bar
+<a id="__codelineno-7-39" name="__codelineno-7-39" href="#__codelineno-7-39"></a>|   - Display orchestrator status every 10 seconds
+<a id="__codelineno-7-40" name="__codelineno-7-40" href="#__codelineno-7-40"></a>|
+<a id="__codelineno-7-41" name="__codelineno-7-41" href="#__codelineno-7-41"></a>+-- STEP 5: CALCULATE RESULTS
+<a id="__codelineno-7-42" name="__codelineno-7-42" href="#__codelineno-7-42"></a>|   - Get end balance
+<a id="__codelineno-7-43" name="__codelineno-7-43" href="#__codelineno-7-43"></a>|   - Calculate cycle profit/loss
+<a id="__codelineno-7-44" name="__codelineno-7-44" href="#__codelineno-7-44"></a>|   - Update total profit
+<a id="__codelineno-7-45" name="__codelineno-7-45" href="#__codelineno-7-45"></a>|
+<a id="__codelineno-7-46" name="__codelineno-7-46" href="#__codelineno-7-46"></a>+-- STEP 6: CHECK SAFETY LIMITS
+<a id="__codelineno-7-47" name="__codelineno-7-47" href="#__codelineno-7-47"></a>|   - Total loss &gt; $100? → STOP
+<a id="__codelineno-7-48" name="__codelineno-7-48" href="#__codelineno-7-48"></a>|   - Daily loss &gt; $500? → STOP
+<a id="__codelineno-7-49" name="__codelineno-7-49" href="#__codelineno-7-49"></a>|   - Daily profit &gt; $1000? → STOP (success)
+<a id="__codelineno-7-50" name="__codelineno-7-50" href="#__codelineno-7-50"></a>|
+<a id="__codelineno-7-51" name="__codelineno-7-51" href="#__codelineno-7-51"></a>+-- STEP 7: PAUSE
+<a id="__codelineno-7-52" name="__codelineno-7-52" href="#__codelineno-7-52"></a>|   - Wait 30 seconds before next cycle
+<a id="__codelineno-7-53" name="__codelineno-7-53" href="#__codelineno-7-53"></a>|
+<a id="__codelineno-7-54" name="__codelineno-7-54" href="#__codelineno-7-54"></a>+-- REPEAT CYCLE
+<a id="__codelineno-7-55" name="__codelineno-7-55" href="#__codelineno-7-55"></a>|
+<a id="__codelineno-7-56" name="__codelineno-7-56" href="#__codelineno-7-56"></a>ON STOP (Ctrl+C or safety limit):
+<a id="__codelineno-7-57" name="__codelineno-7-57" href="#__codelineno-7-57"></a>- Stop all active orchestrators
+<a id="__codelineno-7-58" name="__codelineno-7-58" href="#__codelineno-7-58"></a>- Show final results
+<a id="__codelineno-7-59" name="__codelineno-7-59" href="#__codelineno-7-59"></a>- Return total profit
+<a id="__codelineno-7-60" name="__codelineno-7-60" href="#__codelineno-7-60"></a>|
+<a id="__codelineno-7-61" name="__codelineno-7-61" href="#__codelineno-7-61"></a>END
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">AdaptiveOrchestratorPreset</span><span class="p">)</span><span class="w"> </span><span class="nx">Execute</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="kt">float64</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="c1">// Get starting balance</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nx">p</span><span class="p">.</span><span class="nx">initialBalance</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">suga</span><span class="p">.</span><span class="nx">GetBalance</span><span class="p">()</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nx">p</span><span class="p">.</span><span class="nx">dailyStartBalance</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">initialBalance</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="c1">// Setup context and signal handling</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="nx">p</span><span class="p">.</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">cancel</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">WithCancel</span><span class="p">(</span><span class="nx">context</span><span class="p">.</span><span class="nx">Background</span><span class="p">())</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="nx">sigChan</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="kd">chan</span><span class="w"> </span><span class="nx">os</span><span class="p">.</span><span class="nx">Signal</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">    </span><span class="nx">signal</span><span class="p">.</span><span class="nx">Notify</span><span class="p">(</span><span class="nx">sigChan</span><span class="p">,</span><span class="w"> </span><span class="nx">os</span><span class="p">.</span><span class="nx">Interrupt</span><span class="p">,</span><span class="w"> </span><span class="nx">syscall</span><span class="p">.</span><span class="nx">SIGTERM</span><span class="p">)</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="w">    </span><span class="c1">// Start main cycle loop</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="w">    </span><span class="k">go</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">runCycles</span><span class="p">()</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="w">    </span><span class="c1">// Wait for interrupt</span>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="w">    </span><span class="o">&lt;-</span><span class="nx">sigChan</span>
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>What happens</strong>:</p>
+<ul>
+<li>Gets starting balance for profit calculation</li>
+<li>Creates context for graceful shutdown</li>
+<li>Sets up Ctrl+C handling</li>
+<li>Launches main cycle loop in a goroutine</li>
+<li>Blocks until user stops execution (Ctrl+C)</li>
+</ul>
+<hr />
+<h4 id="2-main-cycle-loop">2. Main Cycle Loop<a class="headerlink" href="#2-main-cycle-loop" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>307–331</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">AdaptiveOrchestratorPreset</span><span class="p">)</span><span class="w"> </span><span class="nx">runCycles</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">        </span><span class="k">select</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">p</span><span class="p">.</span><span class="nx">ctx</span><span class="p">.</span><span class="nx">Done</span><span class="p">():</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">            </span><span class="k">return</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">        </span><span class="k">default</span><span class="p">:</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">            </span><span class="nx">p</span><span class="p">.</span><span class="nx">cycleNumber</span><span class="o">++</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">            </span><span class="nx">p</span><span class="p">.</span><span class="nx">executeCycle</span><span class="p">()</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">            </span><span class="c1">// Check safety limits</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">checkSafetyLimits</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">                </span><span class="nx">p</span><span class="p">.</span><span class="nx">cancel</span><span class="p">()</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">                </span><span class="k">return</span>
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">            </span><span class="p">}</span>
+<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>
+<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="w">            </span><span class="c1">// Pause 30 seconds</span>
+<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="w">            </span><span class="nx">time</span><span class="p">.</span><span class="nx">Sleep</span><span class="p">(</span><span class="mi">30</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">)</span>
+<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>What happens</strong>:</p>
+<ul>
+<li>Infinite loop running cycles</li>
+<li>Increments cycle counter</li>
+<li>Executes one trading cycle</li>
+<li>Checks safety limits after each cycle</li>
+<li>Stops if limits are breached</li>
+<li>Pauses 30 seconds between cycles</li>
+</ul>
+<hr />
+<h4 id="3-execute-single-cycle">3. Execute Single Cycle<a class="headerlink" href="#3-execute-single-cycle" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>334–387</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">AdaptiveOrchestratorPreset</span><span class="p">)</span><span class="w"> </span><span class="nx">executeCycle</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="c1">// Step 1: Analyze market</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="nx">condition</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">analyzeMarketConditions</span><span class="p">()</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">    </span><span class="c1">// Step 2: Stop previous orchestrators</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="nx">p</span><span class="p">.</span><span class="nx">stopAllOrchestrators</span><span class="p">()</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="c1">// Step 3: Execute appropriate mode</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">    </span><span class="nx">cycleStartBalance</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">suga</span><span class="p">.</span><span class="nx">GetBalance</span><span class="p">()</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">    </span><span class="k">switch</span><span class="w"> </span><span class="nx">condition</span><span class="p">.</span><span class="nx">Mode</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">GridMode</span><span class="p">:</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">        </span><span class="nx">p</span><span class="p">.</span><span class="nx">executeGridMode</span><span class="p">(</span><span class="nx">condition</span><span class="p">)</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">ManagedMode</span><span class="p">:</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="w">        </span><span class="nx">p</span><span class="p">.</span><span class="nx">executeManagedMode</span><span class="p">(</span><span class="nx">condition</span><span class="p">)</span>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">ProtectionMode</span><span class="p">:</span>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="w">        </span><span class="nx">p</span><span class="p">.</span><span class="nx">executeProtectionMode</span><span class="p">(</span><span class="nx">condition</span><span class="p">)</span>
+<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">PortfolioMode</span><span class="p">:</span>
+<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a><span class="w">        </span><span class="nx">p</span><span class="p">.</span><span class="nx">executePortfolioMode</span><span class="p">(</span><span class="nx">condition</span><span class="p">)</span>
+<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a><span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="nx">TrendingMode</span><span class="p">:</span>
+<a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a><span class="w">        </span><span class="nx">p</span><span class="p">.</span><span class="nx">executeTrendingMode</span><span class="p">(</span><span class="nx">condition</span><span class="p">)</span>
+<a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a>
+<a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a><span class="w">    </span><span class="c1">// Step 4: Monitor cycle</span>
+<a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a><span class="w">    </span><span class="nx">p</span><span class="p">.</span><span class="nx">monitorCycle</span><span class="p">()</span>
+<a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a>
+<a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a><span class="w">    </span><span class="c1">// Step 5: Calculate profit</span>
+<a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a><span class="w">    </span><span class="nx">cycleEndBalance</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">suga</span><span class="p">.</span><span class="nx">GetBalance</span><span class="p">()</span>
+<a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a><span class="w">    </span><span class="nx">cycleProfit</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">cycleEndBalance</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">cycleStartBalance</span>
+<a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a><span class="w">    </span><span class="nx">p</span><span class="p">.</span><span class="nx">totalProfit</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nx">cycleProfit</span>
+<a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>What happens</strong>:</p>
+<ul>
+<li>Analyzes current market conditions</li>
+<li>Stops any orchestrators from the previous cycle</li>
+<li>Records starting balance</li>
+<li>Selects and executes the appropriate mode</li>
+<li>Monitors execution for the cycle duration (5 minutes)</li>
+<li>Calculates profit for this cycle</li>
+<li>Updates total profit</li>
+</ul>
+<hr />
+<h4 id="4-market-analysis">4. Market Analysis<a class="headerlink" href="#4-market-analysis" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>394–447</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">AdaptiveOrchestratorPreset</span><span class="p">)</span><span class="w"> </span><span class="nx">analyzeMarketConditions</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">MarketCondition</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="c1">// Get price info</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="nx">priceInfo</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">suga</span><span class="p">.</span><span class="nx">GetPriceInfo</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">Symbol</span><span class="p">)</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="c1">// Calculate volatility from spread</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="nx">spreadPoints</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">priceInfo</span><span class="p">.</span><span class="nx">SpreadPips</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">    </span><span class="nx">estimatedVolatility</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">spreadPoints</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">10</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">    </span><span class="c1">// Get active positions</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">    </span><span class="nx">positions</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">suga</span><span class="p">.</span><span class="nx">GetOpenPositions</span><span class="p">()</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">    </span><span class="c1">// Count unique symbols</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="w">    </span><span class="nx">symbolMap</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="kd">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="kt">bool</span><span class="p">)</span>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">pos</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">positions</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a><span class="w">        </span><span class="nx">symbolMap</span><span class="p">[</span><span class="nx">pos</span><span class="p">.</span><span class="nx">Symbol</span><span class="p">]</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>
+<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a><span class="w">    </span><span class="c1">// Determine mode (priority order)</span>
+<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">EnablePortfolioMode</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="nx">symbolMap</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a><span class="w">        </span><span class="nx">condition</span><span class="p">.</span><span class="nx">Mode</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">PortfolioMode</span>
+<a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nx">estimatedVolatility</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">HighVolatilityThreshold</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a><span class="w">        </span><span class="nx">condition</span><span class="p">.</span><span class="nx">Mode</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">ProtectionMode</span>
+<a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nx">estimatedVolatility</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">LowVolatilityThreshold</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a><span class="w">        </span><span class="nx">condition</span><span class="p">.</span><span class="nx">Mode</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">GridMode</span>
+<a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nx">math</span><span class="p">.</span><span class="nx">Abs</span><span class="p">(</span><span class="nx">condition</span><span class="p">.</span><span class="nx">TrendStrength</span><span class="p">)</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="mf">0.7</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-26" name="__codelineno-11-26" href="#__codelineno-11-26"></a><span class="w">        </span><span class="nx">condition</span><span class="p">.</span><span class="nx">Mode</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">TrendingMode</span>
+<a id="__codelineno-11-27" name="__codelineno-11-27" href="#__codelineno-11-27"></a><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-28" name="__codelineno-11-28" href="#__codelineno-11-28"></a><span class="w">        </span><span class="nx">condition</span><span class="p">.</span><span class="nx">Mode</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">ManagedMode</span>
+<a id="__codelineno-11-29" name="__codelineno-11-29" href="#__codelineno-11-29"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-11-30" name="__codelineno-11-30" href="#__codelineno-11-30"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>What happens</strong>:</p>
+<ul>
+<li>Fetches current price info using <code>GetPriceInfo()</code></li>
+<li>Calculates volatility as <code>spread × 10</code> (simplified estimate)</li>
+<li>Gets all open positions</li>
+<li>Counts unique symbols for portfolio detection</li>
+<li>
+<p>Applies mode selection logic with priority:</p>
+</li>
+<li>
+<p><strong>Portfolio</strong> if 2+ symbols active</p>
+</li>
+<li>
+<p><strong>Protection</strong> if volatility &gt; 50 pts</p>
+</li>
+<li>
+<p><strong>Grid</strong> if volatility &lt; 25 pts</p>
+</li>
+<li>
+<p><strong>Trending</strong> if trend strength &gt; 70%</p>
+</li>
+<li>
+<p><strong>Managed</strong> otherwise (default)</p>
+</li>
+</ul>
+<hr />
+<h4 id="5-mode-execution-example-grid-mode">5. Mode Execution Example: Grid Mode<a class="headerlink" href="#5-mode-execution-example-grid-mode" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>454–477</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">AdaptiveOrchestratorPreset</span><span class="p">)</span><span class="w"> </span><span class="nx">executeGridMode</span><span class="p">(</span><span class="nx">condition</span><span class="w"> </span><span class="o">*</span><span class="nx">MarketCondition</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">    </span><span class="nx">config</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">orchestrators</span><span class="p">.</span><span class="nx">GridTradeConfig</span><span class="p">{</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">        </span><span class="nx">Symbol</span><span class="p">:</span><span class="w">        </span><span class="nx">p</span><span class="p">.</span><span class="nx">Symbol</span><span class="p">,</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">        </span><span class="nx">GridSize</span><span class="p">:</span><span class="w">      </span><span class="mi">5</span><span class="p">,</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">        </span><span class="nx">GridStep</span><span class="p">:</span><span class="w">      </span><span class="mi">100</span><span class="p">,</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">        </span><span class="nx">LotSize</span><span class="p">:</span><span class="w">       </span><span class="mf">0.01</span><span class="p">,</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">        </span><span class="nx">MaxPositions</span><span class="p">:</span><span class="w">  </span><span class="mi">10</span><span class="p">,</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">        </span><span class="nx">CheckInterval</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">    </span><span class="nx">gridTrade</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">orchestrators</span><span class="p">.</span><span class="nx">NewGridTrade</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">suga</span><span class="p">,</span><span class="w"> </span><span class="nx">config</span><span class="p">)</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">gridTrade</span><span class="p">.</span><span class="nx">Start</span><span class="p">();</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="w">        </span><span class="k">return</span>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="w">    </span><span class="nx">p</span><span class="p">.</span><span class="nx">activeOrchestrators</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">activeOrchestrators</span><span class="p">,</span><span class="w"> </span><span class="nx">gridTrade</span><span class="p">)</span>
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>What happens</strong>:</p>
+<ul>
+<li>Creates configuration for GridTrade</li>
+<li>Instantiates a new GridTrade orchestrator</li>
+<li>Starts the orchestrator</li>
+<li>Adds it to the active orchestrators list</li>
+<li>Same pattern is used for other modes (ManagedMode, ProtectionMode, etc.)</li>
+</ul>
+<hr />
+<h4 id="6-cycle-monitoring">6. Cycle Monitoring<a class="headerlink" href="#6-cycle-monitoring" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>562–580</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">AdaptiveOrchestratorPreset</span><span class="p">)</span><span class="w"> </span><span class="nx">monitorCycle</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="nx">totalSeconds</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">int</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">CycleDuration</span><span class="p">.</span><span class="nx">Seconds</span><span class="p">())</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">    </span><span class="nx">helpers</span><span class="p">.</span><span class="nx">WaitWithProgressBarAndCallback</span><span class="p">(</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">        </span><span class="nx">totalSeconds</span><span class="p">,</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">        </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;Cycle #%d monitoring&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">cycleNumber</span><span class="p">),</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">        </span><span class="mi">10</span><span class="o">*</span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span><span class="w"> </span><span class="c1">// Update every 10 seconds</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">        </span><span class="kd">func</span><span class="p">()</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="w">            </span><span class="nx">p</span><span class="p">.</span><span class="nx">showOrchestratorStatus</span><span class="p">()</span>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">            </span><span class="k">return</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="w">        </span><span class="p">},</span>
+<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="w">        </span><span class="nx">p</span><span class="p">.</span><span class="nx">ctx</span><span class="p">,</span>
+<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="w">    </span><span class="p">)</span>
+<a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>What happens</strong>:</p>
+<ul>
+<li>Waits for the cycle duration (default: 5 minutes)</li>
+<li>Shows a progress bar</li>
+<li>Every 10 seconds displays orchestrator status</li>
+<li>Shows operations count, success, and errors</li>
+<li>User can see live performance</li>
+</ul>
+<hr />
+<h4 id="7-safety-limits-check">7. Safety Limits Check<a class="headerlink" href="#7-safety-limits-check" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>609–632</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">AdaptiveOrchestratorPreset</span><span class="p">)</span><span class="w"> </span><span class="nx">checkSafetyLimits</span><span class="p">()</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">    </span><span class="c1">// Check total loss</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">totalProfit</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="o">-</span><span class="nx">p</span><span class="p">.</span><span class="nx">BaseRiskAmount</span><span class="o">*</span><span class="mi">5</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">        </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;STOP: Total loss exceeds $%.2f\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">BaseRiskAmount</span><span class="o">*</span><span class="mi">5</span><span class="p">)</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">    </span><span class="c1">// Check daily loss</span>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">    </span><span class="nx">currentBalance</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">suga</span><span class="p">.</span><span class="nx">GetBalance</span><span class="p">()</span>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="w">    </span><span class="nx">dailyProfit</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">currentBalance</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">dailyStartBalance</span>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">dailyProfit</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="o">-</span><span class="nx">p</span><span class="p">.</span><span class="nx">MaxDailyLoss</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a><span class="w">        </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;STOP: Daily loss limit ($%.2f) reached\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">MaxDailyLoss</span><span class="p">)</span>
+<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a>
+<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a><span class="w">    </span><span class="c1">// Check daily profit target</span>
+<a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">dailyProfit</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">MaxDailyProfit</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a><span class="w">        </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;SUCCESS: Daily profit target ($%.2f) reached!\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">MaxDailyProfit</span><span class="p">)</span>
+<a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-14-21" name="__codelineno-14-21" href="#__codelineno-14-21"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-14-22" name="__codelineno-14-22" href="#__codelineno-14-22"></a>
+<a id="__codelineno-14-23" name="__codelineno-14-23" href="#__codelineno-14-23"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-14-24" name="__codelineno-14-24" href="#__codelineno-14-24"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>What happens</strong>:</p>
+<ul>
+<li><strong>Total loss check</strong>: Stops if loss &gt; $100 (5 × $20 base risk)</li>
+<li><strong>Daily loss check</strong>: Stops if daily loss &gt; $500</li>
+<li><strong>Daily profit check</strong>: Stops if daily profit &gt; $1000 (success)</li>
+<li>Returns <code>true</code> if any limit is breached, stopping the preset</li>
+</ul>
+<hr />
+<h4 id="8-stop-all-orchestrators">8. Stop All Orchestrators<a class="headerlink" href="#8-stop-all-orchestrators" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>599–606</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">AdaptiveOrchestratorPreset</span><span class="p">)</span><span class="w"> </span><span class="nx">stopAllOrchestrators</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">orch</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">activeOrchestrators</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">orch</span><span class="p">.</span><span class="nx">IsRunning</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">            </span><span class="nx">orch</span><span class="p">.</span><span class="nx">Stop</span><span class="p">()</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">    </span><span class="nx">p</span><span class="p">.</span><span class="nx">activeOrchestrators</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">make</span><span class="p">([]</span><span class="nx">orchestrators</span><span class="p">.</span><span class="nx">Orchestrator</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>What happens</strong>:</p>
+<ul>
+<li>Iterates through all active orchestrators</li>
+<li>Stops each one if still running</li>
+<li>Clears the orchestrators list</li>
+<li>Called before starting a new cycle</li>
+<li>Ensures a clean slate for the next mode</li>
+</ul>
+<hr />
+<h2 id="mode-selection-priority">Mode Selection Priority<a class="headerlink" href="#mode-selection-priority" title="Permanent link">¶</a></h2>
+<p>The preset uses <strong>priority-based mode selection</strong> to handle conflicting conditions:</p>
+<h3 id="priority-order-highest-to-lowest">Priority Order (Highest to Lowest)<a class="headerlink" href="#priority-order-highest-to-lowest" title="Permanent link">¶</a></h3>
+<ol>
+<li>
+<p><strong>Portfolio Mode</strong> — if <code>EnablePortfolioMode = true</code> AND 2+ symbols are active</p>
+</li>
+<li>
+<p><strong>Protection Mode</strong> — if volatility &gt; 50 points</p>
+</li>
+<li>
+<p><strong>Grid Mode</strong> — if volatility &lt; 25 points</p>
+</li>
+<li>
+<p><strong>Trending Mode</strong> — if trend strength &gt; 70%</p>
+</li>
+<li>
+<p><strong>Managed Mode</strong> — default fallback for medium volatility</p>
+</li>
+</ol>
+<h3 id="why-this-order">Why This Order?<a class="headerlink" href="#why-this-order" title="Permanent link">¶</a></h3>
+<ul>
+<li><strong>Portfolio First</strong> — multi-symbol management overrides single-symbol strategies</li>
+<li><strong>Protection Second</strong> — safety takes priority in high volatility</li>
+<li><strong>Grid Third</strong> — low-volatility grid comes before trend detection</li>
+<li><strong>Trending Fourth</strong> — only if volatility is medium but strong trend exists</li>
+<li><strong>Managed Last</strong> — balanced approach when no special conditions apply</li>
+</ul>
+<hr />
+<h2 id="volatility-calculation">Volatility Calculation<a class="headerlink" href="#volatility-calculation" title="Permanent link">¶</a></h2>
+<h3 id="simplified-method-demo">Simplified Method (Demo)<a class="headerlink" href="#simplified-method-demo" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nx">spreadPoints</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">priceInfo</span><span class="p">.</span><span class="nx">SpreadPips</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nx">estimatedVolatility</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">spreadPoints</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">10</span>
+</code></pre></div>
+<p><strong>Current Implementation</strong>:</p>
+<ul>
+<li>Uses spread as a volatility proxy</li>
+<li>Multiplies by 10 for point estimation</li>
+<li><strong>Simplified for demonstration purposes</strong></li>
+</ul>
+<h3 id="production-alternatives">Production Alternatives<a class="headerlink" href="#production-alternatives" title="Permanent link">¶</a></h3>
+<p>For real trading, calculate volatility using:</p>
+<ol>
+<li><strong>ATR (Average True Range)</strong> — 14-period ATR from bars</li>
+<li><strong>Historical Volatility</strong> — standard deviation of price changes</li>
+<li><strong>VWAP Deviation</strong> — distance from volume-weighted average price</li>
+</ol>
+<p><strong>Example with bars</strong>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1">// Get recent bars</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="nx">bars</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">suga</span><span class="p">.</span><span class="nx">GetBars</span><span class="p">(</span><span class="nx">symbol</span><span class="p">,</span><span class="w"> </span><span class="nx">timeframe</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">)</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="c1">// Calculate ATR</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="nx">atr</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">calculateATR</span><span class="p">(</span><span class="nx">bars</span><span class="p">,</span><span class="w"> </span><span class="mi">14</span><span class="p">)</span>
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>
+<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="c1">// Use ATR as volatility</span>
+<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="k">if</span><span class="w"> </span><span class="nx">atr</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="mi">20</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a><span class="w">    </span><span class="nx">mode</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">GridMode</span>
+<a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="nx">atr</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="mi">50</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a><span class="w">    </span><span class="nx">mode</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">ProtectionMode</span>
+<a id="__codelineno-17-12" name="__codelineno-17-12" href="#__codelineno-17-12"></a><span class="p">}</span>
+</code></pre></div>
+<hr />
+<h2 id="safety-features">Safety Features<a class="headerlink" href="#safety-features" title="Permanent link">¶</a></h2>
+<h3 id="1-stop-loss-protection">1. Stop-Loss Protection<a class="headerlink" href="#1-stop-loss-protection" title="Permanent link">¶</a></h3>
+<p><strong>Total Loss Limit</strong>: Stops if loss &gt; 5 × base risk</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="k">if</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">totalProfit</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="o">-</span><span class="nx">p</span><span class="p">.</span><span class="nx">BaseRiskAmount</span><span class="o">*</span><span class="mi">5</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">    </span><span class="c1">// Stop preset</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Default</strong>: $100 total loss limit ($20 × 5)</p>
+<hr />
+<h3 id="2-daily-loss-limit">2. Daily Loss Limit<a class="headerlink" href="#2-daily-loss-limit" title="Permanent link">¶</a></h3>
+<p><strong>Maximum Daily Loss</strong>: Stops if daily loss exceeds configured limit</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="nx">dailyProfit</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">currentBalance</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">dailyStartBalance</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="k">if</span><span class="w"> </span><span class="nx">dailyProfit</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="o">-</span><span class="nx">p</span><span class="p">.</span><span class="nx">MaxDailyLoss</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">    </span><span class="c1">// Stop preset</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Default</strong>: $500 daily loss limit</p>
+<hr />
+<h3 id="3-daily-profit-target">3. Daily Profit Target<a class="headerlink" href="#3-daily-profit-target" title="Permanent link">¶</a></h3>
+<p><strong>Profit Goal</strong>: Stops when daily profit target is reached</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="k">if</span><span class="w"> </span><span class="nx">dailyProfit</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">MaxDailyProfit</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">    </span><span class="c1">// Stop preset (success!)</span>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Default</strong>: $1000 daily profit target</p>
+<hr />
+<h3 id="4-maximum-concurrent-orchestrators">4. Maximum Concurrent Orchestrators<a class="headerlink" href="#4-maximum-concurrent-orchestrators" title="Permanent link">¶</a></h3>
+<p><strong>Orchestrator Limit</strong>: Controls maximum orchestrators running at once</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="nx">MaxConcurrentOrchestrators</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span>
+</code></pre></div>
+<p><strong>Current Usage</strong>:</p>
+<ul>
+<li>Grid Mode: 1 orchestrator</li>
+<li>Managed Mode: 2 orchestrators</li>
+<li>Other modes: 1 orchestrator</li>
+</ul>
+<hr />
+<h3 id="5-graceful-shutdown">5. Graceful Shutdown<a class="headerlink" href="#5-graceful-shutdown" title="Permanent link">¶</a></h3>
+<p><strong>Signal Handling</strong>: Catches Ctrl+C for clean exit</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="nx">sigChan</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nb">make</span><span class="p">(</span><span class="kd">chan</span><span class="w"> </span><span class="nx">os</span><span class="p">.</span><span class="nx">Signal</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="nx">signal</span><span class="p">.</span><span class="nx">Notify</span><span class="p">(</span><span class="nx">sigChan</span><span class="p">,</span><span class="w"> </span><span class="nx">os</span><span class="p">.</span><span class="nx">Interrupt</span><span class="p">,</span><span class="w"> </span><span class="nx">syscall</span><span class="p">.</span><span class="nx">SIGTERM</span><span class="p">)</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="o">&lt;-</span><span class="nx">sigChan</span><span class="w"> </span><span class="c1">// Wait for Ctrl+C</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="nx">p</span><span class="p">.</span><span class="nx">stopAllOrchestrators</span><span class="p">()</span><span class="w"> </span><span class="c1">// Clean shutdown</span>
+</code></pre></div>
+<hr />
+<h2 id="critical-warnings">⚙️ Critical Warnings<a class="headerlink" href="#critical-warnings" title="Permanent link">¶</a></h2>
+<h3 id="1-simplified-volatility-calculation">1. Simplified Volatility Calculation<a class="headerlink" href="#1-simplified-volatility-calculation" title="Permanent link">¶</a></h3>
+<ul>
+<li>Current implementation: <code>spread × 10</code></li>
+<li><strong>Not accurate for production trading</strong></li>
+<li>Use ATR, historical volatility, or proper indicators</li>
+<li>Test calculations on demo accounts first</li>
+</ul>
+<hr />
+<h3 id="2-trend-detection-is-placeholder">2. Trend Detection Is Placeholder<a class="headerlink" href="#2-trend-detection-is-placeholder" title="Permanent link">¶</a></h3>
+<ul>
+<li>Current: based on spread modulo</li>
+<li><strong>Not real trend analysis</strong></li>
+<li>Production: use moving averages, MACD, trend lines</li>
+<li>Implement proper technical analysis</li>
+</ul>
+<hr />
+<h3 id="3-continuous-operation-risks">3. Continuous Operation Risks<a class="headerlink" href="#3-continuous-operation-risks" title="Permanent link">¶</a></h3>
+<ul>
+<li>Preset runs in an infinite loop until stopped</li>
+<li>Can accumulate losses if market analysis fails</li>
+<li>Monitor actively during first runs</li>
+<li>Set conservative safety limits</li>
+</ul>
+<hr />
+<h3 id="4-mode-switching-overhead">4. Mode Switching Overhead<a class="headerlink" href="#4-mode-switching-overhead" title="Permanent link">¶</a></h3>
+<ul>
+<li>Stops and starts orchestrators every cycle</li>
+<li>May close positions prematurely</li>
+<li>Consider longer cycle durations (10–15 minutes)</li>
+<li>Balance adaptation speed vs. stability</li>
+</ul>
+<hr />
+<h3 id="5-multiple-orchestrators-complexity">5. Multiple Orchestrators Complexity<a class="headerlink" href="#5-multiple-orchestrators-complexity" title="Permanent link">¶</a></h3>
+<ul>
+<li>Managed Mode runs 2 orchestrators simultaneously</li>
+<li>Ensure they don’t conflict (e.g., both modifying the same position)</li>
+<li>Current implement</li>
+</ul>
+<h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">¶</a></h2>
+<h3 id="start-with-demo-account">Start with Demo Account<a class="headerlink" href="#start-with-demo-account" title="Permanent link">¶</a></h3>
+<ul>
+<li>Run the preset on a demo account for a minimum of 1 week</li>
+<li>Observe mode switches and orchestrator behavior</li>
+<li>Verify volatility and trend detection accuracy</li>
+<li>Adjust thresholds based on your symbols</li>
+</ul>
+<hr />
+<h3 id="customize-thresholds-for-your-market">Customize Thresholds for Your Market<a class="headerlink" href="#customize-thresholds-for-your-market" title="Permanent link">¶</a></h3>
+<ul>
+<li>Default thresholds (25 pts, 50 pts) are tuned for EURUSD</li>
+<li>Volatile pairs (e.g. GBPJPY) need higher thresholds</li>
+<li>Stable pairs (e.g. EURCHF) need lower thresholds</li>
+<li>Always test on your specific symbols</li>
+</ul>
+<hr />
+<h3 id="monitor-first-10-cycles-manually">Monitor First 10 Cycles Manually<a class="headerlink" href="#monitor-first-10-cycles-manually" title="Permanent link">¶</a></h3>
+<ul>
+<li>Watch mode selection logic closely</li>
+<li>Verify the appropriate orchestrator is chosen</li>
+<li>Check if modes switch too frequently</li>
+<li>Adjust <code>CycleDuration</code> if needed</li>
+</ul>
+<hr />
+<h3 id="set-conservative-safety-limits">Set Conservative Safety Limits<a class="headerlink" href="#set-conservative-safety-limits" title="Permanent link">¶</a></h3>
+<ul>
+<li>Start with low <code>BaseRiskAmount</code> ($10–$20)</li>
+<li>Set tight <code>MaxDailyLoss</code> (1–2% of balance)</li>
+<li>Use realistic <code>MaxDailyProfit</code> (2–3% of balance)</li>
+<li>Tighten limits until you trust the system</li>
+</ul>
+<hr />
+<h3 id="improve-market-analysis">Improve Market Analysis<a class="headerlink" href="#improve-market-analysis" title="Permanent link">¶</a></h3>
+<ul>
+<li>Replace spread-based volatility with ATR</li>
+<li>Implement proper trend detection (MA crossovers)</li>
+<li>Add time-of-day filters (avoid low-liquidity hours)</li>
+<li>Consider fundamental factors (news events)</li>
+</ul>
+<hr />
+<h3 id="log-all-mode-switches">Log All Mode Switches<a class="headerlink" href="#log-all-mode-switches" title="Permanent link">¶</a></h3>
+<ul>
+<li>Record why each mode was selected</li>
+<li>Track mode effectiveness (profit per mode)</li>
+<li>Identify which modes work best</li>
+<li>Disable underperforming modes</li>
+</ul>
+<hr />
+<h3 id="regular-performance-review">Regular Performance Review<a class="headerlink" href="#regular-performance-review" title="Permanent link">¶</a></h3>
+<ul>
+<li>Check <code>GetCycleNumber()</code> and <code>GetTotalProfit()</code></li>
+<li>Calculate average profit per cycle</li>
+<li>Identify loss-making modes</li>
+<li>Optimize orchestrator configurations</li>
+</ul>
+<hr />
+<h2 id="when-to-use-this-preset">🔧 When to Use This Preset<a class="headerlink" href="#when-to-use-this-preset" title="Permanent link">¶</a></h2>
+<h3 id="ideal-use-cases">Ideal Use Cases<a class="headerlink" href="#ideal-use-cases" title="Permanent link">¶</a></h3>
+<p><strong>Set-and-Forget Trading</strong></p>
+<ul>
+<li>Want automated strategy that adapts to markets</li>
+<li>Don’t want to manually switch strategies</li>
+<li>Available to monitor but not actively trade</li>
+</ul>
+<p><strong>Multi-Strategy Testing</strong></p>
+<ul>
+<li>Want to compare different orchestrators</li>
+<li>Test which strategies work in which conditions</li>
+<li>Learn orchestrator behavior</li>
+</ul>
+<p><strong>24/7 Automated Trading</strong></p>
+<ul>
+<li>Running unattended trading system</li>
+<li>Need adaptive approach for changing markets</li>
+<li>Built-in safety stops for protection</li>
+</ul>
+<p><strong>Learning Advanced Patterns</strong></p>
+<ul>
+<li>Understanding orchestrator composition</li>
+<li>Learning market condition detection</li>
+<li>Building your own adaptive systems</li>
+</ul>
+<hr />
+<h3 id="avoid-using-when">Avoid Using When<a class="headerlink" href="#avoid-using-when" title="Permanent link">¶</a></h3>
+<p><strong>High-Frequency Trading</strong></p>
+<ul>
+<li>5-minute cycles are too slow for HFT</li>
+<li>Mode switching overhead too high</li>
+<li>Use single specialized orchestrator instead</li>
+</ul>
+<p><strong>Very Specific Strategy</strong></p>
+<ul>
+<li>You already have one proven strategy</li>
+<li>No need for adaptation</li>
+<li>Use that single orchestrator directly</li>
+</ul>
+<p><strong>Small Account (&lt; $500)</strong></p>
+<ul>
+<li>Preset complexity not worth it for small capital</li>
+<li>Safety limits may stop prematurely</li>
+<li>Use simpler single-orchestrator approach</li>
+</ul>
+<p><strong>During Major News Events</strong></p>
+<ul>
+<li>Market analysis may fail in extreme volatility</li>
+<li>Unpredictable mode switching</li>
+<li>Disable preset or use manual trading</li>
+</ul>
+<hr />
+<h2 id="monitoring-and-control">Monitoring and Control<a class="headerlink" href="#monitoring-and-control" title="Permanent link">¶</a></h2>
+<h3 id="checking-status-during-execution">Checking Status During Execution<a class="headerlink" href="#checking-status-during-execution" title="Permanent link">¶</a></h3>
+<p>The preset displays live status every 10 seconds during monitoring:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>[15:04:05] Active orchestrators: 2
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>- TrailingStopManage: 5 ops (4 success, 1 error)
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>- PositionScale: 3 ops (3 success, 0 errors)
+</code></pre></div>
+<hr />
+<h3 id="accessing-metrics-programmatically">Accessing Metrics Programmatically<a class="headerlink" href="#accessing-metrics-programmatically" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1">// Get current cycle number</span>
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="nx">cycleNum</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">preset</span><span class="p">.</span><span class="nx">GetCycleNumber</span><span class="p">()</span>
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="c1">// Get total profit / loss</span>
+<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="nx">totalProfit</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">preset</span><span class="p">.</span><span class="nx">GetTotalProfit</span><span class="p">()</span>
+<a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>
+<a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="c1">// Get active orchestrators count</span>
+<a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a><span class="nx">activeCount</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">preset</span><span class="p">.</span><span class="nx">GetActiveOrchestratorCount</span><span class="p">()</span>
+<a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a>
+<a id="__codelineno-24-10" name="__codelineno-24-10" href="#__codelineno-24-10"></a><span class="c1">// Get orchestrator details</span>
+<a id="__codelineno-24-11" name="__codelineno-24-11" href="#__codelineno-24-11"></a><span class="nx">orchestrators</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">preset</span><span class="p">.</span><span class="nx">GetActiveOrchestrators</span><span class="p">()</span>
+<a id="__codelineno-24-12" name="__codelineno-24-12" href="#__codelineno-24-12"></a><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">orch</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">orchestrators</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-24-13" name="__codelineno-24-13" href="#__codelineno-24-13"></a><span class="w">    </span><span class="nx">status</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">orch</span><span class="p">.</span><span class="nx">GetStatus</span><span class="p">()</span>
+<a id="__codelineno-24-14" name="__codelineno-24-14" href="#__codelineno-24-14"></a><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Printf</span><span class="p">(</span><span class="s">&quot;%s: %d operations\n&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">status</span><span class="p">.</span><span class="nx">Name</span><span class="p">,</span><span class="w"> </span><span class="nx">status</span><span class="p">.</span><span class="nx">SuccessCount</span><span class="p">)</span>
+<a id="__codelineno-24-15" name="__codelineno-24-15" href="#__codelineno-24-15"></a><span class="p">}</span>
+</code></pre></div>
+<hr />
+<h3 id="final-results-display">💡 Final Results Display<a class="headerlink" href="#final-results-display" title="Permanent link">¶</a></h3>
+<p>When the preset stops (Ctrl+C or safety limit), it shows a summary:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>+============================================================+
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>| FINAL RESULTS                                              |
+<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>+============================================================+
+<a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>Initial Balance:      $10000.00
+<a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>Final Balance:        $10350.00
+<a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>Total Profit / Loss:  $350.00
+<a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a>Cycles Completed:     12
+<a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a>Average Per Cycle:    $29.17
+<a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a>+============================================================+
+</code></pre></div>
+<hr />
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">¶</a></h2>
+<h3 id="problem-preset-never-enters-grid-mode">Problem: Preset Never Enters Grid Mode<a class="headerlink" href="#problem-preset-never-enters-grid-mode" title="Permanent link">¶</a></h3>
+<p><strong>Solution</strong>: Check volatility threshold</p>
+<ul>
+<li>Current: <code>LowVolatilityThreshold = 25.0</code></li>
+<li>If your market always has spread &gt; 2.5 pips, increase the threshold</li>
+<li>Try: <code>preset.LowVolatilityThreshold = 40.0</code></li>
+</ul>
+<hr />
+<h3 id="problem-switches-modes-every-cycle-unstable">Problem: Switches Modes Every Cycle (Unstable)<a class="headerlink" href="#problem-switches-modes-every-cycle-unstable" title="Permanent link">¶</a></h3>
+<p><strong>Solution</strong>: Widen volatility bands</p>
+<ul>
+<li>Create a buffer zone between thresholds</li>
+<li>Example: Low &lt; 20 pts, High &gt; 60 pts (40 pt gap)</li>
+<li>Or increase <code>CycleDuration</code> to 10–15 minutes</li>
+</ul>
+<hr />
+<h3 id="problem-always-in-protection-mode">Problem: Always in Protection Mode<a class="headerlink" href="#problem-always-in-protection-mode" title="Permanent link">¶</a></h3>
+<p><strong>Solution</strong>: Increase high volatility threshold</p>
+<ul>
+<li>Current: <code>HighVolatilityThreshold = 50.0</code></li>
+<li>Increase to 80–100 for volatile pairs</li>
+<li>Example: <code>preset.HighVolatilityThreshold = 80.0</code></li>
+</ul>
+<hr />
+<h3 id="problem-hit-max-daily-loss-quickly">Problem: Hit Max Daily Loss Quickly<a class="headerlink" href="#problem-hit-max-daily-loss-quickly" title="Permanent link">¶</a></h3>
+<p><strong>Solution</strong>: Reduce risk or increase limit</p>
+<ul>
+<li>Lower <code>BaseRiskAmount</code> from $20 to $10</li>
+<li>Or increase <code>MaxDailyLoss</code> from $500 to $1000</li>
+<li>Verify orchestrator configurations are conservative</li>
+</ul>
+<hr />
+<h3 id="problem-orchestrator-errors-during-execution">Problem: Orchestrator Errors During Execution<a class="headerlink" href="#problem-orchestrator-errors-during-execution" title="Permanent link">¶</a></h3>
+<p><strong>Solution</strong>: Check individual orchestrator logs</p>
+<ul>
+<li>Review error messages in status display</li>
+<li>Verify the symbol is tradable</li>
+<li>Check account has sufficient margin</li>
+<li>Test individual orchestrators separately first</li>
+</ul>
+<hr />
+<h2 id="improving-the-preset">Improving the Preset<a class="headerlink" href="#improving-the-preset" title="Permanent link">¶</a></h2>
+<h3 id="custom-market-analysis">Custom Market Analysis<a class="headerlink" href="#custom-market-analysis" title="Permanent link">¶</a></h3>
+<p>Replace simplified volatility calculation:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">AdaptiveOrchestratorPreset</span><span class="p">)</span><span class="w"> </span><span class="nx">analyzeMarketConditions</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">MarketCondition</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="w">    </span><span class="c1">// Get bars for analysis</span>
+<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="w">    </span><span class="nx">bars</span><span class="p">,</span><span class="w"> </span><span class="nx">_</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">suga</span><span class="p">.</span><span class="nx">GetBars</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">Symbol</span><span class="p">,</span><span class="w"> </span><span class="nx">pb</span><span class="p">.</span><span class="nx">Timeframe_M15</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">)</span>
+<a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>
+<a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="w">    </span><span class="c1">// Calculate ATR</span>
+<a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a><span class="w">    </span><span class="nx">atr</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">calculateATR</span><span class="p">(</span><span class="nx">bars</span><span class="p">,</span><span class="w"> </span><span class="mi">14</span><span class="p">)</span>
+<a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a>
+<a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a><span class="w">    </span><span class="c1">// Calculate moving averages for trend</span>
+<a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a><span class="w">    </span><span class="nx">ma20</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">calculateMA</span><span class="p">(</span><span class="nx">bars</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">)</span>
+<a id="__codelineno-26-10" name="__codelineno-26-10" href="#__codelineno-26-10"></a><span class="w">    </span><span class="nx">ma50</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">calculateMA</span><span class="p">(</span><span class="nx">bars</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">)</span>
+<a id="__codelineno-26-11" name="__codelineno-26-11" href="#__codelineno-26-11"></a>
+<a id="__codelineno-26-12" name="__codelineno-26-12" href="#__codelineno-26-12"></a><span class="w">    </span><span class="c1">// Detect trend</span>
+<a id="__codelineno-26-13" name="__codelineno-26-13" href="#__codelineno-26-13"></a><span class="w">    </span><span class="nx">trendStrength</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mf">0.0</span>
+<a id="__codelineno-26-14" name="__codelineno-26-14" href="#__codelineno-26-14"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">ma20</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="nx">ma50</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-26-15" name="__codelineno-26-15" href="#__codelineno-26-15"></a><span class="w">        </span><span class="nx">trendStrength</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="nx">ma20</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">ma50</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nx">ma50</span>
+<a id="__codelineno-26-16" name="__codelineno-26-16" href="#__codelineno-26-16"></a><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-26-17" name="__codelineno-26-17" href="#__codelineno-26-17"></a><span class="w">        </span><span class="nx">trendStrength</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="nx">ma20</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">ma50</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nx">ma50</span>
+<a id="__codelineno-26-18" name="__codelineno-26-18" href="#__codelineno-26-18"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-26-19" name="__codelineno-26-19" href="#__codelineno-26-19"></a>
+<a id="__codelineno-26-20" name="__codelineno-26-20" href="#__codelineno-26-20"></a><span class="w">    </span><span class="c1">// Use ATR for volatility</span>
+<a id="__codelineno-26-21" name="__codelineno-26-21" href="#__codelineno-26-21"></a><span class="w">    </span><span class="nx">condition</span><span class="p">.</span><span class="nx">VolatilityPoints</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">atr</span>
+<a id="__codelineno-26-22" name="__codelineno-26-22" href="#__codelineno-26-22"></a><span class="w">    </span><span class="nx">condition</span><span class="p">.</span><span class="nx">TrendStrength</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">trendStrength</span>
+<a id="__codelineno-26-23" name="__codelineno-26-23" href="#__codelineno-26-23"></a>
+<a id="__codelineno-26-24" name="__codelineno-26-24" href="#__codelineno-26-24"></a><span class="w">    </span><span class="c1">// ...rest of mode selection logic</span>
+<a id="__codelineno-26-25" name="__codelineno-26-25" href="#__codelineno-26-25"></a><span class="p">}</span>
+</code></pre></div>
+<hr />
+<h3 id="adding-time-of-day-filters">Adding Time-of-Day Filters<a class="headerlink" href="#adding-time-of-day-filters" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c1">// Don’t trade during low-liquidity hours</span>
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">AdaptiveOrchestratorPreset</span><span class="p">)</span><span class="w"> </span><span class="nx">isTradingHours</span><span class="p">()</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a><span class="w">    </span><span class="nx">now</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">().</span><span class="nx">UTC</span><span class="p">()</span>
+<a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="w">    </span><span class="nx">hour</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">now</span><span class="p">.</span><span class="nx">Hour</span><span class="p">()</span>
+<a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>
+<a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a><span class="w">    </span><span class="c1">// Avoid Asian session (22:00–02:00 UTC)</span>
+<a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">hour</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="mi">22</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nx">hour</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a>
+<a id="__codelineno-27-11" name="__codelineno-27-11" href="#__codelineno-27-11"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-27-12" name="__codelineno-27-12" href="#__codelineno-27-12"></a><span class="p">}</span>
+<a id="__codelineno-27-13" name="__codelineno-27-13" href="#__codelineno-27-13"></a>
+<a id="__codelineno-27-14" name="__codelineno-27-14" href="#__codelineno-27-14"></a><span class="c1">// In executeCycle():</span>
+<a id="__codelineno-27-15" name="__codelineno-27-15" href="#__codelineno-27-15"></a><span class="k">if</span><span class="w"> </span><span class="p">!</span><span class="nx">p</span><span class="p">.</span><span class="nx">isTradingHours</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-27-16" name="__codelineno-27-16" href="#__codelineno-27-16"></a><span class="w">    </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Println</span><span class="p">(</span><span class="s">&quot;Outside trading hours, skipping cycle&quot;</span><span class="p">)</span>
+<a id="__codelineno-27-17" name="__codelineno-27-17" href="#__codelineno-27-17"></a><span class="w">    </span><span class="k">return</span>
+<a id="__codelineno-27-18" name="__codelineno-27-18" href="#__codelineno-27-18"></a><span class="p">}</span>
+</code></pre></div>
+<hr />
+<h3 id="mode-specific-optimization">Mode-Specific Optimization<a class="headerlink" href="#mode-specific-optimization" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c1">// Track performance per mode</span>
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">ModePerformance</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a><span class="w">    </span><span class="nx">Mode</span><span class="w">          </span><span class="nx">MarketMode</span>
+<a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a><span class="w">    </span><span class="nx">TotalCycles</span><span class="w">   </span><span class="kt">int</span>
+<a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a><span class="w">    </span><span class="nx">TotalProfit</span><span class="w">   </span><span class="kt">float64</span>
+<a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a><span class="w">    </span><span class="nx">SuccessRate</span><span class="w">   </span><span class="kt">float64</span>
+<a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a><span class="p">}</span>
+<a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a>
+<a id="__codelineno-28-9" name="__codelineno-28-9" href="#__codelineno-28-9"></a><span class="c1">// Disable underperforming modes</span>
+<a id="__codelineno-28-10" name="__codelineno-28-10" href="#__codelineno-28-10"></a><span class="k">if</span><span class="w"> </span><span class="nx">modePerf</span><span class="p">[</span><span class="nx">GridMode</span><span class="p">].</span><span class="nx">SuccessRate</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="mf">0.4</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-28-11" name="__codelineno-28-11" href="#__codelineno-28-11"></a><span class="w">    </span><span class="c1">// Skip Grid Mode for this session</span>
+<a id="__codelineno-28-12" name="__codelineno-28-12" href="#__codelineno-28-12"></a><span class="w">    </span><span class="k">continue</span>
+<a id="__codelineno-28-13" name="__codelineno-28-13" href="#__codelineno-28-13"></a><span class="p">}</span>
+</code></pre></div>
+<hr />
+<h2 id="integration-with-other-systems">Integration with Other Systems<a class="headerlink" href="#integration-with-other-systems" title="Permanent link">¶</a></h2>
+<h3 id="with-external-signals">With External Signals<a class="headerlink" href="#with-external-signals" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="c1">// Add signal integration</span>
+<a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a><span class="kd">type</span><span class="w"> </span><span class="nx">ExternalSignal</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a><span class="w">    </span><span class="nx">Symbol</span><span class="w">    </span><span class="kt">string</span>
+<a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a><span class="w">    </span><span class="nx">Direction</span><span class="w"> </span><span class="kt">string</span><span class="w"> </span><span class="c1">// &quot;BUY&quot; or &quot;SELL&quot;</span>
+<a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a><span class="w">    </span><span class="nx">Strength</span><span class="w">  </span><span class="kt">float64</span>
+<a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a><span class="p">}</span>
+<a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a>
+<a id="__codelineno-29-8" name="__codelineno-29-8" href="#__codelineno-29-8"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">AdaptiveOrchestratorPreset</span><span class="p">)</span><span class="w"> </span><span class="nx">checkExternalSignals</span><span class="p">()</span><span class="w"> </span><span class="o">*</span><span class="nx">ExternalSignal</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-29-9" name="__codelineno-29-9" href="#__codelineno-29-9"></a><span class="w">    </span><span class="c1">// Check your signal provider</span>
+<a id="__codelineno-29-10" name="__codelineno-29-10" href="#__codelineno-29-10"></a><span class="w">    </span><span class="nx">signal</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">fetchSignalFromAPI</span><span class="p">()</span>
+<a id="__codelineno-29-11" name="__codelineno-29-11" href="#__codelineno-29-11"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">signal</span>
+<a id="__codelineno-29-12" name="__codelineno-29-12" href="#__codelineno-29-12"></a><span class="p">}</span>
+<a id="__codelineno-29-13" name="__codelineno-29-13" href="#__codelineno-29-13"></a>
+<a id="__codelineno-29-14" name="__codelineno-29-14" href="#__codelineno-29-14"></a><span class="c1">// Modify mode selection</span>
+<a id="__codelineno-29-15" name="__codelineno-29-15" href="#__codelineno-29-15"></a><span class="k">if</span><span class="w"> </span><span class="nx">signal</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">checkExternalSignals</span><span class="p">();</span><span class="w"> </span><span class="nx">signal</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-29-16" name="__codelineno-29-16" href="#__codelineno-29-16"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">signal</span><span class="p">.</span><span class="nx">Direction</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s">&quot;BUY&quot;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">signal</span><span class="p">.</span><span class="nx">Strength</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="mf">0.8</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-29-17" name="__codelineno-29-17" href="#__codelineno-29-17"></a><span class="w">        </span><span class="nx">condition</span><span class="p">.</span><span class="nx">Mode</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">TrendingMode</span>
+<a id="__codelineno-29-18" name="__codelineno-29-18" href="#__codelineno-29-18"></a><span class="w">        </span><span class="nx">condition</span><span class="p">.</span><span class="nx">Reason</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s">&quot;Strong external buy signal&quot;</span>
+<a id="__codelineno-29-19" name="__codelineno-29-19" href="#__codelineno-29-19"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-29-20" name="__codelineno-29-20" href="#__codelineno-29-20"></a><span class="p">}</span>
+</code></pre></div>
+<hr />
+<h3 id="with-custom-risk-management">With Custom Risk Management<a class="headerlink" href="#with-custom-risk-management" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="c1">// Override default RiskManage configuration</span>
+<a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">p</span><span class="w"> </span><span class="o">*</span><span class="nx">AdaptiveOrchestratorPreset</span><span class="p">)</span><span class="w"> </span><span class="nx">executeProtectionMode</span><span class="p">(</span><span class="nx">condition</span><span class="w"> </span><span class="o">*</span><span class="nx">MarketCondition</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a><span class="w">    </span><span class="nx">config</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">orchestrators</span><span class="p">.</span><span class="nx">RiskManageConfig</span><span class="p">{</span>
+<a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a><span class="w">        </span><span class="nx">MaxDrawdownPercent</span><span class="p">:</span><span class="w"> </span><span class="mf">3.0</span><span class="p">,</span><span class="w">  </span><span class="c1">// Stricter limit</span>
+<a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a><span class="w">        </span><span class="nx">DailyLossLimit</span><span class="p">:</span><span class="w">     </span><span class="mf">200.0</span><span class="p">,</span><span class="w"> </span><span class="c1">// Lower daily limit</span>
+<a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a><span class="w">        </span><span class="nx">MinMarginLevel</span><span class="p">:</span><span class="w">     </span><span class="mf">200.0</span><span class="p">,</span><span class="w"> </span><span class="c1">// Higher margin safety</span>
+<a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a><span class="w">        </span><span class="nx">EnableAutoClose</span><span class="p">:</span><span class="w">    </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-30-8" name="__codelineno-30-8" href="#__codelineno-30-8"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-30-9" name="__codelineno-30-9" href="#__codelineno-30-9"></a>
+<a id="__codelineno-30-10" name="__codelineno-30-10" href="#__codelineno-30-10"></a><span class="w">    </span><span class="nx">riskManage</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">orchestrators</span><span class="p">.</span><span class="nx">NewRiskManage</span><span class="p">(</span><span class="nx">p</span><span class="p">.</span><span class="nx">suga</span><span class="p">,</span><span class="w"> </span><span class="nx">config</span><span class="p">)</span>
+<a id="__codelineno-30-11" name="__codelineno-30-11" href="#__codelineno-30-11"></a><span class="w">    </span><span class="nx">riskManage</span><span class="p">.</span><span class="nx">Start</span><span class="p">()</span>
+<a id="__codelineno-30-12" name="__codelineno-30-12" href="#__codelineno-30-12"></a><span class="p">}</span>
+</code></pre></div>
+<hr />
+<h2 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">¶</a></h2>
+<p><strong>Adaptive Orchestrator Preset</strong> is an intelligent multi-strategy trading system:</p>
+<ul>
+<li><strong>Adaptive Selection</strong> — automatically chooses the best orchestrator based on market conditions</li>
+<li><strong>Five Market Modes</strong> — Grid, Managed, Protection, Portfolio, Trending</li>
+<li><strong>Continuous Operation</strong> — runs in cycles with automatic adaptation</li>
+<li><strong>Built-in Safety</strong> — multiple safety stops and daily limits</li>
+<li><strong>Highly Customizable</strong> — thresholds and configurations are adjustable</li>
+</ul>
+<p><strong>Remember</strong>:</p>
+<ul>
+<li>Market analysis is simplified (improve for production use)</li>
+<li>Test extensively on demo accounts</li>
+<li>Monitor first runs closely</li>
+<li>Customize thresholds for your symbols</li>
+<li>Start with conservative limits</li>
+</ul>
+<p><strong>The goal</strong>: Create a complete adaptive trading system that automatically selects the right strategy for current market conditions, providing true <em>set-and-forget</em> automated trading with intelligent risk management.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2024–2025 GoMT5. MT5 is a trademark of MetaQuotes Software Corp. This documentation is community-maintained and not affiliated with MetaQuotes.
+
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/MetaRPC/GoMT5" target="_blank" rel="noopener" title="GoMT5 on GitHub" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tracking", "navigation.expand", "navigation.top", "navigation.footer", "content.code.copy", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/ux.js"></script>
+      
+    
+  </body>
+</html>

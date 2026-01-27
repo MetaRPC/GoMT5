@@ -1,0 +1,2256 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Complete Go SDK for MetaTrader 5 trading automation">
+      
+      
+      
+        <link rel="canonical" href="https://MetaRPC.github.io/GoMT5/Orchestrators/14_Risk_manager/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>RiskManager - Account Protection System - GoMT5 SDK Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../styles/custom.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#riskmanager-account-protection-system" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="GoMT5 SDK Documentation" class="md-header__button md-logo" aria-label="GoMT5 SDK Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m2.64 10.33-.02-.06.22-.27.12-.08H6.8l.03.08-.18.26-.11.06zm-1.61.98L1 11.26l.22-.29.12-.06h4.9l.05.09-.08.24-.1.07zm2.6.99-.04-.06.16-.28.1-.06H6l.07.07-.02.25-.08.08zm11.15-2.16-1.78.47c-.19.04-.2.05-.34-.11-.16-.18-.27-.29-.5-.4-.66-.34-1.33-.24-1.94.15-.72.48-1.11 1.17-1.1 2.05.01.86.6 1.57 1.45 1.7.73.09 1.34-.17 1.83-.72l.29-.39h-2.07c-.22 0-.27-.14-.2-.32l.55-1.18c.03-.06.11-.17.27-.17h3.44c.15-.5.41-.96.75-1.41.78-1.03 1.73-1.57 3-1.81 1.07-.18 2.13-.07 3.07.57.84.58 1.37 1.36 1.5 2.39.19 1.45-.24 2.63-1.24 3.65-.71.72-1.58 1.17-2.57 1.39l-.86.08c-.98-.02-1.87-.3-2.62-.95-.52-.45-.88-.99-1.06-1.63-.15.24-.27.47-.44.7-.77 1.02-1.78 1.65-3.06 1.8-1.05.16-2.03-.05-2.89-.69-.79-.6-1.26-1.4-1.36-2.39-.14-1.17.2-2.22.91-3.14.76-1 1.77-1.63 3.01-1.86 1-.18 1.97-.06 2.84.52.57.38.97.9 1.24 1.52q.06.135-.12.18m6.11 1.6-.03-.36c-.19-1.06-1.17-1.66-2.19-1.43-1.01.22-1.67.85-1.88 1.86-.19.84.21 1.69.98 2.03.59.26 1.19.22 1.76-.06.84-.43 1.31-1.12 1.36-2.04"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            GoMT5 SDK Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              RiskManager - Account Protection System
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/MetaRPC/GoMT5" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    MetaRPC/GoMT5
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="GoMT5 SDK Documentation" class="md-nav__button md-logo" aria-label="GoMT5 SDK Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m2.64 10.33-.02-.06.22-.27.12-.08H6.8l.03.08-.18.26-.11.06zm-1.61.98L1 11.26l.22-.29.12-.06h4.9l.05.09-.08.24-.1.07zm2.6.99-.04-.06.16-.28.1-.06H6l.07.07-.02.25-.08.08zm11.15-2.16-1.78.47c-.19.04-.2.05-.34-.11-.16-.18-.27-.29-.5-.4-.66-.34-1.33-.24-1.94.15-.72.48-1.11 1.17-1.1 2.05.01.86.6 1.57 1.45 1.7.73.09 1.34-.17 1.83-.72l.29-.39h-2.07c-.22 0-.27-.14-.2-.32l.55-1.18c.03-.06.11-.17.27-.17h3.44c.15-.5.41-.96.75-1.41.78-1.03 1.73-1.57 3-1.81 1.07-.18 2.13-.07 3.07.57.84.58 1.37 1.36 1.5 2.39.19 1.45-.24 2.63-1.24 3.65-.71.72-1.58 1.17-2.57 1.39l-.86.08c-.98-.02-1.87-.3-2.62-.95-.52-.45-.88-.99-1.06-1.63-.15.24-.27.47-.44.7-.77 1.02-1.78 1.65-3.06 1.8-1.05.16-2.03-.05-2.89-.69-.79-.6-1.26-1.4-1.36-2.39-.14-1.17.2-2.22.91-3.14.76-1 1.77-1.63 3.01-1.86 1-.18 1.97-.06 2.84.52.57.38.97.9 1.24 1.52q.06.135-.12.18m6.11 1.6-.03-.36c-.19-1.06-1.17-1.66-2.19-1.43-1.01.22-1.67.85-1.88 1.86-.19.84.21 1.69.98 2.03.59.26 1.19.22 1.76-.06.84-.43 1.31-1.12 1.36-2.04"/></svg>
+
+    </a>
+    GoMT5 SDK Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/MetaRPC/GoMT5" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    MetaRPC/GoMT5
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/Your_First_Project/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Project
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/PROJECT_MAP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Map
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/GLOSSARY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/MT5_For_Beginners/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5 for Beginners
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/GRPC_STREAM_MANAGEMENT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gRPC Streaming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/RETURN_CODES_REFERENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Return Codes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/ENUMS_USAGE_REFERENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ENUMs Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/PROTOBUF_INSPECTOR_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protobuf Inspector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/USERCODE_SANDBOX_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UserCode Sandbox
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_Reference/MT5Account/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5Account API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_Reference/MT5Service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5Service API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_Reference/MT5Sugar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5Sugar API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Orchestrators
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Orchestrators
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Strategies.Master.Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Description
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🟢 Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🟢 Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuration-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to Run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🟢 Algorithm
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🟢 Algorithm">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flowchart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flowchart
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-by-step-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🛠️ Step-by-step Description
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#visual-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visual Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Visual Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scenario-1-drawdown-protection-in-action" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scenario 1: Drawdown Protection in Action
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scenario-2-daily-loss-limit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scenario 2: Daily Loss Limit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scenario-3-margin-level-protection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scenario 3: Margin Level Protection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#used-mt5sugar-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Used MT5Sugar Methods
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Used MT5Sugar Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-getequity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. GetEquity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-getbalance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. GetBalance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-getmarginlevel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. GetMarginLevel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-getopenpositions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. GetOpenPositions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-closeallpositions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. CloseAllPositions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-closeposition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. ClosePosition
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#risk-profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk Profiles
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Risk Profiles">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#conservative-profile-beginners" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conservative Profile (Beginners)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#moderate-profile-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Moderate Profile (Default)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aggressive-profile-experienced" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aggressive Profile (Experienced)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#risk-event-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk Event Types
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Risk Event Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#event-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Event Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#severity-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Severity Levels
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#event-logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Event Logging
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best Practices
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best Practices">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#set-limits-based-on-account-size" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Set Limits Based on Account Size
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#test-on-demo-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test on Demo First
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monitor-risk-events" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Monitor Risk Events
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#combine-with-trading-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combine with Trading Strategy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#use-daily-profit-target" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Use Daily Profit Target
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-location" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Location
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="riskmanager-account-protection-system">RiskManager - Account Protection System<a class="headerlink" href="#riskmanager-account-protection-system" title="Permanent link">¶</a></h1>
+<h2 id="description">Description<a class="headerlink" href="#description" title="Permanent link">¶</a></h2>
+<p><strong>🧩 RiskManager</strong> is an automated account guardian that monitors risk metrics 24/7 and automatically intervenes when danger limits are exceeded. It <strong>PREVENTS ACCOUNT BLOW-UPS</strong> by enforcing strict risk rules: drawdown limits, daily loss caps, margin monitoring, and position limits. The "safety net" that saves you from catastrophic losses.</p>
+<p><strong>Strategy Principle</strong>: Continuously monitors critical account parameters and takes protective action when thresholds are breached:</p>
+<ul>
+<li><strong>Drawdown Protection</strong>: Monitors both percentage and absolute drawdown from peak balance</li>
+<li><strong>Daily Loss Limit</strong>: Enforces maximum daily loss caps (prevents revenge trading)</li>
+<li><strong>Daily Profit Target</strong>: Locks in good days by stopping trading at profit goal</li>
+<li><strong>Margin Safety</strong>: Monitors margin levels and prevents margin calls</li>
+<li><strong>Position Limits</strong>: Controls maximum position counts and per-symbol exposure</li>
+<li><strong>Emergency Actions</strong>: Automatically closes positions or blocks new trades when limits hit</li>
+</ul>
+<p><strong>File</strong>: <code>examples/demos/orchestrators/14_risk_manager.go</code></p>
+<blockquote>
+<p><strong>IMPORTANT DISCLAIMER - EDUCATIONAL EXAMPLE ONLY</strong></p>
+<p>This orchestrator is a demonstration showing how GoMT5 methods function and combine into automated risk management systems. <strong>NOT a production-ready trading strategy!</strong> Always test on demo accounts first and adjust limits to your specific risk tolerance.</p>
+</blockquote>
+<hr />
+<h2 id="architecture">🟢 Architecture<a class="headerlink" href="#architecture" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>RISK MANAGER ORCHESTRATOR
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    |
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>MT5Sugar Instance
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    |
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    |  |  |  |
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>GetEquity  GetBalance  GetMarginLevel  GetOpenPositions
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>(monitoring) (tracking)    (safety)        (limits)
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    |
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>CloseAllPositions / ClosePosition
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>(emergency intervention)
+</code></pre></div>
+<h3 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">¶</a></h3>
+<ul>
+<li><strong>MT5Sugar</strong>: High-level convenience API (<code>GetEquity</code>, <code>GetBalance</code>, <code>GetMarginLevel</code>, <code>GetOpenPositions</code>, <code>CloseAllPositions</code>, <code>ClosePosition</code>)</li>
+<li><strong>BaseOrchestrator</strong>: Foundation pattern with metrics tracking and lifecycle management</li>
+<li><strong>protobuf types</strong>: <code>pb.PositionInfo</code> for position data structures</li>
+</ul>
+<hr />
+<h2 id="configuration-parameters">Configuration Parameters<a class="headerlink" href="#configuration-parameters" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MaxDrawdownPercent</code></td>
+<td>float64</td>
+<td><code>10.0</code></td>
+<td>Maximum account drawdown percentage from peak</td>
+</tr>
+<tr>
+<td><code>MaxDrawdownAbsolute</code></td>
+<td>float64</td>
+<td><code>1000.0</code></td>
+<td>Maximum absolute drawdown amount</td>
+</tr>
+<tr>
+<td><code>DailyLossLimit</code></td>
+<td>float64</td>
+<td><code>500.0</code></td>
+<td>Maximum daily loss allowed</td>
+</tr>
+<tr>
+<td><code>DailyProfitTarget</code></td>
+<td>float64</td>
+<td><code>1000.0</code></td>
+<td>Stop trading after hitting this profit</td>
+</tr>
+<tr>
+<td><code>MinMarginLevel</code></td>
+<td>float64</td>
+<td><code>150.0</code></td>
+<td>Minimum margin level percentage</td>
+</tr>
+<tr>
+<td><code>MaxMarginUsed</code></td>
+<td>float64</td>
+<td><code>80.0</code></td>
+<td>Maximum margin usage percentage</td>
+</tr>
+<tr>
+<td><code>MaxOpenPositions</code></td>
+<td>int</td>
+<td><code>20</code></td>
+<td>Maximum concurrent positions</td>
+</tr>
+<tr>
+<td><code>MaxSymbolExposure</code></td>
+<td>int</td>
+<td><code>5</code></td>
+<td>Maximum positions per symbol</td>
+</tr>
+<tr>
+<td><code>MaxPositionSize</code></td>
+<td>float64</td>
+<td><code>1.0</code></td>
+<td>Maximum lot size per position</td>
+</tr>
+<tr>
+<td><code>CheckInterval</code></td>
+<td>time.Duration</td>
+<td><code>5s</code></td>
+<td>How often to check risk metrics</td>
+</tr>
+<tr>
+<td><code>EnableAutoClose</code></td>
+<td>bool</td>
+<td><code>true</code></td>
+<td>Automatically close positions on breach</td>
+</tr>
+<tr>
+<td><code>EnableTradeBlocking</code></td>
+<td>bool</td>
+<td><code>true</code></td>
+<td>Block new trades when limits hit</td>
+</tr>
+</tbody>
+</table>
+<h3 id="configuration-example">Configuration Example<a class="headerlink" href="#configuration-example" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nx">config</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">orchestrators</span><span class="p">.</span><span class="nx">RiskManagerConfig</span><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nx">MaxDrawdownPercent</span><span class="p">:</span><span class="w">  </span><span class="mf">10.0</span><span class="p">,</span><span class="w">              </span><span class="c1">// 10% max drawdown from peak</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nx">MaxDrawdownAbsolute</span><span class="p">:</span><span class="w"> </span><span class="mf">1000.0</span><span class="p">,</span><span class="w">            </span><span class="c1">// $1000 max drawdown</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">DailyLossLimit</span><span class="p">:</span><span class="w">      </span><span class="mf">500.0</span><span class="p">,</span><span class="w">             </span><span class="c1">// $500 daily loss limit</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nx">DailyProfitTarget</span><span class="p">:</span><span class="w">   </span><span class="mf">1000.0</span><span class="p">,</span><span class="w">            </span><span class="c1">// $1000 daily profit target</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nx">MinMarginLevel</span><span class="p">:</span><span class="w">      </span><span class="mf">150.0</span><span class="p">,</span><span class="w">             </span><span class="c1">// 150% min margin level</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nx">MaxMarginUsed</span><span class="p">:</span><span class="w">       </span><span class="mf">80.0</span><span class="p">,</span><span class="w">              </span><span class="c1">// 80% max margin usage</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nx">MaxOpenPositions</span><span class="p">:</span><span class="w">    </span><span class="mi">20</span><span class="p">,</span><span class="w">                </span><span class="c1">// Max 20 positions</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="nx">MaxSymbolExposure</span><span class="p">:</span><span class="w">   </span><span class="mi">5</span><span class="p">,</span><span class="w">                 </span><span class="c1">// Max 5 per symbol</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="nx">MaxPositionSize</span><span class="p">:</span><span class="w">     </span><span class="mf">1.0</span><span class="p">,</span><span class="w">               </span><span class="c1">// Max 1.0 lot</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="nx">CheckInterval</span><span class="p">:</span><span class="w">       </span><span class="mi">5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span><span class="w">   </span><span class="c1">// Check every 5 seconds</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="nx">EnableAutoClose</span><span class="p">:</span><span class="w">     </span><span class="kc">true</span><span class="p">,</span><span class="w">              </span><span class="c1">// Auto-close on breach</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="nx">EnableTradeBlocking</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">              </span><span class="c1">// Block trades on breach</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="p">}</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="nx">riskManager</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">orchestrators</span><span class="p">.</span><span class="nx">NewRiskManager</span><span class="p">(</span><span class="nx">sugar</span><span class="p">,</span><span class="w"> </span><span class="nx">config</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="how-to-run">How to Run<a class="headerlink" href="#how-to-run" title="Permanent link">¶</a></h2>
+<p>You can execute this orchestrator using several command variations:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Navigate to examples directory</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">cd</span><span class="w"> </span>examples/demos
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Option 1: By number</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>go<span class="w"> </span>run<span class="w"> </span>main.go<span class="w"> </span><span class="m">14</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Option 2: By keyword</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>go<span class="w"> </span>run<span class="w"> </span>main.go<span class="w"> </span>risk
+</code></pre></div>
+<p>Both commands will launch the <strong>RiskManager</strong> orchestrator with the configuration specified in <code>main.go -&gt; RunOrchestrator_RiskManager()</code>.</p>
+<hr />
+<h2 id="algorithm">🟢 Algorithm<a class="headerlink" href="#algorithm" title="Permanent link">¶</a></h2>
+<h3 id="flowchart">Flowchart<a class="headerlink" href="#flowchart" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>START
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  |
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>Initialize baseline values:
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>  - Starting balance
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>  - Peak balance
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>  - Daily start balance
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>  - Trading blocked = false
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>  |
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>MONITORING LOOP (every CheckInterval):
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>  |
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>  Check if new day -&gt; Reset daily counters
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>  |
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>  Get current account state:
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>    - Equity
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>    - Balance
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>    - Margin Level
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>    - Open positions
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>  |
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>  Update peak balance if equity higher
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>  |
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>  Calculate metrics:
+<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>    - Current drawdown = peak - equity
+<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>    - Drawdown % = (drawdown / peak) × 100
+<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>    - Today profit = balance - daily start balance
+<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>  |
+<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a>  CHECK RISK LIMITS:
+<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a>    |
+<a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>    1. DRAWDOWN LIMITS:
+<a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a>       | If drawdown % &gt;= MaxDrawdownPercent:
+<a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a>       |   -&gt; Log CRITICAL event
+<a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a>       |   -&gt; If EnableAutoClose: CLOSE ALL POSITIONS
+<a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a>       |
+<a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a>       | If drawdown $ &gt;= MaxDrawdownAbsolute:
+<a id="__codelineno-3-34" name="__codelineno-3-34" href="#__codelineno-3-34"></a>       |   -&gt; Log CRITICAL event
+<a id="__codelineno-3-35" name="__codelineno-3-35" href="#__codelineno-3-35"></a>       |   -&gt; If EnableAutoClose: CLOSE ALL POSITIONS
+<a id="__codelineno-3-36" name="__codelineno-3-36" href="#__codelineno-3-36"></a>    |
+<a id="__codelineno-3-37" name="__codelineno-3-37" href="#__codelineno-3-37"></a>    2. DAILY LIMITS:
+<a id="__codelineno-3-38" name="__codelineno-3-38" href="#__codelineno-3-38"></a>       | If today loss &gt;= DailyLossLimit:
+<a id="__codelineno-3-39" name="__codelineno-3-39" href="#__codelineno-3-39"></a>       |   -&gt; Log CRITICAL event
+<a id="__codelineno-3-40" name="__codelineno-3-40" href="#__codelineno-3-40"></a>       |   -&gt; If EnableAutoClose: CLOSE ALL POSITIONS
+<a id="__codelineno-3-41" name="__codelineno-3-41" href="#__codelineno-3-41"></a>       |   -&gt; If EnableTradeBlocking: Block trading
+<a id="__codelineno-3-42" name="__codelineno-3-42" href="#__codelineno-3-42"></a>       |
+<a id="__codelineno-3-43" name="__codelineno-3-43" href="#__codelineno-3-43"></a>       | If today profit &gt;= DailyProfitTarget:
+<a id="__codelineno-3-44" name="__codelineno-3-44" href="#__codelineno-3-44"></a>       |   -&gt; Log INFO event
+<a id="__codelineno-3-45" name="__codelineno-3-45" href="#__codelineno-3-45"></a>       |   -&gt; If EnableTradeBlocking: Block trading
+<a id="__codelineno-3-46" name="__codelineno-3-46" href="#__codelineno-3-46"></a>    |
+<a id="__codelineno-3-47" name="__codelineno-3-47" href="#__codelineno-3-47"></a>    3. MARGIN LIMITS:
+<a id="__codelineno-3-48" name="__codelineno-3-48" href="#__codelineno-3-48"></a>       | If margin level &lt; MinMarginLevel:
+<a id="__codelineno-3-49" name="__codelineno-3-49" href="#__codelineno-3-49"></a>       |   -&gt; Log CRITICAL event
+<a id="__codelineno-3-50" name="__codelineno-3-50" href="#__codelineno-3-50"></a>       |   -&gt; If EnableAutoClose: Close most losing position
+<a id="__codelineno-3-51" name="__codelineno-3-51" href="#__codelineno-3-51"></a>    |
+<a id="__codelineno-3-52" name="__codelineno-3-52" href="#__codelineno-3-52"></a>    4. POSITION LIMITS:
+<a id="__codelineno-3-53" name="__codelineno-3-53" href="#__codelineno-3-53"></a>       | If open positions &gt; MaxOpenPositions:
+<a id="__codelineno-3-54" name="__codelineno-3-54" href="#__codelineno-3-54"></a>       |   -&gt; Log WARNING event
+<a id="__codelineno-3-55" name="__codelineno-3-55" href="#__codelineno-3-55"></a>       |
+<a id="__codelineno-3-56" name="__codelineno-3-56" href="#__codelineno-3-56"></a>       | For each symbol:
+<a id="__codelineno-3-57" name="__codelineno-3-57" href="#__codelineno-3-57"></a>       |   If positions &gt; MaxSymbolExposure:
+<a id="__codelineno-3-58" name="__codelineno-3-58" href="#__codelineno-3-58"></a>       |     -&gt; Log WARNING event
+<a id="__codelineno-3-59" name="__codelineno-3-59" href="#__codelineno-3-59"></a>  |
+<a id="__codelineno-3-60" name="__codelineno-3-60" href="#__codelineno-3-60"></a>  Update status metrics
+<a id="__codelineno-3-61" name="__codelineno-3-61" href="#__codelineno-3-61"></a>  |
+<a id="__codelineno-3-62" name="__codelineno-3-62" href="#__codelineno-3-62"></a>REPEAT until stopped
+<a id="__codelineno-3-63" name="__codelineno-3-63" href="#__codelineno-3-63"></a>  |
+<a id="__codelineno-3-64" name="__codelineno-3-64" href="#__codelineno-3-64"></a>ON STOP:
+<a id="__codelineno-3-65" name="__codelineno-3-65" href="#__codelineno-3-65"></a>  | Cancel monitoring loop
+<a id="__codelineno-3-66" name="__codelineno-3-66" href="#__codelineno-3-66"></a>  | Print risk event summary
+<a id="__codelineno-3-67" name="__codelineno-3-67" href="#__codelineno-3-67"></a>  |
+<a id="__codelineno-3-68" name="__codelineno-3-68" href="#__codelineno-3-68"></a>END
+</code></pre></div>
+<h3 id="step-by-step-description">🛠️ Step-by-step Description<a class="headerlink" href="#step-by-step-description" title="Permanent link">¶</a></h3>
+<h4 id="1-initialization">1. Initialization<a class="headerlink" href="#1-initialization" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>188–201</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">RiskManager</span><span class="p">)</span><span class="w"> </span><span class="nx">initialize</span><span class="p">()</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="c1">// Get starting balance</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="nx">balance</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">sugar</span><span class="p">.</span><span class="nx">GetBalance</span><span class="p">()</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;failed to get balance: %w&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nx">r</span><span class="p">.</span><span class="nx">startingBalance</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">balance</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="nx">r</span><span class="p">.</span><span class="nx">peakBalance</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">balance</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">    </span><span class="nx">r</span><span class="p">.</span><span class="nx">dailyStartBalance</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">balance</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">    </span><span class="nx">r</span><span class="p">.</span><span class="nx">tradingBlocked</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>What happens</strong>:</p>
+<ul>
+<li>Gets current account balance as baseline</li>
+<li>Sets peak balance (tracks highest equity reached)</li>
+<li>Sets daily start balance (for daily P/L calculations)</li>
+<li>Initializes trading as unblocked</li>
+<li>All subsequent drawdown is measured from this peak</li>
+</ul>
+<h4 id="2-monitoring-loop">2. Monitoring Loop<a class="headerlink" href="#2-monitoring-loop" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>204–216</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">RiskManager</span><span class="p">)</span><span class="w"> </span><span class="nx">monitorLoop</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">ticker</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">NewTicker</span><span class="p">(</span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">CheckInterval</span><span class="p">)</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="nx">ticker</span><span class="p">.</span><span class="nx">Stop</span><span class="p">()</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">        </span><span class="k">select</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">r</span><span class="p">.</span><span class="nx">GetContext</span><span class="p">().</span><span class="nx">Done</span><span class="p">():</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">            </span><span class="k">return</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">ticker</span><span class="p">.</span><span class="nx">C</span><span class="p">:</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">            </span><span class="nx">r</span><span class="p">.</span><span class="nx">checkRiskLimits</span><span class="p">()</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Monitoring actions every CheckInterval</strong>:</p>
+<ol>
+<li><strong>Ticker triggers</strong>: Every 5 seconds by default</li>
+<li><strong>Context check</strong>: Monitors for stop signal</li>
+<li><strong>Risk checks</strong>: Calls <code>checkRiskLimits()</code> to evaluate all parameters</li>
+<li><strong>Graceful exit</strong>: Stops cleanly when context is cancelled</li>
+</ol>
+<h4 id="3-daily-reset-check">3. Daily Reset Check<a class="headerlink" href="#3-daily-reset-check" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>411–425</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">RiskManager</span><span class="p">)</span><span class="w"> </span><span class="nx">checkDailyReset</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">    </span><span class="nx">now</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Now</span><span class="p">()</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">now</span><span class="p">.</span><span class="nx">Day</span><span class="p">()</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">lastResetDate</span><span class="p">.</span><span class="nx">Day</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">        </span><span class="nx">balance</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">sugar</span><span class="p">.</span><span class="nx">GetBalance</span><span class="p">()</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">            </span><span class="nx">r</span><span class="p">.</span><span class="nx">dailyStartBalance</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">balance</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">            </span><span class="nx">r</span><span class="p">.</span><span class="nx">tradingBlocked</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">            </span><span class="nx">r</span><span class="p">.</span><span class="nx">lastResetDate</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">now</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>What happens</strong>:</p>
+<ul>
+<li>Checks if current day differs from last reset day</li>
+<li>If new day: resets daily start balance to current balance</li>
+<li>Unblocks trading (allows new trading day to begin)</li>
+<li>Resets today's profit to zero (new calculations start)</li>
+</ul>
+<h4 id="4-drawdown-protection">4. Drawdown Protection<a class="headerlink" href="#4-drawdown-protection" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>266–288</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">RiskManager</span><span class="p">)</span><span class="w"> </span><span class="nx">checkDrawdownLimit</span><span class="p">(</span><span class="nx">drawdownPercent</span><span class="p">,</span><span class="w"> </span><span class="nx">drawdownAbsolute</span><span class="w"> </span><span class="kt">float64</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="c1">// Check percentage drawdown</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">drawdownPercent</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">MaxDrawdownPercent</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">        </span><span class="nx">r</span><span class="p">.</span><span class="nx">logRiskEvent</span><span class="p">(</span><span class="s">&quot;MAX_DRAWDOWN_PERCENT&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;CRITICAL&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">            </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;Drawdown %.1f%% exceeds limit %.1f%%&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">drawdownPercent</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">MaxDrawdownPercent</span><span class="p">),</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">            </span><span class="nx">drawdownPercent</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">MaxDrawdownPercent</span><span class="p">)</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">EnableAutoClose</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">            </span><span class="nx">r</span><span class="p">.</span><span class="nx">closeAllPositionsEmergency</span><span class="p">(</span><span class="s">&quot;Maximum drawdown exceeded&quot;</span><span class="p">)</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">    </span><span class="c1">// Check absolute drawdown</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">drawdownAbsolute</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">MaxDrawdownAbsolute</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">        </span><span class="nx">r</span><span class="p">.</span><span class="nx">logRiskEvent</span><span class="p">(</span><span class="s">&quot;MAX_DRAWDOWN_ABSOLUTE&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;CRITICAL&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="w">            </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;Drawdown $%.2f exceeds limit $%.2f&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">drawdownAbsolute</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">MaxDrawdownAbsolute</span><span class="p">),</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="w">            </span><span class="nx">drawdownAbsolute</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">MaxDrawdownAbsolute</span><span class="p">)</span>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">EnableAutoClose</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="w">            </span><span class="nx">r</span><span class="p">.</span><span class="nx">closeAllPositionsEmergency</span><span class="p">(</span><span class="s">&quot;Maximum absolute drawdown exceeded&quot;</span><span class="p">)</span>
+<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Critical protection</strong>:</p>
+<ul>
+<li><strong>Percentage drawdown</strong>: Triggers when equity drops X% from peak</li>
+<li>Example: Peak = $10,000, MaxDrawdownPercent = 10%</li>
+<li>Trigger at equity = $9,000 (10% drop from peak)</li>
+<li><strong>Absolute drawdown</strong>: Triggers when equity drops $X from peak</li>
+<li>Example: Peak = $10,000, MaxDrawdownAbsolute = $1000</li>
+<li>Trigger at equity = $9,000 ($1000 drop from peak)</li>
+<li><strong>Both are checked</strong>: Whichever threshold is hit first triggers emergency action</li>
+</ul>
+<h4 id="5-daily-limits-protection">5. Daily Limits Protection<a class="headerlink" href="#5-daily-limits-protection" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>291–320</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">RiskManager</span><span class="p">)</span><span class="w"> </span><span class="nx">checkDailyLimits</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span><span class="c1">// Check daily loss limit</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">todayProfit</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="p">(</span><span class="o">-</span><span class="nx">r</span><span class="p">.</span><span class="nx">todayProfit</span><span class="p">)</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">DailyLossLimit</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">        </span><span class="nx">r</span><span class="p">.</span><span class="nx">logRiskEvent</span><span class="p">(</span><span class="s">&quot;DAILY_LOSS_LIMIT&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;CRITICAL&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">            </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;Daily loss $%.2f exceeds limit $%.2f&quot;</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="nx">r</span><span class="p">.</span><span class="nx">todayProfit</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">DailyLossLimit</span><span class="p">),</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">            </span><span class="o">-</span><span class="nx">r</span><span class="p">.</span><span class="nx">todayProfit</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">DailyLossLimit</span><span class="p">)</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">EnableAutoClose</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">            </span><span class="nx">r</span><span class="p">.</span><span class="nx">closeAllPositionsEmergency</span><span class="p">(</span><span class="s">&quot;Daily loss limit exceeded&quot;</span><span class="p">)</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">EnableTradeBlocking</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="w">            </span><span class="nx">r</span><span class="p">.</span><span class="nx">tradingBlocked</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a>
+<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="w">    </span><span class="c1">// Check daily profit target</span>
+<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">DailyProfitTarget</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">todayProfit</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">DailyProfitTarget</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a><span class="w">        </span><span class="nx">r</span><span class="p">.</span><span class="nx">logRiskEvent</span><span class="p">(</span><span class="s">&quot;DAILY_PROFIT_TARGET&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;INFO&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a><span class="w">            </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;Daily profit target $%.2f reached&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">DailyProfitTarget</span><span class="p">),</span>
+<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a><span class="w">            </span><span class="nx">r</span><span class="p">.</span><span class="nx">todayProfit</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">DailyProfitTarget</span><span class="p">)</span>
+<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a>
+<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">EnableTradeBlocking</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a><span class="w">            </span><span class="nx">r</span><span class="p">.</span><span class="nx">tradingBlocked</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-8-27" name="__codelineno-8-27" href="#__codelineno-8-27"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Daily protections</strong>:</p>
+<ul>
+<li><strong>Daily loss limit</strong>: Stops trading after losing too much today</li>
+<li>Prevents "revenge trading" after bad day</li>
+<li>Closes all positions and blocks new trades</li>
+<li><strong>Daily profit target</strong>: Stops trading after hitting profit goal</li>
+<li>Locks in good days</li>
+<li>Only blocks new trades (keeps existing positions open)</li>
+</ul>
+<h4 id="6-margin-safety">6. Margin Safety<a class="headerlink" href="#6-margin-safety" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>323–335</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">RiskManager</span><span class="p">)</span><span class="w"> </span><span class="nx">checkMarginLimits</span><span class="p">(</span><span class="nx">marginLevel</span><span class="w"> </span><span class="kt">float64</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="c1">// Check minimum margin level</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">marginLevel</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nx">marginLevel</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">MinMarginLevel</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">        </span><span class="nx">r</span><span class="p">.</span><span class="nx">logRiskEvent</span><span class="p">(</span><span class="s">&quot;LOW_MARGIN_LEVEL&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;CRITICAL&quot;</span><span class="p">,</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">            </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;Margin level %.0f%% below minimum %.0f%%&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">marginLevel</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">MinMarginLevel</span><span class="p">),</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">            </span><span class="nx">marginLevel</span><span class="p">,</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">MinMarginLevel</span><span class="p">)</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">EnableAutoClose</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">            </span><span class="c1">// Close most losing position to free margin</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">            </span><span class="nx">r</span><span class="p">.</span><span class="nx">closeMostLosingPosition</span><span class="p">(</span><span class="s">&quot;Low margin level&quot;</span><span class="p">)</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Margin protection</strong>:</p>
+<ul>
+<li><strong>Margin Level</strong> = (Equity / Margin Used) × 100</li>
+<li>When margin level drops below threshold:</li>
+<li>Closes most losing position to free up margin</li>
+<li>Prevents broker margin call (typically at 50-100%)</li>
+<li><strong>Example</strong>: MinMarginLevel = 150%</li>
+<li>Equity = $10,000, Margin = $6,667</li>
+<li>Margin Level = 150% (borderline)</li>
+<li>If drops to 149%: close worst position</li>
+</ul>
+<h4 id="7-emergency-close-all">7. Emergency Close All<a class="headerlink" href="#7-emergency-close-all" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>367–382</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">r</span><span class="w"> </span><span class="o">*</span><span class="nx">RiskManager</span><span class="p">)</span><span class="w"> </span><span class="nx">closeAllPositionsEmergency</span><span class="p">(</span><span class="nx">reason</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span><span class="nx">closed</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">r</span><span class="p">.</span><span class="nx">sugar</span><span class="p">.</span><span class="nx">CloseAllPositions</span><span class="p">()</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">        </span><span class="nx">r</span><span class="p">.</span><span class="nx">IncrementError</span><span class="p">(</span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;emergency close failed: %v&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">))</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">        </span><span class="k">return</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="nx">r</span><span class="p">.</span><span class="nx">UpdateMetrics</span><span class="p">(</span><span class="kd">func</span><span class="p">(</span><span class="nx">m</span><span class="w"> </span><span class="o">*</span><span class="nx">OrchestratorMetrics</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">        </span><span class="nx">m</span><span class="p">.</span><span class="nx">LastOperation</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;EMERGENCY: Closed %d positions - %s&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">closed</span><span class="p">,</span><span class="w"> </span><span class="nx">reason</span><span class="p">)</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="w">        </span><span class="nx">m</span><span class="p">.</span><span class="nx">OperationsTotal</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="nx">closed</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">    </span><span class="p">})</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">    </span><span class="nx">r</span><span class="p">.</span><span class="nx">logRiskEvent</span><span class="p">(</span><span class="s">&quot;EMERGENCY_CLOSE&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;CRITICAL&quot;</span><span class="p">,</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="w">        </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Sprintf</span><span class="p">(</span><span class="s">&quot;Closed all %d positions: %s&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">closed</span><span class="p">,</span><span class="w"> </span><span class="nx">reason</span><span class="p">),</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a><span class="w">        </span><span class="nb">float64</span><span class="p">(</span><span class="nx">closed</span><span class="p">),</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Emergency action</strong>:</p>
+<ul>
+<li>Immediately closes ALL open positions</li>
+<li>Cannot be undone</li>
+<li>Triggered by:</li>
+<li>Maximum drawdown exceeded (% or $)</li>
+<li>Daily loss limit exceeded</li>
+<li>Logs critical event for analysis</li>
+<li>Updates metrics with emergency action</li>
+</ul>
+<hr />
+<h2 id="visual-examples">Visual Examples<a class="headerlink" href="#visual-examples" title="Permanent link">¶</a></h2>
+<h3 id="scenario-1-drawdown-protection-in-action">Scenario 1: Drawdown Protection in Action<a class="headerlink" href="#scenario-1-drawdown-protection-in-action" title="Permanent link">¶</a></h3>
+<p><strong>Initial State</strong>:</p>
+<ul>
+<li>Account balance: $10,000</li>
+<li>MaxDrawdownPercent: 10%</li>
+<li>MaxDrawdownAbsolute: $1,000</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>TIME 0: Trading Starts
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>Balance:      $10,000
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>Peak Balance: $10,000
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>Drawdown:     $0 (0%)
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>Positions:    0
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>Status:       Monitoring
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>TIME 1: Good Trading Day
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>Balance:      $11,500
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>Peak Balance: $11,500 (new peak!)
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a>Drawdown:     $0 (0%)
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>Positions:    3
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>Status:       Monitoring - all good
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>TIME 2: Market Turns Against Positions
+<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>
+<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a>Balance:      $10,800
+<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a>Peak Balance: $11,500 (unchanged - peak is max)
+<a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a>Drawdown:     $700 (6.1%)
+<a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a>Positions:    5
+<a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a>Status:       Monitoring - within limits
+<a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a>
+<a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a>TIME 3: Drawdown Approaching Limit
+<a id="__codelineno-11-26" name="__codelineno-11-26" href="#__codelineno-11-26"></a>
+<a id="__codelineno-11-27" name="__codelineno-11-27" href="#__codelineno-11-27"></a>Balance:      $10,400
+<a id="__codelineno-11-28" name="__codelineno-11-28" href="#__codelineno-11-28"></a>Peak Balance: $11,500
+<a id="__codelineno-11-29" name="__codelineno-11-29" href="#__codelineno-11-29"></a>Drawdown:     $1,100 (9.6%)
+<a id="__codelineno-11-30" name="__codelineno-11-30" href="#__codelineno-11-30"></a>Status:       WARNING - approaching 10% limit
+<a id="__codelineno-11-31" name="__codelineno-11-31" href="#__codelineno-11-31"></a>
+<a id="__codelineno-11-32" name="__codelineno-11-32" href="#__codelineno-11-32"></a>TIME 4: DRAWDOWN LIMIT EXCEEDED
+<a id="__codelineno-11-33" name="__codelineno-11-33" href="#__codelineno-11-33"></a>
+<a id="__codelineno-11-34" name="__codelineno-11-34" href="#__codelineno-11-34"></a>Balance:      $10,350
+<a id="__codelineno-11-35" name="__codelineno-11-35" href="#__codelineno-11-35"></a>Peak Balance: $11,500
+<a id="__codelineno-11-36" name="__codelineno-11-36" href="#__codelineno-11-36"></a>Drawdown:     $1,150 (10.0%)
+<a id="__codelineno-11-37" name="__codelineno-11-37" href="#__codelineno-11-37"></a>TRIGGER:      MaxDrawdownPercent HIT!
+<a id="__codelineno-11-38" name="__codelineno-11-38" href="#__codelineno-11-38"></a>ACTION:       EMERGENCY CLOSE ALL 5 POSITIONS
+<a id="__codelineno-11-39" name="__codelineno-11-39" href="#__codelineno-11-39"></a>Result:       Trading stopped, account protected at $10,350
+<a id="__codelineno-11-40" name="__codelineno-11-40" href="#__codelineno-11-40"></a>Prevented:    Further losses from uncontrolled drawdown
+<a id="__codelineno-11-41" name="__codelineno-11-41" href="#__codelineno-11-41"></a>
+<a id="__codelineno-11-42" name="__codelineno-11-42" href="#__codelineno-11-42"></a>WITHOUT RISK MANAGER:
+<a id="__codelineno-11-43" name="__codelineno-11-43" href="#__codelineno-11-43"></a>- Positions could continue losing
+<a id="__codelineno-11-44" name="__codelineno-11-44" href="#__codelineno-11-44"></a>- Drawdown could reach 20-30% or more
+<a id="__codelineno-11-45" name="__codelineno-11-45" href="#__codelineno-11-45"></a>- Account could blow up completely
+<a id="__codelineno-11-46" name="__codelineno-11-46" href="#__codelineno-11-46"></a>
+<a id="__codelineno-11-47" name="__codelineno-11-47" href="#__codelineno-11-47"></a>WITH RISK MANAGER:
+<a id="__codelineno-11-48" name="__codelineno-11-48" href="#__codelineno-11-48"></a>- Loss limited to 10% from peak
+<a id="__codelineno-11-49" name="__codelineno-11-49" href="#__codelineno-11-49"></a>- $1,150 loss vs potential $3,000+ loss
+<a id="__codelineno-11-50" name="__codelineno-11-50" href="#__codelineno-11-50"></a>- Account survives to trade another day
+</code></pre></div>
+<h3 id="scenario-2-daily-loss-limit">Scenario 2: Daily Loss Limit<a class="headerlink" href="#scenario-2-daily-loss-limit" title="Permanent link">¶</a></h3>
+<p><strong>Configuration</strong>:</p>
+<ul>
+<li>DailyLossLimit: $500</li>
+<li>EnableAutoClose: true</li>
+<li>EnableTradeBlocking: true</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>TIME 0: Start of Day (Midnight Reset)
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>Daily Start Balance: $10,000
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>Current Balance:     $10,000
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>Today Profit:        $0
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>Trading Blocked:     false
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>TIME 1: Morning Trades (09:00)
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>Current Balance:     $9,800
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>Today Profit:        -$200
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>Status:              Within limits
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>TIME 2: Bad Trading Session (11:00)
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>Current Balance:     $9,600
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>Today Profit:        -$400
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>Status:              WARNING - approaching limit
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>TIME 3: DAILY LIMIT HIT (12:30)
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>
+<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a>Current Balance:     $9,500
+<a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a>Today Profit:        -$500
+<a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a>TRIGGER:             DailyLossLimit HIT!
+<a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a>ACTION:              1. CLOSE ALL POSITIONS
+<a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a>                     2. BLOCK NEW TRADES
+<a id="__codelineno-12-27" name="__codelineno-12-27" href="#__codelineno-12-27"></a>Status:              Trading blocked for rest of day
+<a id="__codelineno-12-28" name="__codelineno-12-28" href="#__codelineno-12-28"></a>
+<a id="__codelineno-12-29" name="__codelineno-12-29" href="#__codelineno-12-29"></a>TIME 4: Attempt to Trade (14:00)
+<a id="__codelineno-12-30" name="__codelineno-12-30" href="#__codelineno-12-30"></a>
+<a id="__codelineno-12-31" name="__codelineno-12-31" href="#__codelineno-12-31"></a>Status:              Trading blocked - limit reached
+<a id="__codelineno-12-32" name="__codelineno-12-32" href="#__codelineno-12-32"></a>Result:              Cannot open new positions
+<a id="__codelineno-12-33" name="__codelineno-12-33" href="#__codelineno-12-33"></a>                     Prevents revenge trading
+<a id="__codelineno-12-34" name="__codelineno-12-34" href="#__codelineno-12-34"></a>
+<a id="__codelineno-12-35" name="__codelineno-12-35" href="#__codelineno-12-35"></a>TIME 5: Next Day (Midnight Reset)
+<a id="__codelineno-12-36" name="__codelineno-12-36" href="#__codelineno-12-36"></a>
+<a id="__codelineno-12-37" name="__codelineno-12-37" href="#__codelineno-12-37"></a>Daily Start Balance: $9,500 (updated to current)
+<a id="__codelineno-12-38" name="__codelineno-12-38" href="#__codelineno-12-38"></a>Today Profit:        $0 (reset)
+<a id="__codelineno-12-39" name="__codelineno-12-39" href="#__codelineno-12-39"></a>Trading Blocked:     false (unblocked)
+<a id="__codelineno-12-40" name="__codelineno-12-40" href="#__codelineno-12-40"></a>Status:              New day, trading allowed again
+<a id="__codelineno-12-41" name="__codelineno-12-41" href="#__codelineno-12-41"></a>
+<a id="__codelineno-12-42" name="__codelineno-12-42" href="#__codelineno-12-42"></a>BENEFIT:
+<a id="__codelineno-12-43" name="__codelineno-12-43" href="#__codelineno-12-43"></a>- Prevented emotional &quot;revenge trading&quot;
+<a id="__codelineno-12-44" name="__codelineno-12-44" href="#__codelineno-12-44"></a>- Limited daily loss to exactly $500
+<a id="__codelineno-12-45" name="__codelineno-12-45" href="#__codelineno-12-45"></a>- Forced break to reassess strategy
+<a id="__codelineno-12-46" name="__codelineno-12-46" href="#__codelineno-12-46"></a>- Protected remaining capital
+</code></pre></div>
+<h3 id="scenario-3-margin-level-protection">Scenario 3: Margin Level Protection<a class="headerlink" href="#scenario-3-margin-level-protection" title="Permanent link">¶</a></h3>
+<p><strong>Configuration</strong>:</p>
+<ul>
+<li>MinMarginLevel: 150%</li>
+<li>EnableAutoClose: true</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>TIME 0: Normal Trading
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>Equity:       $10,000
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>Margin Used:  $5,000
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>Margin Level: 200% (healthy)
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>Positions:    5 positions
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>Status:       All systems normal
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>TIME 1: Positions Move Against
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>Equity:       $9,000
+<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>Margin Used:  $5,000
+<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a>Margin Level: 180%
+<a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>Status:       Still safe
+<a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a>
+<a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a>TIME 2: Approaching Danger
+<a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a>
+<a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a>Equity:       $8,000
+<a id="__codelineno-13-19" name="__codelineno-13-19" href="#__codelineno-13-19"></a>Margin Used:  $5,000
+<a id="__codelineno-13-20" name="__codelineno-13-20" href="#__codelineno-13-20"></a>Margin Level: 160%
+<a id="__codelineno-13-21" name="__codelineno-13-21" href="#__codelineno-13-21"></a>Status:       Getting close to limit
+<a id="__codelineno-13-22" name="__codelineno-13-22" href="#__codelineno-13-22"></a>
+<a id="__codelineno-13-23" name="__codelineno-13-23" href="#__codelineno-13-23"></a>TIME 3: MARGIN LEVEL LOW
+<a id="__codelineno-13-24" name="__codelineno-13-24" href="#__codelineno-13-24"></a>
+<a id="__codelineno-13-25" name="__codelineno-13-25" href="#__codelineno-13-25"></a>Equity:       $7,500
+<a id="__codelineno-13-26" name="__codelineno-13-26" href="#__codelineno-13-26"></a>Margin Used:  $5,000
+<a id="__codelineno-13-27" name="__codelineno-13-27" href="#__codelineno-13-27"></a>Margin Level: 150%
+<a id="__codelineno-13-28" name="__codelineno-13-28" href="#__codelineno-13-28"></a>TRIGGER:      MarginLevel = MinMarginLevel
+<a id="__codelineno-13-29" name="__codelineno-13-29" href="#__codelineno-13-29"></a>ACTION:       Close most losing position
+<a id="__codelineno-13-30" name="__codelineno-13-30" href="#__codelineno-13-30"></a>
+<a id="__codelineno-13-31" name="__codelineno-13-31" href="#__codelineno-13-31"></a>Position Details:
+<a id="__codelineno-13-32" name="__codelineno-13-32" href="#__codelineno-13-32"></a>- Position 1: -$200
+<a id="__codelineno-13-33" name="__codelineno-13-33" href="#__codelineno-13-33"></a>- Position 2: +$50
+<a id="__codelineno-13-34" name="__codelineno-13-34" href="#__codelineno-13-34"></a>- Position 3: -$500 &lt;- WORST LOSS
+<a id="__codelineno-13-35" name="__codelineno-13-35" href="#__codelineno-13-35"></a>- Position 4: +$100
+<a id="__codelineno-13-36" name="__codelineno-13-36" href="#__codelineno-13-36"></a>- Position 5: -$150
+<a id="__codelineno-13-37" name="__codelineno-13-37" href="#__codelineno-13-37"></a>
+<a id="__codelineno-13-38" name="__codelineno-13-38" href="#__codelineno-13-38"></a>ACTION TAKEN: Close Position #3 (worst loser)
+<a id="__codelineno-13-39" name="__codelineno-13-39" href="#__codelineno-13-39"></a>
+<a id="__codelineno-13-40" name="__codelineno-13-40" href="#__codelineno-13-40"></a>TIME 4: After Closing Worst Position
+<a id="__codelineno-13-41" name="__codelineno-13-41" href="#__codelineno-13-41"></a>
+<a id="__codelineno-13-42" name="__codelineno-13-42" href="#__codelineno-13-42"></a>Equity:       $7,500
+<a id="__codelineno-13-43" name="__codelineno-13-43" href="#__codelineno-13-43"></a>Margin Used:  $4,000 (reduced)
+<a id="__codelineno-13-44" name="__codelineno-13-44" href="#__codelineno-13-44"></a>Margin Level: 187.5% (improved!)
+<a id="__codelineno-13-45" name="__codelineno-13-45" href="#__codelineno-13-45"></a>Positions:    4 remaining
+<a id="__codelineno-13-46" name="__codelineno-13-46" href="#__codelineno-13-46"></a>Status:       Margin level safe again
+<a id="__codelineno-13-47" name="__codelineno-13-47" href="#__codelineno-13-47"></a>
+<a id="__codelineno-13-48" name="__codelineno-13-48" href="#__codelineno-13-48"></a>RESULT:
+<a id="__codelineno-13-49" name="__codelineno-13-49" href="#__codelineno-13-49"></a>- Prevented broker margin call
+<a id="__codelineno-13-50" name="__codelineno-13-50" href="#__codelineno-13-50"></a>- Closed only worst position
+<a id="__codelineno-13-51" name="__codelineno-13-51" href="#__codelineno-13-51"></a>- Other positions remain open
+<a id="__codelineno-13-52" name="__codelineno-13-52" href="#__codelineno-13-52"></a>- Can continue trading
+</code></pre></div>
+<hr />
+<h2 id="used-mt5sugar-methods">Used MT5Sugar Methods<a class="headerlink" href="#used-mt5sugar-methods" title="Permanent link">¶</a></h2>
+<h3 id="1-getequity">1. GetEquity<a class="headerlink" href="#1-getequity" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">MT5Sugar</span><span class="p">)</span><span class="w"> </span><span class="nx">GetEquity</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="kt">float64</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Purpose</strong>: Gets current account equity (balance + floating P/L).</p>
+<p><strong>Usage in RiskManager</strong>:</p>
+<ul>
+<li>Called every CheckInterval</li>
+<li>Used to calculate current drawdown from peak</li>
+<li>Core metric for drawdown protection</li>
+</ul>
+<p><strong>Returns</strong>: Current equity or error</p>
+<h3 id="2-getbalance">2. GetBalance<a class="headerlink" href="#2-getbalance" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">MT5Sugar</span><span class="p">)</span><span class="w"> </span><span class="nx">GetBalance</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="kt">float64</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Purpose</strong>: Gets current account balance (closed positions only).</p>
+<p><strong>Usage in RiskManager</strong>:</p>
+<ul>
+<li>Used for daily profit/loss calculations</li>
+<li>Compared to dailyStartBalance to get today's performance</li>
+<li>Reset baseline at start of each day</li>
+</ul>
+<p><strong>Returns</strong>: Current balance or error</p>
+<h3 id="3-getmarginlevel">3. GetMarginLevel<a class="headerlink" href="#3-getmarginlevel" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">MT5Sugar</span><span class="p">)</span><span class="w"> </span><span class="nx">GetMarginLevel</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="kt">float64</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Purpose</strong>: Gets current margin level percentage.</p>
+<p><strong>Usage in RiskManager</strong>:</p>
+<ul>
+<li>Monitors risk of margin call</li>
+<li>Triggers protective action when too low</li>
+<li>Formula: (Equity / Margin) × 100</li>
+</ul>
+<p><strong>Returns</strong>: Margin level percentage or error</p>
+<h3 id="4-getopenpositions">4. GetOpenPositions<a class="headerlink" href="#4-getopenpositions" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">MT5Sugar</span><span class="p">)</span><span class="w"> </span><span class="nx">GetOpenPositions</span><span class="p">()</span><span class="w"> </span><span class="p">([]</span><span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">PositionInfo</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Purpose</strong>: Retrieves all currently open positions.</p>
+<p><strong>Usage in RiskManager</strong>:</p>
+<ul>
+<li>Counts total positions vs MaxOpenPositions</li>
+<li>Counts per-symbol exposure</li>
+<li>Identifies worst losing position for margin protection</li>
+</ul>
+<p><strong>Returns</strong>: Slice of position info or error</p>
+<h3 id="5-closeallpositions">5. CloseAllPositions<a class="headerlink" href="#5-closeallpositions" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">MT5Sugar</span><span class="p">)</span><span class="w"> </span><span class="nx">CloseAllPositions</span><span class="p">()</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Purpose</strong>: Closes all open positions immediately.</p>
+<p><strong>Usage in RiskManager</strong>:</p>
+<ul>
+<li>Emergency action when critical limits breached</li>
+<li>Used for drawdown limits and daily loss limits</li>
+<li>Cannot be undone - final protective measure</li>
+</ul>
+<p><strong>Returns</strong>: Number of positions closed or error</p>
+<h3 id="6-closeposition">6. ClosePosition<a class="headerlink" href="#6-closeposition" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">MT5Sugar</span><span class="p">)</span><span class="w"> </span><span class="nx">ClosePosition</span><span class="p">(</span><span class="nx">ticket</span><span class="w"> </span><span class="kt">uint64</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span>
+</code></pre></div>
+<p><strong>Purpose</strong>: Closes a specific position by ticket number.</p>
+<p><strong>Usage in RiskManager</strong>:</p>
+<ul>
+<li>Closes worst losing position when margin low</li>
+<li>Frees up margin without closing all positions</li>
+<li>More surgical than CloseAllPositions</li>
+</ul>
+<p><strong>Parameters</strong>:
+- <code>ticket</code>: Position ticket to close</p>
+<p><strong>Returns</strong>: Error if failed</p>
+<hr />
+<h2 id="risk-profiles">Risk Profiles<a class="headerlink" href="#risk-profiles" title="Permanent link">¶</a></h2>
+<h3 id="conservative-profile-beginners">Conservative Profile (Beginners)<a class="headerlink" href="#conservative-profile-beginners" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="nx">RiskManagerConfig</span><span class="p">{</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">    </span><span class="nx">MaxDrawdownPercent</span><span class="p">:</span><span class="w">  </span><span class="mf">5.0</span><span class="p">,</span><span class="w">              </span><span class="c1">// Very tight</span>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">    </span><span class="nx">MaxDrawdownAbsolute</span><span class="p">:</span><span class="w"> </span><span class="mf">500.0</span><span class="p">,</span><span class="w">            </span><span class="c1">// Small absolute limit</span>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">    </span><span class="nx">DailyLossLimit</span><span class="p">:</span><span class="w">      </span><span class="mf">200.0</span><span class="p">,</span><span class="w">            </span><span class="c1">// Stop early on losses</span>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="w">    </span><span class="nx">DailyProfitTarget</span><span class="p">:</span><span class="w">   </span><span class="mf">300.0</span><span class="p">,</span><span class="w">            </span><span class="c1">// Lock in profits early</span>
+<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="w">    </span><span class="nx">MinMarginLevel</span><span class="p">:</span><span class="w">      </span><span class="mf">200.0</span><span class="p">,</span><span class="w">            </span><span class="c1">// High margin safety</span>
+<a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="w">    </span><span class="nx">MaxMarginUsed</span><span class="p">:</span><span class="w">       </span><span class="mf">50.0</span><span class="p">,</span><span class="w">             </span><span class="c1">// Conservative margin usage</span>
+<a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="w">    </span><span class="nx">MaxOpenPositions</span><span class="p">:</span><span class="w">    </span><span class="mi">10</span><span class="p">,</span><span class="w">               </span><span class="c1">// Limited positions</span>
+<a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="w">    </span><span class="nx">MaxSymbolExposure</span><span class="p">:</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">                </span><span class="c1">// Minimal per-symbol</span>
+<a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="w">    </span><span class="nx">MaxPositionSize</span><span class="p">:</span><span class="w">     </span><span class="mf">0.5</span><span class="p">,</span><span class="w">              </span><span class="c1">// Small sizes</span>
+<a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a><span class="w">    </span><span class="nx">CheckInterval</span><span class="p">:</span><span class="w">       </span><span class="mi">3</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span><span class="w">  </span><span class="c1">// Frequent checks</span>
+<a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a><span class="w">    </span><span class="nx">EnableAutoClose</span><span class="p">:</span><span class="w">     </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a><span class="w">    </span><span class="nx">EnableTradeBlocking</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Best for</strong>:</p>
+<ul>
+<li>New traders learning risk management</li>
+<li>Small accounts ($1,000-$5,000)</li>
+<li>Demo account testing</li>
+<li>High-risk strategies needing tight control</li>
+</ul>
+<h3 id="moderate-profile-default">Moderate Profile (Default)<a class="headerlink" href="#moderate-profile-default" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="nx">RiskManagerConfig</span><span class="p">{</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">    </span><span class="nx">MaxDrawdownPercent</span><span class="p">:</span><span class="w">  </span><span class="mf">10.0</span><span class="p">,</span><span class="w">             </span><span class="c1">// Moderate tolerance</span>
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">    </span><span class="nx">MaxDrawdownAbsolute</span><span class="p">:</span><span class="w"> </span><span class="mf">1000.0</span><span class="p">,</span><span class="w">           </span><span class="c1">// Reasonable limit</span>
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">    </span><span class="nx">DailyLossLimit</span><span class="p">:</span><span class="w">      </span><span class="mf">500.0</span><span class="p">,</span><span class="w">            </span><span class="c1">// Balanced daily limit</span>
+<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">    </span><span class="nx">DailyProfitTarget</span><span class="p">:</span><span class="w">   </span><span class="mf">1000.0</span><span class="p">,</span><span class="w">           </span><span class="c1">// Good profit target</span>
+<a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="w">    </span><span class="nx">MinMarginLevel</span><span class="p">:</span><span class="w">      </span><span class="mf">150.0</span><span class="p">,</span><span class="w">            </span><span class="c1">// Standard margin safety</span>
+<a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="w">    </span><span class="nx">MaxMarginUsed</span><span class="p">:</span><span class="w">       </span><span class="mf">80.0</span><span class="p">,</span><span class="w">             </span><span class="c1">// Healthy margin usage</span>
+<a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="w">    </span><span class="nx">MaxOpenPositions</span><span class="p">:</span><span class="w">    </span><span class="mi">20</span><span class="p">,</span><span class="w">               </span><span class="c1">// Moderate count</span>
+<a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a><span class="w">    </span><span class="nx">MaxSymbolExposure</span><span class="p">:</span><span class="w">   </span><span class="mi">5</span><span class="p">,</span><span class="w">                </span><span class="c1">// Reasonable per-symbol</span>
+<a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a><span class="w">    </span><span class="nx">MaxPositionSize</span><span class="p">:</span><span class="w">     </span><span class="mf">1.0</span><span class="p">,</span><span class="w">              </span><span class="c1">// Standard lot size</span>
+<a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a><span class="w">    </span><span class="nx">CheckInterval</span><span class="p">:</span><span class="w">       </span><span class="mi">5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span><span class="w">  </span><span class="c1">// Regular checks</span>
+<a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a><span class="w">    </span><span class="nx">EnableAutoClose</span><span class="p">:</span><span class="w">     </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a><span class="w">    </span><span class="nx">EnableTradeBlocking</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-21-14" name="__codelineno-21-14" href="#__codelineno-21-14"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Best for</strong>:</p>
+<ul>
+<li>Experienced traders</li>
+<li>Medium accounts ($5,000-$20,000)</li>
+<li>Swing trading strategies</li>
+<li>Multi-pair trading</li>
+</ul>
+<h3 id="aggressive-profile-experienced">Aggressive Profile (Experienced)<a class="headerlink" href="#aggressive-profile-experienced" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="nx">RiskManagerConfig</span><span class="p">{</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w">    </span><span class="nx">MaxDrawdownPercent</span><span class="p">:</span><span class="w">  </span><span class="mf">20.0</span><span class="p">,</span><span class="w">             </span><span class="c1">// Wider tolerance</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">    </span><span class="nx">MaxDrawdownAbsolute</span><span class="p">:</span><span class="w"> </span><span class="mf">5000.0</span><span class="p">,</span><span class="w">           </span><span class="c1">// Large absolute limit</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">    </span><span class="nx">DailyLossLimit</span><span class="p">:</span><span class="w">      </span><span class="mf">2000.0</span><span class="p">,</span><span class="w">           </span><span class="c1">// Higher daily tolerance</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="w">    </span><span class="nx">DailyProfitTarget</span><span class="p">:</span><span class="w">   </span><span class="mf">5000.0</span><span class="p">,</span><span class="w">           </span><span class="c1">// Ambitious target</span>
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="w">    </span><span class="nx">MinMarginLevel</span><span class="p">:</span><span class="w">      </span><span class="mf">100.0</span><span class="p">,</span><span class="w">            </span><span class="c1">// Minimal margin safety</span>
+<a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="w">    </span><span class="nx">MaxMarginUsed</span><span class="p">:</span><span class="w">       </span><span class="mf">90.0</span><span class="p">,</span><span class="w">             </span><span class="c1">// Aggressive margin usage</span>
+<a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="w">    </span><span class="nx">MaxOpenPositions</span><span class="p">:</span><span class="w">    </span><span class="mi">50</span><span class="p">,</span><span class="w">               </span><span class="c1">// Many positions</span>
+<a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a><span class="w">    </span><span class="nx">MaxSymbolExposure</span><span class="p">:</span><span class="w">   </span><span class="mi">10</span><span class="p">,</span><span class="w">               </span><span class="c1">// High per-symbol</span>
+<a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a><span class="w">    </span><span class="nx">MaxPositionSize</span><span class="p">:</span><span class="w">     </span><span class="mf">5.0</span><span class="p">,</span><span class="w">              </span><span class="c1">// Large sizes</span>
+<a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a><span class="w">    </span><span class="nx">CheckInterval</span><span class="p">:</span><span class="w">       </span><span class="mi">10</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span><span class="w"> </span><span class="c1">// Less frequent checks</span>
+<a id="__codelineno-22-12" name="__codelineno-22-12" href="#__codelineno-22-12"></a><span class="w">    </span><span class="nx">EnableAutoClose</span><span class="p">:</span><span class="w">     </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-22-13" name="__codelineno-22-13" href="#__codelineno-22-13"></a><span class="w">    </span><span class="nx">EnableTradeBlocking</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">            </span><span class="c1">// No trade blocking</span>
+<a id="__codelineno-22-14" name="__codelineno-22-14" href="#__codelineno-22-14"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Best for</strong>:</p>
+<ul>
+<li>Professional traders only</li>
+<li>Large accounts ($20,000+)</li>
+<li>Grid/martingale strategies</li>
+<li>When you can monitor actively</li>
+</ul>
+<p><strong>WARNING</strong>: Only use aggressive profile if you fully understand the risks!</p>
+<hr />
+<h2 id="risk-event-types">Risk Event Types<a class="headerlink" href="#risk-event-types" title="Permanent link">¶</a></h2>
+<h3 id="event-types">Event Types<a class="headerlink" href="#event-types" title="Permanent link">¶</a></h3>
+<ol>
+<li>
+<p><strong>MAX_DRAWDOWN_PERCENT</strong>: Drawdown percentage exceeded</p>
+</li>
+<li>
+<p><strong>MAX_DRAWDOWN_ABSOLUTE</strong>: Drawdown dollar amount exceeded</p>
+</li>
+<li>
+<p><strong>DAILY_LOSS_LIMIT</strong>: Daily loss limit hit</p>
+</li>
+<li>
+<p><strong>DAILY_PROFIT_TARGET</strong>: Daily profit target reached</p>
+</li>
+<li>
+<p><strong>LOW_MARGIN_LEVEL</strong>: Margin level too low</p>
+</li>
+<li>
+<p><strong>MAX_POSITIONS</strong>: Too many open positions</p>
+</li>
+<li>
+<p><strong>SYMBOL_EXPOSURE</strong>: Too many positions on one symbol</p>
+</li>
+<li>
+<p><strong>EMERGENCY_CLOSE</strong>: Positions closed by risk manager</p>
+</li>
+</ol>
+<h3 id="severity-levels">Severity Levels<a class="headerlink" href="#severity-levels" title="Permanent link">¶</a></h3>
+<ul>
+<li><strong>INFO</strong>: Informational (profit target reached)</li>
+<li><strong>WARNING</strong>: Potential issue (position count high)</li>
+<li><strong>CRITICAL</strong>: Immediate action taken (drawdown exceeded, emergency close)</li>
+</ul>
+<h3 id="event-logging">Event Logging<a class="headerlink" href="#event-logging" title="Permanent link">¶</a></h3>
+<ul>
+<li>Last 100 events kept in memory</li>
+<li>Accessible via <code>GetRiskEvents()</code></li>
+<li>Each event contains:</li>
+<li>Timestamp</li>
+<li>EventType</li>
+<li>Severity</li>
+<li>Description</li>
+<li>Current value vs limit</li>
+<li>Action taken</li>
+</ul>
+<hr />
+<h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">¶</a></h2>
+<h3 id="set-limits-based-on-account-size">Set Limits Based on Account Size<a class="headerlink" href="#set-limits-based-on-account-size" title="Permanent link">¶</a></h3>
+<ul>
+<li><strong>Drawdown</strong>: 5-10% of account</li>
+<li><strong>Daily loss</strong>: 2-5% of account</li>
+<li><strong>Position size</strong>: 1-2% risk per trade</li>
+</ul>
+<h3 id="test-on-demo-first">Test on Demo First<a class="headerlink" href="#test-on-demo-first" title="Permanent link">¶</a></h3>
+<ul>
+<li>Run risk manager on demo for 1 week minimum</li>
+<li>Ensure limits trigger correctly</li>
+<li>Verify emergency close works as expected</li>
+</ul>
+<h3 id="monitor-risk-events">Monitor Risk Events<a class="headerlink" href="#monitor-risk-events" title="Permanent link">¶</a></h3>
+<ul>
+<li>Check <code>GetRiskEvents()</code> regularly</li>
+<li>Look for patterns (same limit hit repeatedly?)</li>
+<li>Adjust limits if needed</li>
+</ul>
+<h3 id="combine-with-trading-strategy">Combine with Trading Strategy<a class="headerlink" href="#combine-with-trading-strategy" title="Permanent link">¶</a></h3>
+<ul>
+<li>Risk manager complements your strategy, doesn't replace it</li>
+<li>Your strategy should have its own stop losses</li>
+<li>Risk manager is "last line of defense"</li>
+</ul>
+<h3 id="use-daily-profit-target">Use Daily Profit Target<a class="headerlink" href="#use-daily-profit-target" title="Permanent link">¶</a></h3>
+<ul>
+<li>Lock in good days by stopping at target</li>
+<li>Prevents "giving it all back" syndrome</li>
+<li>Set realistic targets (don't be too greedy)</li>
+</ul>
+<hr />
+<h2 id="configuration-location">Configuration Location<a class="headerlink" href="#configuration-location" title="Permanent link">¶</a></h2>
+<p><strong>Runtime configuration is located in</strong>: <code>examples/demos/main.go -&gt; RunOrchestrator_RiskManager()</code></p>
+<p>This separation exists because:</p>
+<ol>
+<li>
+<p><strong>Code reusability</strong>: Same risk engine runs with different limits</p>
+</li>
+<li>
+<p><strong>Quick testing</strong>: Change limits without modifying protection logic</p>
+</li>
+<li>
+<p><strong>User examples</strong>: Shows how to configure risk management</p>
+</li>
+<li>
+<p><strong>Centralized entry point</strong>: Single place for all orchestrator launches</p>
+</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2024–2025 GoMT5. MT5 is a trademark of MetaQuotes Software Corp. This documentation is community-maintained and not affiliated with MetaQuotes.
+
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/MetaRPC/GoMT5" target="_blank" rel="noopener" title="GoMT5 on GitHub" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tracking", "navigation.expand", "navigation.top", "navigation.footer", "content.code.copy", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/ux.js"></script>
+      
+    
+  </body>
+</html>

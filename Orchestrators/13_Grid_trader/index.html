@@ -1,0 +1,1981 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Complete Go SDK for MetaTrader 5 trading automation">
+      
+      
+      
+        <link rel="canonical" href="https://MetaRPC.github.io/GoMT5/Orchestrators/13_Grid_trader/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>GridTrader - Grid Trading Orchestrator - GoMT5 SDK Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../styles/custom.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#gridtrader-grid-trading-orchestrator" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="GoMT5 SDK Documentation" class="md-header__button md-logo" aria-label="GoMT5 SDK Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m2.64 10.33-.02-.06.22-.27.12-.08H6.8l.03.08-.18.26-.11.06zm-1.61.98L1 11.26l.22-.29.12-.06h4.9l.05.09-.08.24-.1.07zm2.6.99-.04-.06.16-.28.1-.06H6l.07.07-.02.25-.08.08zm11.15-2.16-1.78.47c-.19.04-.2.05-.34-.11-.16-.18-.27-.29-.5-.4-.66-.34-1.33-.24-1.94.15-.72.48-1.11 1.17-1.1 2.05.01.86.6 1.57 1.45 1.7.73.09 1.34-.17 1.83-.72l.29-.39h-2.07c-.22 0-.27-.14-.2-.32l.55-1.18c.03-.06.11-.17.27-.17h3.44c.15-.5.41-.96.75-1.41.78-1.03 1.73-1.57 3-1.81 1.07-.18 2.13-.07 3.07.57.84.58 1.37 1.36 1.5 2.39.19 1.45-.24 2.63-1.24 3.65-.71.72-1.58 1.17-2.57 1.39l-.86.08c-.98-.02-1.87-.3-2.62-.95-.52-.45-.88-.99-1.06-1.63-.15.24-.27.47-.44.7-.77 1.02-1.78 1.65-3.06 1.8-1.05.16-2.03-.05-2.89-.69-.79-.6-1.26-1.4-1.36-2.39-.14-1.17.2-2.22.91-3.14.76-1 1.77-1.63 3.01-1.86 1-.18 1.97-.06 2.84.52.57.38.97.9 1.24 1.52q.06.135-.12.18m6.11 1.6-.03-.36c-.19-1.06-1.17-1.66-2.19-1.43-1.01.22-1.67.85-1.88 1.86-.19.84.21 1.69.98 2.03.59.26 1.19.22 1.76-.06.84-.43 1.31-1.12 1.36-2.04"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            GoMT5 SDK Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              GridTrader - Grid Trading Orchestrator
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/MetaRPC/GoMT5" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    MetaRPC/GoMT5
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="GoMT5 SDK Documentation" class="md-nav__button md-logo" aria-label="GoMT5 SDK Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m2.64 10.33-.02-.06.22-.27.12-.08H6.8l.03.08-.18.26-.11.06zm-1.61.98L1 11.26l.22-.29.12-.06h4.9l.05.09-.08.24-.1.07zm2.6.99-.04-.06.16-.28.1-.06H6l.07.07-.02.25-.08.08zm11.15-2.16-1.78.47c-.19.04-.2.05-.34-.11-.16-.18-.27-.29-.5-.4-.66-.34-1.33-.24-1.94.15-.72.48-1.11 1.17-1.1 2.05.01.86.6 1.57 1.45 1.7.73.09 1.34-.17 1.83-.72l.29-.39h-2.07c-.22 0-.27-.14-.2-.32l.55-1.18c.03-.06.11-.17.27-.17h3.44c.15-.5.41-.96.75-1.41.78-1.03 1.73-1.57 3-1.81 1.07-.18 2.13-.07 3.07.57.84.58 1.37 1.36 1.5 2.39.19 1.45-.24 2.63-1.24 3.65-.71.72-1.58 1.17-2.57 1.39l-.86.08c-.98-.02-1.87-.3-2.62-.95-.52-.45-.88-.99-1.06-1.63-.15.24-.27.47-.44.7-.77 1.02-1.78 1.65-3.06 1.8-1.05.16-2.03-.05-2.89-.69-.79-.6-1.26-1.4-1.36-2.39-.14-1.17.2-2.22.91-3.14.76-1 1.77-1.63 3.01-1.86 1-.18 1.97-.06 2.84.52.57.38.97.9 1.24 1.52q.06.135-.12.18m6.11 1.6-.03-.36c-.19-1.06-1.17-1.66-2.19-1.43-1.01.22-1.67.85-1.88 1.86-.19.84.21 1.69.98 2.03.59.26 1.19.22 1.76-.06.84-.43 1.31-1.12 1.36-2.04"/></svg>
+
+    </a>
+    GoMT5 SDK Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/MetaRPC/GoMT5" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    MetaRPC/GoMT5
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/GETTING_STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/Your_First_Project/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Project
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/PROJECT_MAP/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Map
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/GLOSSARY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/MT5_For_Beginners/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5 for Beginners
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/GRPC_STREAM_MANAGEMENT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gRPC Streaming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/RETURN_CODES_REFERENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Return Codes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/ENUMS_USAGE_REFERENCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ENUMs Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/PROTOBUF_INSPECTOR_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Protobuf Inspector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../All_Guides/USERCODE_SANDBOX_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UserCode Sandbox
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_Reference/MT5Account/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5Account API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_Reference/MT5Service/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5Service API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API_Reference/MT5Sugar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MT5Sugar API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Orchestrators
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Orchestrators
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Strategies.Master.Overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Description
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Architecture
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Architecture">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#configuration-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to Run
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🟢 Algorithm
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🟢 Algorithm">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flowchart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flowchart
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-by-step-description" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step-by-step Description
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#grid-visualization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Grid Visualization
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Grid Visualization">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scenario-gridsize5-gridstep100-currentprice110000" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scenario: GridSize=5, GridStep=100, CurrentPrice=1.10000
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#working-scenario-price-movement-profit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Working Scenario: Price Movement &amp; Profit
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#used-mt5sugar-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Used MT5Sugar Methods
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Used MT5Sugar Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-buylimit-buylimitwithsltp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. BuyLimit / BuyLimitWithSLTP
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-selllimit-selllimitwithsltp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. SellLimit / SellLimitWithSLTP
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-getpositionsbysymbol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. GetPositionsBySymbol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-getpriceinfo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. GetPriceInfo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-servicecloseorder-via-getservice" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Service.CloseOrder (via GetService)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#risk-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk Management
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Risk Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#maximum-risk-calculation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Maximum Risk Calculation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#risk-considerations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk Considerations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommended-settings-by-account-size" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended Settings by Account Size
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#when-to-use-grid-trading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to Use Grid Trading
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="When to Use Grid Trading">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#suitable-conditions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Suitable Conditions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#unsuitable-conditions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unsuitable Conditions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#best-market-sessions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best Market Sessions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-location" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Location
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="gridtrader-grid-trading-orchestrator">GridTrader - Grid Trading Orchestrator<a class="headerlink" href="#gridtrader-grid-trading-orchestrator" title="Permanent link">¶</a></h1>
+<h2 id="description">Description<a class="headerlink" href="#description" title="Permanent link">¶</a></h2>
+<p><strong>🧩 GridTrader</strong> is an automated grid trading orchestrator designed for <strong>RANGE-BOUND and SIDEWAYS markets</strong>. It places a "fishing net" of pending BUY and SELL orders at fixed price intervals, profiting from oscillations as price bounces between levels. Perfect for choppy, non-trending markets where price moves back and forth.</p>
+<p><strong>Strategy Principle</strong>: A symmetrical grid of pending orders is created above AND below current price:
+- <strong>SELL LIMIT orders</strong> placed above current price (profit when price rises then falls back)
+- <strong>BUY LIMIT orders</strong> placed below current price (profit when price falls then rises back)
+- Each level acts as a profit target for the opposite direction
+- Grid automatically rebuilds when price moves significantly
+- Works 24/7 capturing small profits from price oscillations</p>
+<p><strong>File</strong>: <code>examples/demos/orchestrators/13_grid_trader.go</code></p>
+<blockquote>
+<p><strong>IMPORTANT DISCLAIMER - EDUCATIONAL EXAMPLE ONLY</strong></p>
+<p>This orchestrator is a demonstration showing how GoMT5 methods function and combine into automated strategies. <strong>NOT a production-ready trading strategy!</strong> Always test on demo accounts first.</p>
+</blockquote>
+<hr />
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">¶</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>GRID TRADER ORCHESTRATOR
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    |
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>MT5Sugar Instance
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    |
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    |  |  |
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>BuyLimit  SellLimit  GetPositions
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>(below)   (above)    (monitoring)
+</code></pre></div>
+<h3 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">¶</a></h3>
+<ul>
+<li><strong>MT5Sugar</strong>: High-level convenience API (<code>BuyLimit</code>, <code>SellLimit</code>, <code>GetPositionsBySymbol</code>)</li>
+<li><strong>MT5Service</strong>: Mid-level API for cleanup operations (<code>CloseOrder</code>)</li>
+<li><strong>BaseOrchestrator</strong>: Foundation pattern with metrics tracking</li>
+<li><strong>protobuf types</strong>: <code>pb.OrderCloseRequest</code> for order management</li>
+</ul>
+<hr />
+<h2 id="configuration-parameters">Configuration Parameters<a class="headerlink" href="#configuration-parameters" title="Permanent link">¶</a></h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Symbol</code></td>
+<td>string</td>
+<td><em>required</em></td>
+<td>Trading instrument (e.g., "EURUSD")</td>
+</tr>
+<tr>
+<td><code>GridSize</code></td>
+<td>int</td>
+<td><code>5</code></td>
+<td>Number of grid levels above AND below current price</td>
+</tr>
+<tr>
+<td><code>GridStep</code></td>
+<td>float64</td>
+<td><code>100</code></td>
+<td>Distance between levels in points (100pts=10pips for EURUSD)</td>
+</tr>
+<tr>
+<td><code>LotSize</code></td>
+<td>float64</td>
+<td><code>0.01</code></td>
+<td>Volume (lots) for each order in the grid</td>
+</tr>
+<tr>
+<td><code>MaxPositions</code></td>
+<td>int</td>
+<td><code>10</code></td>
+<td>Maximum concurrent open positions allowed</td>
+</tr>
+<tr>
+<td><code>TakeProfit</code></td>
+<td>float64</td>
+<td><code>0</code></td>
+<td>Take profit in points (0=use GridStep as TP)</td>
+</tr>
+<tr>
+<td><code>StopLoss</code></td>
+<td>float64</td>
+<td><code>0</code></td>
+<td>Stop loss in points (0=no SL)</td>
+</tr>
+<tr>
+<td><code>CheckInterval</code></td>
+<td>time.Duration</td>
+<td><code>5s</code></td>
+<td>How often to check and update grid</td>
+</tr>
+<tr>
+<td><code>RebuildOnFill</code></td>
+<td>bool</td>
+<td><code>false</code></td>
+<td>Whether to rebuild entire grid when order fills</td>
+</tr>
+</tbody>
+</table>
+<h3 id="configuration-example">Configuration Example<a class="headerlink" href="#configuration-example" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nx">config</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">orchestrators</span><span class="p">.</span><span class="nx">GridTraderConfig</span><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="nx">Symbol</span><span class="p">:</span><span class="w">        </span><span class="s">&quot;EURUSD&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nx">GridSize</span><span class="p">:</span><span class="w">      </span><span class="mi">5</span><span class="p">,</span><span class="w">                </span><span class="c1">// 5 levels each side (10 total orders)</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nx">GridStep</span><span class="p">:</span><span class="w">      </span><span class="mi">100</span><span class="p">,</span><span class="w">              </span><span class="c1">// 100 points = 10 pips spacing</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nx">LotSize</span><span class="p">:</span><span class="w">       </span><span class="mf">0.01</span><span class="p">,</span><span class="w">             </span><span class="c1">// 0.01 lots per order</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nx">MaxPositions</span><span class="p">:</span><span class="w">  </span><span class="mi">10</span><span class="p">,</span><span class="w">               </span><span class="c1">// Max 10 concurrent positions</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nx">TakeProfit</span><span class="p">:</span><span class="w">    </span><span class="mi">0</span><span class="p">,</span><span class="w">                </span><span class="c1">// Use grid step as TP</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nx">StopLoss</span><span class="p">:</span><span class="w">      </span><span class="mi">0</span><span class="p">,</span><span class="w">                </span><span class="c1">// No SL by default</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="nx">CheckInterval</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">Second</span><span class="p">,</span><span class="w">  </span><span class="c1">// Check every 5 seconds</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="nx">RebuildOnFill</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">            </span><span class="c1">// Don&#39;t rebuild on each fill</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="p">}</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="nx">gridTrader</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">orchestrators</span><span class="p">.</span><span class="nx">NewGridTrader</span><span class="p">(</span><span class="nx">sugar</span><span class="p">,</span><span class="w"> </span><span class="nx">config</span><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="how-to-run">How to Run<a class="headerlink" href="#how-to-run" title="Permanent link">¶</a></h2>
+<p>You can execute this orchestrator using several command variations:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Navigate to examples directory</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">cd</span><span class="w"> </span>examples/demos
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Option 1: By number</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>go<span class="w"> </span>run<span class="w"> </span>main.go<span class="w"> </span><span class="m">13</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Option 2: By keyword</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>go<span class="w"> </span>run<span class="w"> </span>main.go<span class="w"> </span>grid
+</code></pre></div>
+<p>Both commands will launch the <strong>GridTrader</strong> orchestrator with the configuration specified in <code>main.go -&gt; RunOrchestrator_Grid()</code>.</p>
+<hr />
+<h2 id="algorithm">🟢 Algorithm<a class="headerlink" href="#algorithm" title="Permanent link">¶</a></h2>
+<h3 id="flowchart">Flowchart<a class="headerlink" href="#flowchart" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>START
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  |
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>Initialize symbol parameters (digits, point value)
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>  |
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>Get current price (Bid/Ask midpoint)
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>  |
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>Calculate grid levels:
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>  Levels ABOVE: currentPrice + (1×step), (2×step), ..., (GridSize×step)
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>  Levels BELOW: currentPrice - (1×step), (2×step), ..., (GridSize×step)
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>  |
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>FOR each level ABOVE current price:
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>  | Place SELL LIMIT at level
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>  | Set TP at (level - GridStep)
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>  |
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>FOR each level BELOW current price:
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>  | Place BUY LIMIT at level
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>  | Set TP at (level + GridStep)
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>  |
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>MONITORING LOOP (every CheckInterval):
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>  | Get current positions count
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>  | Check if max positions reached -&gt; pause if yes
+<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>  | Get current price
+<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>  | If price moved &gt; 2×GridStep from center -&gt; rebuild grid
+<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>  | Track total P/L of open positions
+<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>  |
+<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a>ON STOP:
+<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a>  | Cancel all pending orders
+<a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>  | Close all positions (if configured)
+<a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a>  |
+<a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a>END
+</code></pre></div>
+<h3 id="step-by-step-description">Step-by-step Description<a class="headerlink" href="#step-by-step-description" title="Permanent link">¶</a></h3>
+<h4 id="1-initialization">1. Initialization<a class="headerlink" href="#1-initialization" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>272–286</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">g</span><span class="w"> </span><span class="o">*</span><span class="nx">GridTrader</span><span class="p">)</span><span class="w"> </span><span class="nx">initializeSymbol</span><span class="p">()</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">    </span><span class="nx">priceInfo</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">sugar</span><span class="p">.</span><span class="nx">GetPriceInfo</span><span class="p">(</span><span class="nx">g</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">Symbol</span><span class="p">)</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="kc">nil</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="nx">fmt</span><span class="p">.</span><span class="nx">Errorf</span><span class="p">(</span><span class="s">&quot;failed to get price: %w&quot;</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="p">)</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nx">g</span><span class="p">.</span><span class="nx">currentPrice</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">priceInfo</span><span class="p">.</span><span class="nx">Bid</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">    </span><span class="nx">g</span><span class="p">.</span><span class="nx">digits</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">5</span><span class="w">         </span><span class="c1">// Symbol decimal digits</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">    </span><span class="nx">g</span><span class="p">.</span><span class="nx">point</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mf">0.00001</span><span class="w">    </span><span class="c1">// Point value for EURUSD</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>What happens</strong>:</p>
+<ul>
+<li>Current Bid price is obtained for grid center calculation</li>
+<li>Symbol parameters (digits, point value) are initialized</li>
+<li>For EURUSD: 5 digits, point = 0.00001</li>
+</ul>
+<h4 id="2-building-the-grid">2. Building the Grid<a class="headerlink" href="#2-building-the-grid" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>289–331</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">g</span><span class="w"> </span><span class="o">*</span><span class="nx">GridTrader</span><span class="p">)</span><span class="w"> </span><span class="nx">buildGrid</span><span class="p">()</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">    </span><span class="nx">g</span><span class="p">.</span><span class="nx">cleanupOrders</span><span class="p">()</span><span class="w">  </span><span class="c1">// Remove old grid first</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="c1">// Get fresh current price</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">    </span><span class="nx">priceInfo</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">sugar</span><span class="p">.</span><span class="nx">GetPriceInfo</span><span class="p">(</span><span class="nx">g</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">Symbol</span><span class="p">)</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="nx">g</span><span class="p">.</span><span class="nx">currentPrice</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">(</span><span class="nx">priceInfo</span><span class="p">.</span><span class="nx">Bid</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">priceInfo</span><span class="p">.</span><span class="nx">Ask</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="c1">// Calculate grid step in price units</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="nx">gridStepPrice</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">GridStep</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">point</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">    </span><span class="c1">// Build levels above and below</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">GridSize</span><span class="p">;</span><span class="w"> </span><span class="nx">i</span><span class="o">++</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">        </span><span class="nx">levelAbove</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">currentPrice</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nb">float64</span><span class="p">(</span><span class="nx">i</span><span class="p">)</span><span class="o">*</span><span class="nx">gridStepPrice</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">        </span><span class="nx">levelBelow</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">currentPrice</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nb">float64</span><span class="p">(</span><span class="nx">i</span><span class="p">)</span><span class="o">*</span><span class="nx">gridStepPrice</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">        </span><span class="nx">g</span><span class="p">.</span><span class="nx">placeSellLimit</span><span class="p">(</span><span class="nx">levelAbove</span><span class="p">)</span><span class="w">  </span><span class="c1">// SELL above</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">        </span><span class="nx">g</span><span class="p">.</span><span class="nx">placeBuyLimit</span><span class="p">(</span><span class="nx">levelBelow</span><span class="p">)</span><span class="w">   </span><span class="c1">// BUY below</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>
+<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span>
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Critical Details</strong>:</p>
+<ul>
+<li>Grid center = (Bid + Ask) / 2 for balanced placement</li>
+<li>Each level is <code>GridStep × point</code> distance from center</li>
+<li>SELL LIMIT orders go <strong>ABOVE</strong> current price</li>
+<li>BUY LIMIT orders go <strong>BELOW</strong> current price</li>
+<li>Old grid is cleaned up before rebuilding</li>
+</ul>
+<p><strong>Example with GridSize=5, GridStep=100, CurrentPrice=1.10000</strong>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>Grid levels calculated:
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>levelAbove[1] = 1.10000 + (1×0.00100) = 1.10100  SELL LIMIT
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>levelAbove[2] = 1.10000 + (2×0.00100) = 1.10200  SELL LIMIT
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>levelAbove[3] = 1.10000 + (3×0.00100) = 1.10300  SELL LIMIT
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>levelAbove[4] = 1.10000 + (4×0.00100) = 1.10400  SELL LIMIT
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>levelAbove[5] = 1.10000 + (5×0.00100) = 1.10500  SELL LIMIT
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>levelBelow[1] = 1.10000 - (1×0.00100) = 1.09900  BUY LIMIT
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>levelBelow[2] = 1.10000 - (2×0.00100) = 1.09800  BUY LIMIT
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>levelBelow[3] = 1.10000 - (3×0.00100) = 1.09700  BUY LIMIT
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>levelBelow[4] = 1.10000 - (4×0.00100) = 1.09600  BUY LIMIT
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>levelBelow[5] = 1.10000 - (5×0.00100) = 1.09500  BUY LIMIT
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>Total: 10 pending orders
+</code></pre></div>
+<h4 id="3-placing-buy-limit-orders">3. Placing BUY LIMIT Orders<a class="headerlink" href="#3-placing-buy-limit-orders" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>334–379</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">g</span><span class="w"> </span><span class="o">*</span><span class="nx">GridTrader</span><span class="p">)</span><span class="w"> </span><span class="nx">placeBuyLimit</span><span class="p">(</span><span class="nx">price</span><span class="w"> </span><span class="kt">float64</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="c1">// Calculate TP/SL</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="nx">tp</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">price</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">GridStep</span><span class="o">*</span><span class="nx">g</span><span class="p">.</span><span class="nx">point</span><span class="w">  </span><span class="c1">// TP one grid level up</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">    </span><span class="nx">sl</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mf">0.0</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">StopLoss</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">        </span><span class="nx">sl</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">price</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">StopLoss</span><span class="o">*</span><span class="nx">g</span><span class="p">.</span><span class="nx">point</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="c1">// Place order</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">    </span><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">sugar</span><span class="p">.</span><span class="nx">BuyLimitWithSLTP</span><span class="p">(</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">        </span><span class="nx">g</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">Symbol</span><span class="p">,</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">        </span><span class="nx">g</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">LotSize</span><span class="p">,</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">        </span><span class="nx">price</span><span class="p">,</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">        </span><span class="nx">sl</span><span class="p">,</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">        </span><span class="nx">tp</span><span class="p">,</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="w">    </span><span class="p">)</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="w">    </span><span class="nx">g</span><span class="p">.</span><span class="nx">activeOrders</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">g</span><span class="p">.</span><span class="nx">activeOrders</span><span class="p">,</span><span class="w"> </span><span class="nx">ticket</span><span class="p">)</span>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span>
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Key Points</strong>:</p>
+<ul>
+<li><strong>TP is set one grid level ABOVE entry</strong> (price + GridStep)</li>
+<li>This means: when BUY fills at 1.09900, TP is at 1.10000</li>
+<li>As price rises back to grid center, position closes with profit</li>
+<li>SL is optional (default 0 = no SL)</li>
+</ul>
+<p><strong>Example BUY order placement</strong>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Price: 1.09900 (BUY LIMIT)
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>TP:    1.10000 (price + 100pts)
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>SL:    none (StopLoss = 0)
+</code></pre></div></p>
+<h4 id="4-placing-sell-limit-orders">4. Placing SELL LIMIT Orders<a class="headerlink" href="#4-placing-sell-limit-orders" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>382–427</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">g</span><span class="w"> </span><span class="o">*</span><span class="nx">GridTrader</span><span class="p">)</span><span class="w"> </span><span class="nx">placeSellLimit</span><span class="p">(</span><span class="nx">price</span><span class="w"> </span><span class="kt">float64</span><span class="p">)</span><span class="w"> </span><span class="kt">error</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">    </span><span class="c1">// Calculate TP/SL</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nx">tp</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">price</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">GridStep</span><span class="o">*</span><span class="nx">g</span><span class="p">.</span><span class="nx">point</span><span class="w">  </span><span class="c1">// TP one grid level down</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nx">sl</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="mf">0.0</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">StopLoss</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">        </span><span class="nx">sl</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nx">price</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">StopLoss</span><span class="o">*</span><span class="nx">g</span><span class="p">.</span><span class="nx">point</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">    </span><span class="c1">// Place order</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">    </span><span class="nx">ticket</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">sugar</span><span class="p">.</span><span class="nx">SellLimitWithSLTP</span><span class="p">(</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">        </span><span class="nx">g</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">Symbol</span><span class="p">,</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">        </span><span class="nx">g</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">LotSize</span><span class="p">,</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">        </span><span class="nx">price</span><span class="p">,</span>
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">        </span><span class="nx">sl</span><span class="p">,</span>
+<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">        </span><span class="nx">tp</span><span class="p">,</span>
+<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="w">    </span><span class="p">)</span>
+<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a>
+<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="w">    </span><span class="nx">g</span><span class="p">.</span><span class="nx">activeOrders</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">append</span><span class="p">(</span><span class="nx">g</span><span class="p">.</span><span class="nx">activeOrders</span><span class="p">,</span><span class="w"> </span><span class="nx">ticket</span><span class="p">)</span>
+<a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="kc">nil</span>
+<a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Key Points</strong>:</p>
+<ul>
+<li><strong>TP is set one grid level BELOW entry</strong> (price - GridStep)</li>
+<li>This means: when SELL fills at 1.10100, TP is at 1.10000</li>
+<li>As price falls back to grid center, position closes with profit</li>
+</ul>
+<p><strong>Example SELL order placement</strong>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>Price: 1.10100 (SELL LIMIT)
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>TP:    1.10000 (price - 100pts)
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>SL:    none (StopLoss = 0)
+</code></pre></div></p>
+<h4 id="5-monitoring-loop">5. Monitoring Loop<a class="headerlink" href="#5-monitoring-loop" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>430–501</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">g</span><span class="w"> </span><span class="o">*</span><span class="nx">GridTrader</span><span class="p">)</span><span class="w"> </span><span class="nx">monitorLoop</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">    </span><span class="nx">ticker</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">time</span><span class="p">.</span><span class="nx">NewTicker</span><span class="p">(</span><span class="nx">g</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">CheckInterval</span><span class="p">)</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">    </span><span class="k">defer</span><span class="w"> </span><span class="nx">ticker</span><span class="p">.</span><span class="nx">Stop</span><span class="p">()</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">        </span><span class="k">select</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">g</span><span class="p">.</span><span class="nx">GetContext</span><span class="p">().</span><span class="nx">Done</span><span class="p">():</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">            </span><span class="k">return</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">        </span><span class="k">case</span><span class="w"> </span><span class="o">&lt;-</span><span class="nx">ticker</span><span class="p">.</span><span class="nx">C</span><span class="p">:</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">            </span><span class="nx">g</span><span class="p">.</span><span class="nx">checkAndUpdateGrid</span><span class="p">()</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Monitoring actions every CheckInterval</strong>:</p>
+<ol>
+<li><strong>Get current positions</strong>: Count open positions for the symbol</li>
+<li><strong>Check max positions</strong>: If <code>CurrentPositions &gt;= MaxPositions</code>, pause</li>
+<li><strong>Get current price</strong>: Fetch latest Bid/Ask</li>
+<li><strong>Check price drift</strong>: If price moved &gt; 2×GridStep from center, rebuild grid</li>
+<li><strong>Track P/L</strong>: Sum profit/loss of all open positions</li>
+<li><strong>Update metrics</strong>: Store in orchestrator metrics for reporting</li>
+</ol>
+<p><strong>Grid rebuild trigger</strong>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nx">priceDiff</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">currentPrice</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">currentPrice</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nx">gridStepPrice</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">config</span><span class="p">.</span><span class="nx">GridStep</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">point</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1">// Rebuild if price moved more than 2 grid steps</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="k">if</span><span class="w"> </span><span class="nx">priceDiff</span><span class="w"> </span><span class="p">&gt;</span><span class="w"> </span><span class="mi">2</span><span class="o">*</span><span class="nx">gridStepPrice</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nx">priceDiff</span><span class="w"> </span><span class="p">&lt;</span><span class="w"> </span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="nx">gridStepPrice</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="nx">g</span><span class="p">.</span><span class="nx">buildGrid</span><span class="p">()</span><span class="w">  </span><span class="c1">// Rebuild centered on new price</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="p">}</span>
+</code></pre></div>
+<h4 id="6-cleanup-on-stop">6. Cleanup on Stop<a class="headerlink" href="#6-cleanup-on-stop" title="Permanent link">¶</a></h4>
+<blockquote>
+<p>Lines <code>504–536</code>  </p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">g</span><span class="w"> </span><span class="o">*</span><span class="nx">GridTrader</span><span class="p">)</span><span class="w"> </span><span class="nx">cleanupOrders</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">    </span><span class="nx">ctx</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Background</span><span class="p">()</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="nx">service</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">sugar</span><span class="p">.</span><span class="nx">GetService</span><span class="p">()</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">    </span><span class="k">for</span><span class="w"> </span><span class="nx">_</span><span class="p">,</span><span class="w"> </span><span class="nx">ticket</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="k">range</span><span class="w"> </span><span class="nx">g</span><span class="p">.</span><span class="nx">activeOrders</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">        </span><span class="nx">req</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="o">&amp;</span><span class="nx">pb</span><span class="p">.</span><span class="nx">OrderCloseRequest</span><span class="p">{</span><span class="nx">Ticket</span><span class="p">:</span><span class="w"> </span><span class="nx">ticket</span><span class="p">}</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">        </span><span class="nx">service</span><span class="p">.</span><span class="nx">CloseOrder</span><span class="p">(</span><span class="nx">ctx</span><span class="p">,</span><span class="w"> </span><span class="nx">req</span><span class="p">)</span><span class="w">  </span><span class="c1">// Delete pending order</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">    </span><span class="nx">g</span><span class="p">.</span><span class="nx">activeOrders</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="nb">make</span><span class="p">([]</span><span class="kt">uint64</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w">  </span><span class="c1">// Clear list</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>What happens</strong>:</p>
+<ul>
+<li>All pending orders in <code>activeOrders</code> list are canceled</li>
+<li>Uses <code>Service.CloseOrder()</code> which can delete pending orders</li>
+<li>Grid is fully cleaned up to prevent hanging orders</li>
+<li>Orchestrator exits cleanly</li>
+</ul>
+<hr />
+<h2 id="grid-visualization">Grid Visualization<a class="headerlink" href="#grid-visualization" title="Permanent link">¶</a></h2>
+<h3 id="scenario-gridsize5-gridstep100-currentprice110000">Scenario: GridSize=5, GridStep=100, CurrentPrice=1.10000<a class="headerlink" href="#scenario-gridsize5-gridstep100-currentprice110000" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>1.10500  [SELL LIMIT #5]  &lt;- Level +5 (+500pts)      TP: 1.10400
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>         +500pts from center                          SL: none
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>1.10400  [SELL LIMIT #4]  &lt;- Level +4 (+400pts)      TP: 1.10300
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>         +400pts from center                          SL: none
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>1.10300  [SELL LIMIT #3]  &lt;- Level +3 (+300pts)      TP: 1.10200
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>         +300pts from center                          SL: none
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a>1.10200  [SELL LIMIT #2]  &lt;- Level +2 (+200pts)      TP: 1.10100
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>         +200pts from center                          SL: none
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a>
+<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a>1.10100  [SELL LIMIT #1]  &lt;- Level +1 (+100pts)      TP: 1.10000
+<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a>         +100pts from center                          SL: none
+<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a>
+<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a>1.10000  &gt;&gt;&gt; CURRENT PRICE &lt;&lt;&lt;  [Grid Center]
+<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a>
+<a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a>1.09900  [BUY LIMIT #1]   &lt;- Level -1 (-100pts)      TP: 1.10000
+<a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a>         -100pts from center                          SL: none
+<a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a>
+<a id="__codelineno-14-21" name="__codelineno-14-21" href="#__codelineno-14-21"></a>1.09800  [BUY LIMIT #2]   &lt;- Level -2 (-200pts)      TP: 1.09900
+<a id="__codelineno-14-22" name="__codelineno-14-22" href="#__codelineno-14-22"></a>         -200pts from center                          SL: none
+<a id="__codelineno-14-23" name="__codelineno-14-23" href="#__codelineno-14-23"></a>
+<a id="__codelineno-14-24" name="__codelineno-14-24" href="#__codelineno-14-24"></a>1.09700  [BUY LIMIT #3]   &lt;- Level -3 (-300pts)      TP: 1.09800
+<a id="__codelineno-14-25" name="__codelineno-14-25" href="#__codelineno-14-25"></a>         -300pts from center                          SL: none
+<a id="__codelineno-14-26" name="__codelineno-14-26" href="#__codelineno-14-26"></a>
+<a id="__codelineno-14-27" name="__codelineno-14-27" href="#__codelineno-14-27"></a>1.09600  [BUY LIMIT #4]   &lt;- Level -4 (-400pts)      TP: 1.09700
+<a id="__codelineno-14-28" name="__codelineno-14-28" href="#__codelineno-14-28"></a>         -400pts from center                          SL: none
+<a id="__codelineno-14-29" name="__codelineno-14-29" href="#__codelineno-14-29"></a>
+<a id="__codelineno-14-30" name="__codelineno-14-30" href="#__codelineno-14-30"></a>1.09500  [BUY LIMIT #5]   &lt;- Level -5 (-500pts)      TP: 1.09600
+<a id="__codelineno-14-31" name="__codelineno-14-31" href="#__codelineno-14-31"></a>         -500pts from center                          SL: none
+<a id="__codelineno-14-32" name="__codelineno-14-32" href="#__codelineno-14-32"></a>
+<a id="__codelineno-14-33" name="__codelineno-14-33" href="#__codelineno-14-33"></a>Total: 10 pending orders (5 BUY + 5 SELL)
+</code></pre></div>
+<h3 id="working-scenario-price-movement-profit">Working Scenario: Price Movement &amp; Profit<a class="headerlink" href="#working-scenario-price-movement-profit" title="Permanent link">¶</a></h3>
+<p><strong>Time 0: Grid Placed</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>Price:     1.10000
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>Status:    All 10 pending orders active
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>Positions: 0
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>P/L:       $0.00
+</code></pre></div></p>
+<p><strong>Time 1: Price Drops to 1.09900</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>Event:     BUY LIMIT #1 @ 1.09900 TRIGGERED
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>Position:  LONG 0.01 lots @ 1.09900
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>TP:        1.10000 (next grid level up)
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>Status:    1 position open, 9 pending orders remain
+</code></pre></div></p>
+<p><strong>Time 2: Price Returns to 1.10000</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>Event:     BUY position CLOSED by TP @ 1.10000
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>Profit:    +100 points = +$10 (for 0.01 lots)
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>Action:    Grid rebuilds, new 10 pending orders placed
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>Total P/L: +$10
+</code></pre></div></p>
+<p><strong>Time 3: Price Rises to 1.10200</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>Event:     SELL LIMIT #2 @ 1.10200 TRIGGERED
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>Position:  SHORT 0.01 lots @ 1.10200
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>TP:        1.10100 (next grid level down)
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>Status:    1 position open, 9 pending orders remain
+</code></pre></div></p>
+<p><strong>Time 4: Price Falls to 1.10100</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>Event:     SELL position CLOSED by TP @ 1.10100
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>Profit:    +100 points = +$10
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>Total P/L: +$20
+</code></pre></div></p>
+<p><strong>Time 5: Multiple Oscillations</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>Price oscillates: 1.09900 -&gt; 1.10000 -&gt; 1.09800 -&gt; 1.10100
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>Result:  4 trades triggered, each with +100pts profit
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>Total profit: 4 × $10 = $40
+</code></pre></div></p>
+<p><strong>Summary</strong>:</p>
+<ul>
+<li>Range-bound market (1.09500 - 1.10500): Grid captures EVERY oscillation</li>
+<li>Without grid: Hard to catch manually, many small movements missed</li>
+<li>With grid: Automatic profit on each bounce</li>
+<li>Typical result: 10-20 small wins per day in choppy markets</li>
+</ul>
+<hr />
+<h2 id="used-mt5sugar-methods">Used MT5Sugar Methods<a class="headerlink" href="#used-mt5sugar-methods" title="Permanent link">¶</a></h2>
+<h3 id="1-buylimit-buylimitwithsltp">1. BuyLimit / BuyLimitWithSLTP<a class="headerlink" href="#1-buylimit-buylimitwithsltp" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">MT5Sugar</span><span class="p">)</span><span class="w"> </span><span class="nx">BuyLimit</span><span class="p">(</span><span class="nx">symbol</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">volume</span><span class="w"> </span><span class="kt">float64</span><span class="p">,</span><span class="w"> </span><span class="nx">price</span><span class="w"> </span><span class="kt">float64</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">uint64</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">MT5Sugar</span><span class="p">)</span><span class="w"> </span><span class="nx">BuyLimitWithSLTP</span><span class="p">(</span>
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">    </span><span class="nx">symbol</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span>
+<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="w">    </span><span class="nx">volume</span><span class="w"> </span><span class="kt">float64</span><span class="p">,</span>
+<a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a><span class="w">    </span><span class="nx">price</span><span class="w"> </span><span class="kt">float64</span><span class="p">,</span>
+<a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="w">    </span><span class="nx">sl</span><span class="w"> </span><span class="kt">float64</span><span class="p">,</span>
+<a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="w">    </span><span class="nx">tp</span><span class="w"> </span><span class="kt">float64</span><span class="p">,</span>
+<a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">uint64</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Purpose</strong>: Places pending Buy Limit order at specified price.</p>
+<p><strong>Parameters in GridTrader</strong>:</p>
+<ul>
+<li><code>symbol</code>: Trading instrument (from config.Symbol)</li>
+<li><code>volume</code>: <code>config.LotSize</code> (e.g., 0.01)</li>
+<li><code>price</code>: Calculated grid level BELOW current price</li>
+<li><code>sl</code>: Stop loss price (0 if disabled)</li>
+<li><code>tp</code>: Take profit price (price + GridStep)</li>
+</ul>
+<p><strong>Returns</strong>: Order ticket number or error</p>
+<h3 id="2-selllimit-selllimitwithsltp">2. SellLimit / SellLimitWithSLTP<a class="headerlink" href="#2-selllimit-selllimitwithsltp" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">MT5Sugar</span><span class="p">)</span><span class="w"> </span><span class="nx">SellLimit</span><span class="p">(</span><span class="nx">symbol</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span><span class="w"> </span><span class="nx">volume</span><span class="w"> </span><span class="kt">float64</span><span class="p">,</span><span class="w"> </span><span class="nx">price</span><span class="w"> </span><span class="kt">float64</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">uint64</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">MT5Sugar</span><span class="p">)</span><span class="w"> </span><span class="nx">SellLimitWithSLTP</span><span class="p">(</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">    </span><span class="nx">symbol</span><span class="w"> </span><span class="kt">string</span><span class="p">,</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="w">    </span><span class="nx">volume</span><span class="w"> </span><span class="kt">float64</span><span class="p">,</span>
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="w">    </span><span class="nx">price</span><span class="w"> </span><span class="kt">float64</span><span class="p">,</span>
+<a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="w">    </span><span class="nx">sl</span><span class="w"> </span><span class="kt">float64</span><span class="p">,</span>
+<a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="w">    </span><span class="nx">tp</span><span class="w"> </span><span class="kt">float64</span><span class="p">,</span>
+<a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="kt">uint64</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Purpose</strong>: Places pending Sell Limit order at specified price.</p>
+<p><strong>Parameters in GridTrader</strong>:</p>
+<ul>
+<li><code>price</code>: Calculated grid level ABOVE current price</li>
+<li><code>tp</code>: Take profit price (price - GridStep)</li>
+</ul>
+<h3 id="3-getpositionsbysymbol">3. GetPositionsBySymbol<a class="headerlink" href="#3-getpositionsbysymbol" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">MT5Sugar</span><span class="p">)</span><span class="w"> </span><span class="nx">GetPositionsBySymbol</span><span class="p">(</span><span class="nx">symbol</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">([]</span><span class="o">*</span><span class="nx">mt5</span><span class="p">.</span><span class="nx">Position</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Purpose</strong>: Retrieves all open positions for a symbol.</p>
+<p><strong>Usage in GridTrader</strong>:</p>
+<ul>
+<li>Called every CheckInterval in monitoring loop</li>
+<li>Counts positions to enforce MaxPositions limit</li>
+<li>Calculates total P/L across all positions</li>
+</ul>
+<h3 id="4-getpriceinfo">4. GetPriceInfo<a class="headerlink" href="#4-getpriceinfo" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="kd">func</span><span class="w"> </span><span class="p">(</span><span class="nx">s</span><span class="w"> </span><span class="o">*</span><span class="nx">MT5Sugar</span><span class="p">)</span><span class="w"> </span><span class="nx">GetPriceInfo</span><span class="p">(</span><span class="nx">symbol</span><span class="w"> </span><span class="kt">string</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">mt5</span><span class="p">.</span><span class="nx">PriceInfo</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Purpose</strong>: Gets current Bid/Ask prices for a symbol.</p>
+<p><strong>Usage in GridTrader</strong>:</p>
+<ul>
+<li>Gets current price for grid center calculation</li>
+<li>Monitors price drift to trigger grid rebuilds</li>
+</ul>
+<h3 id="5-servicecloseorder-via-getservice">5. Service.CloseOrder (via GetService)<a class="headerlink" href="#5-servicecloseorder-via-getservice" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="nx">service</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">sugar</span><span class="p">.</span><span class="nx">GetService</span><span class="p">()</span>
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="nx">service</span><span class="p">.</span><span class="nx">CloseOrder</span><span class="p">(</span><span class="nx">ctx</span><span class="w"> </span><span class="nx">context</span><span class="p">.</span><span class="nx">Context</span><span class="p">,</span><span class="w"> </span><span class="nx">req</span><span class="w"> </span><span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">OrderCloseRequest</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="nx">pb</span><span class="p">.</span><span class="nx">OrderCloseData</span><span class="p">,</span><span class="w"> </span><span class="kt">error</span><span class="p">)</span>
+</code></pre></div>
+<p><strong>Purpose</strong>: Closes position or deletes pending order.</p>
+<p><strong>Usage in GridTrader</strong>:</p>
+<ul>
+<li>Cleanup operation when stopping orchestrator</li>
+<li>Deletes all pending orders in <code>activeOrders</code> list</li>
+<li>Ensures no hanging orders after exit</li>
+</ul>
+<hr />
+<h2 id="risk-management">Risk Management<a class="headerlink" href="#risk-management" title="Permanent link">¶</a></h2>
+<h3 id="maximum-risk-calculation">Maximum Risk Calculation<a class="headerlink" href="#maximum-risk-calculation" title="Permanent link">¶</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>Risk per level = LotSize × StopLoss × PointValue
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>
+<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>For EURUSD (PointValue ~$10 per 1.0 lot):
+<a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>- LotSize = 0.01
+<a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>- StopLoss = 500 points (if configured)
+<a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a>- Risk per level = 0.01 × 500 × $10 = $50
+<a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a>
+<a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a>Total maximum risk (if all orders trigger):
+<a id="__codelineno-26-9" name="__codelineno-26-9" href="#__codelineno-26-9"></a>- GridSize = 5 -&gt; 10 orders total
+<a id="__codelineno-26-10" name="__codelineno-26-10" href="#__codelineno-26-10"></a>- Maximum risk = 10 × $50 = $500
+</code></pre></div>
+<h3 id="risk-considerations">Risk Considerations<a class="headerlink" href="#risk-considerations" title="Permanent link">¶</a></h3>
+<ol>
+<li>
+<p><strong>No Stop Loss Default</strong>:</p>
+</li>
+<li>
+<p>Default <code>StopLoss = 0</code> means <strong>NO stop loss protection</strong></p>
+</li>
+<li>Grid trading relies on price returning to range</li>
+<li>If range breaks violently, losses can be severe</li>
+<li>
+<p><strong>Recommendation</strong>: Set <code>StopLoss = 3 × GridStep</code> for safety</p>
+</li>
+<li>
+<p><strong>Overexposure Risk</strong>:</p>
+</li>
+<li>
+<p><code>GridSize × LotSize</code> = total volume exposure</p>
+</li>
+<li>Example: GridSize=10, LotSize=0.1 -&gt; 1.0 lots total</li>
+<li>
+<p>Ensure account has adequate margin for full grid</p>
+</li>
+<li>
+<p><strong>Trending Market Danger</strong>:</p>
+</li>
+<li>
+<p>Grid designed for RANGES, not TRENDS</p>
+</li>
+<li>In strong trend: all orders on one side fill</li>
+<li>Result: Multiple losing positions, no offsetting wins</li>
+<li>
+<p><strong>Solution</strong>: Only use during range-bound sessions</p>
+</li>
+<li>
+<p><strong>MaxPositions Safety</strong>:</p>
+</li>
+<li>
+<p>Limits concurrent exposure</p>
+</li>
+<li>Prevents runaway position accumulation</li>
+<li>Set to <code>GridSize × 2</code> or higher for buffer</li>
+</ol>
+<h3 id="recommended-settings-by-account-size">Recommended Settings by Account Size<a class="headerlink" href="#recommended-settings-by-account-size" title="Permanent link">¶</a></h3>
+<p><strong>Small Account ($500-$1000)</strong>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="nx">GridSize</span><span class="p">:</span><span class="w">      </span><span class="mi">3</span><span class="p">,</span><span class="w">    </span><span class="c1">// Limited exposure</span>
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="nx">GridStep</span><span class="p">:</span><span class="w">      </span><span class="mi">100</span><span class="p">,</span><span class="w">  </span><span class="c1">// Standard spacing</span>
+<a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a><span class="nx">LotSize</span><span class="p">:</span><span class="w">       </span><span class="mf">0.01</span><span class="p">,</span><span class="w"> </span><span class="c1">// Minimum lots</span>
+<a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="nx">MaxPositions</span><span class="p">:</span><span class="w">  </span><span class="mi">6</span><span class="p">,</span><span class="w">    </span><span class="c1">// Safety limit</span>
+<a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a><span class="nx">StopLoss</span><span class="p">:</span><span class="w">      </span><span class="mi">300</span><span class="p">,</span><span class="w">  </span><span class="c1">// 30 pip SL for protection</span>
+</code></pre></div></p>
+<p><strong>Medium Account ($5000-$10000)</strong>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="nx">GridSize</span><span class="p">:</span><span class="w">      </span><span class="mi">5</span><span class="p">,</span><span class="w">    </span><span class="c1">// Balanced grid</span>
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="nx">GridStep</span><span class="p">:</span><span class="w">      </span><span class="mi">100</span><span class="p">,</span>
+<a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a><span class="nx">LotSize</span><span class="p">:</span><span class="w">       </span><span class="mf">0.02</span><span class="p">,</span>
+<a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a><span class="nx">MaxPositions</span><span class="p">:</span><span class="w">  </span><span class="mi">10</span><span class="p">,</span>
+<a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a><span class="nx">StopLoss</span><span class="p">:</span><span class="w">      </span><span class="mi">200</span><span class="p">,</span><span class="w">  </span><span class="c1">// Tighter SL</span>
+</code></pre></div></p>
+<p><strong>Large Account ($10000+)</strong>:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="nx">GridSize</span><span class="p">:</span><span class="w">      </span><span class="mi">10</span><span class="p">,</span><span class="w">   </span><span class="c1">// Wide grid</span>
+<a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a><span class="nx">GridStep</span><span class="p">:</span><span class="w">      </span><span class="mi">50</span><span class="p">,</span><span class="w">   </span><span class="c1">// Tighter spacing</span>
+<a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a><span class="nx">LotSize</span><span class="p">:</span><span class="w">       </span><span class="mf">0.05</span><span class="p">,</span>
+<a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a><span class="nx">MaxPositions</span><span class="p">:</span><span class="w">  </span><span class="mi">20</span><span class="p">,</span>
+<a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a><span class="nx">StopLoss</span><span class="p">:</span><span class="w">      </span><span class="mi">0</span><span class="p">,</span><span class="w">    </span><span class="c1">// No SL (experienced only)</span>
+</code></pre></div></p>
+<hr />
+<h2 id="when-to-use-grid-trading">When to Use Grid Trading<a class="headerlink" href="#when-to-use-grid-trading" title="Permanent link">¶</a></h2>
+<h3 id="suitable-conditions">Suitable Conditions<a class="headerlink" href="#suitable-conditions" title="Permanent link">¶</a></h3>
+<ul>
+<li><strong>Range-bound markets</strong>: Price oscillating within defined levels</li>
+<li><strong>Low volatility</strong>: Small, predictable price movements</li>
+<li><strong>Asian session</strong>: Typically calmer trading hours</li>
+<li><strong>Post-news consolidation</strong>: After big moves, price settles into range</li>
+<li><strong>Clear support/resistance</strong>: Known price boundaries</li>
+<li><strong>Sideways forex pairs</strong>: EURUSD at night, consolidating pairs</li>
+<li><strong>Cryptocurrency weekends</strong>: Lower volatility, tighter ranges</li>
+</ul>
+<h3 id="unsuitable-conditions">Unsuitable Conditions<a class="headerlink" href="#unsuitable-conditions" title="Permanent link">¶</a></h3>
+<ul>
+<li><strong>Trending markets</strong>: Strong directional movement</li>
+<li><strong>High-impact news events</strong>: NFP, FOMC, Brexit votes</li>
+<li><strong>Breakout scenarios</strong>: Price breaking key levels</li>
+<li><strong>Low liquidity</strong>: Wide spreads, gap risk</li>
+<li><strong>High volatility</strong>: Violent price swings</li>
+<li><strong>Pre-news periods</strong>: Uncertainty before announcements</li>
+</ul>
+<h3 id="best-market-sessions">Best Market Sessions<a class="headerlink" href="#best-market-sessions" title="Permanent link">¶</a></h3>
+<table>
+<thead>
+<tr>
+<th>Session</th>
+<th>Suitability</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Asian (Tokyo)</strong></td>
+<td>Excellent</td>
+<td>Low volatility, tight ranges</td>
+</tr>
+<tr>
+<td><strong>European (London)</strong></td>
+<td>Moderate</td>
+<td>Higher volatility, watch for trends</td>
+</tr>
+<tr>
+<td><strong>US (New York)</strong></td>
+<td>Moderate</td>
+<td>Can be volatile, use wider grids</td>
+</tr>
+<tr>
+<td><strong>Overlap (London+NY)</strong></td>
+<td>Risky</td>
+<td>High volatility, trending tendency</td>
+</tr>
+<tr>
+<td><strong>Weekend (Crypto)</strong></td>
+<td>Good</td>
+<td>Lower volatility in crypto markets</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="configuration-location">Configuration Location<a class="headerlink" href="#configuration-location" title="Permanent link">¶</a></h2>
+<p><strong>Runtime configuration is located in</strong>: <code>examples/demos/main.go -&gt; RunOrchestrator_Grid()</code></p>
+<p>This separation exists because:</p>
+<ol>
+<li>
+<p><strong>Code reusability</strong>: Same orchestrator runs with different parameters</p>
+</li>
+<li>
+<p><strong>Quick testing</strong>: Change numbers without modifying strategy logic</p>
+</li>
+<li>
+<p><strong>User examples</strong>: Shows how to properly configure the orchestrator</p>
+</li>
+<li>
+<p><strong>Centralized entry point</strong>: Single place for all orchestrator launches</p>
+</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2024–2025 GoMT5. MT5 is a trademark of MetaQuotes Software Corp. This documentation is community-maintained and not affiliated with MetaQuotes.
+
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/MetaRPC/GoMT5" target="_blank" rel="noopener" title="GoMT5 on GitHub" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tracking", "navigation.expand", "navigation.top", "navigation.footer", "content.code.copy", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/ux.js"></script>
+      
+    
+  </body>
+</html>
