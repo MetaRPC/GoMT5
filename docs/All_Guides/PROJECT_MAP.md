@@ -36,12 +36,18 @@ External dependencies:
 
 ```
 package/Helpers/
-└── MT5Account.go              ← LAYER 1: Low-level gRPC ⭐ FOUNDATION
-    └── Direct gRPC calls to MT5 terminal
-    └── Connection management with retry logic
-    └── Proto Request/Response handling
-    └── Built-in connection resilience
-    └── Independent Go module (portable)
+├── MT5Account.go              ← LAYER 1: Low-level gRPC ⭐ FOUNDATION
+│   └── Direct gRPC calls to MT5 terminal
+│   └── Connection management with retry logic
+│   └── Proto Request/Response handling
+│   └── Built-in connection resilience
+│   └── Independent Go module (portable)
+│
+└── errors.go                  ← Error handling & trade result codes
+    └── ErrNotConnected sentinel error
+    └── ApiError wrapper (3-level: API/MQL/Trade)
+    └── Trade return code constants & helpers
+    └── Centralized error inspection methods
 
 examples/mt5/
 ├── MT5Service.go              ← LAYER 2: Wrapper methods

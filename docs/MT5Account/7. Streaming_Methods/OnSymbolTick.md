@@ -33,7 +33,7 @@ func (a *MT5Account) OnSymbolTick(
 
 ```protobuf
 OnSymbolTickRequest {
-  string Symbol = 1;  // Symbol name to stream
+  repeated string SymbolNames = 1;  // Array of symbol names to stream
 }
 ```
 
@@ -44,7 +44,7 @@ OnSymbolTickRequest {
 | Parameter | Type                        | Description                                   |
 | --------- | --------------------------- | --------------------------------------------- |
 | `ctx`     | `context.Context`           | Context for cancellation (cancel to stop stream) |
-| `req`     | `*pb.OnSymbolTickRequest`   | Request with Symbol name                      |
+| `req`     | `*pb.OnSymbolTickRequest`   | Request with array of symbol names           |
 
 ---
 
@@ -101,7 +101,7 @@ For a detailed line-by-line explanation with examples, see:
 * **Automatic reconnection:** All `MT5Account` methods have built-in protection against transient gRPC errors with automatic reconnection via `ExecuteWithReconnect`.
 * **Default timeout:** If context has no deadline, streams run indefinitely until cancelled.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
-* **Channel buffering:** Data channel is buffered (default 100), error channel is buffered (default 10).
+* **Channel buffering:** Data channel is unbuffered, error channel is buffered (size 1).
 * **Goroutine required:** You MUST consume the channels in a separate goroutine to avoid blocking.
 * **Context cancellation:** Use `context.WithCancel()` or `context.WithTimeout()` to stop streaming.
 * **Channel closure:** Both channels close when context is cancelled or stream ends.
@@ -133,7 +133,7 @@ func main() {
     defer cancel()
 
     dataChan, errChan := account.OnSymbolTick(ctx, &pb.OnSymbolTickRequest{
-        Symbol: "EURUSD",
+        SymbolNames: []string{"EURUSD"},
     })
 
     // Process in goroutine
@@ -170,7 +170,7 @@ func StreamWithCancellation(account *mt5.MT5Account) {
     ctx, cancel := context.WithCancel(context.Background())
 
     dataChan, errChan := account.OnSymbolTick(ctx, &pb.OnSymbolTickRequest{
-        Symbol: "EURUSD",
+        SymbolNames: []string{"EURUSD"},
     })
 
     // Start consuming

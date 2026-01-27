@@ -78,7 +78,7 @@ ctx, cancel := context.WithCancel(context.Background())
 defer cancel()
 
 dataChan, errChan := account.OnSymbolTick(ctx, &pb.OnSymbolTickRequest{
-    Symbol: "EURUSD",
+    SymbolNames: []string{"EURUSD"},
 })
 
 go func() {
@@ -205,7 +205,7 @@ defer cancel()
 
 // Stream 1: Ticks
 tickData, tickErr := account.OnSymbolTick(ctx, &pb.OnSymbolTickRequest{
-    Symbol: "EURUSD",
+    SymbolNames: []string{"EURUSD"},
 })
 
 go func() {

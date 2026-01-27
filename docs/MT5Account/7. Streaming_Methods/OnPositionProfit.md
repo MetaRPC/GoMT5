@@ -150,7 +150,7 @@ for {
 * **Automatic reconnection:** All `MT5Account` methods have built-in protection against transient gRPC errors with automatic reconnection via `ExecuteWithReconnect`.
 * **Default timeout:** If context has no deadline, streams run indefinitely until cancelled.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
-* **Channel buffering:** Data channel is buffered (default 100), error channel is buffered (default 10).
+* **Channel buffering:** Data channel is unbuffered, error channel is buffered (size 1).
 * **Goroutine required:** You MUST consume the channels in a separate goroutine to avoid blocking.
 * **Timer interval:** Use `TimerPeriodMilliseconds` to control update frequency (e.g., 1000 = update every 1 second).
 * **Ignore empty data:** Set `IgnoreEmptyData` to true to skip updates when no positions changed.

@@ -32,7 +32,7 @@ You will see an interactive prompt:
     MT5 PROTOBUF TYPE INSPECTOR
 ═══════════════════════════════════════════════════════
 
-Available: 267 types, 68 enums
+Available: 267 types, 67 enums
 
 Type 'help' for available commands
 Type 'list' to see all types
@@ -73,24 +73,26 @@ TYPE: PositionInfo
 ═══════════════════════════════════════════════════════
 
 Fields:
-  Ticket: uint64 (#1)
-  Type: BMT5_ENUM_POSITION_TYPE (#2)
-  Symbol: string (#3)
-  Magic: uint64 (#4)
-  Identifier: uint64 (#5)
-  Reason: BMT5_ENUM_POSITION_REASON (#6)
-  Volume: double (#7)
-  PriceOpen: double (#8)
-  Sl: double (#9)
-  Tp: double (#10)
-  PriceCurrent: double (#11)
-  Swap: double (#12)
-  Profit: double (#13)
-  Time: uint64 (#14)
-  TimeUpdate: uint64 (#15)
-  TimeUpdateMsc: uint64 (#16)
+  Index: uint32 (#1)
+  Ticket: uint64 (#2)
+  OpenTime: google.protobuf.Timestamp (#3)
+  Volume: double (#4)
+  PriceOpen: double (#5)
+  StopLoss: double (#6)
+  TakeProfit: double (#7)
+  PriceCurrent: double (#8)
+  Swap: double (#9)
+  Profit: double (#10)
+  LastUpdateTime: google.protobuf.Timestamp (#11)
+  Type: BMT5_ENUM_POSITION_TYPE (#12)
+  MagicNumber: int64 (#13)
+  Identifier: int64 (#14)
+  Reason: BMT5_ENUM_POSITION_REASON (#15)
+  Symbol: string (#16)
   Comment: string (#17)
   ExternalId: string (#18)
+  PositionCommission: double (#19)
+  AccountLogin: int64 (#20)
 ```
 
 ---
@@ -276,16 +278,15 @@ BMT5_ORDER_TYPE_BUY_LIMIT = 2
 > list
 ```
 
-**Result:** Shows all 267 available types, grouped alphabetically
+**Result:** Shows all available types, grouped alphabetically (actual count displayed by tool)
 
 ---
 
 ## 📊 Statistics
 
 - **Total Types:** 267 (all MT5 gRPC protobuf message types)
-- **Total Enums:** 68 (with 1400+ enum values)
+- **Total Enums:** 67 (with 1400+ enum values)
 - **Coverage:** 100% of MT5 gRPC API
-- **File size:** 1767 lines, 86KB
 
 ---
 
@@ -396,14 +397,14 @@ The Protobuf Inspector uses Go reflection to:
 
 **Source file:** `examples/demos/helpers/17_protobuf_inspector.go`
 
-**Enum registration:** All 1400+ enum values across 68 enums are manually registered in the code (Go protobuf doesn't support automatic enum value discovery via reflection).
+**Enum registration:** All 1400+ enum values across 67 enums are manually registered in the code (Go protobuf doesn't support automatic enum value discovery via reflection).
 
 ---
 
 ## 🔧 Technical Notes
 
 - **No MT5 connection required** - This is a purely offline tool that inspects type definitions
-- **Complete coverage** - All 267 types and 68 enums from the MT5 gRPC API
+- **Complete coverage** - All 267 types and 67 enums from the MT5 gRPC API
 - **Instant search** - In-memory index for fast lookup
 - **Development only** - Not intended for production use
 

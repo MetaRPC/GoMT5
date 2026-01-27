@@ -31,7 +31,9 @@ RetCode is returned in **all trading operations** that modify positions or order
 
 ```go
 import (
-    "github.com/MetaRPC/GoMT5/package/Helpers"
+    "errors"
+    "fmt"
+
     mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
 )
 
@@ -65,6 +67,14 @@ if sendData.ReturnedCode == mt5.TradeRetCodeDone {
 ### 2. OrderModify (Modifying SL/TP)
 
 ```go
+import (
+    "context"
+    "fmt"
+
+    mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+    pb "github.com/MetaRPC/GoMT5/package"
+)
+
 modifyData, err := account.OrderModify(ctx, &pb.OrderModifyRequest{
     Ticket: ticket,
     Sl:     1.0850,
@@ -87,6 +97,15 @@ if mt5.IsRetCodeSuccess(modifyData.ReturnedCode) {
 ### 3. PositionClose (Closing Positions)
 
 ```go
+import (
+    "context"
+    "errors"
+    "fmt"
+
+    mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+    pb "github.com/MetaRPC/GoMT5/package"
+)
+
 // Using Sugar API
 err := sugar.ClosePosition(ticket)
 if err != nil {
@@ -300,17 +319,27 @@ import (
     "context"
     "fmt"
 
-    "github.com/MetaRPC/GoMT5/package/Helpers"
     mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
     pb "github.com/MetaRPC/GoMT5/package"
 )
 
 func main() {
-    // Connection (see connection examples)
-    account, _ := mt5.NewMT5Account(user, password, grpcServer)
-    account.Connect(cluster)
+    // Connection (see GETTING_STARTED.md for connection details)
+    account := mt5.NewMT5Account()
 
     ctx := context.Background()
+
+    _, err := account.Connect(ctx, &pb.ConnectRequest{
+        Host:     "localhost",
+        Port:     7775,
+        User:     "12345678",
+        Password: "your_password",
+    })
+    if err != nil {
+        fmt.Printf("Connection error: %v\n", err)
+        return
+    }
+    defer account.Disconnect(ctx)
 
     // Place buy market order
     req := &pb.OrderSendRequest{
@@ -346,6 +375,14 @@ func main() {
 ### Example 2: Handling Common Errors (Switch Statement)
 
 ```go
+import (
+    "errors"
+    "fmt"
+    "time"
+
+    mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+)
+
 ticket, err := sugar.BuyMarket("GBPUSD", 0.5)
 if err != nil {
     var apiErr *mt5.ApiError
@@ -353,9 +390,6 @@ if err != nil {
         retCode := apiErr.MqlErrorTradeIntCode()
 
         switch retCode {
-        case mt5.TradeRetCodeDone:
-            fmt.Printf("Order #%d opened\n", ticket)
-
         case mt5.TradeRetCodeNoMoney:
             fmt.Println("⚠️ Insufficient funds!")
             fmt.Println("   Solution: Reduce volume or add margin")
@@ -387,12 +421,22 @@ if err != nil {
             fmt.Printf("❌ Error: %s\n", apiErr.MqlErrorTradeDescription())
         }
     }
+} else {
+    fmt.Printf("✅ Order #%d opened\n", ticket)
 }
 ```
 
 ### Example 3: Retry Logic for Temporary Errors
 
 ```go
+import (
+    "errors"
+    "fmt"
+    "time"
+
+    mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+)
+
 func PlaceOrderWithRetry(
     sugar *mt5.MT5Sugar,
     symbol string,
@@ -414,14 +458,14 @@ func PlaceOrderWithRetry(
             retCode := apiErr.MqlErrorTradeIntCode()
 
             // Requote - retry immediately
-            if mt5.IsRetCodeRequote(retCode) {
+            if mt5.IsRetCodeRequote(uint32(retCode)) {
                 fmt.Printf("Requote on attempt %d, retrying...\n", attempt)
                 time.Sleep(time.Millisecond * 100)
                 continue
             }
 
             // Retryable error - exponential backoff
-            if mt5.IsRetCodeRetryable(retCode) {
+            if mt5.IsRetCodeRetryable(uint32(retCode)) {
                 waitTime := time.Second * time.Duration(attempt)
                 fmt.Printf("Temporary error on attempt %d, waiting %v...\n",
                     attempt, waitTime)
@@ -475,6 +519,14 @@ if helpers.CheckRetCode(sendData.ReturnedCode, "Order placement") {
 ### Example 5: Modifying SL/TP with Validation
 
 ```go
+import (
+    "context"
+    "fmt"
+
+    mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+    pb "github.com/MetaRPC/GoMT5/package"
+)
+
 modifyData, err := account.OrderModify(ctx, &pb.OrderModifyRequest{
     Ticket: 123456,
     Sl:     1.0850,

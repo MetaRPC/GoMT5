@@ -109,7 +109,7 @@
    • Total Types: 267 (all MT5 gRPC protobuf message types)
    • Total Enums: 67 (with 1400+ enum values)
    • Coverage: 100% of MT5 gRPC API types
-   • File size: 1767 lines, 86KB
+   • Note: Type count is dynamic - actual count may vary with API updates
 
  🔑 IMPORTANT ENUMS (frequently used):
    • BMT5_ENUM_ORDER_TYPE          - Order types (BUY, SELL, LIMIT, STOP, CLOSE_BY)
