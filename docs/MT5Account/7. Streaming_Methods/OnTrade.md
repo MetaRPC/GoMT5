@@ -106,7 +106,7 @@ For a detailed line-by-line explanation with examples, see:
 
 | ENUM Type | Field Name | Purpose | Values |
 |-----------|------------|---------|--------|
-| `MT5_SUB_ENUM_EVENT_GROUP_TYPE` | `Type` | Indicates the event type | `OnTrade` (1) - Trade event notification |
+| `MT5_SUB_ENUM_EVENT_GROUP_TYPE` | `Type` | Indicates the event type | `OrderUpdate` (1) - Trade event notification |
 
 **Usage in code:**
 
@@ -114,16 +114,360 @@ For a detailed line-by-line explanation with examples, see:
 tradeStream, errChan := account.OnTrade(ctx, &pb.OnTradeRequest{})
 
 for event := range tradeStream {
-    // Check event type (always OnTrade for this stream)
+    // Check event type (always OrderUpdate for this stream)
     switch event.Type {
-    case pb.MT5_SUB_ENUM_EVENT_GROUP_TYPE_OnTrade:
+    case pb.MT5_SUB_ENUM_EVENT_GROUP_TYPE_OrderUpdate:
         fmt.Println("Trade event received")
         // Process trade event data
     }
 }
 ```
 
-**Note:** The `Type` field will always be `OnTrade` for OnTrade stream. This ENUM is shared across all streaming methods (OnTrade, OnPositionProfit, OnTradeTransaction) to maintain consistent event identification.
+**Note:** The `Type` field will always be `OrderUpdate` for OnTrade stream. This ENUM is shared across all streaming methods (OnTrade, OnPositionProfit, OnTradeTransaction) to maintain consistent event identification.
+
+---
+
+### Structure and ENUMs Usage
+
+**OnTradeData Structure:**
+
+```
+OnTradeData
+├── Type (MT5_SUB_ENUM_EVENT_GROUP_TYPE) - Event group type
+├── EventData (OnTadeEventData)
+│   ├── NewOrders ([]*OnTradeOrderInfo)
+│   │   └── Uses: SUB_ENUM_ORDER_TYPE, SUB_ENUM_ORDER_STATE,
+│   │              SUB_ENUM_ORDER_TYPE_TIME, SUB_ENUM_ORDER_TYPE_FILLING,
+│   │              SUB_ENUM_ORDER_REASON
+│   ├── DisappearedOrders ([]*OnTradeOrderInfo)
+│   │   └── Uses: SUB_ENUM_ORDER_TYPE, SUB_ENUM_ORDER_STATE,
+│   │              SUB_ENUM_ORDER_TYPE_TIME, SUB_ENUM_ORDER_TYPE_FILLING,
+│   │              SUB_ENUM_ORDER_REASON
+│   ├── StateChangedOrders ([]*OnTradeOrderStateChange)
+│   │   └── Contains: PreviousOrder, CurrentOrder (OnTradeOrderInfo)
+│   │   └── Uses: SUB_ENUM_ORDER_TYPE, SUB_ENUM_ORDER_STATE,
+│   │              SUB_ENUM_ORDER_TYPE_TIME, SUB_ENUM_ORDER_TYPE_FILLING,
+│   │              SUB_ENUM_ORDER_REASON
+│   ├── NewHistoryOrders ([]*OnTradeHistoryOrderInfo)
+│   │   └── Uses: SUB_ENUM_ORDER_TYPE, SUB_ENUM_ORDER_STATE,
+│   │              SUB_ENUM_ORDER_TYPE_TIME, SUB_ENUM_ORDER_TYPE_FILLING,
+│   │              SUB_ENUM_DEAL_REASON
+│   ├── DisappearedHistoryOrders ([]*OnTradeHistoryOrderInfo)
+│   │   └── Uses: SUB_ENUM_ORDER_TYPE, SUB_ENUM_ORDER_STATE,
+│   │              SUB_ENUM_ORDER_TYPE_TIME, SUB_ENUM_ORDER_TYPE_FILLING,
+│   │              SUB_ENUM_DEAL_REASON
+│   ├── UpdatedHistoryOrders ([]*OnTradeHistoryOrderUpdate)
+│   │   └── Contains: PreviousHistoryOrder, CurrentHistoryOrder (OnTradeHistoryOrderInfo)
+│   │   └── Uses: SUB_ENUM_ORDER_TYPE, SUB_ENUM_ORDER_STATE,
+│   │              SUB_ENUM_ORDER_TYPE_TIME, SUB_ENUM_ORDER_TYPE_FILLING,
+│   │              SUB_ENUM_DEAL_REASON
+│   ├── NewHistoryDeals ([]*OnTradeHistoryDealInfo)
+│   │   └── Uses: SUB_ENUM_DEAL_TYPE, SUB_ENUM_DEAL_ENTRY, SUB_ENUM_DEAL_REASON
+│   ├── DisappearedHistoryDeals ([]*OnTradeHistoryDealInfo)
+│   │   └── Uses: SUB_ENUM_DEAL_TYPE, SUB_ENUM_DEAL_ENTRY, SUB_ENUM_DEAL_REASON
+│   ├── UpdatedHistoryDeals ([]*OnTradeHistoryDealUpdate)
+│   │   └── Contains: PreviousHistoryDeal, CurrentHistoryDeal (OnTradeHistoryDealInfo)
+│   │   └── Uses: SUB_ENUM_DEAL_TYPE, SUB_ENUM_DEAL_ENTRY, SUB_ENUM_DEAL_REASON
+│   ├── NewPositions ([]*OnTradePositionInfo)
+│   │   └── Uses: SUB_ENUM_POSITION_TYPE, SUB_ENUM_POSITION_REASON
+│   ├── DisappearedPositions ([]*OnTradePositionInfo)
+│   │   └── Uses: SUB_ENUM_POSITION_TYPE, SUB_ENUM_POSITION_REASON
+│   └── UpdatedPositions ([]*OnTradePositionUpdate)
+│       └── Contains: PreviousPosition, CurrentPosition (OnTradePositionInfo)
+│       └── Uses: SUB_ENUM_POSITION_TYPE, SUB_ENUM_POSITION_REASON
+├── AccountInfo (*OnEventAccountInfo)
+└── TerminalInstanceGuidId (string)
+```
+
+---
+
+### Event Group Type Enum (MT5_SUB_ENUM_EVENT_GROUP_TYPE)
+
+Used in `OnTradeData.Type` field:
+
+| Name           | Value | Description                          |
+| -------------- | ----- | ------------------------------------ |
+| `OrderProfit`  | 0     | Order profit event                   |
+| `OrderUpdate`  | 1     | Order update event                   |
+
+**Usage:**
+```go
+pb.MT5_SUB_ENUM_EVENT_GROUP_TYPE_OrderProfit  // = 0
+pb.MT5_SUB_ENUM_EVENT_GROUP_TYPE_OrderUpdate  // = 1
+```
+
+---
+
+### ENUMs Used in Nested Structures
+
+The following enums are used by the nested message types inside `OnTadeEventData`:
+
+| Nested Structure              | Used in Fields                                    | ENUMs Used                                                                                                      |
+| ----------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `OnTradePositionInfo`         | `NewPositions`, `DisappearedPositions`            | `SUB_ENUM_POSITION_TYPE`, `SUB_ENUM_POSITION_REASON`                                                           |
+| `OnTradePositionUpdate`       | `UpdatedPositions`                                | `SUB_ENUM_POSITION_TYPE`, `SUB_ENUM_POSITION_REASON`                                                           |
+| `OnTradeOrderInfo`            | `NewOrders`, `DisappearedOrders`                  | `SUB_ENUM_ORDER_TYPE`, `SUB_ENUM_ORDER_STATE`, `SUB_ENUM_ORDER_TYPE_TIME`, `SUB_ENUM_ORDER_TYPE_FILLING`, `SUB_ENUM_ORDER_REASON` |
+| `OnTradeOrderStateChange`     | `StateChangedOrders`                              | `SUB_ENUM_ORDER_TYPE`, `SUB_ENUM_ORDER_STATE`, `SUB_ENUM_ORDER_TYPE_TIME`, `SUB_ENUM_ORDER_TYPE_FILLING`, `SUB_ENUM_ORDER_REASON` |
+| `OnTradeHistoryOrderInfo`     | `NewHistoryOrders`, `DisappearedHistoryOrders`    | `SUB_ENUM_ORDER_TYPE`, `SUB_ENUM_ORDER_STATE`, `SUB_ENUM_ORDER_TYPE_TIME`, `SUB_ENUM_ORDER_TYPE_FILLING`, `SUB_ENUM_DEAL_REASON`  |
+| `OnTradeHistoryOrderUpdate`   | `UpdatedHistoryOrders`                            | `SUB_ENUM_ORDER_TYPE`, `SUB_ENUM_ORDER_STATE`, `SUB_ENUM_ORDER_TYPE_TIME`, `SUB_ENUM_ORDER_TYPE_FILLING`, `SUB_ENUM_DEAL_REASON`  |
+| `OnTradeHistoryDealInfo`      | `NewHistoryDeals`, `DisappearedHistoryDeals`      | `SUB_ENUM_DEAL_TYPE`, `SUB_ENUM_DEAL_ENTRY`, `SUB_ENUM_DEAL_REASON`                                            |
+| `OnTradeHistoryDealUpdate`    | `UpdatedHistoryDeals`                             | `SUB_ENUM_DEAL_TYPE`, `SUB_ENUM_DEAL_ENTRY`, `SUB_ENUM_DEAL_REASON`                                            |
+
+---
+
+### Position Type Enum (SUB_ENUM_POSITION_TYPE)
+
+| Name                       | Value | Description                          |
+| -------------------------- | ----- | ------------------------------------ |
+| `SUB_POSITION_TYPE_BUY`    | 0     | Buy position                         |
+| `SUB_POSITION_TYPE_SELL`   | 1     | Sell position                        |
+
+**Usage:**
+```go
+pb.SUB_ENUM_POSITION_TYPE_SUB_POSITION_TYPE_BUY   // = 0
+pb.SUB_ENUM_POSITION_TYPE_SUB_POSITION_TYPE_SELL  // = 1
+```
+
+---
+
+### Position Reason Enum (SUB_ENUM_POSITION_REASON)
+
+| Name                           | Value | Description                          |
+| ------------------------------ | ----- | ------------------------------------ |
+| `SUB_POSITION_REASON_CLIENT`   | 0     | Position opened from desktop terminal|
+| `SUB_POSITION_REASON_MOBILE`   | 2     | Position opened from mobile app      |
+| `SUB_POSITION_REASON_WEB`      | 3     | Position opened from web terminal    |
+| `SUB_POSITION_REASON_EXPERT`   | 4     | Position opened by Expert Advisor    |
+
+**Usage:**
+```go
+pb.SUB_ENUM_POSITION_REASON_SUB_POSITION_REASON_CLIENT  // = 0
+pb.SUB_ENUM_POSITION_REASON_SUB_POSITION_REASON_MOBILE  // = 2
+pb.SUB_ENUM_POSITION_REASON_SUB_POSITION_REASON_WEB     // = 3
+pb.SUB_ENUM_POSITION_REASON_SUB_POSITION_REASON_EXPERT  // = 4
+```
+
+---
+
+### Order Type Enum (SUB_ENUM_ORDER_TYPE)
+
+| Name                              | Value | Description                          |
+| --------------------------------- | ----- | ------------------------------------ |
+| `SUB_ORDER_TYPE_BUY`              | 0     | Market buy order                     |
+| `SUB_ORDER_TYPE_SELL`             | 1     | Market sell order                    |
+| `SUB_ORDER_TYPE_BUY_LIMIT`        | 2     | Buy limit pending order              |
+| `SUB_ORDER_TYPE_SELL_LIMIT`       | 3     | Sell limit pending order             |
+| `SUB_ORDER_TYPE_BUY_STOP`         | 4     | Buy stop pending order               |
+| `SUB_ORDER_TYPE_SELL_STOP`        | 5     | Sell stop pending order              |
+| `SUB_ORDER_TYPE_BUY_STOP_LIMIT`   | 6     | Buy stop limit pending order         |
+| `SUB_ORDER_TYPE_SELL_STOP_LIMIT`  | 7     | Sell stop limit pending order        |
+| `SUB_ORDER_TYPE_CLOSE_BY`         | 8     | Close by opposite position           |
+
+**Usage:**
+```go
+pb.SUB_ENUM_ORDER_TYPE_SUB_ORDER_TYPE_BUY             // = 0
+pb.SUB_ENUM_ORDER_TYPE_SUB_ORDER_TYPE_SELL            // = 1
+pb.SUB_ENUM_ORDER_TYPE_SUB_ORDER_TYPE_BUY_LIMIT       // = 2
+pb.SUB_ENUM_ORDER_TYPE_SUB_ORDER_TYPE_SELL_LIMIT      // = 3
+pb.SUB_ENUM_ORDER_TYPE_SUB_ORDER_TYPE_BUY_STOP        // = 4
+pb.SUB_ENUM_ORDER_TYPE_SUB_ORDER_TYPE_SELL_STOP       // = 5
+pb.SUB_ENUM_ORDER_TYPE_SUB_ORDER_TYPE_BUY_STOP_LIMIT  // = 6
+pb.SUB_ENUM_ORDER_TYPE_SUB_ORDER_TYPE_SELL_STOP_LIMIT // = 7
+pb.SUB_ENUM_ORDER_TYPE_SUB_ORDER_TYPE_CLOSE_BY        // = 8
+```
+
+---
+
+### Order State Enum (SUB_ENUM_ORDER_STATE)
+
+| Name                              | Value | Description                          |
+| --------------------------------- | ----- | ------------------------------------ |
+| `SUB_ORDER_STATE_STARTED`         | 0     | Order checked, but not yet accepted  |
+| `SUB_ORDER_STATE_PLACED`          | 1     | Order accepted                       |
+| `SUB_ORDER_STATE_CANCELED`        | 2     | Order canceled by client             |
+| `SUB_ORDER_STATE_PARTIAL`         | 3     | Order partially executed             |
+| `SUB_ORDER_STATE_FILLED`          | 4     | Order fully executed                 |
+| `SUB_ORDER_STATE_REJECTED`        | 5     | Order rejected                       |
+| `SUB_ORDER_STATE_EXPIRED`         | 6     | Order expired                        |
+| `SUB_ORDER_STATE_REQUEST_ADD`     | 7     | Order being registered               |
+| `SUB_ORDER_STATE_REQUEST_MODIFY`  | 8     | Order being modified                 |
+| `SUB_ORDER_STATE_REQUEST_CANCEL`  | 9     | Order being deleted                  |
+
+**Usage:**
+```go
+pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_STARTED        // = 0
+pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_PLACED         // = 1
+pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_CANCELED       // = 2
+pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_PARTIAL        // = 3
+pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_FILLED         // = 4
+pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_REJECTED       // = 5
+pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_EXPIRED        // = 6
+pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_REQUEST_ADD    // = 7
+pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_REQUEST_MODIFY // = 8
+pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_REQUEST_CANCEL // = 9
+```
+
+---
+
+### Order Time Type Enum (SUB_ENUM_ORDER_TYPE_TIME)
+
+| Name                           | Value | Description                          |
+| ------------------------------ | ----- | ------------------------------------ |
+| `SUB_ORDER_TIME_GTC`           | 0     | Good till cancel                     |
+| `SUB_ORDER_TIME_DAY`           | 1     | Good till current trading day        |
+| `SUB_ORDER_TIME_SPECIFIED`     | 2     | Good till specified date             |
+| `SUB_ORDER_TIME_SPECIFIED_DAY` | 3     | Good till specified day              |
+
+**Usage:**
+```go
+pb.SUB_ENUM_ORDER_TYPE_TIME_SUB_ORDER_TIME_GTC           // = 0
+pb.SUB_ENUM_ORDER_TYPE_TIME_SUB_ORDER_TIME_DAY           // = 1
+pb.SUB_ENUM_ORDER_TYPE_TIME_SUB_ORDER_TIME_SPECIFIED     // = 2
+pb.SUB_ENUM_ORDER_TYPE_TIME_SUB_ORDER_TIME_SPECIFIED_DAY // = 3
+```
+
+---
+
+### Order Filling Type Enum (SUB_ENUM_ORDER_TYPE_FILLING)
+
+| Name                         | Value | Description                          |
+| ---------------------------- | ----- | ------------------------------------ |
+| `SUB_ORDER_FILLING_FOK`      | 0     | Fill or Kill                         |
+| `SUB_ORDER_FILLING_IOC`      | 1     | Immediate or Cancel                  |
+| `SUB_ORDER_FILLING_BOC`      | 2     | Book or Cancel                       |
+| `SUB_ORDER_FILLING_RETURN`   | 3     | Return                               |
+
+**Usage:**
+```go
+pb.SUB_ENUM_ORDER_TYPE_FILLING_SUB_ORDER_FILLING_FOK    // = 0
+pb.SUB_ENUM_ORDER_TYPE_FILLING_SUB_ORDER_FILLING_IOC    // = 1
+pb.SUB_ENUM_ORDER_TYPE_FILLING_SUB_ORDER_FILLING_BOC    // = 2
+pb.SUB_ENUM_ORDER_TYPE_FILLING_SUB_ORDER_FILLING_RETURN // = 3
+```
+
+---
+
+### Order Reason Enum (SUB_ENUM_ORDER_REASON)
+
+| Name                         | Value | Description                          |
+| ---------------------------- | ----- | ------------------------------------ |
+| `SUB_ORDER_REASON_CLIENT`    | 0     | Order placed from desktop terminal   |
+| `SUB_ORDER_REASON_MOBILE`    | 2     | Order placed from mobile app         |
+| `SUB_ORDER_REASON_WEB`       | 3     | Order placed from web terminal       |
+| `SUB_ORDER_REASON_EXPERT`    | 4     | Order placed by Expert Advisor       |
+| `SUB_ORDER_REASON_SL`        | 5     | Order triggered by Stop Loss         |
+| `SUB_ORDER_REASON_TP`        | 6     | Order triggered by Take Profit       |
+| `SUB_ORDER_REASON_SO`        | 7     | Order triggered by Stop Out          |
+
+**Usage:**
+```go
+pb.SUB_ENUM_ORDER_REASON_SUB_ORDER_REASON_CLIENT // = 0
+pb.SUB_ENUM_ORDER_REASON_SUB_ORDER_REASON_MOBILE // = 2
+pb.SUB_ENUM_ORDER_REASON_SUB_ORDER_REASON_WEB    // = 3
+pb.SUB_ENUM_ORDER_REASON_SUB_ORDER_REASON_EXPERT // = 4
+pb.SUB_ENUM_ORDER_REASON_SUB_ORDER_REASON_SL     // = 5
+pb.SUB_ENUM_ORDER_REASON_SUB_ORDER_REASON_TP     // = 6
+pb.SUB_ENUM_ORDER_REASON_SUB_ORDER_REASON_SO     // = 7
+```
+
+---
+
+### Deal Type Enum (SUB_ENUM_DEAL_TYPE)
+
+| Name                                  | Value | Description                          |
+| ------------------------------------- | ----- | ------------------------------------ |
+| `SUB_DEAL_TYPE_BUY`                   | 0     | Buy deal                             |
+| `SUB_DEAL_TYPE_SELL`                  | 1     | Sell deal                            |
+| `SUB_DEAL_TYPE_BALANCE`               | 2     | Balance operation                    |
+| `SUB_DEAL_TYPE_CREDIT`                | 3     | Credit operation                     |
+| `SUB_DEAL_TYPE_CHARGE`                | 4     | Additional charge                    |
+| `SUB_DEAL_TYPE_CORRECTION`            | 5     | Correction                           |
+| `SUB_DEAL_TYPE_BONUS`                 | 6     | Bonus                                |
+| `SUB_DEAL_TYPE_COMMISSION`            | 7     | Additional commission                |
+| `SUB_DEAL_TYPE_COMMISSION_DAILY`      | 8     | Daily commission                     |
+| `SUB_DEAL_TYPE_COMMISSION_MONTHLY`    | 9     | Monthly commission                   |
+| `SUB_DEAL_TYPE_COMMISSION_AGENT_DAILY`   | 10    | Daily agent commission            |
+| `SUB_DEAL_TYPE_COMMISSION_AGENT_MONTHLY` | 11    | Monthly agent commission          |
+| `SUB_DEAL_TYPE_INTEREST`              | 12    | Interest rate                        |
+| `SUB_DEAL_TYPE_BUY_CANCELED`          | 13    | Canceled buy deal                    |
+| `SUB_DEAL_TYPE_SELL_CANCELED`         | 14    | Canceled sell deal                   |
+| `SUB_DEAL_DIVIDEND`                   | 15    | Dividend operations                  |
+| `SUB_DEAL_DIVIDEND_FRANKED`           | 16    | Franked (non-taxable) dividend       |
+| `SUB_DEAL_TAX`                        | 17    | Tax charges                          |
+
+**Usage:**
+```go
+pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_BUY                      // = 0
+pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_SELL                     // = 1
+pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_BALANCE                  // = 2
+pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_CREDIT                   // = 3
+pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_CHARGE                   // = 4
+pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_CORRECTION               // = 5
+pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_BONUS                    // = 6
+pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_COMMISSION               // = 7
+pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_COMMISSION_DAILY         // = 8
+pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_COMMISSION_MONTHLY       // = 9
+pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_COMMISSION_AGENT_DAILY   // = 10
+pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_COMMISSION_AGENT_MONTHLY // = 11
+pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_INTEREST                 // = 12
+pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_BUY_CANCELED             // = 13
+pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_SELL_CANCELED            // = 14
+pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_DIVIDEND                      // = 15
+pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_DIVIDEND_FRANKED              // = 16
+pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TAX                           // = 17
+```
+
+---
+
+### Deal Entry Type Enum (SUB_ENUM_DEAL_ENTRY)
+
+| Name                       | Value | Description                          |
+| -------------------------- | ----- | ------------------------------------ |
+| `SUB_DEAL_ENTRY_IN`        | 0     | Entry into market                    |
+| `SUB_DEAL_ENTRY_OUT`       | 1     | Exit from market                     |
+| `SUB_DEAL_ENTRY_INOUT`     | 2     | Reverse                              |
+| `SUB_DEAL_ENTRY_OUT_BY`    | 3     | Close by opposite position           |
+
+**Usage:**
+```go
+pb.SUB_ENUM_DEAL_ENTRY_SUB_DEAL_ENTRY_IN     // = 0
+pb.SUB_ENUM_DEAL_ENTRY_SUB_DEAL_ENTRY_OUT    // = 1
+pb.SUB_ENUM_DEAL_ENTRY_SUB_DEAL_ENTRY_INOUT  // = 2
+pb.SUB_ENUM_DEAL_ENTRY_SUB_DEAL_ENTRY_OUT_BY // = 3
+```
+
+---
+
+### Deal Reason Enum (SUB_ENUM_DEAL_REASON)
+
+| Name                                 | Value | Description                          |
+| ------------------------------------ | ----- | ------------------------------------ |
+| `SUB_DEAL_REASON_CLIENT`             | 0     | Deal from desktop terminal           |
+| `SUB_DEAL_REASON_MOBILE`             | 1     | Deal from mobile app                 |
+| `SUB_DEAL_REASON_WEB`                | 2     | Deal from web terminal               |
+| `SUB_DEAL_REASON_EXPERT`             | 3     | Deal by Expert Advisor               |
+| `SUB_DEAL_REASON_SL`                 | 4     | Deal by Stop Loss                    |
+| `SUB_DEAL_REASON_TP`                 | 5     | Deal by Take Profit                  |
+| `SUB_DEAL_REASON_SO`                 | 6     | Deal by Stop Out                     |
+| `SUB_DEAL_REASON_ROLLOVER`           | 7     | Deal by rollover                     |
+| `SUB_DEAL_REASON_VMARGIN`            | 8     | Deal by variation margin             |
+| `SUB_DEAL_REASON_SPLIT`              | 9     | Deal by split                        |
+| `SUB_DEAL_REASON_CORPORATE_ACTION`   | 10    | Deal by corporate action             |
+
+**Usage:**
+```go
+pb.SUB_ENUM_DEAL_REASON_SUB_DEAL_REASON_CLIENT           // = 0
+pb.SUB_ENUM_DEAL_REASON_SUB_DEAL_REASON_MOBILE           // = 1
+pb.SUB_ENUM_DEAL_REASON_SUB_DEAL_REASON_WEB              // = 2
+pb.SUB_ENUM_DEAL_REASON_SUB_DEAL_REASON_EXPERT           // = 3
+pb.SUB_ENUM_DEAL_REASON_SUB_DEAL_REASON_SL               // = 4
+pb.SUB_ENUM_DEAL_REASON_SUB_DEAL_REASON_TP               // = 5
+pb.SUB_ENUM_DEAL_REASON_SUB_DEAL_REASON_SO               // = 6
+pb.SUB_ENUM_DEAL_REASON_SUB_DEAL_REASON_ROLLOVER         // = 7
+pb.SUB_ENUM_DEAL_REASON_SUB_DEAL_REASON_VMARGIN          // = 8
+pb.SUB_ENUM_DEAL_REASON_SUB_DEAL_REASON_SPLIT            // = 9
+pb.SUB_ENUM_DEAL_REASON_SUB_DEAL_REASON_CORPORATE_ACTION // = 10
+```
 
 ---
 
