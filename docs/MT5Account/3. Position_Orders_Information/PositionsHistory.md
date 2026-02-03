@@ -153,6 +153,7 @@ PositionsHistoryReply {
 | 5 | `AH_ORDER_TYPE_SELL_STOP` | Sell Stop pending order |
 | 6 | `AH_ORDER_TYPE_BUY_STOP_LIMIT` | Buy Stop Limit (pending Buy Limit order at StopLimit price) |
 | 7 | `AH_ORDER_TYPE_SELL_STOP_LIMIT` | Sell Stop Limit (pending Sell Limit order at StopLimit price) |
+| 8 | `AH_ORDER_TYPE_CLOSE_BY` | Close by opposite position |
 
 ---
 
