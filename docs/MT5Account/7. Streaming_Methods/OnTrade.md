@@ -92,6 +92,7 @@ Use it to:
 ## 📚 Tutorial
 
 For a detailed line-by-line explanation with examples, see:
+
 **→ [OnTrade - How it works](../HOW_IT_WORK/7.%20Streaming_Methods_HOW/OnTrade_HOW.md)**
 
 ---
@@ -113,6 +114,7 @@ For a detailed line-by-line explanation with examples, see:
 ## 🧱 ENUMs Overview
 
 OnTrade uses **11 ENUMs in total**:
+
 - **1 Direct ENUM** - returned by the method itself in `OnTradeData.Type`
 - **10 Nested ENUMs** - used in nested data structures within `OnTadeEventData`
 
@@ -123,6 +125,7 @@ OnTrade uses **11 ENUMs in total**:
 | `MT5_SUB_ENUM_EVENT_GROUP_TYPE` | `Type` | `OrderUpdate` (1) | Event type identifier (shared across streaming methods) |
 
 **Important Notes:**
+
 - This ENUM has 2 values: `OrderProfit` (0) and `OrderUpdate` (1)
 - **OnTrade always returns `OrderUpdate` (1)**
 - `OrderProfit` (0) is used by [OnPositionProfit](./OnPositionProfit.md) method
@@ -215,6 +218,7 @@ pb.SUB_ENUM_POSITION_REASON_SUB_POSITION_REASON_CLIENT
 ```
 
 **Why so long?**
+
 - Standard protobuf naming for Go
 - Ensures uniqueness across the package
 - No shorter alternatives available
