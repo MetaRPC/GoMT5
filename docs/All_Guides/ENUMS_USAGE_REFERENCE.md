@@ -22,12 +22,12 @@
 
 ### ✅ All methods use ENUMs
 
-| Method | Description | Input ENUMs | Output ENUMs |
-|--------|-------------|-------------|--------------|
-| **AccountSummary** | Get all account data in one call (RECOMMENDED) | - | `MrpcEnumAccountTradeMode` - Account type (DEMO/CONTEST/REAL) |
-| **AccountInfoDouble** | Get double properties (Balance, Equity, Margin, etc.) | `AccountInfoDoublePropertyType` - Property selector (14 values: ACCOUNT_BALANCE, ACCOUNT_EQUITY, ACCOUNT_MARGIN, ACCOUNT_MARGIN_FREE, ACCOUNT_MARGIN_LEVEL, ACCOUNT_PROFIT, ACCOUNT_CREDIT, ACCOUNT_MARGIN_SO_CALL, ACCOUNT_MARGIN_SO_SO, ACCOUNT_MARGIN_INITIAL, ACCOUNT_MARGIN_MAINTENANCE, ACCOUNT_ASSETS, ACCOUNT_LIABILITIES, ACCOUNT_COMMISSION_BLOCKED) | - |
-| **AccountInfoInteger** | Get integer properties (Login, Leverage, etc.) | `AccountInfoIntegerPropertyType` - Property selector (11 values: ACCOUNT_LOGIN, ACCOUNT_TRADE_MODE, ACCOUNT_LEVERAGE, ACCOUNT_LIMIT_ORDERS, ACCOUNT_MARGIN_SO_MODE, ACCOUNT_TRADE_ALLOWED, ACCOUNT_TRADE_EXPERT, ACCOUNT_MARGIN_MODE, ACCOUNT_CURRENCY_DIGITS, ACCOUNT_FIFO_CLOSE, ACCOUNT_HEDGE_ALLOWED) | ⚠️ Returns `int64` values that may represent ENUMs (e.g., ACCOUNT_TRADE_MODE: 0=DEMO, 1=CONTEST, 2=REAL) |
-| **AccountInfoString** | Get string properties (Currency, Company, etc.) | `AccountInfoStringPropertyType` - Property selector (4 values: ACCOUNT_NAME, ACCOUNT_SERVER, ACCOUNT_CURRENCY, ACCOUNT_COMPANY) | - |
+| Method | ENUMs Count | Description | Input ENUMs | Output ENUMs |
+|--------|-------------|-------------|-------------|--------------|
+| **AccountSummary** | **[In: 0, Out: 1]**<br>Total: 1 ENUM | Get all account data in one call (RECOMMENDED) | - | `MrpcEnumAccountTradeMode` (3 values) - Account type (DEMO/CONTEST/REAL) |
+| **AccountInfoDouble** | **[In: 1, Out: 0]**<br>Total: 1 ENUM | Get double properties (Balance, Equity, Margin, etc.) | `AccountInfoDoublePropertyType` (14 values) - Property selector | - |
+| **AccountInfoInteger** | **[In: 1, Out: 0]**<br>Total: 1 ENUM | Get integer properties (Login, Leverage, etc.) | `AccountInfoIntegerPropertyType` (11 values) - Property selector | ⚠️ Returns `int64` values that may represent ENUMs (e.g., ACCOUNT_TRADE_MODE: 0=DEMO, 1=CONTEST, 2=REAL) |
+| **AccountInfoString** | **[In: 1, Out: 0]**<br>Total: 1 ENUM | Get string properties (Currency, Company, etc.) | `AccountInfoStringPropertyType` (4 values) - Property selector | - |
 
 ---
 
@@ -35,22 +35,22 @@
 
 ### 7 methods use ENUMs
 
-| Method | Description | Input ENUMs | Output ENUMs |
-|--------|-------------|-------------|--------------|
-| **SymbolsTotal** | Count total/selected symbols | - | - |
-| **SymbolExist** | Check if symbol exists | - | - |
-| **SymbolName** | Get symbol name by index | - | - |
-| **SymbolSelect** | Add/remove symbol from Market Watch | - | - |
-| **SymbolIsSynchronized** | Check sync status with server | - | - |
-| **SymbolInfoDouble** | Get double properties (Bid, Ask, Point, Volume, etc.) | `SymbolInfoDoubleProperty` - Property selector (SYMBOL_BID, SYMBOL_ASK, SYMBOL_POINT, SYMBOL_VOLUME_MIN, SYMBOL_VOLUME_MAX, etc.) | - |
-| **SymbolInfoInteger** | Get integer properties (Digits, Spread, Stops Level) | `SymbolInfoIntegerProperty` - Property selector | ⚠️ Returns `int64` values that may represent ENUMs: BMT5_ENUM_SYMBOL_TRADE_MODE, BMT5_ENUM_SYMBOL_TRADE_EXECUTION, BMT5_ENUM_SYMBOL_CALC_MODE, BMT5_ENUM_SYMBOL_SWAP_MODE, BMT5_ENUM_SYMBOL_ORDER_GTC_MODE, BMT5_ENUM_SYMBOL_OPTION_RIGHT, BMT5_ENUM_SYMBOL_CHART_MODE, BMT5_ENUM_SYMBOL_SECTOR, BMT5_ENUM_SYMBOL_INDUSTRY |
-| **SymbolInfoString** | Get string properties (Description, Base/Profit Currency) | `SymbolInfoStringProperty` - Property selector (SYMBOL_BASIS, SYMBOL_CATEGORY, SYMBOL_COUNTRY, SYMBOL_CURRENCY_BASE, SYMBOL_CURRENCY_PROFIT, SYMBOL_DESCRIPTION, etc.) | - |
-| **SymbolInfoMarginRate** | Get margin requirements for order types | `ENUM_ORDER_TYPE` - Order type for margin calculation (ORDER_TYPE_BUY, ORDER_TYPE_SELL, ORDER_TYPE_BUY_LIMIT, ORDER_TYPE_SELL_LIMIT, ORDER_TYPE_BUY_STOP, ORDER_TYPE_SELL_STOP, etc.) | - |
-| **SymbolInfoTick** | Get last tick data with timestamp | - | - |
-| **SymbolInfoSessionQuote** | Get quote session times | `DayOfWeek` - Day of week (SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY) | - |
-| **SymbolInfoSessionTrade** | Get trade session times | `DayOfWeek` - Day of week (SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY) | - |
-| **SymbolParamsMany** | Get detailed parameters for multiple symbols | `AH_SYMBOL_PARAMS_MANY_SORT_TYPE` - Sort mode (AH_PARAMS_MANY_SORT_TYPE_SYMBOL_NAME_ASC, AH_PARAMS_MANY_SORT_TYPE_SYMBOL_NAME_DESC, AH_PARAMS_MANY_SORT_TYPE_MQL_INDEX_ASC, AH_PARAMS_MANY_SORT_TYPE_MQL_INDEX_DESC) | - |
-| **TickValueWithSize** | Get tick value and size information for symbols | - | - |
+| Method | ENUMs Count | Description | Input ENUMs | Output ENUMs |
+|--------|-------------|-------------|-------------|--------------|
+| **SymbolsTotal** | **[In: 0, Out: 0]**<br>Total: 0 ENUMs | Count total/selected symbols | - | - |
+| **SymbolExist** | **[In: 0, Out: 0]**<br>Total: 0 ENUMs | Check if symbol exists | - | - |
+| **SymbolName** | **[In: 0, Out: 0]**<br>Total: 0 ENUMs | Get symbol name by index | - | - |
+| **SymbolSelect** | **[In: 0, Out: 0]**<br>Total: 0 ENUMs | Add/remove symbol from Market Watch | - | - |
+| **SymbolIsSynchronized** | **[In: 0, Out: 0]**<br>Total: 0 ENUMs | Check sync status with server | - | - |
+| **SymbolInfoDouble** | **[In: 1, Out: 0]**<br>Total: 1 ENUM | Get double properties (Bid, Ask, Point, Volume, etc.) | `SymbolInfoDoubleProperty` (60 values) - Property selector | - |
+| **SymbolInfoInteger** | **[In: 1, Out: 0]**<br>Total: 1 ENUM | Get integer properties (Digits, Spread, Stops Level) | `SymbolInfoIntegerProperty` (37 values) - Property selector | ⚠️ Returns `int64` values that may represent ENUMs: BMT5_ENUM_SYMBOL_TRADE_MODE, BMT5_ENUM_SYMBOL_TRADE_EXECUTION, BMT5_ENUM_SYMBOL_CALC_MODE, BMT5_ENUM_SYMBOL_SWAP_MODE, BMT5_ENUM_SYMBOL_ORDER_GTC_MODE, BMT5_ENUM_SYMBOL_OPTION_RIGHT, BMT5_ENUM_SYMBOL_CHART_MODE, BMT5_ENUM_SYMBOL_SECTOR, BMT5_ENUM_SYMBOL_INDUSTRY |
+| **SymbolInfoString** | **[In: 1, Out: 0]**<br>Total: 1 ENUM | Get string properties (Description, Base/Profit Currency) | `SymbolInfoStringProperty` (15 values) - Property selector | - |
+| **SymbolInfoMarginRate** | **[In: 1, Out: 0]**<br>Total: 1 ENUM | Get margin requirements for order types | `ENUM_ORDER_TYPE` (9 values) - Order type for margin calculation | - |
+| **SymbolInfoTick** | **[In: 0, Out: 0]**<br>Total: 0 ENUMs | Get last tick data with timestamp | - | - |
+| **SymbolInfoSessionQuote** | **[In: 1, Out: 0]**<br>Total: 1 ENUM | Get quote session times | `DayOfWeek` (7 values) - Day of week | - |
+| **SymbolInfoSessionTrade** | **[In: 1, Out: 0]**<br>Total: 1 ENUM | Get trade session times | `DayOfWeek` (7 values) - Day of week | - |
+| **SymbolParamsMany** | **[In: 1, Out: 0]**<br>Total: 1 ENUM | Get detailed parameters for multiple symbols | `AH_SYMBOL_PARAMS_MANY_SORT_TYPE` (4 values) - Sort mode | - |
+| **TickValueWithSize** | **[In: 0, Out: 0]**<br>Total: 0 ENUMs | Get tick value and size information for symbols | - | - |
 
 ---
 
@@ -58,13 +58,13 @@
 
 ### 3 methods use ENUMs
 
-| Method | Description | Input ENUMs | Output ENUMs |
-|--------|-------------|-------------|--------------|
-| **PositionsTotal** | Count open positions | - | - |
-| **OpenedOrders** | Get all opened orders & positions with full details | `BMT5_ENUM_OPENED_ORDER_SORT_TYPE` - Sort mode | **In PositionInfo:** BMT5_ENUM_POSITION_TYPE (Position type: BUY/SELL), BMT5_ENUM_POSITION_REASON (Open reason)<br>**In OpenedOrderInfo:** BMT5_ENUM_ORDER_TYPE (Order type), BMT5_ENUM_ORDER_STATE (Order state), BMT5_ENUM_ORDER_TYPE_TIME (Order lifetime), BMT5_ENUM_ORDER_TYPE_FILLING (Fill mode) |
-| **OpenedOrdersTickets** | Get only ticket numbers (lightweight) | - | - |
-| **OrderHistory** | Get historical orders with pagination | `BMT5_ENUM_ORDER_HISTORY_SORT_TYPE` - Sort mode | **In OrderHistoryData:** BMT5_ENUM_ORDER_STATE, BMT5_ENUM_ORDER_TYPE, BMT5_ENUM_ORDER_TYPE_TIME, BMT5_ENUM_ORDER_TYPE_FILLING<br>**In DealHistoryData:** BMT5_ENUM_DEAL_ENTRY_TYPE, BMT5_ENUM_DEAL_TYPE, BMT5_ENUM_DEAL_REASON |
-| **PositionsHistory** | Get historical positions with P&L | `AH_ENUM_POSITIONS_HISTORY_SORT_TYPE` - Sort mode (AH_SORT_BY_OPEN_TIME_ASC, AH_SORT_BY_OPEN_TIME_DESC, AH_SORT_BY_CLOSE_TIME_ASC, AH_SORT_BY_CLOSE_TIME_DESC, AH_SORT_BY_PROFIT_ASC, AH_SORT_BY_PROFIT_DESC) | `AH_ENUM_POSITIONS_HISTORY_ORDER_TYPE` - Order type in PositionHistoryInfo (AH_ORDER_TYPE_BUY, AH_ORDER_TYPE_SELL, AH_ORDER_TYPE_BUY_LIMIT, AH_ORDER_TYPE_SELL_LIMIT, AH_ORDER_TYPE_BUY_STOP, AH_ORDER_TYPE_SELL_STOP, AH_ORDER_TYPE_BUY_STOP_LIMIT, AH_ORDER_TYPE_SELL_STOP_LIMIT) |
+| Method | ENUMs Count | Description | Input ENUMs | Output ENUMs |
+|--------|-------------|-------------|-------------|--------------|
+| **PositionsTotal** | **[In: 0, Out: 0]**<br>Total: 0 ENUMs | Count open positions | - | - |
+| **OpenedOrders** | **[In: 1, Out: 6]**<br>Total: 7 ENUMs | Get all opened orders & positions with full details | `BMT5_ENUM_OPENED_ORDER_SORT_TYPE` (4 values) - Sort mode | **6 ENUMs:**<br>**In PositionInfo:** BMT5_ENUM_POSITION_TYPE, BMT5_ENUM_POSITION_REASON<br>**In OpenedOrderInfo:** BMT5_ENUM_ORDER_TYPE, BMT5_ENUM_ORDER_STATE, BMT5_ENUM_ORDER_TYPE_TIME, BMT5_ENUM_ORDER_TYPE_FILLING |
+| **OpenedOrdersTickets** | **[In: 0, Out: 0]**<br>Total: 0 ENUMs | Get only ticket numbers (lightweight) | - | - |
+| **OrderHistory** | **[In: 1, Out: 7]**<br>Total: 8 ENUMs | Get historical orders with pagination | `BMT5_ENUM_ORDER_HISTORY_SORT_TYPE` (6 values) - Sort mode | **7 ENUMs:**<br>**In OrderHistoryData:** BMT5_ENUM_ORDER_STATE, BMT5_ENUM_ORDER_TYPE, BMT5_ENUM_ORDER_TYPE_TIME, BMT5_ENUM_ORDER_TYPE_FILLING<br>**In DealHistoryData:** BMT5_ENUM_DEAL_ENTRY_TYPE, BMT5_ENUM_DEAL_TYPE, BMT5_ENUM_DEAL_REASON |
+| **PositionsHistory** | **[In: 1, Out: 1]**<br>Total: 2 ENUMs | Get historical positions with P&L | `AH_ENUM_POSITIONS_HISTORY_SORT_TYPE` (4 values) - Sort mode | `AH_ENUM_POSITIONS_HISTORY_ORDER_TYPE` (9 values) - Order type in PositionHistoryInfo |
 
 ---
 
@@ -72,11 +72,11 @@
 
 ### 1 method uses ENUMs
 
-| Method | Description | Input ENUMs | Output ENUMs |
-|--------|-------------|-------------|--------------|
-| **MarketBookAdd** | Subscribe to Depth of Market updates | - | - |
-| **MarketBookRelease** | Unsubscribe from DOM | - | - |
-| **MarketBookGet** | Get current market depth snapshot | - | `BookType` - Order type in order book (in MrpcMqlBookInfo.Type field): BOOK_TYPE_SELL (sell order/Offer), BOOK_TYPE_BUY (buy order/Bid), BOOK_TYPE_SELL_MARKET (market sell), BOOK_TYPE_BUY_MARKET (market buy) |
+| Method | ENUMs Count | Description | Input ENUMs | Output ENUMs |
+|--------|-------------|-------------|-------------|--------------|
+| **MarketBookAdd** | **[In: 0, Out: 0]**<br>Total: 0 ENUMs | Subscribe to Depth of Market updates | - | - |
+| **MarketBookRelease** | **[In: 0, Out: 0]**<br>Total: 0 ENUMs | Unsubscribe from DOM | - | - |
+| **MarketBookGet** | **[In: 0, Out: 1]**<br>Total: 1 ENUM | Get current market depth snapshot | - | `BookType` (4 values) - Order type in order book (BOOK_TYPE_SELL, BOOK_TYPE_BUY, BOOK_TYPE_SELL_MARKET, BOOK_TYPE_BUY_MARKET) |
 
 ---
 
@@ -84,28 +84,28 @@
 
 ### ✅ All methods use ENUMs
 
-| Method | Description | Input ENUMs | Output ENUMs |
-|--------|-------------|-------------|--------------|
-| **OrderSend** | Send market or pending order | `TMT5_ENUM_ORDER_TYPE` - Order type (TMT5_ORDER_TYPE_BUY, TMT5_ORDER_TYPE_SELL, TMT5_ORDER_TYPE_BUY_LIMIT, TMT5_ORDER_TYPE_SELL_LIMIT, TMT5_ORDER_TYPE_BUY_STOP, TMT5_ORDER_TYPE_SELL_STOP, TMT5_ORDER_TYPE_BUY_STOP_LIMIT, TMT5_ORDER_TYPE_SELL_STOP_LIMIT, TMT5_ORDER_TYPE_CLOSE_BY)<br>`TMT5_ENUM_ORDER_TYPE_TIME` - Order lifetime (TMT5_ORDER_TIME_GTC, TMT5_ORDER_TIME_DAY, TMT5_ORDER_TIME_SPECIFIED, TMT5_ORDER_TIME_SPECIFIED_DAY) | - |
-| **OrderModify** | Modify existing order parameters | `TMT5_ENUM_ORDER_TYPE_TIME` - Order lifetime (used in ExpirationTimeType field) | - |
-| **OrderClose** | Close market or pending order | - | `MRPC_ORDER_CLOSE_MODE` - Close mode: MRPC_MARKET_ORDER_CLOSE (close market position), MRPC_MARKET_ORDER_PARTIAL_CLOSE (partial close), MRPC_PENDING_ORDER_REMOVE (remove pending order) |
-| **OrderCheck** | Validate order before sending | `MRPC_ENUM_TRADE_REQUEST_ACTIONS` - Trade operation action<br>`ENUM_ORDER_TYPE_TF` - Order type (for TradeFunction)<br>`MRPC_ENUM_ORDER_TYPE_FILLING` - Fill mode<br>`MRPC_ENUM_ORDER_TYPE_TIME` - Order lifetime | - |
-| **OrderCalcMargin** | Calculate required margin | `ENUM_ORDER_TYPE_TF` - Order type (for TradeFunction) | - |
-| **OrderCalcProfit** | Calculate potential profit/loss | `ENUM_ORDER_TYPE_TF` - Order type (for TradeFunction) | - |
+| Method | ENUMs Count | Description | Input ENUMs | Output ENUMs |
+|--------|-------------|-------------|-------------|--------------|
+| **OrderSend** | **[In: 2, Out: 0]**<br>Total: 2 ENUMs | Send market or pending order | `TMT5_ENUM_ORDER_TYPE` (9 values) - Order type<br>`TMT5_ENUM_ORDER_TYPE_TIME` (4 values) - Order lifetime | - |
+| **OrderModify** | **[In: 1, Out: 0]**<br>Total: 1 ENUM | Modify existing order parameters | `TMT5_ENUM_ORDER_TYPE_TIME` (4 values) - Order lifetime (ExpirationTimeType field) | - |
+| **OrderClose** | **[In: 0, Out: 1]**<br>Total: 1 ENUM | Close market or pending order | - | `MRPC_ORDER_CLOSE_MODE` (3 values) - Close mode: MRPC_MARKET_ORDER_CLOSE, MRPC_MARKET_ORDER_PARTIAL_CLOSE, MRPC_PENDING_ORDER_REMOVE |
+| **OrderCheck** | **[In: 4, Out: 0]**<br>Total: 4 ENUMs | Validate order before sending | `MRPC_ENUM_TRADE_REQUEST_ACTIONS` (6 values) - Trade action<br>`ENUM_ORDER_TYPE_TF` (9 values) - Order type<br>`MRPC_ENUM_ORDER_TYPE_FILLING` (4 values) - Fill mode<br>`MRPC_ENUM_ORDER_TYPE_TIME` (4 values) - Order lifetime | - |
+| **OrderCalcMargin** | **[In: 1, Out: 0]**<br>Total: 1 ENUM | Calculate required margin | `ENUM_ORDER_TYPE_TF` (9 values) - Order type | - |
+| **OrderCalcProfit** | **[In: 1, Out: 0]**<br>Total: 1 ENUM | Calculate potential profit/loss | `ENUM_ORDER_TYPE_TF` (9 values) - Order type | - |
 
 ---
 
 ## 6. Streaming Methods (5 methods)
 
-### 3 methods use ENUMs
+### ✅ 3/5 methods use ENUMs (60%)
 
-| Method | Description | Input ENUMs | Output ENUMs |
-|--------|-------------|-------------|--------------|
-| **OnSymbolTick** | Stream tick data (Bid/Ask updates) | - | - |
-| **OnTrade** | Stream trade events | - | `MT5_SUB_ENUM_EVENT_GROUP_TYPE` - Event type (in OnTradeData.Type field) |
-| **OnPositionProfit** | Stream position P&L updates | - | `MT5_SUB_ENUM_EVENT_GROUP_TYPE` - Event type (in OnPositionProfitData.Type field) |
-| **OnPositionsAndPendingOrdersTickets** | Stream ticket changes | - | - |
-| **OnTradeTransaction** | Stream trade transaction events | - | **9 unique ENUM types, 11 field uses:**<br>1. `MT5_SUB_ENUM_EVENT_GROUP_TYPE` (OnTradeTransactionData.Type)<br>2. `SUB_ENUM_TRADE_TRANSACTION_TYPE` (MqlTradeTransaction.Type)<br>3. `SUB_ENUM_ORDER_TYPE` (used 2×: MqlTradeTransaction.OrderType, MqlTradeRequest.OrderType)<br>4. `SUB_ENUM_ORDER_STATE` (MqlTradeTransaction.OrderState)<br>5. `SUB_ENUM_DEAL_TYPE` (MqlTradeTransaction.DealType)<br>6. `SUB_ENUM_ORDER_TYPE_TIME` (used 2×: MqlTradeTransaction.OrderTimeType, MqlTradeRequest.TypeTime)<br>7. `SUB_ENUM_TRADE_REQUEST_ACTIONS` (MqlTradeRequest.TradeOperationType)<br>8. `SUB_ENUM_ORDER_TYPE_FILLING` (MqlTradeRequest.OrderTypeFilling)<br>9. `MqlErrorTradeCode` (MqlTradeResult.TradeReturnCode) |
+| Method | ENUMs Count | Description | Input ENUMs | Output ENUMs |
+|--------|-------------|-------------|-------------|--------------|
+| **OnSymbolTick** | **[In: 0, Out: 0]**<br>Total: 0 ENUMs | Stream tick data (Bid/Ask updates) | - | - |
+| **OnTrade** | **[In: 0, Out: 11]**<br>Total: 11 ENUMs | Stream trade events (positions, orders, deals) | - | **11 ENUMs (1 direct, 10 nested):**<br>**Direct ENUM (1):**<br>1. `MT5_SUB_ENUM_EVENT_GROUP_TYPE` (OnTradeData.Type) - 2 values<br>**Nested ENUMs (10):**<br>2. `SUB_ENUM_POSITION_TYPE` (OnTradePositionInfo)<br>3. `SUB_ENUM_POSITION_REASON` (OnTradePositionInfo)<br>4. `SUB_ENUM_ORDER_TYPE` (OnTradeOrderInfo, OnTradeHistoryOrderInfo)<br>5. `SUB_ENUM_ORDER_STATE` (OnTradeOrderInfo, OnTradeHistoryOrderInfo)<br>6. `SUB_ENUM_ORDER_TYPE_TIME` (OnTradeOrderInfo, OnTradeHistoryOrderInfo)<br>7. `SUB_ENUM_ORDER_TYPE_FILLING` (OnTradeOrderInfo, OnTradeHistoryOrderInfo)<br>8. `SUB_ENUM_ORDER_REASON` (OnTradeOrderInfo)<br>9. `SUB_ENUM_DEAL_TYPE` (OnTradeHistoryDealInfo)<br>10. `SUB_ENUM_DEAL_ENTRY` (OnTradeHistoryDealInfo)<br>11. `SUB_ENUM_DEAL_REASON` (OnTradeHistoryDealInfo, OnTradeHistoryOrderInfo) |
+| **OnPositionProfit** | **[In: 0, Out: 1]**<br>Total: 1 ENUM | Stream position P&L updates | - | `MT5_SUB_ENUM_EVENT_GROUP_TYPE` (2 values) - Event type (OnPositionProfitData.Type) |
+| **OnPositionsAndPendingOrdersTickets** | **[In: 0, Out: 0]**<br>Total: 0 ENUMs | Stream ticket changes | - | - |
+| **OnTradeTransaction** | **[In: 0, Out: 9]**<br>Total: 9 ENUMs<br>(11 field uses) | Stream trade transaction events | - | **9 ENUMs (1 direct, 8 nested):**<br>**Direct ENUM (1):**<br>1. `MT5_SUB_ENUM_EVENT_GROUP_TYPE` (OnTradeTransactionData.Type)<br>**Nested ENUMs (8):**<br>2. `SUB_ENUM_TRADE_TRANSACTION_TYPE` (MqlTradeTransaction.Type)<br>3. `SUB_ENUM_ORDER_TYPE` (×2: MqlTradeTransaction.OrderType, MqlTradeRequest.OrderType)<br>4. `SUB_ENUM_ORDER_STATE` (MqlTradeTransaction.OrderState)<br>5. `SUB_ENUM_DEAL_TYPE` (MqlTradeTransaction.DealType)<br>6. `SUB_ENUM_ORDER_TYPE_TIME` (×2: MqlTradeTransaction.OrderTimeType, MqlTradeRequest.TypeTime)<br>7. `SUB_ENUM_TRADE_REQUEST_ACTIONS` (MqlTradeRequest.TradeOperationType)<br>8. `SUB_ENUM_ORDER_TYPE_FILLING` (MqlTradeRequest.OrderTypeFilling)<br>9. `MqlErrorTradeCode` (MqlTradeResult.TradeReturnCode) |
 
 ---
 
@@ -183,7 +183,7 @@ orders, _ := account.OpenedOrders(ctx, req)
 
 // PositionsHistory - Input ENUM
 histReq := &pb.PositionsHistoryRequest{
-    SortType: pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_SORT_BY_PROFIT_DESC,
+    SortType: pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_DESC,
 }
 history, _ := account.PositionsHistory(ctx, histReq)
 
@@ -225,15 +225,44 @@ for _, bookInfo := range bookData.MqlBookInfos {
 ### 6. Streaming Methods
 
 ```go
-// OnTrade - Output ENUM
+// OnTrade - Output ENUMs (11 unique types in nested structures)
 dataChan, errChan := account.OnTrade(ctx, &pb.OnTradeRequest{})
 go func() {
     for event := range dataChan {
-        // Check event type
+        // Check top-level event type
         switch event.Type {
-        case pb.MT5_SUB_ENUM_EVENT_GROUP_TYPE_OnTrade:
+        case pb.MT5_SUB_ENUM_EVENT_GROUP_TYPE_OrderUpdate:
             fmt.Println("Trade event received")
-            // Process trade data
+
+            // Process positions (uses SUB_ENUM_POSITION_TYPE, SUB_ENUM_POSITION_REASON)
+            for _, pos := range event.EventData.NewPositions {
+                switch pos.Type {
+                case pb.SUB_ENUM_POSITION_TYPE_SUB_POSITION_TYPE_BUY:
+                    fmt.Printf("New BUY position #%d\n", pos.Ticket)
+                case pb.SUB_ENUM_POSITION_TYPE_SUB_POSITION_TYPE_SELL:
+                    fmt.Printf("New SELL position #%d\n", pos.Ticket)
+                }
+            }
+
+            // Process orders (uses SUB_ENUM_ORDER_TYPE, SUB_ENUM_ORDER_STATE, etc.)
+            for _, order := range event.EventData.NewOrders {
+                switch order.State {
+                case pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_PLACED:
+                    fmt.Printf("Order #%d placed\n", order.Ticket)
+                case pb.SUB_ENUM_ORDER_STATE_SUB_ORDER_STATE_FILLED:
+                    fmt.Printf("Order #%d filled\n", order.Ticket)
+                }
+            }
+
+            // Process deals (uses SUB_ENUM_DEAL_TYPE, SUB_ENUM_DEAL_ENTRY, SUB_ENUM_DEAL_REASON)
+            for _, deal := range event.EventData.NewHistoryDeals {
+                switch deal.Type {
+                case pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_BUY:
+                    fmt.Printf("Buy deal #%d\n", deal.Ticket)
+                case pb.SUB_ENUM_DEAL_TYPE_SUB_DEAL_TYPE_SELL:
+                    fmt.Printf("Sell deal #%d\n", deal.Ticket)
+                }
+            }
         }
     }
 }()
@@ -376,7 +405,8 @@ pb.<ENUM_TYPE>_<CONSTANT_NAME>
 
 - Does NOT return Deal ENUMs (BMT5_ENUM_DEAL_TYPE, BMT5_ENUM_DEAL_REASON, BMT5_ENUM_DEAL_ENTRY_TYPE)
 - Returns only POSITION information, not deals
-- Output ENUM: only AH_ENUM_POSITIONS_HISTORY_ORDER_TYPE
+- Input ENUM: AH_ENUM_POSITIONS_HISTORY_SORT_TYPE (4 values: OPEN_TIME_ASC/DESC, TICKET_ASC/DESC)
+- Output ENUM: AH_ENUM_POSITIONS_HISTORY_ORDER_TYPE (9 values, includes CLOSE_BY)
 
 **3. OrderModify:**
 
@@ -395,7 +425,22 @@ pb.<ENUM_TYPE>_<CONSTANT_NAME>
 - This same ENUM is used in OnTrade and OnTradeTransaction
 - Represents event type in stream (OrderProfit, OrderPlaced, OrderModified, TradeTransaction, etc.)
 
-**6. OnTradeTransaction - most complex:**
+**6. OnTrade - most complex streaming method:**
+
+- Uses **11 unique ENUM types** in nested structures (more than OnTradeTransaction!):
+  - `OnTradeData.Type` - MT5_SUB_ENUM_EVENT_GROUP_TYPE (top-level event type)
+  - `OnTradePositionInfo` (in NewPositions, DisappearedPositions, UpdatedPositions) - 2 ENUMs:
+    - SUB_ENUM_POSITION_TYPE, SUB_ENUM_POSITION_REASON
+  - `OnTradeOrderInfo` (in NewOrders, DisappearedOrders, StateChangedOrders) - 5 ENUMs:
+    - SUB_ENUM_ORDER_TYPE, SUB_ENUM_ORDER_STATE, SUB_ENUM_ORDER_TYPE_TIME, SUB_ENUM_ORDER_TYPE_FILLING, SUB_ENUM_ORDER_REASON
+  - `OnTradeHistoryOrderInfo` (in NewHistoryOrders, DisappearedHistoryOrders, UpdatedHistoryOrders) - 5 ENUMs:
+    - SUB_ENUM_ORDER_TYPE, SUB_ENUM_ORDER_STATE, SUB_ENUM_ORDER_TYPE_TIME, SUB_ENUM_ORDER_TYPE_FILLING, SUB_ENUM_DEAL_REASON (note: DEAL_REASON, not ORDER_REASON!)
+  - `OnTradeHistoryDealInfo` (in NewHistoryDeals, DisappearedHistoryDeals, UpdatedHistoryDeals) - 3 ENUMs:
+    - SUB_ENUM_DEAL_TYPE, SUB_ENUM_DEAL_ENTRY, SUB_ENUM_DEAL_REASON
+- Many ENUM types are reused across different structures
+- **Important:** Always check `event.Type == MT5_SUB_ENUM_EVENT_GROUP_TYPE_OrderUpdate` (not OnTrade!)
+
+**7. OnTradeTransaction - second most complex:**
 
 - Uses **11 fields with ENUMs** (9 unique types) in four nested structures:
   - `OnTradeTransactionData.Type` - MT5_SUB_ENUM_EVENT_GROUP_TYPE
@@ -404,8 +449,26 @@ pb.<ENUM_TYPE>_<CONSTANT_NAME>
   - `MqlTradeResult.TradeReturnCode` - MqlErrorTradeCode
 - Some ENUM types are reused in different structures (SUB_ENUM_ORDER_TYPE, SUB_ENUM_ORDER_TYPE_TIME)
 
-**7. Methods with Multiple Nested ENUMs:**
+**8. Methods with Multiple Nested ENUMs:**
 
+- **OnTrade** uses 11 unique ENUM types (most complex!)
+- **OnTradeTransaction** uses 9 unique ENUM types (11 field uses)
 - **OrderHistory** returns 7 different ENUMs (4 in OrderHistoryData + 3 in DealHistoryData)
 - **OpenedOrders** returns 6 different ENUMs (3 in PositionInfo + 3 in OpenedOrderInfo)
 
+---
+
+## 🔗 See Also
+
+### Documentation by Group:
+
+- [Account Information Overview](../MT5Account/1.%20Account_information/Account_Information.Overview.md)
+- [Symbol Information Overview](../MT5Account/2.%20Symbol_information/Symbol_Information.Overview.md)
+- [Positions & Orders Overview](../MT5Account/3.%20Position_Orders_Information/Position_Orders.Overview.md)
+- [Market Depth Overview](../MT5Account/5.%20Market_Depth(DOM)/Market_Depth.Overview.md)
+- [Trading Operations Overview](../MT5Account/4.%20Trading_Operations/Trading_Operations.Overview.md)
+
+### Other References:
+
+- [Return Codes Reference](./RETURN_CODES_REFERENCE.md) - trading operation return codes
+- [Error Handling Guide](./ERROR_HANDLING_GUIDE.md) - error handling
