@@ -42,6 +42,7 @@ type AccountHelperClient interface {
 	TickValueWithSize(ctx context.Context, in *TickValueWithSizeRequest, opts ...grpc.CallOption) (*TickValueWithSizeReply, error)
 	// History positions
 	PositionsHistory(ctx context.Context, in *PositionsHistoryRequest, opts ...grpc.CallOption) (*PositionsHistoryReply, error)
+	AllHistoryOrders(ctx context.Context, in *AllHistoryOrdersRequest, opts ...grpc.CallOption) (*AllHistoryOrdersReply, error)
 }
 
 type accountHelperClient struct {
@@ -115,6 +116,15 @@ func (c *accountHelperClient) PositionsHistory(ctx context.Context, in *Position
 	return out, nil
 }
 
+func (c *accountHelperClient) AllHistoryOrders(ctx context.Context, in *AllHistoryOrdersRequest, opts ...grpc.CallOption) (*AllHistoryOrdersReply, error) {
+	out := new(AllHistoryOrdersReply)
+	err := c.cc.Invoke(ctx, "/mt5_term_api.AccountHelper/AllHistoryOrders", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AccountHelperServer is the server API for AccountHelper service.
 // All implementations should embed UnimplementedAccountHelperServer
 // for forward compatibility
@@ -139,6 +149,7 @@ type AccountHelperServer interface {
 	TickValueWithSize(context.Context, *TickValueWithSizeRequest) (*TickValueWithSizeReply, error)
 	// History positions
 	PositionsHistory(context.Context, *PositionsHistoryRequest) (*PositionsHistoryReply, error)
+	AllHistoryOrders(context.Context, *AllHistoryOrdersRequest) (*AllHistoryOrdersReply, error)
 }
 
 // UnimplementedAccountHelperServer should be embedded to have forward compatible implementations.
@@ -165,6 +176,9 @@ func (UnimplementedAccountHelperServer) TickValueWithSize(context.Context, *Tick
 }
 func (UnimplementedAccountHelperServer) PositionsHistory(context.Context, *PositionsHistoryRequest) (*PositionsHistoryReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PositionsHistory not implemented")
+}
+func (UnimplementedAccountHelperServer) AllHistoryOrders(context.Context, *AllHistoryOrdersRequest) (*AllHistoryOrdersReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AllHistoryOrders not implemented")
 }
 
 // UnsafeAccountHelperServer may be embedded to opt out of forward compatibility for this service.
@@ -304,6 +318,24 @@ func _AccountHelper_PositionsHistory_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AccountHelper_AllHistoryOrders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AllHistoryOrdersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountHelperServer).AllHistoryOrders(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mt5_term_api.AccountHelper/AllHistoryOrders",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountHelperServer).AllHistoryOrders(ctx, req.(*AllHistoryOrdersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AccountHelper_ServiceDesc is the grpc.ServiceDesc for AccountHelper service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -338,6 +370,10 @@ var AccountHelper_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PositionsHistory",
 			Handler:    _AccountHelper_PositionsHistory_Handler,
+		},
+		{
+			MethodName: "AllHistoryOrders",
+			Handler:    _AccountHelper_AllHistoryOrders_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

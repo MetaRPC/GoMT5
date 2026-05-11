@@ -23,6 +23,13 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ConnectionClient interface {
 	// Creates terminal connection to the MT5 server by MT cluster name, waits for connection and returns Guid of it
+	// [DefaultValues]
+	//
+	//	{
+	//	  "user": "213827411",
+	//	  "password": "_rVx1tMn",
+	//	  "mtClusterName": "OctaFX-Demo"
+	//	}
 	ConnectEx(ctx context.Context, in *ConnectExRequest, opts ...grpc.CallOption) (*ConnectExReply, error)
 	// Creates terminal connection to the MT5 server and returns Guid of it
 	// [DefaultValues]
@@ -56,6 +63,8 @@ type ConnectionClient interface {
 	Disconnect(ctx context.Context, in *DisconnectRequest, opts ...grpc.CallOption) (*DisconnectReply, error)
 	// If you need to recreate terminal instance with the same id
 	Reconnect(ctx context.Context, in *ReconnectRequest, opts ...grpc.CallOption) (*ReconnectReply, error)
+	GetBrokerServersByBrokerName(ctx context.Context, in *GetBrokerServersByBrokerNameRequest, opts ...grpc.CallOption) (*GetBrokerServersByBrokerNameReply, error)
+	GetTerminalJournalContent(ctx context.Context, in *GetTerminalJournalContentRequest, opts ...grpc.CallOption) (*GetTerminalJournalContentReply, error)
 }
 
 type connectionClient struct {
@@ -120,11 +129,36 @@ func (c *connectionClient) Reconnect(ctx context.Context, in *ReconnectRequest, 
 	return out, nil
 }
 
+func (c *connectionClient) GetBrokerServersByBrokerName(ctx context.Context, in *GetBrokerServersByBrokerNameRequest, opts ...grpc.CallOption) (*GetBrokerServersByBrokerNameReply, error) {
+	out := new(GetBrokerServersByBrokerNameReply)
+	err := c.cc.Invoke(ctx, "/mt5_term_api.Connection/GetBrokerServersByBrokerName", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *connectionClient) GetTerminalJournalContent(ctx context.Context, in *GetTerminalJournalContentRequest, opts ...grpc.CallOption) (*GetTerminalJournalContentReply, error) {
+	out := new(GetTerminalJournalContentReply)
+	err := c.cc.Invoke(ctx, "/mt5_term_api.Connection/GetTerminalJournalContent", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ConnectionServer is the server API for Connection service.
 // All implementations should embed UnimplementedConnectionServer
 // for forward compatibility
 type ConnectionServer interface {
 	// Creates terminal connection to the MT5 server by MT cluster name, waits for connection and returns Guid of it
+	// [DefaultValues]
+	//
+	//	{
+	//	  "user": "213827411",
+	//	  "password": "_rVx1tMn",
+	//	  "mtClusterName": "OctaFX-Demo"
+	//	}
 	ConnectEx(context.Context, *ConnectExRequest) (*ConnectExReply, error)
 	// Creates terminal connection to the MT5 server and returns Guid of it
 	// [DefaultValues]
@@ -158,6 +192,8 @@ type ConnectionServer interface {
 	Disconnect(context.Context, *DisconnectRequest) (*DisconnectReply, error)
 	// If you need to recreate terminal instance with the same id
 	Reconnect(context.Context, *ReconnectRequest) (*ReconnectReply, error)
+	GetBrokerServersByBrokerName(context.Context, *GetBrokerServersByBrokerNameRequest) (*GetBrokerServersByBrokerNameReply, error)
+	GetTerminalJournalContent(context.Context, *GetTerminalJournalContentRequest) (*GetTerminalJournalContentReply, error)
 }
 
 // UnimplementedConnectionServer should be embedded to have forward compatible implementations.
@@ -181,6 +217,12 @@ func (UnimplementedConnectionServer) Disconnect(context.Context, *DisconnectRequ
 }
 func (UnimplementedConnectionServer) Reconnect(context.Context, *ReconnectRequest) (*ReconnectReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Reconnect not implemented")
+}
+func (UnimplementedConnectionServer) GetBrokerServersByBrokerName(context.Context, *GetBrokerServersByBrokerNameRequest) (*GetBrokerServersByBrokerNameReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBrokerServersByBrokerName not implemented")
+}
+func (UnimplementedConnectionServer) GetTerminalJournalContent(context.Context, *GetTerminalJournalContentRequest) (*GetTerminalJournalContentReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTerminalJournalContent not implemented")
 }
 
 // UnsafeConnectionServer may be embedded to opt out of forward compatibility for this service.
@@ -302,6 +344,42 @@ func _Connection_Reconnect_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Connection_GetBrokerServersByBrokerName_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBrokerServersByBrokerNameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConnectionServer).GetBrokerServersByBrokerName(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mt5_term_api.Connection/GetBrokerServersByBrokerName",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConnectionServer).GetBrokerServersByBrokerName(ctx, req.(*GetBrokerServersByBrokerNameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Connection_GetTerminalJournalContent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTerminalJournalContentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConnectionServer).GetTerminalJournalContent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mt5_term_api.Connection/GetTerminalJournalContent",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConnectionServer).GetTerminalJournalContent(ctx, req.(*GetTerminalJournalContentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Connection_ServiceDesc is the grpc.ServiceDesc for Connection service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -332,6 +410,14 @@ var Connection_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Reconnect",
 			Handler:    _Connection_Reconnect_Handler,
+		},
+		{
+			MethodName: "GetBrokerServersByBrokerName",
+			Handler:    _Connection_GetBrokerServersByBrokerName_Handler,
+		},
+		{
+			MethodName: "GetTerminalJournalContent",
+			Handler:    _Connection_GetTerminalJournalContent_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

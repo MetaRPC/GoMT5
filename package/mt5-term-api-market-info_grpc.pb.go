@@ -67,6 +67,8 @@ type MarketInfoClient interface {
 	// Returns a structure array MqlBookInfo containing records of the Depth of Market of a specified symbol
 	// https://www.mql5.com/en/docs/marketinformation/marketbookget
 	MarketBookGet(ctx context.Context, in *MarketBookGetRequest, opts ...grpc.CallOption) (*MarketBookGetReply, error)
+	// Returns a collection of a broker symbols
+	SymbolList(ctx context.Context, in *SymbolListRequest, opts ...grpc.CallOption) (*SymbolListReply, error)
 }
 
 type marketInfoClient struct {
@@ -212,6 +214,15 @@ func (c *marketInfoClient) MarketBookGet(ctx context.Context, in *MarketBookGetR
 	return out, nil
 }
 
+func (c *marketInfoClient) SymbolList(ctx context.Context, in *SymbolListRequest, opts ...grpc.CallOption) (*SymbolListReply, error) {
+	out := new(SymbolListReply)
+	err := c.cc.Invoke(ctx, "/mt5_term_api.MarketInfo/SymbolList", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MarketInfoServer is the server API for MarketInfo service.
 // All implementations should embed UnimplementedMarketInfoServer
 // for forward compatibility
@@ -261,6 +272,8 @@ type MarketInfoServer interface {
 	// Returns a structure array MqlBookInfo containing records of the Depth of Market of a specified symbol
 	// https://www.mql5.com/en/docs/marketinformation/marketbookget
 	MarketBookGet(context.Context, *MarketBookGetRequest) (*MarketBookGetReply, error)
+	// Returns a collection of a broker symbols
+	SymbolList(context.Context, *SymbolListRequest) (*SymbolListReply, error)
 }
 
 // UnimplementedMarketInfoServer should be embedded to have forward compatible implementations.
@@ -311,6 +324,9 @@ func (UnimplementedMarketInfoServer) MarketBookRelease(context.Context, *MarketB
 }
 func (UnimplementedMarketInfoServer) MarketBookGet(context.Context, *MarketBookGetRequest) (*MarketBookGetReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MarketBookGet not implemented")
+}
+func (UnimplementedMarketInfoServer) SymbolList(context.Context, *SymbolListRequest) (*SymbolListReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SymbolList not implemented")
 }
 
 // UnsafeMarketInfoServer may be embedded to opt out of forward compatibility for this service.
@@ -594,6 +610,24 @@ func _MarketInfo_MarketBookGet_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MarketInfo_SymbolList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SymbolListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MarketInfoServer).SymbolList(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mt5_term_api.MarketInfo/SymbolList",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MarketInfoServer).SymbolList(ctx, req.(*SymbolListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MarketInfo_ServiceDesc is the grpc.ServiceDesc for MarketInfo service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -660,6 +694,10 @@ var MarketInfo_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MarketBookGet",
 			Handler:    _MarketInfo_MarketBookGet_Handler,
+		},
+		{
+			MethodName: "SymbolList",
+			Handler:    _MarketInfo_SymbolList_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
