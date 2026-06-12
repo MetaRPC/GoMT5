@@ -22,10 +22,25 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SubscriptionServiceClient interface {
+	// Streams real-time symbol tick data for the specified symbols.
+	// Requires 'id' header with the terminal connection GUID returned by Connect.
+	// Swagger does not support streaming — use /subscription-stream interactive viewer.
 	OnSymbolTick(ctx context.Context, in *OnSymbolTickRequest, opts ...grpc.CallOption) (SubscriptionService_OnSymbolTickClient, error)
+	// Streams real-time trade events (orders, positions, deals changes).
+	// Requires 'id' header with the terminal connection GUID returned by Connect.
+	// Swagger does not support streaming — use /subscription-stream interactive viewer.
 	OnTrade(ctx context.Context, in *OnTradeRequest, opts ...grpc.CallOption) (SubscriptionService_OnTradeClient, error)
+	// Streams real-time position profit updates at the specified timer interval.
+	// Requires 'id' header with the terminal connection GUID returned by Connect.
+	// Swagger does not support streaming — use /subscription-stream interactive viewer.
 	OnPositionProfit(ctx context.Context, in *OnPositionProfitRequest, opts ...grpc.CallOption) (SubscriptionService_OnPositionProfitClient, error)
+	// Streams real-time position and pending order ticket changes.
+	// Requires 'id' header with the terminal connection GUID returned by Connect.
+	// Swagger does not support streaming — use /subscription-stream interactive viewer.
 	OnPositionsAndPendingOrdersTickets(ctx context.Context, in *OnPositionsAndPendingOrdersTicketsRequest, opts ...grpc.CallOption) (SubscriptionService_OnPositionsAndPendingOrdersTicketsClient, error)
+	// Streams real-time trade transaction events (order add/update/delete, deal add, position changes).
+	// Requires 'id' header with the terminal connection GUID returned by Connect.
+	// Swagger does not support streaming — use /subscription-stream interactive viewer.
 	OnTradeTransaction(ctx context.Context, in *OnTradeTransactionRequest, opts ...grpc.CallOption) (SubscriptionService_OnTradeTransactionClient, error)
 }
 
@@ -201,10 +216,25 @@ func (x *subscriptionServiceOnTradeTransactionClient) Recv() (*OnTradeTransactio
 // All implementations should embed UnimplementedSubscriptionServiceServer
 // for forward compatibility
 type SubscriptionServiceServer interface {
+	// Streams real-time symbol tick data for the specified symbols.
+	// Requires 'id' header with the terminal connection GUID returned by Connect.
+	// Swagger does not support streaming — use /subscription-stream interactive viewer.
 	OnSymbolTick(*OnSymbolTickRequest, SubscriptionService_OnSymbolTickServer) error
+	// Streams real-time trade events (orders, positions, deals changes).
+	// Requires 'id' header with the terminal connection GUID returned by Connect.
+	// Swagger does not support streaming — use /subscription-stream interactive viewer.
 	OnTrade(*OnTradeRequest, SubscriptionService_OnTradeServer) error
+	// Streams real-time position profit updates at the specified timer interval.
+	// Requires 'id' header with the terminal connection GUID returned by Connect.
+	// Swagger does not support streaming — use /subscription-stream interactive viewer.
 	OnPositionProfit(*OnPositionProfitRequest, SubscriptionService_OnPositionProfitServer) error
+	// Streams real-time position and pending order ticket changes.
+	// Requires 'id' header with the terminal connection GUID returned by Connect.
+	// Swagger does not support streaming — use /subscription-stream interactive viewer.
 	OnPositionsAndPendingOrdersTickets(*OnPositionsAndPendingOrdersTicketsRequest, SubscriptionService_OnPositionsAndPendingOrdersTicketsServer) error
+	// Streams real-time trade transaction events (order add/update/delete, deal add, position changes).
+	// Requires 'id' header with the terminal connection GUID returned by Connect.
+	// Swagger does not support streaming — use /subscription-stream interactive viewer.
 	OnTradeTransaction(*OnTradeTransactionRequest, SubscriptionService_OnTradeTransactionServer) error
 }
 
