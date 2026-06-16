@@ -27,6 +27,8 @@ type AdminApiClient interface {
 	// Active terminals across ALL pods of this StatefulSet/Deployment.
 	// Lists peer pods via the Kubernetes API, then calls ActiveTerminals on each.
 	ActiveTerminalsCluster(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*ActiveTerminalsClusterReply, error)
+	// Whole-machine CPU % and physical RAM (current + short history) for THIS pod.
+	SystemUsage(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*SystemUsageReply, error)
 }
 
 type adminApiClient struct {
@@ -55,6 +57,15 @@ func (c *adminApiClient) ActiveTerminalsCluster(ctx context.Context, in *ActiveT
 	return out, nil
 }
 
+func (c *adminApiClient) SystemUsage(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*SystemUsageReply, error) {
+	out := new(SystemUsageReply)
+	err := c.cc.Invoke(ctx, "/mrpc_admin.AdminApi/SystemUsage", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminApiServer is the server API for AdminApi service.
 // All implementations should embed UnimplementedAdminApiServer
 // for forward compatibility
@@ -64,6 +75,8 @@ type AdminApiServer interface {
 	// Active terminals across ALL pods of this StatefulSet/Deployment.
 	// Lists peer pods via the Kubernetes API, then calls ActiveTerminals on each.
 	ActiveTerminalsCluster(context.Context, *ActiveTerminalsRequest) (*ActiveTerminalsClusterReply, error)
+	// Whole-machine CPU % and physical RAM (current + short history) for THIS pod.
+	SystemUsage(context.Context, *ActiveTerminalsRequest) (*SystemUsageReply, error)
 }
 
 // UnimplementedAdminApiServer should be embedded to have forward compatible implementations.
@@ -75,6 +88,9 @@ func (UnimplementedAdminApiServer) ActiveTerminals(context.Context, *ActiveTermi
 }
 func (UnimplementedAdminApiServer) ActiveTerminalsCluster(context.Context, *ActiveTerminalsRequest) (*ActiveTerminalsClusterReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ActiveTerminalsCluster not implemented")
+}
+func (UnimplementedAdminApiServer) SystemUsage(context.Context, *ActiveTerminalsRequest) (*SystemUsageReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SystemUsage not implemented")
 }
 
 // UnsafeAdminApiServer may be embedded to opt out of forward compatibility for this service.
@@ -124,6 +140,24 @@ func _AdminApi_ActiveTerminalsCluster_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminApi_SystemUsage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ActiveTerminalsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminApiServer).SystemUsage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mrpc_admin.AdminApi/SystemUsage",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminApiServer).SystemUsage(ctx, req.(*ActiveTerminalsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminApi_ServiceDesc is the grpc.ServiceDesc for AdminApi service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -138,6 +172,10 @@ var AdminApi_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ActiveTerminalsCluster",
 			Handler:    _AdminApi_ActiveTerminalsCluster_Handler,
+		},
+		{
+			MethodName: "SystemUsage",
+			Handler:    _AdminApi_SystemUsage_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
