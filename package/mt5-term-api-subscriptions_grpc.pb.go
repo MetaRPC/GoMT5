@@ -25,6 +25,11 @@ type SubscriptionServiceClient interface {
 	// Streams real-time symbol tick data for the specified symbols.
 	// Requires 'id' header with the terminal connection GUID returned by Connect.
 	// Swagger does not support streaming — use /subscription-stream interactive viewer.
+	// [DefaultValues]
+	//
+	//	{
+	//	  "symbolNames": "EURUSD,BTCUSD"
+	//	}
 	OnSymbolTick(ctx context.Context, in *OnSymbolTickRequest, opts ...grpc.CallOption) (SubscriptionService_OnSymbolTickClient, error)
 	// Streams real-time trade events (orders, positions, deals changes).
 	// Requires 'id' header with the terminal connection GUID returned by Connect.
@@ -219,6 +224,11 @@ type SubscriptionServiceServer interface {
 	// Streams real-time symbol tick data for the specified symbols.
 	// Requires 'id' header with the terminal connection GUID returned by Connect.
 	// Swagger does not support streaming — use /subscription-stream interactive viewer.
+	// [DefaultValues]
+	//
+	//	{
+	//	  "symbolNames": "EURUSD,BTCUSD"
+	//	}
 	OnSymbolTick(*OnSymbolTickRequest, SubscriptionService_OnSymbolTickServer) error
 	// Streams real-time trade events (orders, positions, deals changes).
 	// Requires 'id' header with the terminal connection GUID returned by Connect.
