@@ -29,6 +29,26 @@ type AdminApiClient interface {
 	ActiveTerminalsCluster(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*ActiveTerminalsClusterReply, error)
 	// Whole-machine CPU % and physical RAM (current + short history) for THIS pod.
 	SystemUsage(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*SystemUsageReply, error)
+	// Lists the diagnostic log files on \\host.lan\Data\logs (mrpc.log, startup.log,
+	// install.log, boot-diag.log, and any future additions) - the exact files the container's
+	// postStart hook tails into "kubectl logs", readable here without cluster/kubectl access.
+	ListLogFiles(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*ListLogFilesReply, error)
+	// Content of one log file from \\host.lan\Data\logs (see ListLogFiles). Truncated to the
+	// LAST max_bytes bytes if larger (0 = server default, 256 KiB).
+	GetLogFile(ctx context.Context, in *GetLogFileRequest, opts ...grpc.CallOption) (*GetLogFileReply, error)
+	// On-demand dump of recent Windows Event Log entries (Service Control Manager events,
+	// shutdown/restart events, Application errors) - the same data boot-diag.bat captures on a
+	// service state change, available here without waiting for that trigger.
+	GetEventLogEntries(ctx context.Context, in *GetEventLogEntriesRequest, opts ...grpc.CallOption) (*GetEventLogEntriesReply, error)
+	// Screenshot of a Windows interactive session's whole desktop - a specific
+	// MrpcTerminalUser<N> session, or (if session_user_name is empty) the pod's main/autologon
+	// session, the one startup.bat runs in.
+	CaptureSessionScreenshot(ctx context.Context, in *CaptureSessionScreenshotRequest, opts ...grpc.CallOption) (*CaptureSessionScreenshotReply, error)
+	// Same as CaptureSessionScreenshot, but fanned out from THIS pod to a DIFFERENT pod by IP
+	// (mirroring the ActiveTerminalsCluster fan-out) - a browser can only reach the pod that is
+	// currently serving it, not other pods' ClusterIPs, so the cluster admin view asks whichever
+	// pod it's connected to relay the request.
+	CaptureSessionScreenshotOnPod(ctx context.Context, in *CaptureSessionScreenshotOnPodRequest, opts ...grpc.CallOption) (*CaptureSessionScreenshotReply, error)
 }
 
 type adminApiClient struct {
@@ -66,6 +86,51 @@ func (c *adminApiClient) SystemUsage(ctx context.Context, in *ActiveTerminalsReq
 	return out, nil
 }
 
+func (c *adminApiClient) ListLogFiles(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*ListLogFilesReply, error) {
+	out := new(ListLogFilesReply)
+	err := c.cc.Invoke(ctx, "/mrpc_admin.AdminApi/ListLogFiles", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminApiClient) GetLogFile(ctx context.Context, in *GetLogFileRequest, opts ...grpc.CallOption) (*GetLogFileReply, error) {
+	out := new(GetLogFileReply)
+	err := c.cc.Invoke(ctx, "/mrpc_admin.AdminApi/GetLogFile", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminApiClient) GetEventLogEntries(ctx context.Context, in *GetEventLogEntriesRequest, opts ...grpc.CallOption) (*GetEventLogEntriesReply, error) {
+	out := new(GetEventLogEntriesReply)
+	err := c.cc.Invoke(ctx, "/mrpc_admin.AdminApi/GetEventLogEntries", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminApiClient) CaptureSessionScreenshot(ctx context.Context, in *CaptureSessionScreenshotRequest, opts ...grpc.CallOption) (*CaptureSessionScreenshotReply, error) {
+	out := new(CaptureSessionScreenshotReply)
+	err := c.cc.Invoke(ctx, "/mrpc_admin.AdminApi/CaptureSessionScreenshot", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminApiClient) CaptureSessionScreenshotOnPod(ctx context.Context, in *CaptureSessionScreenshotOnPodRequest, opts ...grpc.CallOption) (*CaptureSessionScreenshotReply, error) {
+	out := new(CaptureSessionScreenshotReply)
+	err := c.cc.Invoke(ctx, "/mrpc_admin.AdminApi/CaptureSessionScreenshotOnPod", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminApiServer is the server API for AdminApi service.
 // All implementations should embed UnimplementedAdminApiServer
 // for forward compatibility
@@ -77,6 +142,26 @@ type AdminApiServer interface {
 	ActiveTerminalsCluster(context.Context, *ActiveTerminalsRequest) (*ActiveTerminalsClusterReply, error)
 	// Whole-machine CPU % and physical RAM (current + short history) for THIS pod.
 	SystemUsage(context.Context, *ActiveTerminalsRequest) (*SystemUsageReply, error)
+	// Lists the diagnostic log files on \\host.lan\Data\logs (mrpc.log, startup.log,
+	// install.log, boot-diag.log, and any future additions) - the exact files the container's
+	// postStart hook tails into "kubectl logs", readable here without cluster/kubectl access.
+	ListLogFiles(context.Context, *ActiveTerminalsRequest) (*ListLogFilesReply, error)
+	// Content of one log file from \\host.lan\Data\logs (see ListLogFiles). Truncated to the
+	// LAST max_bytes bytes if larger (0 = server default, 256 KiB).
+	GetLogFile(context.Context, *GetLogFileRequest) (*GetLogFileReply, error)
+	// On-demand dump of recent Windows Event Log entries (Service Control Manager events,
+	// shutdown/restart events, Application errors) - the same data boot-diag.bat captures on a
+	// service state change, available here without waiting for that trigger.
+	GetEventLogEntries(context.Context, *GetEventLogEntriesRequest) (*GetEventLogEntriesReply, error)
+	// Screenshot of a Windows interactive session's whole desktop - a specific
+	// MrpcTerminalUser<N> session, or (if session_user_name is empty) the pod's main/autologon
+	// session, the one startup.bat runs in.
+	CaptureSessionScreenshot(context.Context, *CaptureSessionScreenshotRequest) (*CaptureSessionScreenshotReply, error)
+	// Same as CaptureSessionScreenshot, but fanned out from THIS pod to a DIFFERENT pod by IP
+	// (mirroring the ActiveTerminalsCluster fan-out) - a browser can only reach the pod that is
+	// currently serving it, not other pods' ClusterIPs, so the cluster admin view asks whichever
+	// pod it's connected to relay the request.
+	CaptureSessionScreenshotOnPod(context.Context, *CaptureSessionScreenshotOnPodRequest) (*CaptureSessionScreenshotReply, error)
 }
 
 // UnimplementedAdminApiServer should be embedded to have forward compatible implementations.
@@ -91,6 +176,21 @@ func (UnimplementedAdminApiServer) ActiveTerminalsCluster(context.Context, *Acti
 }
 func (UnimplementedAdminApiServer) SystemUsage(context.Context, *ActiveTerminalsRequest) (*SystemUsageReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SystemUsage not implemented")
+}
+func (UnimplementedAdminApiServer) ListLogFiles(context.Context, *ActiveTerminalsRequest) (*ListLogFilesReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListLogFiles not implemented")
+}
+func (UnimplementedAdminApiServer) GetLogFile(context.Context, *GetLogFileRequest) (*GetLogFileReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLogFile not implemented")
+}
+func (UnimplementedAdminApiServer) GetEventLogEntries(context.Context, *GetEventLogEntriesRequest) (*GetEventLogEntriesReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetEventLogEntries not implemented")
+}
+func (UnimplementedAdminApiServer) CaptureSessionScreenshot(context.Context, *CaptureSessionScreenshotRequest) (*CaptureSessionScreenshotReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CaptureSessionScreenshot not implemented")
+}
+func (UnimplementedAdminApiServer) CaptureSessionScreenshotOnPod(context.Context, *CaptureSessionScreenshotOnPodRequest) (*CaptureSessionScreenshotReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CaptureSessionScreenshotOnPod not implemented")
 }
 
 // UnsafeAdminApiServer may be embedded to opt out of forward compatibility for this service.
@@ -158,6 +258,96 @@ func _AdminApi_SystemUsage_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminApi_ListLogFiles_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ActiveTerminalsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminApiServer).ListLogFiles(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mrpc_admin.AdminApi/ListLogFiles",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminApiServer).ListLogFiles(ctx, req.(*ActiveTerminalsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminApi_GetLogFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLogFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminApiServer).GetLogFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mrpc_admin.AdminApi/GetLogFile",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminApiServer).GetLogFile(ctx, req.(*GetLogFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminApi_GetEventLogEntries_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetEventLogEntriesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminApiServer).GetEventLogEntries(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mrpc_admin.AdminApi/GetEventLogEntries",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminApiServer).GetEventLogEntries(ctx, req.(*GetEventLogEntriesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminApi_CaptureSessionScreenshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CaptureSessionScreenshotRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminApiServer).CaptureSessionScreenshot(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mrpc_admin.AdminApi/CaptureSessionScreenshot",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminApiServer).CaptureSessionScreenshot(ctx, req.(*CaptureSessionScreenshotRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminApi_CaptureSessionScreenshotOnPod_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CaptureSessionScreenshotOnPodRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminApiServer).CaptureSessionScreenshotOnPod(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mrpc_admin.AdminApi/CaptureSessionScreenshotOnPod",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminApiServer).CaptureSessionScreenshotOnPod(ctx, req.(*CaptureSessionScreenshotOnPodRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminApi_ServiceDesc is the grpc.ServiceDesc for AdminApi service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -176,6 +366,26 @@ var AdminApi_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SystemUsage",
 			Handler:    _AdminApi_SystemUsage_Handler,
+		},
+		{
+			MethodName: "ListLogFiles",
+			Handler:    _AdminApi_ListLogFiles_Handler,
+		},
+		{
+			MethodName: "GetLogFile",
+			Handler:    _AdminApi_GetLogFile_Handler,
+		},
+		{
+			MethodName: "GetEventLogEntries",
+			Handler:    _AdminApi_GetEventLogEntries_Handler,
+		},
+		{
+			MethodName: "CaptureSessionScreenshot",
+			Handler:    _AdminApi_CaptureSessionScreenshot_Handler,
+		},
+		{
+			MethodName: "CaptureSessionScreenshotOnPod",
+			Handler:    _AdminApi_CaptureSessionScreenshotOnPod_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
