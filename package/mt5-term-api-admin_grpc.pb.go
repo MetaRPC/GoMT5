@@ -49,6 +49,13 @@ type AdminApiClient interface {
 	// currently serving it, not other pods' ClusterIPs, so the cluster admin view asks whichever
 	// pod it's connected to relay the request.
 	CaptureSessionScreenshotOnPod(ctx context.Context, in *CaptureSessionScreenshotOnPodRequest, opts ...grpc.CallOption) (*CaptureSessionScreenshotReply, error)
+	// Runs, in-process (LocalSystem, no guest logon/SSH needed), the same refresh
+	// startup.bat performs on a successful ONLOGON boot: robocopy published-app (including
+	// mrpc-rest) from the host share, then create/start MrpcRestService. Exists because
+	// ONLOGON is unreliable (autologon-dependent) - this lets a stuck deploy be repaired
+	// through the Terminal Manager's own already-running gRPC/HTTP API instead of waiting
+	// on that trigger or requiring interactive guest access.
+	RefreshMrpcRest(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*RefreshMrpcRestReply, error)
 }
 
 type adminApiClient struct {
@@ -131,6 +138,15 @@ func (c *adminApiClient) CaptureSessionScreenshotOnPod(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *adminApiClient) RefreshMrpcRest(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*RefreshMrpcRestReply, error) {
+	out := new(RefreshMrpcRestReply)
+	err := c.cc.Invoke(ctx, "/mrpc_admin.AdminApi/RefreshMrpcRest", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminApiServer is the server API for AdminApi service.
 // All implementations should embed UnimplementedAdminApiServer
 // for forward compatibility
@@ -162,6 +178,13 @@ type AdminApiServer interface {
 	// currently serving it, not other pods' ClusterIPs, so the cluster admin view asks whichever
 	// pod it's connected to relay the request.
 	CaptureSessionScreenshotOnPod(context.Context, *CaptureSessionScreenshotOnPodRequest) (*CaptureSessionScreenshotReply, error)
+	// Runs, in-process (LocalSystem, no guest logon/SSH needed), the same refresh
+	// startup.bat performs on a successful ONLOGON boot: robocopy published-app (including
+	// mrpc-rest) from the host share, then create/start MrpcRestService. Exists because
+	// ONLOGON is unreliable (autologon-dependent) - this lets a stuck deploy be repaired
+	// through the Terminal Manager's own already-running gRPC/HTTP API instead of waiting
+	// on that trigger or requiring interactive guest access.
+	RefreshMrpcRest(context.Context, *ActiveTerminalsRequest) (*RefreshMrpcRestReply, error)
 }
 
 // UnimplementedAdminApiServer should be embedded to have forward compatible implementations.
@@ -191,6 +214,9 @@ func (UnimplementedAdminApiServer) CaptureSessionScreenshot(context.Context, *Ca
 }
 func (UnimplementedAdminApiServer) CaptureSessionScreenshotOnPod(context.Context, *CaptureSessionScreenshotOnPodRequest) (*CaptureSessionScreenshotReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CaptureSessionScreenshotOnPod not implemented")
+}
+func (UnimplementedAdminApiServer) RefreshMrpcRest(context.Context, *ActiveTerminalsRequest) (*RefreshMrpcRestReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RefreshMrpcRest not implemented")
 }
 
 // UnsafeAdminApiServer may be embedded to opt out of forward compatibility for this service.
@@ -348,6 +374,24 @@ func _AdminApi_CaptureSessionScreenshotOnPod_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminApi_RefreshMrpcRest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ActiveTerminalsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminApiServer).RefreshMrpcRest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mrpc_admin.AdminApi/RefreshMrpcRest",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminApiServer).RefreshMrpcRest(ctx, req.(*ActiveTerminalsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminApi_ServiceDesc is the grpc.ServiceDesc for AdminApi service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -386,6 +430,10 @@ var AdminApi_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CaptureSessionScreenshotOnPod",
 			Handler:    _AdminApi_CaptureSessionScreenshotOnPod_Handler,
+		},
+		{
+			MethodName: "RefreshMrpcRest",
+			Handler:    _AdminApi_RefreshMrpcRest_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
