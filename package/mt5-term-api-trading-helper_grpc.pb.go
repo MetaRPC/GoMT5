@@ -23,7 +23,26 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TradingHelperClient interface {
 	// Send market or pending order
+	// [DefaultValues]
+	//
+	//	{
+	//	  "symbol": "EURUSD",
+	//	  "operation": "TMT5_ORDER_TYPE_BUY",
+	//	  "volume": "0.1"
+	//	}
 	OrderSend(ctx context.Context, in *OrderSendRequest, opts ...grpc.CallOption) (*OrderSendReply, error)
+	// Send market or pending order immediately, with no Market Watch or quotes preparation.
+	// Same request and reply as OrderSend, but nothing is checked first and quotes_wait_ms is
+	// ignored. Use only for a symbol already known to be streaming; otherwise the trade server
+	// rejects the order (ErrMarketLasttimeUnknown 4304 "no ticks" and friends).
+	// [DefaultValues]
+	//
+	//	{
+	//	  "symbol": "EURUSD",
+	//	  "operation": "TMT5_ORDER_TYPE_BUY",
+	//	  "volume": "0.1"
+	//	}
+	OrderSendWithoutChecks(ctx context.Context, in *OrderSendRequest, opts ...grpc.CallOption) (*OrderSendReply, error)
 	// Modify market or pending order
 	OrderModify(ctx context.Context, in *OrderModifyRequest, opts ...grpc.CallOption) (*OrderModifyReply, error)
 	// Close market or pending order
@@ -41,6 +60,15 @@ func NewTradingHelperClient(cc grpc.ClientConnInterface) TradingHelperClient {
 func (c *tradingHelperClient) OrderSend(ctx context.Context, in *OrderSendRequest, opts ...grpc.CallOption) (*OrderSendReply, error) {
 	out := new(OrderSendReply)
 	err := c.cc.Invoke(ctx, "/mt5_term_api.TradingHelper/OrderSend", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *tradingHelperClient) OrderSendWithoutChecks(ctx context.Context, in *OrderSendRequest, opts ...grpc.CallOption) (*OrderSendReply, error) {
+	out := new(OrderSendReply)
+	err := c.cc.Invoke(ctx, "/mt5_term_api.TradingHelper/OrderSendWithoutChecks", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +98,26 @@ func (c *tradingHelperClient) OrderClose(ctx context.Context, in *OrderCloseRequ
 // for forward compatibility
 type TradingHelperServer interface {
 	// Send market or pending order
+	// [DefaultValues]
+	//
+	//	{
+	//	  "symbol": "EURUSD",
+	//	  "operation": "TMT5_ORDER_TYPE_BUY",
+	//	  "volume": "0.1"
+	//	}
 	OrderSend(context.Context, *OrderSendRequest) (*OrderSendReply, error)
+	// Send market or pending order immediately, with no Market Watch or quotes preparation.
+	// Same request and reply as OrderSend, but nothing is checked first and quotes_wait_ms is
+	// ignored. Use only for a symbol already known to be streaming; otherwise the trade server
+	// rejects the order (ErrMarketLasttimeUnknown 4304 "no ticks" and friends).
+	// [DefaultValues]
+	//
+	//	{
+	//	  "symbol": "EURUSD",
+	//	  "operation": "TMT5_ORDER_TYPE_BUY",
+	//	  "volume": "0.1"
+	//	}
+	OrderSendWithoutChecks(context.Context, *OrderSendRequest) (*OrderSendReply, error)
 	// Modify market or pending order
 	OrderModify(context.Context, *OrderModifyRequest) (*OrderModifyReply, error)
 	// Close market or pending order
@@ -83,6 +130,9 @@ type UnimplementedTradingHelperServer struct {
 
 func (UnimplementedTradingHelperServer) OrderSend(context.Context, *OrderSendRequest) (*OrderSendReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OrderSend not implemented")
+}
+func (UnimplementedTradingHelperServer) OrderSendWithoutChecks(context.Context, *OrderSendRequest) (*OrderSendReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OrderSendWithoutChecks not implemented")
 }
 func (UnimplementedTradingHelperServer) OrderModify(context.Context, *OrderModifyRequest) (*OrderModifyReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OrderModify not implemented")
@@ -116,6 +166,24 @@ func _TradingHelper_OrderSend_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(TradingHelperServer).OrderSend(ctx, req.(*OrderSendRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TradingHelper_OrderSendWithoutChecks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OrderSendRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TradingHelperServer).OrderSendWithoutChecks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mt5_term_api.TradingHelper/OrderSendWithoutChecks",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TradingHelperServer).OrderSendWithoutChecks(ctx, req.(*OrderSendRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -166,6 +234,10 @@ var TradingHelper_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "OrderSend",
 			Handler:    _TradingHelper_OrderSend_Handler,
+		},
+		{
+			MethodName: "OrderSendWithoutChecks",
+			Handler:    _TradingHelper_OrderSendWithoutChecks_Handler,
 		},
 		{
 			MethodName: "OrderModify",

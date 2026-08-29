@@ -26,8 +26,8 @@ type ConnectionClient interface {
 	// [DefaultValues]
 	//
 	//	{
-	//	  "user": "213827411",
-	//	  "password": "_rVx1tMn",
+	//	  "user": "213889529",
+	//	  "password": "7dPjA*Jm",
 	//	  "mtClusterName": "OctaFX-Demo",
 	//	  "timeoutSeconds": "120"
 	//	}
@@ -36,9 +36,9 @@ type ConnectionClient interface {
 	// [DefaultValues]
 	//
 	//	{
-	//	  "user": "21455",
-	//	  "password": "1nJeS+Ae",
-	//	  "host": "95.217.147.61",
+	//	  "user": "213889529",
+	//	  "password": "7dPjA*Jm",
+	//	  "host": "d51a1.octanetwork.net",
 	//	  "port": "443",
 	//	  "timeoutSeconds": "120"
 	//	}
@@ -47,9 +47,9 @@ type ConnectionClient interface {
 	// [DefaultValues]
 	// {
 	//
-	//	 "user": "21455",
-	//	 "password": "1nJeS+Ae",
-	//	 "host": "95.217.147.61",
+	//	 "user": "213889529",
+	//	 "password": "7dPjA*Jm",
+	//	 "host": "d51a1.octanetwork.net",
 	//	 "port": "443",
 	//	 "proxyUser": "ProxyUser123",
 	//	 "proxyPassword": "qwerty123",
@@ -60,10 +60,21 @@ type ConnectionClient interface {
 	ConnectProxy(ctx context.Context, in *ConnectProxyRequest, opts ...grpc.CallOption) (*ConnectProxyReply, error)
 	// Checks if terminal connection to MT5 server is alive
 	CheckConnect(ctx context.Context, in *CheckConnectRequest, opts ...grpc.CallOption) (*CheckConnectReply, error)
+	// Returns detailed live connection state of this terminal instance
+	ConnectState(ctx context.Context, in *ConnectStateRequest, opts ...grpc.CallOption) (*ConnectStateReply, error)
+	// Streams real-time connection state changes for specified or visible terminals
+	OnConnectState(ctx context.Context, in *OnConnectStateRequest, opts ...grpc.CallOption) (Connection_OnConnectStateClient, error)
+	// Deprecated alias for ConnectState
+	ConnectionStatus(ctx context.Context, in *ConnectionStatusRequest, opts ...grpc.CallOption) (*ConnectionStatusReply, error)
 	// Close terminal connection to MT5 server
 	Disconnect(ctx context.Context, in *DisconnectRequest, opts ...grpc.CallOption) (*DisconnectReply, error)
 	// If you need to recreate terminal instance with the same id
 	Reconnect(ctx context.Context, in *ReconnectRequest, opts ...grpc.CallOption) (*ReconnectReply, error)
+	// Rebuild a terminal instance from a previously-saved token_details_mt5 row. The id header
+	// names the terminal to bring back; every credential (User/Password/Server or Host+Port,
+	// proxy settings, servers.dat bytes, PfxFile, HardwareId, Build) is read from the DB. Same
+	// reply as ConnectEx so callers do not need a separate result path.
+	ConnectByToken(ctx context.Context, in *ConnectByTokenRequest, opts ...grpc.CallOption) (*ConnectExReply, error)
 	GetBrokerServersByBrokerName(ctx context.Context, in *GetBrokerServersByBrokerNameRequest, opts ...grpc.CallOption) (*GetBrokerServersByBrokerNameReply, error)
 	// Captures the Xvfb display screenshot for the terminal instance
 	Screenshot(ctx context.Context, in *ScreenshotRequest, opts ...grpc.CallOption) (*ScreenshotReply, error)
@@ -73,8 +84,8 @@ type ConnectionClient interface {
 	// [DefaultValues]
 	//
 	//	{
-	//	  "user": "213827411",
-	//	  "password": "_rVx1tMn"
+	//	  "user": "213889529",
+	//	  "password": "7dPjA*Jm"
 	//	}
 	GetId(ctx context.Context, in *GetIdRequest, opts ...grpc.CallOption) (*GetIdReply, error)
 	// Same as Connect but streams real-time progress events.
@@ -83,9 +94,9 @@ type ConnectionClient interface {
 	// [DefaultValues]
 	//
 	//	{
-	//	  "user": "21455",
-	//	  "password": "1nJeS+Ae",
-	//	  "host": "95.217.147.61",
+	//	  "user": "213889529",
+	//	  "password": "7dPjA*Jm",
+	//	  "host": "d51a1.octanetwork.net",
 	//	  "port": "443",
 	//	  "timeoutSeconds": "120"
 	//	}
@@ -96,8 +107,8 @@ type ConnectionClient interface {
 	// [DefaultValues]
 	//
 	//	{
-	//	  "user": "213827411",
-	//	  "password": "_rVx1tMn",
+	//	  "user": "213889529",
+	//	  "password": "7dPjA*Jm",
 	//	  "mtClusterName": "OctaFX-Demo",
 	//	  "timeoutSeconds": "120"
 	//	}
@@ -148,6 +159,56 @@ func (c *connectionClient) CheckConnect(ctx context.Context, in *CheckConnectReq
 	return out, nil
 }
 
+func (c *connectionClient) ConnectState(ctx context.Context, in *ConnectStateRequest, opts ...grpc.CallOption) (*ConnectStateReply, error) {
+	out := new(ConnectStateReply)
+	err := c.cc.Invoke(ctx, "/mt5_term_api.Connection/ConnectState", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *connectionClient) OnConnectState(ctx context.Context, in *OnConnectStateRequest, opts ...grpc.CallOption) (Connection_OnConnectStateClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Connection_ServiceDesc.Streams[0], "/mt5_term_api.Connection/OnConnectState", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &connectionOnConnectStateClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Connection_OnConnectStateClient interface {
+	Recv() (*OnConnectStateReply, error)
+	grpc.ClientStream
+}
+
+type connectionOnConnectStateClient struct {
+	grpc.ClientStream
+}
+
+func (x *connectionOnConnectStateClient) Recv() (*OnConnectStateReply, error) {
+	m := new(OnConnectStateReply)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *connectionClient) ConnectionStatus(ctx context.Context, in *ConnectionStatusRequest, opts ...grpc.CallOption) (*ConnectionStatusReply, error) {
+	out := new(ConnectionStatusReply)
+	err := c.cc.Invoke(ctx, "/mt5_term_api.Connection/ConnectionStatus", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *connectionClient) Disconnect(ctx context.Context, in *DisconnectRequest, opts ...grpc.CallOption) (*DisconnectReply, error) {
 	out := new(DisconnectReply)
 	err := c.cc.Invoke(ctx, "/mt5_term_api.Connection/Disconnect", in, out, opts...)
@@ -160,6 +221,15 @@ func (c *connectionClient) Disconnect(ctx context.Context, in *DisconnectRequest
 func (c *connectionClient) Reconnect(ctx context.Context, in *ReconnectRequest, opts ...grpc.CallOption) (*ReconnectReply, error) {
 	out := new(ReconnectReply)
 	err := c.cc.Invoke(ctx, "/mt5_term_api.Connection/Reconnect", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *connectionClient) ConnectByToken(ctx context.Context, in *ConnectByTokenRequest, opts ...grpc.CallOption) (*ConnectExReply, error) {
+	out := new(ConnectExReply)
+	err := c.cc.Invoke(ctx, "/mt5_term_api.Connection/ConnectByToken", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +264,7 @@ func (c *connectionClient) GetId(ctx context.Context, in *GetIdRequest, opts ...
 }
 
 func (c *connectionClient) ConnectStream(ctx context.Context, in *ConnectRequest, opts ...grpc.CallOption) (Connection_ConnectStreamClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Connection_ServiceDesc.Streams[0], "/mt5_term_api.Connection/ConnectStream", opts...)
+	stream, err := c.cc.NewStream(ctx, &Connection_ServiceDesc.Streams[1], "/mt5_term_api.Connection/ConnectStream", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +296,7 @@ func (x *connectionConnectStreamClient) Recv() (*ConnectStreamEvent, error) {
 }
 
 func (c *connectionClient) ConnectExStream(ctx context.Context, in *ConnectExRequest, opts ...grpc.CallOption) (Connection_ConnectExStreamClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Connection_ServiceDesc.Streams[1], "/mt5_term_api.Connection/ConnectExStream", opts...)
+	stream, err := c.cc.NewStream(ctx, &Connection_ServiceDesc.Streams[2], "/mt5_term_api.Connection/ConnectExStream", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -265,8 +335,8 @@ type ConnectionServer interface {
 	// [DefaultValues]
 	//
 	//	{
-	//	  "user": "213827411",
-	//	  "password": "_rVx1tMn",
+	//	  "user": "213889529",
+	//	  "password": "7dPjA*Jm",
 	//	  "mtClusterName": "OctaFX-Demo",
 	//	  "timeoutSeconds": "120"
 	//	}
@@ -275,9 +345,9 @@ type ConnectionServer interface {
 	// [DefaultValues]
 	//
 	//	{
-	//	  "user": "21455",
-	//	  "password": "1nJeS+Ae",
-	//	  "host": "95.217.147.61",
+	//	  "user": "213889529",
+	//	  "password": "7dPjA*Jm",
+	//	  "host": "d51a1.octanetwork.net",
 	//	  "port": "443",
 	//	  "timeoutSeconds": "120"
 	//	}
@@ -286,9 +356,9 @@ type ConnectionServer interface {
 	// [DefaultValues]
 	// {
 	//
-	//	 "user": "21455",
-	//	 "password": "1nJeS+Ae",
-	//	 "host": "95.217.147.61",
+	//	 "user": "213889529",
+	//	 "password": "7dPjA*Jm",
+	//	 "host": "d51a1.octanetwork.net",
 	//	 "port": "443",
 	//	 "proxyUser": "ProxyUser123",
 	//	 "proxyPassword": "qwerty123",
@@ -299,10 +369,21 @@ type ConnectionServer interface {
 	ConnectProxy(context.Context, *ConnectProxyRequest) (*ConnectProxyReply, error)
 	// Checks if terminal connection to MT5 server is alive
 	CheckConnect(context.Context, *CheckConnectRequest) (*CheckConnectReply, error)
+	// Returns detailed live connection state of this terminal instance
+	ConnectState(context.Context, *ConnectStateRequest) (*ConnectStateReply, error)
+	// Streams real-time connection state changes for specified or visible terminals
+	OnConnectState(*OnConnectStateRequest, Connection_OnConnectStateServer) error
+	// Deprecated alias for ConnectState
+	ConnectionStatus(context.Context, *ConnectionStatusRequest) (*ConnectionStatusReply, error)
 	// Close terminal connection to MT5 server
 	Disconnect(context.Context, *DisconnectRequest) (*DisconnectReply, error)
 	// If you need to recreate terminal instance with the same id
 	Reconnect(context.Context, *ReconnectRequest) (*ReconnectReply, error)
+	// Rebuild a terminal instance from a previously-saved token_details_mt5 row. The id header
+	// names the terminal to bring back; every credential (User/Password/Server or Host+Port,
+	// proxy settings, servers.dat bytes, PfxFile, HardwareId, Build) is read from the DB. Same
+	// reply as ConnectEx so callers do not need a separate result path.
+	ConnectByToken(context.Context, *ConnectByTokenRequest) (*ConnectExReply, error)
 	GetBrokerServersByBrokerName(context.Context, *GetBrokerServersByBrokerNameRequest) (*GetBrokerServersByBrokerNameReply, error)
 	// Captures the Xvfb display screenshot for the terminal instance
 	Screenshot(context.Context, *ScreenshotRequest) (*ScreenshotReply, error)
@@ -312,8 +393,8 @@ type ConnectionServer interface {
 	// [DefaultValues]
 	//
 	//	{
-	//	  "user": "213827411",
-	//	  "password": "_rVx1tMn"
+	//	  "user": "213889529",
+	//	  "password": "7dPjA*Jm"
 	//	}
 	GetId(context.Context, *GetIdRequest) (*GetIdReply, error)
 	// Same as Connect but streams real-time progress events.
@@ -322,9 +403,9 @@ type ConnectionServer interface {
 	// [DefaultValues]
 	//
 	//	{
-	//	  "user": "21455",
-	//	  "password": "1nJeS+Ae",
-	//	  "host": "95.217.147.61",
+	//	  "user": "213889529",
+	//	  "password": "7dPjA*Jm",
+	//	  "host": "d51a1.octanetwork.net",
 	//	  "port": "443",
 	//	  "timeoutSeconds": "120"
 	//	}
@@ -335,8 +416,8 @@ type ConnectionServer interface {
 	// [DefaultValues]
 	//
 	//	{
-	//	  "user": "213827411",
-	//	  "password": "_rVx1tMn",
+	//	  "user": "213889529",
+	//	  "password": "7dPjA*Jm",
 	//	  "mtClusterName": "OctaFX-Demo",
 	//	  "timeoutSeconds": "120"
 	//	}
@@ -359,11 +440,23 @@ func (UnimplementedConnectionServer) ConnectProxy(context.Context, *ConnectProxy
 func (UnimplementedConnectionServer) CheckConnect(context.Context, *CheckConnectRequest) (*CheckConnectReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CheckConnect not implemented")
 }
+func (UnimplementedConnectionServer) ConnectState(context.Context, *ConnectStateRequest) (*ConnectStateReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ConnectState not implemented")
+}
+func (UnimplementedConnectionServer) OnConnectState(*OnConnectStateRequest, Connection_OnConnectStateServer) error {
+	return status.Errorf(codes.Unimplemented, "method OnConnectState not implemented")
+}
+func (UnimplementedConnectionServer) ConnectionStatus(context.Context, *ConnectionStatusRequest) (*ConnectionStatusReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ConnectionStatus not implemented")
+}
 func (UnimplementedConnectionServer) Disconnect(context.Context, *DisconnectRequest) (*DisconnectReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Disconnect not implemented")
 }
 func (UnimplementedConnectionServer) Reconnect(context.Context, *ReconnectRequest) (*ReconnectReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Reconnect not implemented")
+}
+func (UnimplementedConnectionServer) ConnectByToken(context.Context, *ConnectByTokenRequest) (*ConnectExReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ConnectByToken not implemented")
 }
 func (UnimplementedConnectionServer) GetBrokerServersByBrokerName(context.Context, *GetBrokerServersByBrokerNameRequest) (*GetBrokerServersByBrokerNameReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBrokerServersByBrokerName not implemented")
@@ -464,6 +557,63 @@ func _Connection_CheckConnect_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Connection_ConnectState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConnectStateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConnectionServer).ConnectState(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mt5_term_api.Connection/ConnectState",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConnectionServer).ConnectState(ctx, req.(*ConnectStateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Connection_OnConnectState_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(OnConnectStateRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ConnectionServer).OnConnectState(m, &connectionOnConnectStateServer{stream})
+}
+
+type Connection_OnConnectStateServer interface {
+	Send(*OnConnectStateReply) error
+	grpc.ServerStream
+}
+
+type connectionOnConnectStateServer struct {
+	grpc.ServerStream
+}
+
+func (x *connectionOnConnectStateServer) Send(m *OnConnectStateReply) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _Connection_ConnectionStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConnectionStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConnectionServer).ConnectionStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mt5_term_api.Connection/ConnectionStatus",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConnectionServer).ConnectionStatus(ctx, req.(*ConnectionStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Connection_Disconnect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DisconnectRequest)
 	if err := dec(in); err != nil {
@@ -496,6 +646,24 @@ func _Connection_Reconnect_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ConnectionServer).Reconnect(ctx, req.(*ReconnectRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Connection_ConnectByToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConnectByTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConnectionServer).ConnectByToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mt5_term_api.Connection/ConnectByToken",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConnectionServer).ConnectByToken(ctx, req.(*ConnectByTokenRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -620,12 +788,24 @@ var Connection_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Connection_CheckConnect_Handler,
 		},
 		{
+			MethodName: "ConnectState",
+			Handler:    _Connection_ConnectState_Handler,
+		},
+		{
+			MethodName: "ConnectionStatus",
+			Handler:    _Connection_ConnectionStatus_Handler,
+		},
+		{
 			MethodName: "Disconnect",
 			Handler:    _Connection_Disconnect_Handler,
 		},
 		{
 			MethodName: "Reconnect",
 			Handler:    _Connection_Reconnect_Handler,
+		},
+		{
+			MethodName: "ConnectByToken",
+			Handler:    _Connection_ConnectByToken_Handler,
 		},
 		{
 			MethodName: "GetBrokerServersByBrokerName",
@@ -641,6 +821,11 @@ var Connection_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "OnConnectState",
+			Handler:       _Connection_OnConnectState_Handler,
+			ServerStreams: true,
+		},
 		{
 			StreamName:    "ConnectStream",
 			Handler:       _Connection_ConnectStream_Handler,
@@ -664,14 +849,17 @@ type LogsClient interface {
 	// network activity, server synchronization and other internal events.
 	// Works regardless of which tab is currently active in the terminal UI.
 	Journal(ctx context.Context, in *JournalRequest, opts ...grpc.CallOption) (*JournalReply, error)
+	// Streams log entries from the terminal Journal tab in real-time.
+	// Requires 'id' header with the terminal connection GUID returned by Connect.
+	OnJournal(ctx context.Context, in *OnJournalRequest, opts ...grpc.CallOption) (Logs_OnJournalClient, error)
 	// Returns log entries from the terminal Experts tab.
 	// The Experts tab contains messages from Expert Advisors (EAs), scripts and indicators
 	// including Print() output, initialization/deinitialization events and runtime errors.
 	// Works regardless of which tab is currently active in the terminal UI.
 	Experts(ctx context.Context, in *JournalRequest, opts ...grpc.CallOption) (*JournalReply, error)
-	// Returns warm pool connection logs for diagnostics.
-	// Handled locally by Terminal Manager (not proxied to the terminal process).
-	WarmConnect(ctx context.Context, in *WarmConnectLogRequest, opts ...grpc.CallOption) (*WarmConnectLogReply, error)
+	// Streams log entries from the terminal Experts tab in real-time.
+	// Requires 'id' header with the terminal connection GUID returned by Connect.
+	OnExperts(ctx context.Context, in *OnJournalRequest, opts ...grpc.CallOption) (Logs_OnExpertsClient, error)
 }
 
 type logsClient struct {
@@ -691,6 +879,38 @@ func (c *logsClient) Journal(ctx context.Context, in *JournalRequest, opts ...gr
 	return out, nil
 }
 
+func (c *logsClient) OnJournal(ctx context.Context, in *OnJournalRequest, opts ...grpc.CallOption) (Logs_OnJournalClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Logs_ServiceDesc.Streams[0], "/mt5_term_api.Logs/OnJournal", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &logsOnJournalClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Logs_OnJournalClient interface {
+	Recv() (*OnJournalReply, error)
+	grpc.ClientStream
+}
+
+type logsOnJournalClient struct {
+	grpc.ClientStream
+}
+
+func (x *logsOnJournalClient) Recv() (*OnJournalReply, error) {
+	m := new(OnJournalReply)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (c *logsClient) Experts(ctx context.Context, in *JournalRequest, opts ...grpc.CallOption) (*JournalReply, error) {
 	out := new(JournalReply)
 	err := c.cc.Invoke(ctx, "/mt5_term_api.Logs/Experts", in, out, opts...)
@@ -700,13 +920,36 @@ func (c *logsClient) Experts(ctx context.Context, in *JournalRequest, opts ...gr
 	return out, nil
 }
 
-func (c *logsClient) WarmConnect(ctx context.Context, in *WarmConnectLogRequest, opts ...grpc.CallOption) (*WarmConnectLogReply, error) {
-	out := new(WarmConnectLogReply)
-	err := c.cc.Invoke(ctx, "/mt5_term_api.Logs/WarmConnect", in, out, opts...)
+func (c *logsClient) OnExperts(ctx context.Context, in *OnJournalRequest, opts ...grpc.CallOption) (Logs_OnExpertsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Logs_ServiceDesc.Streams[1], "/mt5_term_api.Logs/OnExperts", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &logsOnExpertsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Logs_OnExpertsClient interface {
+	Recv() (*OnJournalReply, error)
+	grpc.ClientStream
+}
+
+type logsOnExpertsClient struct {
+	grpc.ClientStream
+}
+
+func (x *logsOnExpertsClient) Recv() (*OnJournalReply, error) {
+	m := new(OnJournalReply)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // LogsServer is the server API for Logs service.
@@ -718,14 +961,17 @@ type LogsServer interface {
 	// network activity, server synchronization and other internal events.
 	// Works regardless of which tab is currently active in the terminal UI.
 	Journal(context.Context, *JournalRequest) (*JournalReply, error)
+	// Streams log entries from the terminal Journal tab in real-time.
+	// Requires 'id' header with the terminal connection GUID returned by Connect.
+	OnJournal(*OnJournalRequest, Logs_OnJournalServer) error
 	// Returns log entries from the terminal Experts tab.
 	// The Experts tab contains messages from Expert Advisors (EAs), scripts and indicators
 	// including Print() output, initialization/deinitialization events and runtime errors.
 	// Works regardless of which tab is currently active in the terminal UI.
 	Experts(context.Context, *JournalRequest) (*JournalReply, error)
-	// Returns warm pool connection logs for diagnostics.
-	// Handled locally by Terminal Manager (not proxied to the terminal process).
-	WarmConnect(context.Context, *WarmConnectLogRequest) (*WarmConnectLogReply, error)
+	// Streams log entries from the terminal Experts tab in real-time.
+	// Requires 'id' header with the terminal connection GUID returned by Connect.
+	OnExperts(*OnJournalRequest, Logs_OnExpertsServer) error
 }
 
 // UnimplementedLogsServer should be embedded to have forward compatible implementations.
@@ -735,11 +981,14 @@ type UnimplementedLogsServer struct {
 func (UnimplementedLogsServer) Journal(context.Context, *JournalRequest) (*JournalReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Journal not implemented")
 }
+func (UnimplementedLogsServer) OnJournal(*OnJournalRequest, Logs_OnJournalServer) error {
+	return status.Errorf(codes.Unimplemented, "method OnJournal not implemented")
+}
 func (UnimplementedLogsServer) Experts(context.Context, *JournalRequest) (*JournalReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Experts not implemented")
 }
-func (UnimplementedLogsServer) WarmConnect(context.Context, *WarmConnectLogRequest) (*WarmConnectLogReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method WarmConnect not implemented")
+func (UnimplementedLogsServer) OnExperts(*OnJournalRequest, Logs_OnExpertsServer) error {
+	return status.Errorf(codes.Unimplemented, "method OnExperts not implemented")
 }
 
 // UnsafeLogsServer may be embedded to opt out of forward compatibility for this service.
@@ -771,6 +1020,27 @@ func _Logs_Journal_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Logs_OnJournal_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(OnJournalRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(LogsServer).OnJournal(m, &logsOnJournalServer{stream})
+}
+
+type Logs_OnJournalServer interface {
+	Send(*OnJournalReply) error
+	grpc.ServerStream
+}
+
+type logsOnJournalServer struct {
+	grpc.ServerStream
+}
+
+func (x *logsOnJournalServer) Send(m *OnJournalReply) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 func _Logs_Experts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(JournalRequest)
 	if err := dec(in); err != nil {
@@ -789,22 +1059,25 @@ func _Logs_Experts_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Logs_WarmConnect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(WarmConnectLogRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+func _Logs_OnExperts_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(OnJournalRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(LogsServer).WarmConnect(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/mt5_term_api.Logs/WarmConnect",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(LogsServer).WarmConnect(ctx, req.(*WarmConnectLogRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(LogsServer).OnExperts(m, &logsOnExpertsServer{stream})
+}
+
+type Logs_OnExpertsServer interface {
+	Send(*OnJournalReply) error
+	grpc.ServerStream
+}
+
+type logsOnExpertsServer struct {
+	grpc.ServerStream
+}
+
+func (x *logsOnExpertsServer) Send(m *OnJournalReply) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 // Logs_ServiceDesc is the grpc.ServiceDesc for Logs service.
@@ -822,11 +1095,18 @@ var Logs_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "Experts",
 			Handler:    _Logs_Experts_Handler,
 		},
+	},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "WarmConnect",
-			Handler:    _Logs_WarmConnect_Handler,
+			StreamName:    "OnJournal",
+			Handler:       _Logs_OnJournal_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "OnExperts",
+			Handler:       _Logs_OnExperts_Handler,
+			ServerStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "mt5-term-api-connection.proto",
 }

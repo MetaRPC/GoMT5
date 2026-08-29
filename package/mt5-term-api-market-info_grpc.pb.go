@@ -69,6 +69,11 @@ type MarketInfoClient interface {
 	MarketBookGet(ctx context.Context, in *MarketBookGetRequest, opts ...grpc.CallOption) (*MarketBookGetReply, error)
 	// Returns a collection of a broker symbols
 	SymbolList(ctx context.Context, in *SymbolListRequest, opts ...grpc.CallOption) (*SymbolListReply, error)
+	// Historical bars for a symbol - what a chart is drawn from.
+	//
+	// This API had no such call, so a client holding a terminal id could list symbols, read a live
+	// price and trade, and still not draw a chart. Ticks are not candles.
+	PriceHistory(ctx context.Context, in *PriceHistoryRequest, opts ...grpc.CallOption) (*PriceHistoryReply, error)
 }
 
 type marketInfoClient struct {
@@ -223,6 +228,15 @@ func (c *marketInfoClient) SymbolList(ctx context.Context, in *SymbolListRequest
 	return out, nil
 }
 
+func (c *marketInfoClient) PriceHistory(ctx context.Context, in *PriceHistoryRequest, opts ...grpc.CallOption) (*PriceHistoryReply, error) {
+	out := new(PriceHistoryReply)
+	err := c.cc.Invoke(ctx, "/mt5_term_api.MarketInfo/PriceHistory", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MarketInfoServer is the server API for MarketInfo service.
 // All implementations should embed UnimplementedMarketInfoServer
 // for forward compatibility
@@ -274,6 +288,11 @@ type MarketInfoServer interface {
 	MarketBookGet(context.Context, *MarketBookGetRequest) (*MarketBookGetReply, error)
 	// Returns a collection of a broker symbols
 	SymbolList(context.Context, *SymbolListRequest) (*SymbolListReply, error)
+	// Historical bars for a symbol - what a chart is drawn from.
+	//
+	// This API had no such call, so a client holding a terminal id could list symbols, read a live
+	// price and trade, and still not draw a chart. Ticks are not candles.
+	PriceHistory(context.Context, *PriceHistoryRequest) (*PriceHistoryReply, error)
 }
 
 // UnimplementedMarketInfoServer should be embedded to have forward compatible implementations.
@@ -327,6 +346,9 @@ func (UnimplementedMarketInfoServer) MarketBookGet(context.Context, *MarketBookG
 }
 func (UnimplementedMarketInfoServer) SymbolList(context.Context, *SymbolListRequest) (*SymbolListReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SymbolList not implemented")
+}
+func (UnimplementedMarketInfoServer) PriceHistory(context.Context, *PriceHistoryRequest) (*PriceHistoryReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PriceHistory not implemented")
 }
 
 // UnsafeMarketInfoServer may be embedded to opt out of forward compatibility for this service.
@@ -628,6 +650,24 @@ func _MarketInfo_SymbolList_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MarketInfo_PriceHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PriceHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MarketInfoServer).PriceHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mt5_term_api.MarketInfo/PriceHistory",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MarketInfoServer).PriceHistory(ctx, req.(*PriceHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MarketInfo_ServiceDesc is the grpc.ServiceDesc for MarketInfo service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -698,6 +738,10 @@ var MarketInfo_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SymbolList",
 			Handler:    _MarketInfo_SymbolList_Handler,
+		},
+		{
+			MethodName: "PriceHistory",
+			Handler:    _MarketInfo_PriceHistory_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

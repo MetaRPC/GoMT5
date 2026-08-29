@@ -56,6 +56,24 @@ type AdminApiClient interface {
 	// through the Terminal Manager's own already-running gRPC/HTTP API instead of waiting
 	// on that trigger or requiring interactive guest access.
 	RefreshMrpcRest(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*RefreshMrpcRestReply, error)
+	// Build/version identity of the Terminal Manager running on THIS pod, so a deploy can be
+	// VERIFIED rather than guessed. No admin_key required - it exposes no secrets. mrpc-rest
+	// transcodes GET /version-tm onto this (its own build is at GET /version).
+	GetVersion(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*VersionReply, error)
+	// Diagnostic MT5/MT4 journal for a SPECIFIC terminal instance on THIS pod: reads the terminal's
+	// own journal (logs\*.log) and the expert/script journal (MQL5\logs\*.log) straight from the
+	// terminal's working directory. Lets us see WHY a terminal failed to start / log in to the broker
+	// without RDP/noVNC access. The terminal must live on the pod serving this request (its record
+	// must be in the local registry); if it is on another pod or was already cleaned up, `error` says so.
+	GetTerminalJournal(ctx context.Context, in *GetTerminalJournalRequest, opts ...grpc.CallOption) (*GetTerminalJournalReply, error)
+	// One-shot bundle of EVERY diagnostic log available on this pod: every *.log file on the
+	// shared Data folder AND in C:\OEM (mrpc.log, mrpc-rest.log, boot-diag.log, startup.log,
+	// install.log, ...), plus the Windows Application + System event logs. Each entry carries a
+	// tail of its content so a single call gives the full diagnostic picture for the pod without
+	// needing to know file names up front (contrast ListLogFiles + N× GetLogFile).
+	GetAllLogs(ctx context.Context, in *GetAllLogsRequest, opts ...grpc.CallOption) (*GetAllLogsReply, error)
+	// Session restore logs for the latest startup sequence on a pod (stored in MongoDB session_restore_logs).
+	GetSessionRestoreLogs(ctx context.Context, in *GetSessionRestoreLogsRequest, opts ...grpc.CallOption) (*GetSessionRestoreLogsReply, error)
 }
 
 type adminApiClient struct {
@@ -147,6 +165,42 @@ func (c *adminApiClient) RefreshMrpcRest(ctx context.Context, in *ActiveTerminal
 	return out, nil
 }
 
+func (c *adminApiClient) GetVersion(ctx context.Context, in *VersionRequest, opts ...grpc.CallOption) (*VersionReply, error) {
+	out := new(VersionReply)
+	err := c.cc.Invoke(ctx, "/mrpc_admin.AdminApi/GetVersion", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminApiClient) GetTerminalJournal(ctx context.Context, in *GetTerminalJournalRequest, opts ...grpc.CallOption) (*GetTerminalJournalReply, error) {
+	out := new(GetTerminalJournalReply)
+	err := c.cc.Invoke(ctx, "/mrpc_admin.AdminApi/GetTerminalJournal", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminApiClient) GetAllLogs(ctx context.Context, in *GetAllLogsRequest, opts ...grpc.CallOption) (*GetAllLogsReply, error) {
+	out := new(GetAllLogsReply)
+	err := c.cc.Invoke(ctx, "/mrpc_admin.AdminApi/GetAllLogs", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminApiClient) GetSessionRestoreLogs(ctx context.Context, in *GetSessionRestoreLogsRequest, opts ...grpc.CallOption) (*GetSessionRestoreLogsReply, error) {
+	out := new(GetSessionRestoreLogsReply)
+	err := c.cc.Invoke(ctx, "/mrpc_admin.AdminApi/GetSessionRestoreLogs", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminApiServer is the server API for AdminApi service.
 // All implementations should embed UnimplementedAdminApiServer
 // for forward compatibility
@@ -185,6 +239,24 @@ type AdminApiServer interface {
 	// through the Terminal Manager's own already-running gRPC/HTTP API instead of waiting
 	// on that trigger or requiring interactive guest access.
 	RefreshMrpcRest(context.Context, *ActiveTerminalsRequest) (*RefreshMrpcRestReply, error)
+	// Build/version identity of the Terminal Manager running on THIS pod, so a deploy can be
+	// VERIFIED rather than guessed. No admin_key required - it exposes no secrets. mrpc-rest
+	// transcodes GET /version-tm onto this (its own build is at GET /version).
+	GetVersion(context.Context, *VersionRequest) (*VersionReply, error)
+	// Diagnostic MT5/MT4 journal for a SPECIFIC terminal instance on THIS pod: reads the terminal's
+	// own journal (logs\*.log) and the expert/script journal (MQL5\logs\*.log) straight from the
+	// terminal's working directory. Lets us see WHY a terminal failed to start / log in to the broker
+	// without RDP/noVNC access. The terminal must live on the pod serving this request (its record
+	// must be in the local registry); if it is on another pod or was already cleaned up, `error` says so.
+	GetTerminalJournal(context.Context, *GetTerminalJournalRequest) (*GetTerminalJournalReply, error)
+	// One-shot bundle of EVERY diagnostic log available on this pod: every *.log file on the
+	// shared Data folder AND in C:\OEM (mrpc.log, mrpc-rest.log, boot-diag.log, startup.log,
+	// install.log, ...), plus the Windows Application + System event logs. Each entry carries a
+	// tail of its content so a single call gives the full diagnostic picture for the pod without
+	// needing to know file names up front (contrast ListLogFiles + N× GetLogFile).
+	GetAllLogs(context.Context, *GetAllLogsRequest) (*GetAllLogsReply, error)
+	// Session restore logs for the latest startup sequence on a pod (stored in MongoDB session_restore_logs).
+	GetSessionRestoreLogs(context.Context, *GetSessionRestoreLogsRequest) (*GetSessionRestoreLogsReply, error)
 }
 
 // UnimplementedAdminApiServer should be embedded to have forward compatible implementations.
@@ -217,6 +289,18 @@ func (UnimplementedAdminApiServer) CaptureSessionScreenshotOnPod(context.Context
 }
 func (UnimplementedAdminApiServer) RefreshMrpcRest(context.Context, *ActiveTerminalsRequest) (*RefreshMrpcRestReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RefreshMrpcRest not implemented")
+}
+func (UnimplementedAdminApiServer) GetVersion(context.Context, *VersionRequest) (*VersionReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetVersion not implemented")
+}
+func (UnimplementedAdminApiServer) GetTerminalJournal(context.Context, *GetTerminalJournalRequest) (*GetTerminalJournalReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTerminalJournal not implemented")
+}
+func (UnimplementedAdminApiServer) GetAllLogs(context.Context, *GetAllLogsRequest) (*GetAllLogsReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAllLogs not implemented")
+}
+func (UnimplementedAdminApiServer) GetSessionRestoreLogs(context.Context, *GetSessionRestoreLogsRequest) (*GetSessionRestoreLogsReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSessionRestoreLogs not implemented")
 }
 
 // UnsafeAdminApiServer may be embedded to opt out of forward compatibility for this service.
@@ -392,6 +476,78 @@ func _AdminApi_RefreshMrpcRest_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminApi_GetVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminApiServer).GetVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mrpc_admin.AdminApi/GetVersion",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminApiServer).GetVersion(ctx, req.(*VersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminApi_GetTerminalJournal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTerminalJournalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminApiServer).GetTerminalJournal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mrpc_admin.AdminApi/GetTerminalJournal",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminApiServer).GetTerminalJournal(ctx, req.(*GetTerminalJournalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminApi_GetAllLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAllLogsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminApiServer).GetAllLogs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mrpc_admin.AdminApi/GetAllLogs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminApiServer).GetAllLogs(ctx, req.(*GetAllLogsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminApi_GetSessionRestoreLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSessionRestoreLogsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminApiServer).GetSessionRestoreLogs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mrpc_admin.AdminApi/GetSessionRestoreLogs",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminApiServer).GetSessionRestoreLogs(ctx, req.(*GetSessionRestoreLogsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminApi_ServiceDesc is the grpc.ServiceDesc for AdminApi service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -434,6 +590,22 @@ var AdminApi_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RefreshMrpcRest",
 			Handler:    _AdminApi_RefreshMrpcRest_Handler,
+		},
+		{
+			MethodName: "GetVersion",
+			Handler:    _AdminApi_GetVersion_Handler,
+		},
+		{
+			MethodName: "GetTerminalJournal",
+			Handler:    _AdminApi_GetTerminalJournal_Handler,
+		},
+		{
+			MethodName: "GetAllLogs",
+			Handler:    _AdminApi_GetAllLogs_Handler,
+		},
+		{
+			MethodName: "GetSessionRestoreLogs",
+			Handler:    _AdminApi_GetSessionRestoreLogs_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
