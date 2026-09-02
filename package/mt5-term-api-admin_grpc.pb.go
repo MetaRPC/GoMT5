@@ -74,6 +74,8 @@ type AdminApiClient interface {
 	GetAllLogs(ctx context.Context, in *GetAllLogsRequest, opts ...grpc.CallOption) (*GetAllLogsReply, error)
 	// Session restore logs for the latest startup sequence on a pod (stored in MongoDB session_restore_logs).
 	GetSessionRestoreLogs(ctx context.Context, in *GetSessionRestoreLogsRequest, opts ...grpc.CallOption) (*GetSessionRestoreLogsReply, error)
+	// Session restore watcher status (terminals loaded, queue count, state, diagnostics) for THIS pod.
+	GetSessionRestoreStatus(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*GetSessionRestoreStatusReply, error)
 }
 
 type adminApiClient struct {
@@ -201,6 +203,15 @@ func (c *adminApiClient) GetSessionRestoreLogs(ctx context.Context, in *GetSessi
 	return out, nil
 }
 
+func (c *adminApiClient) GetSessionRestoreStatus(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*GetSessionRestoreStatusReply, error) {
+	out := new(GetSessionRestoreStatusReply)
+	err := c.cc.Invoke(ctx, "/mrpc_admin.AdminApi/GetSessionRestoreStatus", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminApiServer is the server API for AdminApi service.
 // All implementations should embed UnimplementedAdminApiServer
 // for forward compatibility
@@ -257,6 +268,8 @@ type AdminApiServer interface {
 	GetAllLogs(context.Context, *GetAllLogsRequest) (*GetAllLogsReply, error)
 	// Session restore logs for the latest startup sequence on a pod (stored in MongoDB session_restore_logs).
 	GetSessionRestoreLogs(context.Context, *GetSessionRestoreLogsRequest) (*GetSessionRestoreLogsReply, error)
+	// Session restore watcher status (terminals loaded, queue count, state, diagnostics) for THIS pod.
+	GetSessionRestoreStatus(context.Context, *ActiveTerminalsRequest) (*GetSessionRestoreStatusReply, error)
 }
 
 // UnimplementedAdminApiServer should be embedded to have forward compatible implementations.
@@ -301,6 +314,9 @@ func (UnimplementedAdminApiServer) GetAllLogs(context.Context, *GetAllLogsReques
 }
 func (UnimplementedAdminApiServer) GetSessionRestoreLogs(context.Context, *GetSessionRestoreLogsRequest) (*GetSessionRestoreLogsReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSessionRestoreLogs not implemented")
+}
+func (UnimplementedAdminApiServer) GetSessionRestoreStatus(context.Context, *ActiveTerminalsRequest) (*GetSessionRestoreStatusReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSessionRestoreStatus not implemented")
 }
 
 // UnsafeAdminApiServer may be embedded to opt out of forward compatibility for this service.
@@ -548,6 +564,24 @@ func _AdminApi_GetSessionRestoreLogs_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminApi_GetSessionRestoreStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ActiveTerminalsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminApiServer).GetSessionRestoreStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mrpc_admin.AdminApi/GetSessionRestoreStatus",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminApiServer).GetSessionRestoreStatus(ctx, req.(*ActiveTerminalsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminApi_ServiceDesc is the grpc.ServiceDesc for AdminApi service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -606,6 +640,10 @@ var AdminApi_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetSessionRestoreLogs",
 			Handler:    _AdminApi_GetSessionRestoreLogs_Handler,
+		},
+		{
+			MethodName: "GetSessionRestoreStatus",
+			Handler:    _AdminApi_GetSessionRestoreStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
