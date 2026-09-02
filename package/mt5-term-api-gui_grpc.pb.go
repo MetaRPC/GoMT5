@@ -31,6 +31,7 @@ type GuiClient interface {
 	DemoOpenAccount(ctx context.Context, in *GuiDemoOpenAccountRequest, opts ...grpc.CallOption) (*GuiDemoOpenAccountReply, error)
 	DemoEnumControls(ctx context.Context, in *GuiDemoEnumControlsRequest, opts ...grpc.CallOption) (*GuiDemoEnumControlsReply, error)
 	DemoOpenAccountWithProgress(ctx context.Context, in *GuiDemoOpenAccountRequest, opts ...grpc.CallOption) (Gui_DemoOpenAccountWithProgressClient, error)
+	DemoOpenAccountInteractive(ctx context.Context, opts ...grpc.CallOption) (Gui_DemoOpenAccountInteractiveClient, error)
 }
 
 type guiClient struct {
@@ -145,6 +146,37 @@ func (x *guiDemoOpenAccountWithProgressClient) Recv() (*GuiDemoProgressEvent, er
 	return m, nil
 }
 
+func (c *guiClient) DemoOpenAccountInteractive(ctx context.Context, opts ...grpc.CallOption) (Gui_DemoOpenAccountInteractiveClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Gui_ServiceDesc.Streams[1], "/mt5_term_api.Gui/DemoOpenAccountInteractive", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &guiDemoOpenAccountInteractiveClient{stream}
+	return x, nil
+}
+
+type Gui_DemoOpenAccountInteractiveClient interface {
+	Send(*GuiDemoInteractiveClientMessage) error
+	Recv() (*GuiDemoInteractiveServerMessage, error)
+	grpc.ClientStream
+}
+
+type guiDemoOpenAccountInteractiveClient struct {
+	grpc.ClientStream
+}
+
+func (x *guiDemoOpenAccountInteractiveClient) Send(m *GuiDemoInteractiveClientMessage) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *guiDemoOpenAccountInteractiveClient) Recv() (*GuiDemoInteractiveServerMessage, error) {
+	m := new(GuiDemoInteractiveServerMessage)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // GuiServer is the server API for Gui service.
 // All implementations should embed UnimplementedGuiServer
 // for forward compatibility
@@ -158,6 +190,7 @@ type GuiServer interface {
 	DemoOpenAccount(context.Context, *GuiDemoOpenAccountRequest) (*GuiDemoOpenAccountReply, error)
 	DemoEnumControls(context.Context, *GuiDemoEnumControlsRequest) (*GuiDemoEnumControlsReply, error)
 	DemoOpenAccountWithProgress(*GuiDemoOpenAccountRequest, Gui_DemoOpenAccountWithProgressServer) error
+	DemoOpenAccountInteractive(Gui_DemoOpenAccountInteractiveServer) error
 }
 
 // UnimplementedGuiServer should be embedded to have forward compatible implementations.
@@ -190,6 +223,9 @@ func (UnimplementedGuiServer) DemoEnumControls(context.Context, *GuiDemoEnumCont
 }
 func (UnimplementedGuiServer) DemoOpenAccountWithProgress(*GuiDemoOpenAccountRequest, Gui_DemoOpenAccountWithProgressServer) error {
 	return status.Errorf(codes.Unimplemented, "method DemoOpenAccountWithProgress not implemented")
+}
+func (UnimplementedGuiServer) DemoOpenAccountInteractive(Gui_DemoOpenAccountInteractiveServer) error {
+	return status.Errorf(codes.Unimplemented, "method DemoOpenAccountInteractive not implemented")
 }
 
 // UnsafeGuiServer may be embedded to opt out of forward compatibility for this service.
@@ -368,6 +404,32 @@ func (x *guiDemoOpenAccountWithProgressServer) Send(m *GuiDemoProgressEvent) err
 	return x.ServerStream.SendMsg(m)
 }
 
+func _Gui_DemoOpenAccountInteractive_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(GuiServer).DemoOpenAccountInteractive(&guiDemoOpenAccountInteractiveServer{stream})
+}
+
+type Gui_DemoOpenAccountInteractiveServer interface {
+	Send(*GuiDemoInteractiveServerMessage) error
+	Recv() (*GuiDemoInteractiveClientMessage, error)
+	grpc.ServerStream
+}
+
+type guiDemoOpenAccountInteractiveServer struct {
+	grpc.ServerStream
+}
+
+func (x *guiDemoOpenAccountInteractiveServer) Send(m *GuiDemoInteractiveServerMessage) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *guiDemoOpenAccountInteractiveServer) Recv() (*GuiDemoInteractiveClientMessage, error) {
+	m := new(GuiDemoInteractiveClientMessage)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // Gui_ServiceDesc is the grpc.ServiceDesc for Gui service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -413,6 +475,12 @@ var Gui_ServiceDesc = grpc.ServiceDesc{
 			StreamName:    "DemoOpenAccountWithProgress",
 			Handler:       _Gui_DemoOpenAccountWithProgress_Handler,
 			ServerStreams: true,
+		},
+		{
+			StreamName:    "DemoOpenAccountInteractive",
+			Handler:       _Gui_DemoOpenAccountInteractive_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "mt5-term-api-gui.proto",
