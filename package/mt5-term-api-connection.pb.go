@@ -2901,7 +2901,7 @@ type ConnectStateData struct {
 	unknownFields protoimpl.UnknownFields
 
 	Id           string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	State        string                 `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"` // "Started", "Stopped", "CannotConnect", "WrongPassword", "Starting"
+	State        string                 `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"` // "Queued", "Starting", "Authorizing", "Syncing", "Connected", "WrongPassword", "CannotConnect", "Stopped", "Expired"
 	IsConnected  bool                   `protobuf:"varint,3,opt,name=is_connected,json=isConnected,proto3" json:"is_connected,omitempty"`
 	IsAlive      bool                   `protobuf:"varint,4,opt,name=is_alive,json=isAlive,proto3" json:"is_alive,omitempty"`
 	ApiIsAlive   bool                   `protobuf:"varint,5,opt,name=api_is_alive,json=apiIsAlive,proto3" json:"api_is_alive,omitempty"`
