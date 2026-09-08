@@ -1,4 +1,4 @@
-name: Test & Build
+﻿name: Test & Build
 
 on:
   push:
@@ -27,12 +27,12 @@ jobs:
       - name: Build Go packages
         run: |
           cd package
-          go build -v ./...
+          go build -v .
 
       - name: Run Go unit tests
         run: |
           cd package
-          go test -v ./...
+          go test -v .
 
   docs-lint:
     name: Validate Documentation Integrity
