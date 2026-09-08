@@ -73,3 +73,27 @@ func TestSymbolParameters(t *testing.T) {
 		t.Errorf("Expected Ask=1.08510, got %f", info.GetAsk())
 	}
 }
+
+func TestGetIdRequest(t *testing.T) {
+	req := &GetIdRequest{
+		User:     "12345678",
+		Password: "test_password",
+	}
+	if req.GetUser() != "12345678" {
+		t.Errorf("Expected User='12345678', got %s", req.GetUser())
+	}
+	if req.GetPassword() != "test_password" {
+		t.Errorf("Expected Password='test_password', got %s", req.GetPassword())
+	}
+
+	reply := &GetIdReply{
+		Response: &GetIdReply_Data{
+			Data: &GetIdData{
+				Id: "68c935ee-a2b1-4f3e-bb36-3982845cfa85",
+			},
+		},
+	}
+	if reply.GetData().GetId() != "68c935ee-a2b1-4f3e-bb36-3982845cfa85" {
+		t.Errorf("Expected Id='68c935ee-a2b1-4f3e-bb36-3982845cfa85', got %s", reply.GetData().GetId())
+	}
+}

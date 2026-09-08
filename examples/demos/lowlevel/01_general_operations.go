@@ -689,24 +689,28 @@ func RunGeneral01() error {
 	//      Returns: TradeTickValue, TradeTickSize, TradeContractSize, etc.
 	//      Useful for calculating position value and P&L accurately.
 	// ══════════════════════════════════════════════════════════════
-	fmt.Println("\n4.14. TickValueWithSize() - Get tick value and size info")
+	fmt.Println("\n4.14. SymbolInfoDouble() - Get tick value and size info")
 
-	tickValueReq := &pb.TickValueWithSizeRequest{
-		SymbolNames: []string{cfg.TestSymbol}, // Array of symbol names
+	tickValReq := &pb.SymbolInfoDoubleRequest{
+		Symbol: cfg.TestSymbol,
+		Type:   pb.SymbolInfoDoubleProperty_SYMBOL_TRADE_TICK_VALUE,
 	}
-	tickValueData, err := account.TickValueWithSize(ctx, tickValueReq)
+	tickValData, err := account.SymbolInfoDouble(ctx, tickValReq)
 	if err != nil {
-		helpers.PrintShortError(err, "TickValueWithSize failed")
+		helpers.PrintShortError(err, "SymbolInfoDouble(SYMBOL_TRADE_TICK_VALUE) failed")
 	} else {
-		fmt.Printf("  Retrieved tick value/size data for %d symbols:\n", len(tickValueData.SymbolTickSizeInfos))
-		for _, info := range tickValueData.SymbolTickSizeInfos {
-			fmt.Printf("\n  Symbol: %s (Index: %d)\n", info.Name, info.Index)
-			fmt.Printf("    Trade Tick Value:        %.5f\n", info.TradeTickValue)
-			fmt.Printf("    Trade Tick Value Profit: %.5f\n", info.TradeTickValueProfit)
-			fmt.Printf("    Trade Tick Value Loss:   %.5f\n", info.TradeTickValueLoss)
-			fmt.Printf("    Trade Tick Size:         %.5f\n", info.TradeTickSize)
-			fmt.Printf("    Trade Contract Size:     %.2f\n", info.TradeContractSize)
-		}
+		fmt.Printf("    Trade Tick Value:        %.5f\n", tickValData.Value)
+	}
+
+	tickSizeReq := &pb.SymbolInfoDoubleRequest{
+		Symbol: cfg.TestSymbol,
+		Type:   pb.SymbolInfoDoubleProperty_SYMBOL_TRADE_TICK_SIZE,
+	}
+	tickSizeData, err := account.SymbolInfoDouble(ctx, tickSizeReq)
+	if err != nil {
+		helpers.PrintShortError(err, "SymbolInfoDouble(SYMBOL_TRADE_TICK_SIZE) failed")
+	} else {
+		fmt.Printf("    Trade Tick Size:         %.5f\n", tickSizeData.Value)
 	}
 
 	//#endregion Symbol Info
