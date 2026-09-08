@@ -1,17 +1,48 @@
-## GoMT5
+# GoMT5 SDK
 
-Go SDK for MetaTrader 5 via gRPC gateway.
+> Official MetaTrader 5 Go SDK for high-performance trading automation and market data streaming via gRPC.
 
-## Quick Start
+[![Docs](https://img.shields.io/badge/docs-GoMT5-blue.svg)](https://metarpc.github.io/GoMT5/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-To start working with MT5 in your Go project, you only need to install one dependency:
-
-```bash
-go get github.com/MetaRPC/GoMT5/package
-```
-
-**Complete beginner's guide:** [Your First Project in 10 Minutes](docs/All_Guides/Your_First_Project.md)
+📄 **Full Documentation**: [https://metarpc.github.io/GoMT5/](https://metarpc.github.io/GoMT5/)
 
 ---
 
-📄 **Full documentation:** https://metarpc.github.io/GoMT5/
+## 📦 Installation
+
+```bash
+go get github.com/MetaRPC/GoMT5
+```
+
+---
+
+## 🔑 API Key & Authentication
+
+Connecting to MetaRPC production endpoints (`mt5.mrpc.pro:443`) requires an API key:
+
+1. **Sign Up**: Create an account for free at [https://mrpc.pro/signup](https://mrpc.pro/signup).
+2. **Generate API Key**: In your MetaRPC Portal dashboard at [https://mrpc.pro/my](https://mrpc.pro/my), go to **API Keys** to generate and copy your personal API token.
+3. **Configure Connection**: Pass your API key / token along with the server address (`mt5.mrpc.pro:443`) in your connection settings.
+
+---
+
+## 🌐 Production Endpoints
+
+| Environment | Host | Port | Protocol |
+| :--- | :--- | :--- | :--- |
+| **Production** | `mt5.mrpc.pro` | `443` | TLS / gRPC |
+| **Direct API UI (Swagger)** | `https://mt5.mrpc.pro/apiui` | `443` | HTTPS |
+| **Portal Dashboard** | `https://mrpc.pro/my` | `443` | HTTPS |
+| **Registration / API Key** | `https://mrpc.pro/signup` | `443` | HTTPS |
+
+---
+
+## 📄 Documentation & Guides
+
+Explore comprehensive documentation at [https://metarpc.github.io/GoMT5/](https://metarpc.github.io/GoMT5/):
+- 🚀 **Quick Start & First Project**
+- 🔑 **Authentication & API Keys**
+- 📡 **Live Market Data & gRPC Streaming**
+- 💼 **Account Management & Order Execution**
+- 📊 **Return Codes & Error Handling Reference**

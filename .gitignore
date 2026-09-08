@@ -387,3 +387,5 @@ go.work
 vendor/
 
 .claude
+
+site/

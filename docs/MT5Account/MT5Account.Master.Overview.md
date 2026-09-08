@@ -51,7 +51,7 @@ Every method follows gRPC client-server pattern:
 
 ```go
 // Create client connection
-conn, err := grpc.Dial("localhost:8002", grpc.WithInsecure())
+conn, err := grpc.Dial("mt5.mrpc.pro:443", grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
 if err != nil {
     log.Fatal(err)
 }
