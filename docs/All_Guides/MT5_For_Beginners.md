@@ -13,7 +13,7 @@ Welcome! This guide is designed for complete beginners who have never worked wit
 - Execute automated trading strategies
 - Monitor your positions in real-time
 
-Think of MT5 as your "cockpit" for accessing financial markets. GoMT5 allows you to programmatically control this cockpit using Go.
+Think of MT5 as your "cockpit" for accessing financial markets. PyMT5 allows you to programmatically control this cockpit using Python.
 
 ---
 
@@ -26,7 +26,7 @@ A **demo account** is a risk-free practice account with virtual money. We **stro
 - ✅ **Zero risk** - practice with virtual funds (typically $10,000 - $100,000)
 - ✅ **Real market conditions** - live prices and market behavior
 - ✅ **Learn the platform** - understand how MT5 works before risking real money
-- ✅ **Test your code** - perfect for developing and testing your GoMT5 applications
+- ✅ **Test your code** - perfect for developing and testing your PyMT5 applications
 
 ### Live Account
 
@@ -42,7 +42,7 @@ A **live account** uses your real money. Only move to live trading when you:
 
 The fastest way to get started is to create a demo account directly through the MT5 terminal application.
 
-### Step 1: Download and Install MT5 Terminal
+### Step 1️⃣: Download and Install MT5 Terminal
 
 1. Visit the official MetaTrader website: [https://www.metatrader5.com/en/download](https://www.metatrader5.com/en/download)
 
@@ -52,7 +52,7 @@ The fastest way to get started is to create a demo account directly through the 
 
 ---
 
-### Step 2: Launch MT5 and Locate the Navigator Panel
+### Step 2️⃣: Launch MT5 and Locate the Navigator Panel
 
 When you open the MetaTrader 5 application, you'll typically see a popup window offering to:
 
@@ -78,7 +78,7 @@ The **Navigator** panel is usually located on the **left side** of the screen, b
 
 ---
 
-### Step 3: Opening a New Demo Account
+### Step 3️⃣: Opening a New Demo Account
 
 1. In the **Navigator** panel, find the **Accounts** section
 2. **Right-click** on "Accounts"
@@ -88,7 +88,7 @@ This will open the broker server search panel.
 
 ---
 
-### Step 4: Select MetaQuotes Demo Server
+### Step 4️⃣: Select MetaQuotes Demo Server
 
 In the broker search window, you'll see a list of available MT5 servers.
 
@@ -104,7 +104,7 @@ In the broker search window, you'll see a list of available MT5 servers.
 
 ---
 
-### Step 5: Account Type Selection
+### Step 5️⃣: Account Type Selection
 
 On the next screen, you'll have options:
 
@@ -118,7 +118,7 @@ On the next screen, you'll have options:
 
 ---
 
-### Step 6: Fill in Your Personal Information
+### Step 6️⃣: Fill in Your Personal Information
 
 Now you'll see a form requesting your details:
 
@@ -137,7 +137,7 @@ Now you'll see a form requesting your details:
 
 ---
 
-### Step 7: Save Your Account Credentials
+### Step 7️⃣: Save Your Account Credentials
 
 MT5 will now create your demo account and display your credentials:
 
@@ -150,7 +150,7 @@ MT5 will now create your demo account and display your credentials:
 
 **⚠️ CRITICALLY IMPORTANT**: **Save these credentials immediately!** You'll need them for:
 - Logging back into MT5
-- Configuring GoMT5 in `examples/demos/config/config.json`
+- Configuring PyMT5 in `examples/0_common/settings.json`
 
 Click **Finish** to complete account creation.
 
@@ -158,12 +158,12 @@ Click **Finish** to complete account creation.
 
 ---
 
-### Step 8: Configure GoMT5 with Your Credentials
+### Step 8️⃣: Configure PyMT5 with Your Credentials
 
-Now that you have an MT5 demo account, you need to configure GoMT5 to connect to it.
+Now that you have an MT5 demo account, you need to configure PyMT5 to connect to it.
 
-1. Open your GoMT5 project
-2. Navigate to **`examples/demos/config/config.json`**
+1. Open your PyMT5 project
+2. Navigate to **`examples/0_common/settings.json`**
 3. Fill in the credentials you just saved:
 
 
@@ -189,13 +189,12 @@ Now that you have an MT5 demo account, you need to configure GoMT5 to connect to
 
 ---
 
-### Step 9: Verify MT5 Connection
+### Step 9️⃣: Verify MT5 Connection
 
 Back in the MT5 terminal:
 
 1. MT5 should automatically log you into your new demo account
-2. Check the **bottom right corner** of the terminal window
-3. You should see:
+2. Check the **bottom right corner** of the terminal window - you should see:
    - **Green connection indicator** (means connected to server)
    - **Your account balance** (e.g., $10,000)
 
@@ -203,24 +202,24 @@ Back in the MT5 terminal:
 
 ---
 
-### Step 10: Start Testing GoMT5
+### Step 🔟: Start Testing PyMT5
 
-With your MT5 demo account created and `config.json` configured, you can start running examples:
+With your MT5 demo account created and `settings.json` configured, you can start running examples:
 
 ```bash
 # Navigate to the examples folder
-cd examples/demos
-
-# Install dependencies (one time only)
-go mod tidy
+cd examples
 
 # Run your first example
-go run main.go 1
+python main.py 1
+
+# Or run interactively
+python main.py
 ```
 
 When trading operations occur, your demo account balance will increase or decrease accordingly. **Experiment freely** - it's virtual money, so there's no risk!
 
-All trades executed by GoMT5 will appear in your MT5 terminal in real-time.
+All trades executed by PyMT5 will appear in your MT5 terminal in real-time.
 
 ---
 
@@ -234,7 +233,7 @@ MT5 uses **two types of passwords** for security and flexibility:
 - Can open/close trades, deposit/withdraw funds, change settings
 - **This is the password you created** during account registration
 - Use this password for:
-  - Trading (including GoMT5 applications)
+  - Trading (including PyMT5 applications)
   - Changing account settings
   - Withdrawing funds (live accounts)
 
@@ -273,7 +272,7 @@ While you can use the MetaQuotes demo server for practice, you may want to choos
 - **OANDA** - Strong reputation, accepts US clients
 - **XM** - Easy account opening, many account types
 - **RoboForex** - Good for automated trading
-- **FxPro** - Excellent demo trading conditions (used in GoMT5 examples)
+- **FxPro** - Excellent demo trading conditions (used in PyMT5 examples)
 
 ### What to look for:
 
@@ -296,15 +295,15 @@ While you can use the MetaQuotes demo server for practice, you may want to choos
 
 Now that you have a demo account and understand the basics, you're ready for:
 
-### 1. Setting Up GoMT5
+### 1. Setting Up PyMT5
 
-Follow our main getting started guide to connect GoMT5 to your MT5 account:
+Follow our main getting started guide to connect PyMT5 to your MT5 account:
 
-👉 **[Getting Started with GoMT5](GETTING_STARTED.md)**
+👉 **[Getting Started with PyMT5](GETTING_STARTED.md)**
 
 ### 2. Understanding API Architecture
 
-GoMT5 is built in **three levels**, from low-level to high-level. You can choose where to start depending on your needs:
+PyMT5 is built in **three levels**, from low-level to high-level. You can choose where to start depending on your needs:
 
 #### Level 1: MT5Account (Low-Level gRPC Foundation)
 👉 **[MT5Account Overview](../MT5Account/MT5Account.Master.Overview.md)**
@@ -323,18 +322,12 @@ GoMT5 is built in **three levels**, from low-level to high-level. You can choose
 - Best for: Most common trading scenarios
 
 #### Level 3: MT5Sugar (High-Level Helpers)
-👉 **[MT5Sugar API Overview](../MT5Sugar/MT5Sugar.API_Overview.md)**
+👉 **[MT5Sugar API Overview](../MT5Sugar/MT5Sugar.Master.Overview.md)**
 
 - **Syntactic sugar** and convenience methods
 - Chainable operations, smart defaults
 - Most intuitive and beginner-friendly
 - Best for: Rapid prototyping and simple strategies
-
-**💡 Recommendation:**
-
-- **Start with MT5Sugar** if you're new to the SDK - it's the easiest
-- **Move to MT5Service** when you need more control
-- **Dive into MT5Account** when you need maximum flexibility or want to understand how everything works under the hood
 
 ---
 
@@ -355,7 +348,7 @@ GoMT5 is built in **three levels**, from low-level to high-level. You can choose
 
 ### 🧪 Testing
 
-- Test all your GoMT5 code **on demo first**
+- Test all your PyMT5 code **on demo first**
 - Verify strategies over weeks/months, not days
 - Paper trading (demo) doesn't guarantee live results
 
@@ -367,29 +360,41 @@ GoMT5 is built in **three levels**, from low-level to high-level. You can choose
 
 ---
 
-## Useful Go Commands
+## Useful Python Commands
 
-A few helpful commands you'll need when working with GoMT5:
+### Installation
 
 ```bash
-# Install dependencies
-go mod tidy
+# Install PyMT5 package with all dependencies
+pip install MetaRpcMT5
+```
 
-# Run an example
-go run main.go 1
+### Running Examples
 
-# Check Go version
-go version
+```bash
+# Navigate to examples folder first
+cd examples
 
-# Build the project
-go build
+# Option 1: Run specific example by number
+python main.py 1
 
-# Run tests
-go test ./...
+# Option 2: Interactive menu
+python main.py
+
+# Option 3: Run example file directly
+python 1_lowlevel/01_general_operations.py
+python 3_sugar/06_sugar_basics.py
+```
+
+### Checking Environment
+
+```bash
+# Verify Python version (requires 3.8+)
+python --version
 ```
 
 ---
 
-**Ready to start coding?** Head over to [Getting Started](GETTING_STARTED.md) to connect GoMT5 to your MT5 account!
+**Ready to start coding?** Head over to [Getting Started](GETTING_STARTED.md) to connect PyMT5 to your MT5 account!
 
 **Good luck with your trading journey! 🚀**

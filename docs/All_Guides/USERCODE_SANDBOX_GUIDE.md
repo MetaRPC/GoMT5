@@ -2,21 +2,21 @@
 
 ## What is this?
 
-This is **your sandbox** for writing custom MT5 trading code in Go. Connection setup is already done - you only need to add your trading logic!
+This is **your sandbox** for writing custom MT5 trading code in Python. Connection setup is already done - you only need to add your trading logic!
 
-## Quick Start
+## 🏁 Quick Start
 
-1. **Case already active in main.go**
-   - Open `examples/demos/main.go`
+1. **Case already active in main.py**
+   - Open `examples/main.py`
    - Case "18" for user code sandbox is ready to use
 
-2. **Open `usercode/18_usercode.go`**
+2. **Open `examples/6_usercode/18_usercode.py`**
    - Write your code or uncomment examples
 
 3. **Run:**
    ```bash
-   cd examples/demos
-   go run main.go 18
+   cd examples
+   python main.py usercode
    ```
 
 That's it! Your code will execute with full MT5 connection.
@@ -25,32 +25,28 @@ That's it! Your code will execute with full MT5 connection.
 
 ### Option 1: Uncomment examples
 
-The file contains 3 ready-to-use examples:
+The file contains 5 ready-to-use examples:
 
-```go
-// Example 1: Get account balance (Sugar - easiest)
-// balance, err := sugar.GetBalance()
-// if err != nil {
-//     fmt.Printf("Error: %v\n", err)
-//     return
-// }
-// fmt.Printf("Balance: %.2f\n", balance)
+```python
+# Example 1: Get account balance (Sugar - easiest)
+# balance = await sugar.get_balance()
+# print(f"Balance: {balance:.2f}")
 ```
 
-Just remove `//` to activate!
+Just remove `#` to activate!
 
 ### Option 2: Write your own code
 
 Add your logic between the markers:
 
-```go
-// ═══════════════════════════════════════════════════════════
-// YOUR CODE HERE
-// ═══════════════════════════════════════════════════════════
+```python
+# =================================================================
+# YOUR CODE HERE
+# =================================================================
 
-// Your trading strategy here...
+# Your trading strategy here...
 
-// TODO: Your code here
+# TODO: Write your trading logic here
 ```
 
 ## Available commands
@@ -58,41 +54,42 @@ Add your logic between the markers:
 Run your code with:
 
 ```bash
-# From examples/demos directory
-go run main.go 18
-go run main.go usercode
-go run main.go user
-go run main.go sandbox
+# From examples directory
+python main.py usercode
+python main.py 18
+python main.py user
+python main.py sandbox
 ```
 
 ## What's already configured
 
-✓ **Connection** - MT5 terminal connected via gRPC
++ **Connection** - MT5 terminal connected via gRPC
 
-✓ **Configuration** - Loaded from `config/config.json` or environment variables
++ **Configuration** - Loaded from `examples/0_common/settings.json`
 
-✓ **MT5Account** - Low-level gRPC client (variable: `account`)
++ **account** - Low-level gRPC client (MT5Account)
 
-✓ **MT5Service** - Mid-level wrapper (variable: `service`)
++ **service** - Mid-level wrapper (MT5Service)
 
-✓ **MT5Sugar** - High-level Sugar API (variable: `sugar`)
++ **sugar** - High-level Sugar API (MT5Sugar)
 
-✓ **Context** - For timeouts and cancellation (variable: `ctx`)
++ **async/await** - All methods are asynchronous
 
-## Can I mix API levels?
+## 🧩 Can I mix API levels?
 
 **Yes!** You can use all three levels in the same file:
 
-```go
-// Low-level (direct gRPC protobuf)
-req := &pb.AccountSummaryRequest{}
-reply, err := account.AccountSummary(ctx, req)
+```python
+# Low-level (direct gRPC protobuf)
+summary = await account.account_summary()
+balance_pb = summary.account_balance
 
-// Mid-level (MT5Service)
-accountInfo, err := service.GetAccountSummary(ctx)
+# Mid-level (MT5Service)
+account_info = await service.get_account_summary()
+balance_svc = account_info.balance
 
-// High-level (MT5Sugar)
-balance, err := sugar.GetBalance()
+# High-level (MT5Sugar)
+balance_sugar = await sugar.get_balance()
 ```
 
 All three variables are available simultaneously:
@@ -105,136 +102,145 @@ All three variables are available simultaneously:
 
 ### Get account information
 
-```go
-// Sugar API (easiest)
-balance, err := sugar.GetBalance()
-fmt.Printf("Balance: %.2f\n", balance)
+```python
+# Sugar API (easiest)
+balance = await sugar.get_balance()
+print(f"Balance: {balance:.2f}")
 
-// Service API (more details)
-accountInfo, err := service.GetAccountSummary(ctx)
-fmt.Printf("Balance: %.2f %s\n", accountInfo.Balance, accountInfo.Currency)
-fmt.Printf("Equity:  %.2f\n", accountInfo.Equity)
+# Service API (more details)
+account_info = await service.get_account_summary()
+print(f"Balance: {account_info.balance:.2f} {account_info.currency}")
+print(f"Equity:  {account_info.equity:.2f}")
 
-// Account API (full control)
-req := &pb.AccountSummaryRequest{}
-reply, err := account.AccountSummary(ctx, req)
-fmt.Printf("Balance: %.2f\n", reply.AccountBalance)
+# Account API (full control)
+summary = await account.account_summary()
+print(f"Balance: {summary.account_balance:.2f}")
 ```
 
 ### Get current price
 
-```go
-// Sugar API
-bid, _ := sugar.GetBid("EURUSD")
-ask, _ := sugar.GetAsk("EURUSD")
-fmt.Printf("EURUSD: Bid=%.5f, Ask=%.5f\n", bid, ask)
+```python
+# Sugar API
+bid = await sugar.get_bid("EURUSD")
+ask = await sugar.get_ask("EURUSD")
+print(f"EURUSD: Bid={bid:.5f}, Ask={ask:.5f}")
 
-// Service API
-tick, err := service.GetSymbolTick(ctx, "EURUSD")
-fmt.Printf("EURUSD Bid: %.5f, Ask: %.5f\n", tick.Bid, tick.Ask)
+# Service API
+tick = await service.get_symbol_tick("EURUSD")
+print(f"EURUSD Bid: {tick.bid:.5f}, Ask: {tick.ask:.5f}")
 ```
 
 ### Open market order
 
-```go
-// Sugar API (easiest)
-ticket, err := sugar.BuyMarket("EURUSD", 0.01)
-if err != nil {
-    fmt.Printf("Order failed: %v\n", err)
-} else {
-    fmt.Printf("Order opened: #%d\n", ticket)
-}
+```python
+# Sugar API (easiest)
+try:
+    ticket = await sugar.buy_market("EURUSD", 0.01)
+    print(f"Order opened: #{ticket}")
+except Exception as e:
+    print(f"Order failed: {e}")
 
-// With SL/TP in pips
-ticket, err := sugar.BuyMarketWithPips("EURUSD", 0.01, 20, 30)
+# With SL/TP in pips
+ticket = await sugar.buy_market_with_pips("EURUSD", 0.01, sl_pips=20, tp_pips=30)
 
-// Calculate position size based on risk (2% with 50 pip SL)
-lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 50)
-ticket, err := sugar.BuyMarketWithPips("EURUSD", lotSize, 50, 100)
+# Calculate position size based on risk (2% with 50 pip SL)
+lot_size = await sugar.calculate_position_size("EURUSD", risk_percent=2.0, sl_pips=50)
+ticket = await sugar.buy_market_with_pips("EURUSD", lot_size, sl_pips=50, tp_pips=100)
 ```
 
 ### Place pending order
 
-```go
-// Buy Limit 20 pips below current Ask
-ticket, err := sugar.BuyLimitPips("EURUSD", 0.01, 20, 15, 30)
+```python
+# Buy Limit with absolute price and SL/TP in pips
+ticket = await sugar.buy_limit_with_sltp("EURUSD", 0.01, price=1.0850,
+                                          sl_pips=20, tp_pips=30)
 
-// Buy Stop 20 pips above current Ask
-ticket, err := sugar.BuyStopPips("EURUSD", 0.01, 20, 15, 30)
+# Buy Stop with absolute price
+ticket = await sugar.buy_stop("EURUSD", 0.01, price=1.0950)
 
-// Sell Limit with absolute price
-ticket, err := sugar.SellLimit("EURUSD", 0.01, 1.1050, 1.1070, 1.1030)
+# Sell Limit with absolute price and SL/TP
+ticket = await sugar.sell_limit_with_sltp("EURUSD", 0.01, price=1.1050,
+                                           sl=1.1070, tp=1.1030)
 ```
 
 ### Get open positions
 
-```go
-// Sugar API
-positions, err := sugar.GetOpenPositions()
-fmt.Printf("Open positions: %d\n", len(positions))
-for _, pos := range positions {
-    fmt.Printf("  #%d %s %.2f lot, Profit: %.2f\n",
-        pos.Ticket, pos.Symbol, pos.Volume, pos.Profit)
-}
+```python
+# Sugar API
+positions = await sugar.get_open_positions()
+print(f"Open positions: {len(positions)}")
+for pos in positions:
+    print(f"  #{pos.ticket} {pos.symbol} {pos.volume:.2f} lot, "
+          f"Profit: {pos.profit:.2f}")
 
-// Service API with filters
-positions, err := service.GetOpenedOrders(ctx, "EURUSD", "")
+# Service API with filters
+opened_data = await service.get_opened_orders()
+positions = opened_data.position_infos
 ```
 
 ### Close positions
 
-```go
-// Close specific position
-err := sugar.ClosePosition(ticket)
+```python
+# Close specific position
+await sugar.close_position(ticket)
 
-// Close all positions for symbol
-err := sugar.CloseAllPositions("EURUSD")
+# Close all positions for symbol
+await sugar.close_all_positions("EURUSD")
 
-// Close all positions (all symbols)
-err := sugar.CloseAllPositions("")
+# Close all positions (all symbols)
+await sugar.close_all_positions()
 ```
 
 ### Modify position
 
-```go
-// Modify SL/TP
-err := sugar.ModifyPosition(ticket, 1.0850, 1.0950)
+```python
+# Modify SL/TP
+await sugar.modify_position_sltp(ticket, sl=1.0850, tp=1.0950)
 
-// Set trailing stop
-err := sugar.SetTrailingStop(ticket, 20)  // 20 pips trailing
+# Modify only Stop Loss
+await sugar.modify_position_sl(ticket, sl=1.0850)
+
+# Modify only Take Profit
+await sugar.modify_position_tp(ticket, tp=1.0950)
 ```
 
 ### Calculate position size
 
-```go
-// Calculate position size based on risk
-volume, err := sugar.CalculatePositionSize("EURUSD", 2.0, 20)
-fmt.Printf("Volume for 2%% risk with 20 pip SL: %.2f lot\n", volume)
+```python
+# Calculate position size based on risk
+volume = await sugar.calculate_position_size("EURUSD", risk_percent=2.0, sl_pips=20)
+print(f"Volume for 2% risk with 20 pip SL: {volume:.2f} lot")
 
-// Then use calculated volume
-ticket, err := sugar.BuyMarket("EURUSD", volume)
+# Then use calculated volume
+ticket = await sugar.buy_market("EURUSD", volume)
 ```
 
 ## Return Codes (RetCodes)
 
-**Always check RetCode after trading operations!**
+**Always check returned_code after trading operations!**
 
-```go
-result, err := service.BuyMarket(ctx, "EURUSD", 0.01, 0, 0, 0)
-if err != nil {
-    fmt.Printf("gRPC error: %v\n", err)
-    return
-}
+```python
+from MetaRpcMT5.mt5_term_api_trading_helper_pb2 import OrderSendRequest
+import MetaRpcMT5.mt5_term_api_trading_helper_pb2 as pb_trading
 
-// Check RetCode
-if result.ReturnedCode == 10009 {  // Success for market orders
-    fmt.Printf("✅ Order opened: #%d\n", result.Order)
-} else if result.ReturnedCode == 10008 {  // Success for pending orders
-    fmt.Printf("✅ Pending order placed: #%d\n", result.Order)
-} else {
-    fmt.Printf("❌ Order failed: %s (code %d)\n",
-        result.ReturnedCodeDescription, result.ReturnedCode)
-}
+# Build request
+request = OrderSendRequest(
+    symbol="EURUSD",
+    volume=0.01,
+    operation=pb_trading.TMT5_ORDER_TYPE_BUY,
+    price=0.0,  # Market order (price will be filled by broker)
+    # ... other fields
+)
+
+result = await service.place_order(request)
+
+# Check RetCode
+if result.returned_code == 10009:  # Success for market orders
+    print(f"[OK] Order opened: #{result.order}")
+elif result.returned_code == 10008:  # Success for pending orders
+    print(f"[OK] Pending order placed: #{result.order}")
+else:
+    print(f"[X] Order failed: {result.comment} (code {result.returned_code})")
 ```
 
 **Common RetCodes:**
@@ -247,50 +253,64 @@ if result.ReturnedCode == 10009 {  // Success for market orders
 
 Full list: [RETURN_CODES_REFERENCE.md](RETURN_CODES_REFERENCE.md)
 
-## Error handling
+## ℹ️ Error handling
 
-GoMT5 has two types of errors you must check:
+PyMT5 uses Python exceptions for error handling:
 
-### 1. gRPC transport errors
-```go
-result, err := service.BuyMarket(ctx, "EURUSD", 0.01, 0, 0, 0)
-if err != nil {
-    fmt.Printf("Connection or network error: %v\n", err)
+### 1. Connection/Network errors
+
+```python
+try:
+    result = await service.place_order(request)
+except Exception as e:
+    print(f"Connection or network error: {e}")
     return
-}
 ```
 
 ### 2. Trading operation errors (RetCode)
 
-```go
-if result.ReturnedCode != 10009 {
-    fmt.Printf("Trade rejected: %s\n", result.ReturnedCodeDescription)
-}
+```python
+result = await service.place_order(request)
+if result.returned_code != 10009:
+    print(f"Trade rejected: {result.comment}")
 ```
 
 **Always check BOTH!**
 
-## Documentation
+### Recommended pattern:
 
-- [MT5Account Master Overview](../MT5Account/MT5Account.Master.Overview.md) - Complete API reference (40+ methods)
-- [MT5Service API Overview](../MT5Service/MT5Service.Overview.md) - Mid-level wrapper (50+ methods)
-- [MT5Sugar API Overview](../MT5Sugar/MT5Sugar.API_Overview.md) - High-level Sugar API (62 methods)
-- [Protobuf Inspector Guide](PROTOBUF_INSPECTOR_GUIDE.md) - Interactive type explorer
+```python
+try:
+    result = await service.place_order(request)
 
-## Configuration
+    if result.returned_code == 10009:
+        print(f"[OK] Success: Order #{result.order}")
+    else:
+        print(f"[X] Failed: {result.comment} (code: {result.returned_code})")
 
-### Method 1: config.json (Recommended)
+except Exception as e:
+    print(f"[X] Error: {e}")
+```
 
-Create `examples/demos/config/config.json`:
+## 📝 Documentation
+
+- [MT5Account Master Overview](../MT5Account/MT5Account.Master.Overview.md) - Complete API reference (40 methods)
+- [MT5Service Overview](../MT5Service/MT5Service.Overview.md) - Mid-level wrapper (36 methods)
+- [MT5Sugar Master Overview](../MT5Sugar/MT5Sugar.Master.Overview.md) - High-level Sugar API (62+ methods)
+- [ENUMS Usage Reference](ENUMS_USAGE_REFERENCE.md) - All ENUMs in one place
+
+## 🔑 Configuration
+
+### Method 1: settings.json (Recommended)
+
+Create `examples/0_common/settings.json`:
 
 ```json
 {
   "user": 591129415,
   "password": "YourPassword",
-  "host": "mt5.mrpc.pro",
-  "port": 443,
-  "grpc_server": "mt5.mrpc.pro:443",
-  "mt_cluster": "FxPro-MT5 Demo",
+  "grpc_server": "127.0.0.1:9999",
+  "mt_cluster": "MetaQuotes-Demo",
   "test_symbol": "EURUSD",
   "test_volume": 0.01
 }
@@ -302,127 +322,140 @@ Create `examples/demos/config/config.json`:
 # Linux/Mac
 export MT5_USER=591129415
 export MT5_PASSWORD="YourPassword"
-export MT5_HOST="mt5.mrpc.pro"
-export MT5_CLUSTER="FxPro-MT5 Demo"
+export MT5_GRPC_SERVER="127.0.0.1:9999"
+export MT5_CLUSTER="MetaQuotes-Demo"
 
 # Windows PowerShell
 $env:MT5_USER="591129415"
 $env:MT5_PASSWORD="YourPassword"
-$env:MT5_HOST="mt5.mrpc.pro"
+$env:MT5_GRPC_SERVER="127.0.0.1:9999"
 ```
 
-See [config.go](../../examples/demos/config/config.go) for details.
+See [demo_helpers.py](../../examples/0_common/demo_helpers.py) for details.
 
 ## Tips
 
 1. **Start simple** - Uncomment one example at a time
-2. **Use Sugar API** - Methods like `BuyMarketWithPips()` and `CalculatePositionSize()` are easier than low-level
 
-3. **Check RetCode** - Always validate trading operations (10009 = success)
+2. **Use Sugar API** - Methods like `buy_market_with_pips()` and 
+`calculate_position_size()` are easier than low-level
+
+3. **Check returned_code** - Always validate trading operations (10009 = success)
+
 4. **Test on demo** - Make sure you're using demo account first!
+
 5. **Read documentation** - [RETURN_CODES_REFERENCE.md](RETURN_CODES_REFERENCE.md) explains all error codes
 
-6. **Use context** - The `ctx` variable is already configured with timeout
-7. **Explore types** - Use `go run main.go inspect` to explore protobuf types
-8. **Check examples** - See `examples/demos/helpers/` for 17+ working examples
+6. **Use async/await** - All methods are asynchronous
+
+7. **Type hints** - Use IDE autocomplete for better development experience
+
+8. **Check examples** - See `examples/` folder for 15+ working examples
 
 ## Common mistakes
 
-❌ **Forgot to check err**
-```go
-ticket, _ := sugar.BuyMarket("EURUSD", 0.01)  // DON'T ignore errors!
+[X] **Forgot to use await**
+```python
+balance = sugar.get_balance()  # DON'T forget await!
 ```
 
-✅ **Always check errors**
-```go
-ticket, err := sugar.BuyMarket("EURUSD", 0.01)
-if err != nil {
-    fmt.Printf("Error: %v\n", err)
-    return
-}
+[+] **Always use await**
+```python
+balance = await sugar.get_balance()
 ```
 
-❌ **Not checking RetCode**
-```go
-result, _ := service.BuyMarket(ctx, "EURUSD", 0.01, 0, 0, 0)
-// Assuming it's success!
+[X] **Not checking exceptions**
+```python
+ticket = await sugar.buy_market("EURUSD", 0.01)  # No try/except!
 ```
 
-✅ **Check RetCode for trading operations**
-```go
-result, err := service.BuyMarket(ctx, "EURUSD", 0.01, 0, 0, 0)
-if err != nil {
-    fmt.Printf("Error: %v\n", err)
+[+] **Always handle exceptions**
+```python
+try:
+    ticket = await sugar.buy_market("EURUSD", 0.01)
+    print(f"Order opened: #{ticket}")
+except Exception as e:
+    print(f"Error: {e}")
+```
+
+[X] **Not checking returned_code**
+```python
+result = await service.place_order(request)
+# Assuming it's success!
+```
+
+[+] **Check returned_code for trading operations**
+```python
+result = await service.place_order(request)
+if result.returned_code != 10009:
+    print(f"Trade failed: {result.comment}")
     return
-}
-if result.ReturnedCode != 10009 {
-    fmt.Printf("Trade failed: %s\n", result.ReturnedCodeDescription)
-    return
-}
 ```
 
 ## Getting help
 
-- **Protobuf types**: Run `go run main.go inspect` to explore API types
+- **Protobuf types**: Check `package/MetaRpcMT5/` folder for all protobuf definitions
 - **Error codes**: See [RETURN_CODES_REFERENCE.md](RETURN_CODES_REFERENCE.md)
-- **Examples**: Check `examples/demos/helpers/` for working code
+- **Examples**: Check `examples/` folder for working code
 - **API documentation**: See docs folder for complete reference
 
 ## Example: Complete trading strategy
 
 Here's a complete example demonstrating proper error handling:
 
-```go
-func UserCodeMain() error {
-    // Setup
-    ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-    defer cancel()
+```python
+async def run_user_code():
+    """Your sandbox function - write your code here!"""
 
-    cfg, err := config.LoadConfig()
-    if err != nil {
-        return fmt.Errorf("config error: %w", err)
-    }
+    try:
+        # Load configuration
+        config = load_settings()
+    except Exception as e:
+        print(f"Config error: {e}")
+        return
 
-    account, err := mt5.NewMT5Account(ctx, cfg.GrpcServer)
-    if err != nil {
-        return fmt.Errorf("connection error: %w", err)
-    }
+    try:
+        # Connect to MT5
+        account = await create_and_connect_mt5(config)
+    except Exception as e:
+        print(f"Connection error: {e}")
+        return
 
-    err = account.ConnectEx(ctx, &pb.ConnectExRequest{
-        Uuid:      cfg.User,
-        Password:  cfg.Password,
-        MtCluster: cfg.Cluster,
-    })
-    if err != nil {
-        return fmt.Errorf("login error: %w", err)
-    }
+    # Create service and sugar wrappers
+    service = MT5Service(account)
+    sugar = MT5Sugar(service, default_symbol=config.get('test_symbol', 'EURUSD'))
 
-    service := mt5service.NewMT5Service(account)
-    sugar := mt5sugar.NewMT5Sugar(service)
+    # Get account information
+    try:
+        balance = await sugar.get_balance()
+        print(f"Balance: {balance:.2f}")
+    except Exception as e:
+        print(f"Balance error: {e}")
+        return
 
-    // Get account information
-    balance, err := sugar.GetBalance()
-    if err != nil {
-        return fmt.Errorf("balance error: %w", err)
-    }
-    fmt.Printf("Balance: %.2f\n", balance)
+    # Calculate position size based on risk (1% with 50 pip SL)
+    try:
+        volume = await sugar.calculate_position_size("EURUSD",
+                                                      risk_percent=1.0,
+                                                      sl_pips=50)
+    except Exception as e:
+        print(f"Position size error: {e}")
+        return
 
-    // Calculate position size based on risk (1% with 50 pip SL)
-    volume, err := sugar.CalculatePositionSize("EURUSD", 1.0, 50)
-    if err != nil {
-        return fmt.Errorf("position size error: %w", err)
-    }
+    # Open position with calculated volume
+    try:
+        ticket = await sugar.buy_market_with_pips("EURUSD", volume,
+                                                   sl_pips=50, tp_pips=100)
+        print(f"[OK] Position opened: #{ticket} with {volume:.2f} lot")
+    except Exception as e:
+        print(f"Order error: {e}")
+        return
 
-    // Open position with calculated volume
-    ticket, err := sugar.BuyMarketWithPips("EURUSD", volume, 50, 100)
-    if err != nil {
-        return fmt.Errorf("order error: %w", err)
-    }
+    print("Strategy execution completed!")
 
-    fmt.Printf("✅ Position opened: #%d with %.2f lot\n", ticket, volume)
 
-    return nil
-}
+if __name__ == "__main__":
+    asyncio.run(run_user_code())
 ```
 
-**Happy trading! 🚀**
+**Happy trading!**

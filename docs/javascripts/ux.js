@@ -1,6 +1,6 @@
-// GoMT5 — Enhanced UX
+// PyMT5 — Enhanced UX
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('GoMT5 Documentation loaded');
+  console.log('PyMT5 Documentation loaded');
 
   // Initialize Progress Tracker
   initProgressTracker();
@@ -13,9 +13,9 @@ document.addEventListener('DOMContentLoaded', function() {
 // PROGRESS TRACKER - Track documentation reading progress
 // ============================================================================
 
-const PROGRESS_STORAGE_KEY = 'gomt5_docs_progress';
+const PROGRESS_STORAGE_KEY = 'pymt5_docs_progress';
 
-// Documentation structure for GoMT5 - ALL pages tracked
+// Documentation structure for PyMT5 - ALL pages tracked
 const DOC_STRUCTURE = {
   'guides': {
     name: '📘 Guides',
@@ -36,174 +36,155 @@ const DOC_STRUCTURE = {
     name: '📦 MT5Account',
     pages: [
       'MT5Account/MT5Account.Master.Overview',
-      'MT5Account/1. Account_information/Account_Information.Overview',
-      'MT5Account/1. Account_information/AccountInfoDouble',
-      'MT5Account/1. Account_information/AccountInfoInteger',
-      'MT5Account/1. Account_information/AccountInfoString',
-      'MT5Account/1. Account_information/AccountSummary',
-      'MT5Account/2. Symbol_information/Symbol_Information.Overview',
-      'MT5Account/2. Symbol_information/SymbolExist',
-      'MT5Account/2. Symbol_information/SymbolInfoDouble',
-      'MT5Account/2. Symbol_information/SymbolInfoInteger',
-      'MT5Account/2. Symbol_information/SymbolInfoString',
-      'MT5Account/2. Symbol_information/SymbolInfoTick',
-      'MT5Account/2. Symbol_information/SymbolIsSynchronized',
-      'MT5Account/2. Symbol_information/SymbolName',
-      'MT5Account/2. Symbol_information/SymbolSelect',
-      'MT5Account/2. Symbol_information/SymbolsTotal',
-      'MT5Account/3. Position_Orders_Information/Position_Orders_Information.Overview',
-      'MT5Account/3. Position_Orders_Information/OpenedOrders',
-      'MT5Account/3. Position_Orders_Information/OpenedOrdersTickets',
-      'MT5Account/3. Position_Orders_Information/OrderHistory',
-      'MT5Account/3. Position_Orders_Information/PositionsHistory',
-      'MT5Account/3. Position_Orders_Information/PositionsTotal',
-      'MT5Account/4. Trading_Operations/Trading_Operations.Overview',
-      'MT5Account/4. Trading_Operations/OrderCalcMargin',
-      'MT5Account/4. Trading_Operations/OrderCalcProfit',
-      'MT5Account/4. Trading_Operations/OrderCheck',
-      'MT5Account/4. Trading_Operations/OrderClose',
-      'MT5Account/4. Trading_Operations/OrderModify',
-      'MT5Account/4. Trading_Operations/OrderSend',
-      'MT5Account/5. Market_Depth(DOM)/Market_Depth.Overview',
-      'MT5Account/5. Market_Depth(DOM)/MarketBookAdd',
-      'MT5Account/5. Market_Depth(DOM)/MarketBookGet',
-      'MT5Account/5. Market_Depth(DOM)/MarketBookRelease',
-      'MT5Account/6. Additional_Methods/Additional_Methods.Overview',
-      'MT5Account/6. Additional_Methods/SymbolInfoMarginRate',
-      'MT5Account/6. Additional_Methods/SymbolInfoSessionQuote',
-      'MT5Account/6. Additional_Methods/SymbolInfoSessionTrade',
-      'MT5Account/6. Additional_Methods/SymbolParamsMany',
-      'MT5Account/6. Additional_Methods/TickValueWithSize',
-      'MT5Account/7. Streaming_Methods/Streaming_Methods.Overview',
-      'MT5Account/7. Streaming_Methods/OnPositionProfit',
-      'MT5Account/7. Streaming_Methods/OnPositionsAndPendingOrdersTickets',
-      'MT5Account/7. Streaming_Methods/OnSymbolTick',
-      'MT5Account/7. Streaming_Methods/OnTrade',
-      'MT5Account/7. Streaming_Methods/OnTradeTransaction',
-      'MT5Account/HOW_IT_WORK/1. Account_information_HOW/AccountInfoDouble_HOW',
-      'MT5Account/HOW_IT_WORK/1. Account_information_HOW/AccountInfoInteger_HOW',
-      'MT5Account/HOW_IT_WORK/1. Account_information_HOW/AccountInfoString_HOW',
-      'MT5Account/HOW_IT_WORK/1. Account_information_HOW/AccountSummary_HOW',
-      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/SymbolExist_HOW',
-      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/SymbolInfoDouble_HOW',
-      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/SymbolInfoInteger_HOW',
-      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/SymbolInfoString_HOW',
-      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/SymbolInfoTick_HOW',
-      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/SymbolIsSynchronized_HOW',
-      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/SymbolName_HOW',
-      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/SymbolSelect_HOW',
-      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/SymbolsTotal_HOW',
-      'MT5Account/HOW_IT_WORK/3. Position_Orders_Information_HOW/OpenedOrders_HOW',
-      'MT5Account/HOW_IT_WORK/3. Position_Orders_Information_HOW/OpenedOrdersTickets_HOW',
-      'MT5Account/HOW_IT_WORK/3. Position_Orders_Information_HOW/OrderHistory_HOW',
-      'MT5Account/HOW_IT_WORK/3. Position_Orders_Information_HOW/PositionsHistory_HOW',
-      'MT5Account/HOW_IT_WORK/3. Position_Orders_Information_HOW/PositionsTotal_HOW',
-      'MT5Account/HOW_IT_WORK/4. Trading_Operations_HOW/OrderCalcMargin_HOW',
-      'MT5Account/HOW_IT_WORK/4. Trading_Operations_HOW/OrderCalcProfit_HOW',
-      'MT5Account/HOW_IT_WORK/4. Trading_Operations_HOW/OrderCheck_HOW',
-      'MT5Account/HOW_IT_WORK/4. Trading_Operations_HOW/OrderClose_HOW',
-      'MT5Account/HOW_IT_WORK/4. Trading_Operations_HOW/OrderModify_HOW',
-      'MT5Account/HOW_IT_WORK/4. Trading_Operations_HOW/OrderSend_HOW',
-      'MT5Account/HOW_IT_WORK/5. Market_Depth(DOM)_HOW/MarketBookAdd_HOW',
-      'MT5Account/HOW_IT_WORK/5. Market_Depth(DOM)_HOW/MarketBookGet_HOW',
-      'MT5Account/HOW_IT_WORK/5. Market_Depth(DOM)_HOW/MarketBookRelease_HOW',
-      'MT5Account/HOW_IT_WORK/6. Additional_Methods_HOW/SymbolInfoMarginRate_HOW',
-      'MT5Account/HOW_IT_WORK/6. Additional_Methods_HOW/SymbolInfoSessionQuote_HOW',
-      'MT5Account/HOW_IT_WORK/6. Additional_Methods_HOW/SymbolInfoSessionTrade_HOW',
-      'MT5Account/HOW_IT_WORK/6. Additional_Methods_HOW/SymbolParamsMany_HOW',
-      'MT5Account/HOW_IT_WORK/6. Additional_Methods_HOW/TickValueWithSize_HOW',
-      'MT5Account/HOW_IT_WORK/7. Streaming_Methods_HOW/OnPositionProfit_HOW',
-      'MT5Account/HOW_IT_WORK/7. Streaming_Methods_HOW/OnPositionsAndPendingOrdersTickets_HOW',
-      'MT5Account/HOW_IT_WORK/7. Streaming_Methods_HOW/OnSymbolTick_HOW',
-      'MT5Account/HOW_IT_WORK/7. Streaming_Methods_HOW/OnTrade_HOW',
-      'MT5Account/HOW_IT_WORK/7. Streaming_Methods_HOW/OnTradeTransaction_HOW'
+      'MT5Account/1. Account_Information/Account_Information.Overview',
+      'MT5Account/1. Account_Information/account_info_double',
+      'MT5Account/1. Account_Information/account_info_integer',
+      'MT5Account/1. Account_Information/account_info_string',
+      'MT5Account/1. Account_Information/account_summary',
+      'MT5Account/2. Symbol_Information/Symbol_Information.Overview',
+      'MT5Account/2. Symbol_Information/symbol_exist',
+      'MT5Account/2. Symbol_Information/symbol_info_double',
+      'MT5Account/2. Symbol_Information/symbol_info_integer',
+      'MT5Account/2. Symbol_Information/symbol_info_margin_rate',
+      'MT5Account/2. Symbol_Information/symbol_info_session_quote',
+      'MT5Account/2. Symbol_Information/symbol_info_session_trade',
+      'MT5Account/2. Symbol_Information/symbol_info_string',
+      'MT5Account/2. Symbol_Information/symbol_info_tick',
+      'MT5Account/2. Symbol_Information/symbol_is_synchronized',
+      'MT5Account/2. Symbol_Information/symbol_name',
+      'MT5Account/2. Symbol_Information/symbol_params_many',
+      'MT5Account/2. Symbol_Information/symbol_select',
+      'MT5Account/2. Symbol_Information/symbols_total',
+      'MT5Account/3. Positions_Orders/Positions_Orders.Overview',
+      'MT5Account/3. Positions_Orders/opened_orders',
+      'MT5Account/3. Positions_Orders/opened_orders_tickets',
+      'MT5Account/3. Positions_Orders/order_history',
+      'MT5Account/3. Positions_Orders/positions_history',
+      'MT5Account/3. Positions_Orders/positions_total',
+      'MT5Account/3. Positions_Orders/tick_value_with_size',
+      'MT5Account/4. Market_Depth/Market_Depth.Overview',
+      'MT5Account/4. Market_Depth/market_book_add',
+      'MT5Account/4. Market_Depth/market_book_get',
+      'MT5Account/4. Market_Depth/market_book_release',
+      'MT5Account/5. Trading_Operations/Trading_Operations.Overview',
+      'MT5Account/5. Trading_Operations/order_calc_margin',
+      'MT5Account/5. Trading_Operations/order_calc_profit',
+      'MT5Account/5. Trading_Operations/order_check',
+      'MT5Account/5. Trading_Operations/order_close',
+      'MT5Account/5. Trading_Operations/order_modify',
+      'MT5Account/5. Trading_Operations/order_send',
+      'MT5Account/6. Streaming_Methods/Streaming_Methods.Overview',
+      'MT5Account/6. Streaming_Methods/on_position_profit',
+      'MT5Account/6. Streaming_Methods/on_positions_and_pending_orders_tickets',
+      'MT5Account/6. Streaming_Methods/on_symbol_tick',
+      'MT5Account/6. Streaming_Methods/on_trade',
+      'MT5Account/6. Streaming_Methods/on_trade_transaction',
+      'MT5Account/HOW_IT_WORK/1. Account_information_HOW/account_info_double_HOW',
+      'MT5Account/HOW_IT_WORK/1. Account_information_HOW/account_info_integer_HOW',
+      'MT5Account/HOW_IT_WORK/1. Account_information_HOW/account_info_string_HOW',
+      'MT5Account/HOW_IT_WORK/1. Account_information_HOW/account_summary_HOW',
+      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/symbol_exist_HOW',
+      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/symbol_info_double_HOW',
+      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/symbol_info_integer_HOW',
+      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/symbol_info_margin_rate_HOW',
+      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/symbol_info_session_quote_HOW',
+      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/symbol_info_session_trade_HOW',
+      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/symbol_info_string_HOW',
+      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/symbol_info_tick_HOW',
+      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/symbol_is_synchronized_HOW',
+      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/symbol_name_HOW',
+      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/symbol_params_many_HOW',
+      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/symbol_select_HOW',
+      'MT5Account/HOW_IT_WORK/2. Symbol_information_HOW/symbols_total_HOW',
+      'MT5Account/HOW_IT_WORK/3. Position_Orders_Information_HOW/opened_orders_HOW',
+      'MT5Account/HOW_IT_WORK/3. Position_Orders_Information_HOW/opened_orders_tickets_HOW',
+      'MT5Account/HOW_IT_WORK/3. Position_Orders_Information_HOW/order_history_HOW',
+      'MT5Account/HOW_IT_WORK/3. Position_Orders_Information_HOW/positions_history_HOW',
+      'MT5Account/HOW_IT_WORK/3. Position_Orders_Information_HOW/positions_total_HOW',
+      'MT5Account/HOW_IT_WORK/3. Position_Orders_Information_HOW/tick_value_with_size_HOW',
+      'MT5Account/HOW_IT_WORK/4. Market_Depth(DOM)_HOW/market_book_add_HOW',
+      'MT5Account/HOW_IT_WORK/4. Market_Depth(DOM)_HOW/market_book_get_HOW',
+      'MT5Account/HOW_IT_WORK/4. Market_Depth(DOM)_HOW/market_book_release_HOW',
+      'MT5Account/HOW_IT_WORK/5. Trading_Operations_HOW/order_calc_margin_HOW',
+      'MT5Account/HOW_IT_WORK/5. Trading_Operations_HOW/order_calc_profit_HOW',
+      'MT5Account/HOW_IT_WORK/5. Trading_Operations_HOW/order_check_HOW',
+      'MT5Account/HOW_IT_WORK/5. Trading_Operations_HOW/order_close_HOW',
+      'MT5Account/HOW_IT_WORK/5. Trading_Operations_HOW/order_modify_HOW',
+      'MT5Account/HOW_IT_WORK/5. Trading_Operations_HOW/order_send_HOW',
+      'MT5Account/HOW_IT_WORK/6. Streaming_Methods_HOW/on_position_profit_HOW',
+      'MT5Account/HOW_IT_WORK/6. Streaming_Methods_HOW/on_positions_and_pending_orders_tickets_HOW',
+      'MT5Account/HOW_IT_WORK/6. Streaming_Methods_HOW/on_symbol_tick_HOW',
+      'MT5Account/HOW_IT_WORK/6. Streaming_Methods_HOW/on_trade_HOW',
+      'MT5Account/HOW_IT_WORK/6. Streaming_Methods_HOW/on_trade_transaction_HOW'
     ]
   },
   'mt5service': {
     name: '🔧 MT5Service',
     pages: [
       'MT5Service/MT5Service.Overview',
-      'MT5Service/1. Account_Methods',
-      'MT5Service/2. Symbol_Methods',
-      'MT5Service/3. Position_Orders_Methods',
-      'MT5Service/4. Trading_Methods',
-      'MT5Service/5. MarketDepth_Methods',
+      'MT5Service/1. Account_Information',
+      'MT5Service/2. Symbol_Information',
+      'MT5Service/3. Positions_Orders',
+      'MT5Service/4. Market_Depth',
+      'MT5Service/5. Trading_Operations',
       'MT5Service/6. Streaming_Methods'
     ]
   },
   'mt5sugar': {
     name: '🍬 MT5Sugar',
     pages: [
-      'MT5Sugar/MT5Sugar.API_Overview',
-      'MT5Sugar/1. Connection/IsConnected',
-      'MT5Sugar/1. Connection/Ping',
-      'MT5Sugar/1. Connection/QuickConnect',
-      'MT5Sugar/2. Balance_Margin/GetBalance',
-      'MT5Sugar/2. Balance_Margin/GetEquity',
-      'MT5Sugar/2. Balance_Margin/GetFreeMargin',
-      'MT5Sugar/2. Balance_Margin/GetMargin',
-      'MT5Sugar/2. Balance_Margin/GetMarginLevel',
-      'MT5Sugar/2. Balance_Margin/GetProfit',
-      'MT5Sugar/3. Prices_Quotes/GetAsk',
-      'MT5Sugar/3. Prices_Quotes/GetBid',
-      'MT5Sugar/3. Prices_Quotes/GetPriceInfo',
-      'MT5Sugar/3. Prices_Quotes/GetSpread',
-      'MT5Sugar/3. Prices_Quotes/WaitForPrice',
-      'MT5Sugar/4. Simple_Trading/BuyLimit',
-      'MT5Sugar/4. Simple_Trading/BuyMarket',
-      'MT5Sugar/4. Simple_Trading/BuyStop',
-      'MT5Sugar/4. Simple_Trading/SellLimit',
-      'MT5Sugar/4. Simple_Trading/SellMarket',
-      'MT5Sugar/4. Simple_Trading/SellStop',
-      'MT5Sugar/5. Trading_SLTP/BuyLimitWithSLTP',
-      'MT5Sugar/5. Trading_SLTP/BuyMarketWithSLTP',
-      'MT5Sugar/5. Trading_SLTP/SellLimitWithSLTP',
-      'MT5Sugar/5. Trading_SLTP/SellMarketWithSLTP',
-      'MT5Sugar/6. Position_Management/CloseAllPositions',
-      'MT5Sugar/6. Position_Management/ClosePosition',
-      'MT5Sugar/6. Position_Management/ClosePositionPartial',
-      'MT5Sugar/6. Position_Management/GetOpenPositions',
-      'MT5Sugar/6. Position_Management/GetPositionByTicket',
-      'MT5Sugar/6. Position_Management/GetPositionsBySymbol',
-      'MT5Sugar/6. Position_Management/ModifyPositionSLTP',
-      'MT5Sugar/7. Position_Information/CountOpenPositions',
-      'MT5Sugar/7. Position_Information/HasOpenPosition',
-      'MT5Sugar/8. History_Statistics/GetDailyStats',
-      'MT5Sugar/8. History_Statistics/GetDealsDateRange',
-      'MT5Sugar/8. History_Statistics/GetDealsThisMonth',
-      'MT5Sugar/8. History_Statistics/GetDealsThisWeek',
-      'MT5Sugar/8. History_Statistics/GetDealsToday',
-      'MT5Sugar/8. History_Statistics/GetDealsYesterday',
-      'MT5Sugar/8. History_Statistics/GetProfitThisMonth',
-      'MT5Sugar/8. History_Statistics/GetProfitThisWeek',
-      'MT5Sugar/8. History_Statistics/GetProfitToday',
-      'MT5Sugar/9. Symbol_Information/GetAllSymbols',
-      'MT5Sugar/9. Symbol_Information/GetMinStopLevel',
-      'MT5Sugar/9. Symbol_Information/GetSymbolDigits',
-      'MT5Sugar/9. Symbol_Information/GetSymbolInfo',
-      'MT5Sugar/9. Symbol_Information/IsSymbolAvailable',
-      'MT5Sugar/10. Risk_Management/CalculatePositionSize',
-      'MT5Sugar/10. Risk_Management/CalculateRequiredMargin',
-      'MT5Sugar/10. Risk_Management/CanOpenPosition',
-      'MT5Sugar/10. Risk_Management/GetMaxLotSize',
-      'MT5Sugar/11. Trading_Helpers/BuyMarketWithPips',
-      'MT5Sugar/11. Trading_Helpers/CalculateSLTP',
-      'MT5Sugar/11. Trading_Helpers/SellMarketWithPips',
-      'MT5Sugar/12. Account_Information/AccountInfo',
-      'MT5Sugar/12. Account_Information/DailyStats',
-      'MT5Sugar/12. Account_Information/GetAccountInfo'
-    ]
-  },
-  'orchestrators': {
-    name: '🎯 Orchestrators',
-    pages: [
-      'Orchestrators/Strategies.Master.Overview',
-      'Orchestrators/11_Trailing_stop',
-      'Orchestrators/12_Position_scaler',
-      'Orchestrators/13_Grid_trader',
-      'Orchestrators/14_Risk_manager',
-      'Orchestrators/15_Portfolio_rebalancer',
-      'Orchestrators/16_AdaptiveOrchestratorPreset'
+      'MT5Sugar/MT5Sugar.Master.Overview',
+      'MT5Sugar/1. Connection/is_connected',
+      'MT5Sugar/1. Connection/ping',
+      'MT5Sugar/1. Connection/quick_connect',
+      'MT5Sugar/2. Account_Properties/balance_property',
+      'MT5Sugar/2. Account_Properties/get_account_info',
+      'MT5Sugar/2. Account_Properties/get_balance',
+      'MT5Sugar/2. Account_Properties/get_equity',
+      'MT5Sugar/2. Account_Properties/get_floating_profit',
+      'MT5Sugar/2. Account_Properties/get_free_margin',
+      'MT5Sugar/2. Account_Properties/get_margin',
+      'MT5Sugar/2. Account_Properties/get_margin_level',
+      'MT5Sugar/3. Prices_Quotes/get_ask',
+      'MT5Sugar/3. Prices_Quotes/get_bid',
+      'MT5Sugar/3. Prices_Quotes/get_price_info',
+      'MT5Sugar/3. Prices_Quotes/get_spread',
+      'MT5Sugar/3. Prices_Quotes/wait_for_price',
+      'MT5Sugar/4. Simple_Trading/buy_limit',
+      'MT5Sugar/4. Simple_Trading/buy_market',
+      'MT5Sugar/4. Simple_Trading/buy_stop',
+      'MT5Sugar/4. Simple_Trading/sell_limit',
+      'MT5Sugar/4. Simple_Trading/sell_market',
+      'MT5Sugar/4. Simple_Trading/sell_stop',
+      'MT5Sugar/5. Trading_With_SLTP/buy_limit_with_sltp',
+      'MT5Sugar/5. Trading_With_SLTP/buy_market_with_sltp',
+      'MT5Sugar/5. Trading_With_SLTP/sell_limit_with_sltp',
+      'MT5Sugar/5. Trading_With_SLTP/sell_market_with_sltp',
+      'MT5Sugar/6. Position_Management/close_all_positions',
+      'MT5Sugar/6. Position_Management/close_position',
+      'MT5Sugar/6. Position_Management/close_position_partial',
+      'MT5Sugar/6. Position_Management/modify_position_sl',
+      'MT5Sugar/6. Position_Management/modify_position_sltp',
+      'MT5Sugar/6. Position_Management/modify_position_tp',
+      'MT5Sugar/7. Position_Information/count_open_positions',
+      'MT5Sugar/7. Position_Information/get_open_positions',
+      'MT5Sugar/7. Position_Information/get_position_by_ticket',
+      'MT5Sugar/7. Position_Information/get_positions_by_symbol',
+      'MT5Sugar/7. Position_Information/get_profit_by_symbol',
+      'MT5Sugar/7. Position_Information/get_total_profit',
+      'MT5Sugar/7. Position_Information/has_open_position',
+      'MT5Sugar/8. History_Statistics/get_daily_stats',
+      'MT5Sugar/8. History_Statistics/get_deals',
+      'MT5Sugar/8. History_Statistics/get_profit',
+      'MT5Sugar/9. Symbol_Information/get_all_symbols',
+      'MT5Sugar/9. Symbol_Information/get_min_stop_level',
+      'MT5Sugar/9. Symbol_Information/get_symbol_digits',
+      'MT5Sugar/9. Symbol_Information/get_symbol_info',
+      'MT5Sugar/9. Symbol_Information/is_symbol_available',
+      'MT5Sugar/10. Risk_Management/calculate_position_size',
+      'MT5Sugar/10. Risk_Management/calculate_required_margin',
+      'MT5Sugar/10. Risk_Management/can_open_position',
+      'MT5Sugar/10. Risk_Management/get_max_lot_size'
     ]
   },
   'api_reference': {
@@ -308,8 +289,8 @@ function getCurrentPagePath() {
   path = path.replace(/\.html$/, '');
 
   // Try multiple patterns to extract the page path
-  // Pattern 1: GitHub Pages - /GoMT5/path/to/page/
-  let match = path.match(/\/GoMT5\/(.+?)(?:\/)?$/);
+  // Pattern 1: GitHub Pages - /PyMT5/path/to/page/
+  let match = path.match(/\/PyMT5\/(.+?)(?:\/)?$/);
   if (match && match[1] !== '') {
     // Decode URL encoding (e.g., %20 -> space)
     return decodeURIComponent(match[1].replace(/\/$/, ''));
@@ -323,7 +304,7 @@ function getCurrentPagePath() {
   }
 
   // Pattern 3: Index page
-  if (path === '/' || path === '/GoMT5/' || path === '/index' || path === '/GoMT5/index') {
+  if (path === '/' || path === '/PyMT5/' || path === '/index' || path === '/PyMT5/index') {
     return 'index';
   }
 
@@ -408,7 +389,7 @@ function createProgressBar() {
       <div class="progress-panel-content">
         <div class="progress-overall-section">
           <div class="progress-stats">
-            <span class="progress-count" id="overall-progress-text">0 / 164</span>
+            <span class="progress-count" id="overall-progress-text">0 / 0</span>
             <span class="progress-percentage" id="overall-progress-pct">0%</span>
           </div>
           <div class="progress-bar-wrapper">
@@ -695,7 +676,7 @@ function createContactPanel() {
       <div class="contact-panel-content">
         <div class="contact-intro">
           <h4>Need Help?</h4>
-          <p>Have questions about GoMT5 SDK? Reach out to us through your preferred messenger!</p>
+          <p>Have questions about PyMT5 SDK? Reach out to us through your preferred messenger!</p>
         </div>
 
         <div class="contact-buttons">
