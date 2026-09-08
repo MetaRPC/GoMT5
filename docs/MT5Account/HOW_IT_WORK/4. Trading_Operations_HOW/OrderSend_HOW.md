@@ -159,7 +159,7 @@ if mt5.IsRetCodeSuccess(sendData.ReturnedCode) {
 3. **Error Messages**: `mt5.GetRetCodeMessage()` provides human-readable descriptions for all 40+ return codes
 4. **Type Safety**: The helper function is defined in `package/Helpers/errors.go` with proper type checking
 
-Code `10009` (`TRADE_RETCODE_DONE`) means the order was executed successfully and the position is open. The helper functions are defined in [errors.go](../../../package/Helpers/errors.go) and provide a cleaner, more maintainable way to validate trade operations.
+Code `10009` (`TRADE_RETCODE_DONE`) means the order was executed successfully and the position is open. The helper functions are defined in [errors.go](#) and provide a cleaner, more maintainable way to validate trade operations.
 
 ---
 

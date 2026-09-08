@@ -303,7 +303,7 @@ Every method follows the same shape:
 
 **Location:** `examples/mt5/MT5Service.go`
 
-**Documentation:** [MT5Service.Overview.md](../MT5Service/MT5Service.Overview.md) *(if exists)*
+**Documentation:** [MT5Service.Overview.md](../API_Reference/MT5Service.md) *(if exists)*
 
 ---
 
@@ -325,7 +325,7 @@ Every method follows the same shape:
 
 **Location:** `examples/mt5/MT5Sugar.go`
 
-**Documentation:** [MT5Sugar.API_Overview.md](../MT5Sugar/MT5Sugar.API_Overview.md)
+**Documentation:** [MT5Sugar.API_Overview.md](../API_Reference/MT5Sugar.md)
 
 ---
 
@@ -379,7 +379,7 @@ Every method follows the same shape:
 
 **Goal:** Rapid strategy development with production-ready convenience methods.
 
-**Documentation:** [MT5Sugar.API_Overview.md](../MT5Sugar/MT5Sugar.API_Overview.md)
+**Documentation:** [MT5Sugar.API_Overview.md](../API_Reference/MT5Sugar.md)
 
 ---
 
