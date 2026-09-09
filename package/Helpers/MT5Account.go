@@ -92,7 +92,9 @@ import (
 	"net"
 	"strings"
 
-	pb "github.com/MetaRPC/GoMT5/package"
+	pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
+
+	mt5errors "github.com/MetaRPC/GoMT5/examples/errors"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -127,7 +129,6 @@ type MT5Account struct {
 	TradeFunctionsClient     pb.TradeFunctionsClient
 	HealthClient             pb.HealthClient
 	Id                       uuid.UUID
-	ApiKey                   string
 }
 
 type mrpcError interface {
@@ -215,44 +216,10 @@ func (a *MT5Account) isConnected() bool {
 
 // getHeaders returns metadata headers with session ID for gRPC calls.
 func (a *MT5Account) getHeaders() metadata.MD {
-	pairs := []string{}
-	if a.Id != uuid.Nil {
-		pairs = append(pairs, "id", a.Id.String())
-	}
-	if a.ApiKey != "" {
-		pairs = append(pairs, "apikey", a.ApiKey)
-	}
-	if len(pairs) == 0 {
+	if !a.isConnected() {
 		return nil
 	}
-	return metadata.Pairs(pairs...)
-}
-
-// GetId retrieves or generates the deterministic terminal instance GUID using GetId.
-func (a *MT5Account) GetId(ctx context.Context, user, password string) (string, error) {
-	req := &pb.GetIdRequest{
-		User:     user,
-		Password: password,
-	}
-	md := a.getHeaders()
-	outCtx := ctx
-	if md != nil {
-		outCtx = metadata.NewOutgoingContext(ctx, md)
-	}
-	res, err := a.ConnectionClient.GetId(outCtx, req)
-	if err != nil {
-		return "", err
-	}
-	if res.GetError() != nil && res.GetError().GetErrorMessage() != "" {
-		return "", fmt.Errorf("GetId error: %s", res.GetError().GetErrorMessage())
-	}
-	if res.GetData() != nil && res.GetData().GetId() != "" {
-		if parsed, parseErr := uuid.Parse(res.GetData().GetId()); parseErr == nil {
-			a.Id = parsed
-		}
-		return res.GetData().GetId(), nil
-	}
-	return "", fmt.Errorf("empty ID in response")
+	return metadata.Pairs("id", a.Id.String())
 }
 
 // Close closes the gRPC connection and cleans up resources.
@@ -360,7 +327,7 @@ func ExecuteWithReconnect[T any](
 			}
 			// Convert mrpcError to *pb.Error and wrap in ApiError
 			if pbErr, ok := apiErr.(*pb.Error); ok {
-				return zeroT, NewApiError(pbErr)
+				return zeroT, mt5errors.NewApiError(pbErr)
 			}
 			return zeroT, fmt.Errorf("API error (code=%s): unknown error type", code)
 		}
@@ -460,7 +427,7 @@ func ExecuteStreamWithReconnect[TRequest any, TReply any, TData any](
 					}
 					// Convert mrpcError to *pb.Error and wrap in ApiError
 					if pbErr, ok := apiErr.(*pb.Error); ok {
-						errCh <- NewApiError(pbErr)
+						errCh <- mt5errors.NewApiError(pbErr)
 					} else {
 						errCh <- fmt.Errorf("API error: unknown error type")
 					}
