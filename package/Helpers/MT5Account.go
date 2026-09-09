@@ -82,15 +82,17 @@ UTILITIES:
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"math/rand"
-	"time"
 	"net"
+	"os"
 	"strings"
+	"time"
 
 	pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
 
@@ -135,12 +137,43 @@ type mrpcError interface {
 	GetErrorCode() string
 }
 
+// ComputeDeterministicTerminalId computes a stable deterministic UUID based on credentials.
+// Matches .NET Guid(byte[16]) little-endian byte ordering.
+func ComputeDeterministicTerminalId(user uint64, password string) uuid.UUID {
+	hash := sha256.Sum256([]byte(fmt.Sprintf("%d:%s", user, password)))
+	b := hash[:16]
+	var leBytes [16]byte
+	leBytes[0] = b[3]
+	leBytes[1] = b[2]
+	leBytes[2] = b[1]
+	leBytes[3] = b[0]
+	leBytes[4] = b[5]
+	leBytes[5] = b[4]
+	leBytes[6] = b[7]
+	leBytes[7] = b[6]
+	copy(leBytes[8:], b[8:16])
+	id, _ := uuid.FromBytes(leBytes[:])
+	return id
+}
+
 // NewMT5Account creates a new MT5Account instance with gRPC connection.
 // Default grpcServer is "mt5.mrpc.pro:443" if empty string is provided.
+// If id is uuid.Nil, it is deterministically computed from user and password.
 // The connection is established with TLS, keepalive, and automatic reconnect configured.
-func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID) (*MT5Account, error) {
+func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID, apiKey ...string) (*MT5Account, error) {
 	if grpcServer == "" {
 		grpcServer = "mt5.mrpc.pro:443"
+	}
+
+	if id == uuid.Nil {
+		id = ComputeDeterministicTerminalId(user, password)
+	}
+
+	key := ""
+	if len(apiKey) > 0 && apiKey[0] != "" {
+		key = apiKey[0]
+	} else {
+		key = os.Getenv("MRPC_API_KEY")
 	}
 
 	host := grpcServer
@@ -204,9 +237,15 @@ func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID
 		TradeFunctionsClient:     pb.NewTradeFunctionsClient(conn),
 		HealthClient:             pb.NewHealthClient(conn),
 		Id:                       id,
+		ApiKey:                   key,
 		Port:                     443,
 		ConnectTimeout:           30,
 	}, nil
+}
+
+// NewMT5AccountWithApiKey creates a new MT5Account instance using credentials and API key.
+func NewMT5AccountWithApiKey(user uint64, password string, grpcServer string, apiKey string) (*MT5Account, error) {
+	return NewMT5Account(user, password, grpcServer, uuid.Nil, apiKey)
 }
 
 // isConnected checks if the account has an active gRPC connection.

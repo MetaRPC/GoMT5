@@ -13,23 +13,7 @@ To connect to MetaRPC endpoints (`mt5.mrpc.pro:443`), obtain your API key:
 
 ---
 
-
----
-
-## Step 1: Generate Account ID (`GetId`)
-
-> ⚠️ **Prerequisite**: You must generate your deterministic account ID with `GetId` **firstly** before connecting or streaming.
-
-MetaRPC endpoints route terminal calls using a deterministic GUID (`id`) derived from your account login number and password:
-
-```bash
-curl -X GET "https://mt5.mrpc.pro/GetId?user=YOUR_LOGIN&password=YOUR_PASSWORD" \
-     -H "APIKey: YOUR_API_KEY"
-```
-
-Save the resulting `data.id` token. This token is passed as the `id` parameter / header in Step 2.
-
-## Step 2: Create Your Project
+## Step 1: Create Your Project
 
 Create a new directory for your trading bot:
 
@@ -46,7 +30,7 @@ go get github.com/MetaRPC/GoMT5
 
 ---
 
-## Step 3: Write Your Trading Code
+## Step 2: Write Your Trading Code
 
 Create your main application file and paste the following snippet:
 
@@ -58,7 +42,8 @@ import (
     mt "github.com/MetaRPC/GoMT5"
 )
 
-client, err := mt.NewMT5Account(user, password, grpcServer)
+// Account ID generation (GetId) and authentication are handled automatically
+client, err := mt.NewMT5AccountWithApiKey(user, password, grpcServer, apiKey)
 ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 defer cancel()
 err = client.ConnectByServerName(ctx, serverName, "EURUSD")
@@ -68,7 +53,7 @@ fmt.Printf("Balance: %.2f, Equity: %.2f\n", summary.Balance, summary.Equity)
 
 ---
 
-## Step 4: Run the Program
+## Step 3: Run the Program
 
 Run your application:
 
