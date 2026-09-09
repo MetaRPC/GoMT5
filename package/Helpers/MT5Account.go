@@ -82,17 +82,15 @@ UTILITIES:
 
 import (
 	"context"
-	"crypto/sha256"
 	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"math/rand"
-	"net"
-	"os"
-	"strings"
 	"time"
+	"net"
+	"strings"
 
 	pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
 
@@ -137,43 +135,12 @@ type mrpcError interface {
 	GetErrorCode() string
 }
 
-// ComputeDeterministicTerminalId computes a stable deterministic UUID based on credentials.
-// Matches .NET Guid(byte[16]) little-endian byte ordering.
-func ComputeDeterministicTerminalId(user uint64, password string) uuid.UUID {
-	hash := sha256.Sum256([]byte(fmt.Sprintf("%d:%s", user, password)))
-	b := hash[:16]
-	var leBytes [16]byte
-	leBytes[0] = b[3]
-	leBytes[1] = b[2]
-	leBytes[2] = b[1]
-	leBytes[3] = b[0]
-	leBytes[4] = b[5]
-	leBytes[5] = b[4]
-	leBytes[6] = b[7]
-	leBytes[7] = b[6]
-	copy(leBytes[8:], b[8:16])
-	id, _ := uuid.FromBytes(leBytes[:])
-	return id
-}
-
 // NewMT5Account creates a new MT5Account instance with gRPC connection.
 // Default grpcServer is "mt5.mrpc.pro:443" if empty string is provided.
-// If id is uuid.Nil, it is deterministically computed from user and password.
 // The connection is established with TLS, keepalive, and automatic reconnect configured.
-func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID, apiKey ...string) (*MT5Account, error) {
+func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID) (*MT5Account, error) {
 	if grpcServer == "" {
 		grpcServer = "mt5.mrpc.pro:443"
-	}
-
-	if id == uuid.Nil {
-		id = ComputeDeterministicTerminalId(user, password)
-	}
-
-	key := ""
-	if len(apiKey) > 0 && apiKey[0] != "" {
-		key = apiKey[0]
-	} else {
-		key = os.Getenv("MRPC_API_KEY")
 	}
 
 	host := grpcServer
@@ -223,7 +190,7 @@ func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID
 		return nil, fmt.Errorf("grpc dial failed to %s: %w", grpcServer, err)
 	}
 
-	account := &MT5Account{
+	return &MT5Account{
 		User:                     user,
 		Password:                 password,
 		GrpcServer:               grpcServer,
@@ -236,53 +203,10 @@ func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID
 		MarketInfoClient:         pb.NewMarketInfoClient(conn),
 		TradeFunctionsClient:     pb.NewTradeFunctionsClient(conn),
 		HealthClient:             pb.NewHealthClient(conn),
-		ApiKey:                   key,
+		Id:                       id,
 		Port:                     443,
 		ConnectTimeout:           30,
-	}
-
-	if id != uuid.Nil {
-		account.Id = id
-	} else {
-		account.GetId()
-	}
-
-	return account, nil
-}
-
-// GetId retrieves the deterministic account ID via the server's GetId gRPC endpoint.
-func (a *MT5Account) GetId(ctx ...context.Context) (uuid.UUID, error) {
-	req := &pb.GetIdRequest{
-		User:     fmt.Sprintf("%d", a.User),
-		Password: a.Password,
-	}
-	var callCtx context.Context
-	if len(ctx) > 0 && ctx[0] != nil {
-		callCtx = ctx[0]
-	} else {
-		var cancel context.CancelFunc
-		callCtx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-	}
-	if a.ApiKey != "" {
-		callCtx = metadata.AppendToOutgoingContext(callCtx, "apikey", a.ApiKey)
-	}
-	reply, err := a.ConnectionClient.GetId(callCtx, req)
-	if err == nil && reply != nil {
-		if data := reply.GetData(); data != nil && data.GetId() != "" {
-			if parsed, parseErr := uuid.Parse(data.GetId()); parseErr == nil {
-				a.Id = parsed
-				return a.Id, nil
-			}
-		}
-	}
-	a.Id = ComputeDeterministicTerminalId(a.User, a.Password)
-	return a.Id, nil
-}
-
-// NewMT5AccountWithApiKey creates a new MT5Account instance using credentials and API key.
-func NewMT5AccountWithApiKey(user uint64, password string, grpcServer string, apiKey string) (*MT5Account, error) {
-	return NewMT5Account(user, password, grpcServer, uuid.Nil, apiKey)
+	}, nil
 }
 
 // isConnected checks if the account has an active gRPC connection.
@@ -295,11 +219,7 @@ func (a *MT5Account) getHeaders() metadata.MD {
 	if !a.isConnected() {
 		return nil
 	}
-	pairs := []string{"id", a.Id.String()}
-	if a.ApiKey != "" {
-		pairs = append(pairs, "apikey", a.ApiKey)
-	}
-	return metadata.Pairs(pairs...)
+	return metadata.Pairs("id", a.Id.String())
 }
 
 // Close closes the gRPC connection and cleans up resources.
