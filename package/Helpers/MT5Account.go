@@ -223,7 +223,7 @@ func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID
 		return nil, fmt.Errorf("grpc dial failed to %s: %w", grpcServer, err)
 	}
 
-	return &MT5Account{
+	account := &MT5Account{
 		User:                     user,
 		Password:                 password,
 		GrpcServer:               grpcServer,
@@ -236,11 +236,48 @@ func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID
 		MarketInfoClient:         pb.NewMarketInfoClient(conn),
 		TradeFunctionsClient:     pb.NewTradeFunctionsClient(conn),
 		HealthClient:             pb.NewHealthClient(conn),
-		Id:                       id,
 		ApiKey:                   key,
 		Port:                     443,
 		ConnectTimeout:           30,
-	}, nil
+	}
+
+	if id != uuid.Nil {
+		account.Id = id
+	} else {
+		account.GetId()
+	}
+
+	return account, nil
+}
+
+// GetId retrieves the deterministic account ID via the server's GetId gRPC endpoint.
+func (a *MT5Account) GetId(ctx ...context.Context) (uuid.UUID, error) {
+	req := &pb.GetIdRequest{
+		User:     fmt.Sprintf("%d", a.User),
+		Password: a.Password,
+	}
+	var callCtx context.Context
+	if len(ctx) > 0 && ctx[0] != nil {
+		callCtx = ctx[0]
+	} else {
+		var cancel context.CancelFunc
+		callCtx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+	}
+	if a.ApiKey != "" {
+		callCtx = metadata.AppendToOutgoingContext(callCtx, "apikey", a.ApiKey)
+	}
+	reply, err := a.ConnectionClient.GetId(callCtx, req)
+	if err == nil && reply != nil {
+		if data := reply.GetData(); data != nil && data.GetId() != "" {
+			if parsed, parseErr := uuid.Parse(data.GetId()); parseErr == nil {
+				a.Id = parsed
+				return a.Id, nil
+			}
+		}
+	}
+	a.Id = ComputeDeterministicTerminalId(a.User, a.Password)
+	return a.Id, nil
 }
 
 // NewMT5AccountWithApiKey creates a new MT5Account instance using credentials and API key.
@@ -258,7 +295,11 @@ func (a *MT5Account) getHeaders() metadata.MD {
 	if !a.isConnected() {
 		return nil
 	}
-	return metadata.Pairs("id", a.Id.String())
+	pairs := []string{"id", a.Id.String()}
+	if a.ApiKey != "" {
+		pairs = append(pairs, "apikey", a.ApiKey)
+	}
+	return metadata.Pairs(pairs...)
 }
 
 // Close closes the gRPC connection and cleans up resources.
