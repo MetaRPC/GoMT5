@@ -28,6 +28,7 @@ type ChartsClient interface {
 	GetRunningEas(ctx context.Context, in *GetRunningEasRequest, opts ...grpc.CallOption) (*GetRunningEasReply, error)
 	GetEaLogs(ctx context.Context, in *GetEaLogsRequest, opts ...grpc.CallOption) (*GetEaLogsReply, error)
 	StopEa(ctx context.Context, in *StopEaRequest, opts ...grpc.CallOption) (*StopEaReply, error)
+	StartEa(ctx context.Context, in *StartEaRequest, opts ...grpc.CallOption) (*StartEaReply, error)
 }
 
 type chartsClient struct {
@@ -92,6 +93,15 @@ func (c *chartsClient) StopEa(ctx context.Context, in *StopEaRequest, opts ...gr
 	return out, nil
 }
 
+func (c *chartsClient) StartEa(ctx context.Context, in *StartEaRequest, opts ...grpc.CallOption) (*StartEaReply, error) {
+	out := new(StartEaReply)
+	err := c.cc.Invoke(ctx, "/mt5_term_api.Charts/StartEa", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChartsServer is the server API for Charts service.
 // All implementations should embed UnimplementedChartsServer
 // for forward compatibility
@@ -102,6 +112,7 @@ type ChartsServer interface {
 	GetRunningEas(context.Context, *GetRunningEasRequest) (*GetRunningEasReply, error)
 	GetEaLogs(context.Context, *GetEaLogsRequest) (*GetEaLogsReply, error)
 	StopEa(context.Context, *StopEaRequest) (*StopEaReply, error)
+	StartEa(context.Context, *StartEaRequest) (*StartEaReply, error)
 }
 
 // UnimplementedChartsServer should be embedded to have forward compatible implementations.
@@ -125,6 +136,9 @@ func (UnimplementedChartsServer) GetEaLogs(context.Context, *GetEaLogsRequest) (
 }
 func (UnimplementedChartsServer) StopEa(context.Context, *StopEaRequest) (*StopEaReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StopEa not implemented")
+}
+func (UnimplementedChartsServer) StartEa(context.Context, *StartEaRequest) (*StartEaReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartEa not implemented")
 }
 
 // UnsafeChartsServer may be embedded to opt out of forward compatibility for this service.
@@ -246,6 +260,24 @@ func _Charts_StopEa_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Charts_StartEa_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartEaRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChartsServer).StartEa(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mt5_term_api.Charts/StartEa",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChartsServer).StartEa(ctx, req.(*StartEaRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Charts_ServiceDesc is the grpc.ServiceDesc for Charts service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -276,6 +308,10 @@ var Charts_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "StopEa",
 			Handler:    _Charts_StopEa_Handler,
+		},
+		{
+			MethodName: "StartEa",
+			Handler:    _Charts_StartEa_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
