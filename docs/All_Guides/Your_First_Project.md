@@ -42,7 +42,7 @@ import (
     mt "github.com/MetaRPC/GoMT5"
 )
 
-// Account ID generation (GetId) and authentication are handled automatically
+// Session ID generation on Connect and authentication are handled automatically
 client, err := mt.NewMT5AccountWithApiKey(user, password, grpcServer, apiKey)
 ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 defer cancel()

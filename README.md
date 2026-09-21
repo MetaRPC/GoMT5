@@ -32,9 +32,9 @@ Connecting to MetaRPC production endpoints (`mt5.mrpc.pro:443`) requires an API 
 
 ## 🆔 Automatic Account ID & Authentication
 
-MetaRPC uses deterministic terminal identifiers derived from your account login number and password:
-- The SDK automatically derives and attaches your deterministic account GUID (`id`) and `APIKey` headers on all calls (`ConnectEx`, `AccountSummary`, `OrderSend`, streaming, etc.).
-- Account ID derivation is completely automatic inside the library constructor/client initialization — no manual `GetId` or `curl` calls required.
+MetaRPC endpoints route calls using a terminal session identifier (`id`):
+- When connecting via `Connect` / `ConnectEx`, the server automatically generates and returns a session GUID (`terminalInstanceGuid`).
+- The SDK automatically captures this session ID and attaches both the `id` and `APIKey` headers on all subsequent calls (`AccountSummary`, `OrderSend`, streaming, etc.) — no manual `GetId` or `curl` calls required.
 - Pass your API key directly to the Account/Client constructor or via the `MRPC_API_KEY` environment variable.
 
 ## 🌐 Production Endpoints
