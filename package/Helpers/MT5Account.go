@@ -88,10 +88,7 @@ import (
 	"io"
 	"log"
 	"math/rand"
-<<<<<<< HEAD
-=======
 	"os"
->>>>>>> c394af3 (feat: default ApiKey to TRIAL, attach apikey headers in all calls, and update documentation)
 	"time"
 	"net"
 	"strings"
