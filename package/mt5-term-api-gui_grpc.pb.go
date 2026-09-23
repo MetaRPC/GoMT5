@@ -26,11 +26,7 @@ type GuiClient interface {
 	BrokerSearch(ctx context.Context, in *GuiBrokerSearchRequest, opts ...grpc.CallOption) (*GuiBrokerSearchReply, error)
 	LoginEx(ctx context.Context, in *GuiLoginExRequest, opts ...grpc.CallOption) (*GuiLoginExReply, error)
 	CloseDialogs(ctx context.Context, in *GuiCloseDialogsRequest, opts ...grpc.CallOption) (*GuiCloseDialogsReply, error)
-	DemoFindCompanies(ctx context.Context, in *GuiDemoFindCompaniesRequest, opts ...grpc.CallOption) (*GuiDemoFindCompaniesReply, error)
-	DemoServersAndTypes(ctx context.Context, in *GuiDemoServersAndTypesRequest, opts ...grpc.CallOption) (*GuiDemoServersAndTypesReply, error)
 	DemoOpenAccount(ctx context.Context, in *GuiDemoOpenAccountRequest, opts ...grpc.CallOption) (*GuiDemoOpenAccountReply, error)
-	DemoEnumControls(ctx context.Context, in *GuiDemoEnumControlsRequest, opts ...grpc.CallOption) (*GuiDemoEnumControlsReply, error)
-	DemoOpenAccountWithProgress(ctx context.Context, in *GuiDemoOpenAccountRequest, opts ...grpc.CallOption) (Gui_DemoOpenAccountWithProgressClient, error)
 	DemoOpenAccountInteractive(ctx context.Context, opts ...grpc.CallOption) (Gui_DemoOpenAccountInteractiveClient, error)
 }
 
@@ -78,24 +74,6 @@ func (c *guiClient) CloseDialogs(ctx context.Context, in *GuiCloseDialogsRequest
 	return out, nil
 }
 
-func (c *guiClient) DemoFindCompanies(ctx context.Context, in *GuiDemoFindCompaniesRequest, opts ...grpc.CallOption) (*GuiDemoFindCompaniesReply, error) {
-	out := new(GuiDemoFindCompaniesReply)
-	err := c.cc.Invoke(ctx, "/mt5_term_api.Gui/DemoFindCompanies", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *guiClient) DemoServersAndTypes(ctx context.Context, in *GuiDemoServersAndTypesRequest, opts ...grpc.CallOption) (*GuiDemoServersAndTypesReply, error) {
-	out := new(GuiDemoServersAndTypesReply)
-	err := c.cc.Invoke(ctx, "/mt5_term_api.Gui/DemoServersAndTypes", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *guiClient) DemoOpenAccount(ctx context.Context, in *GuiDemoOpenAccountRequest, opts ...grpc.CallOption) (*GuiDemoOpenAccountReply, error) {
 	out := new(GuiDemoOpenAccountReply)
 	err := c.cc.Invoke(ctx, "/mt5_term_api.Gui/DemoOpenAccount", in, out, opts...)
@@ -105,49 +83,8 @@ func (c *guiClient) DemoOpenAccount(ctx context.Context, in *GuiDemoOpenAccountR
 	return out, nil
 }
 
-func (c *guiClient) DemoEnumControls(ctx context.Context, in *GuiDemoEnumControlsRequest, opts ...grpc.CallOption) (*GuiDemoEnumControlsReply, error) {
-	out := new(GuiDemoEnumControlsReply)
-	err := c.cc.Invoke(ctx, "/mt5_term_api.Gui/DemoEnumControls", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *guiClient) DemoOpenAccountWithProgress(ctx context.Context, in *GuiDemoOpenAccountRequest, opts ...grpc.CallOption) (Gui_DemoOpenAccountWithProgressClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Gui_ServiceDesc.Streams[0], "/mt5_term_api.Gui/DemoOpenAccountWithProgress", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &guiDemoOpenAccountWithProgressClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type Gui_DemoOpenAccountWithProgressClient interface {
-	Recv() (*GuiDemoProgressEvent, error)
-	grpc.ClientStream
-}
-
-type guiDemoOpenAccountWithProgressClient struct {
-	grpc.ClientStream
-}
-
-func (x *guiDemoOpenAccountWithProgressClient) Recv() (*GuiDemoProgressEvent, error) {
-	m := new(GuiDemoProgressEvent)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 func (c *guiClient) DemoOpenAccountInteractive(ctx context.Context, opts ...grpc.CallOption) (Gui_DemoOpenAccountInteractiveClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Gui_ServiceDesc.Streams[1], "/mt5_term_api.Gui/DemoOpenAccountInteractive", opts...)
+	stream, err := c.cc.NewStream(ctx, &Gui_ServiceDesc.Streams[0], "/mt5_term_api.Gui/DemoOpenAccountInteractive", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -185,11 +122,7 @@ type GuiServer interface {
 	BrokerSearch(context.Context, *GuiBrokerSearchRequest) (*GuiBrokerSearchReply, error)
 	LoginEx(context.Context, *GuiLoginExRequest) (*GuiLoginExReply, error)
 	CloseDialogs(context.Context, *GuiCloseDialogsRequest) (*GuiCloseDialogsReply, error)
-	DemoFindCompanies(context.Context, *GuiDemoFindCompaniesRequest) (*GuiDemoFindCompaniesReply, error)
-	DemoServersAndTypes(context.Context, *GuiDemoServersAndTypesRequest) (*GuiDemoServersAndTypesReply, error)
 	DemoOpenAccount(context.Context, *GuiDemoOpenAccountRequest) (*GuiDemoOpenAccountReply, error)
-	DemoEnumControls(context.Context, *GuiDemoEnumControlsRequest) (*GuiDemoEnumControlsReply, error)
-	DemoOpenAccountWithProgress(*GuiDemoOpenAccountRequest, Gui_DemoOpenAccountWithProgressServer) error
 	DemoOpenAccountInteractive(Gui_DemoOpenAccountInteractiveServer) error
 }
 
@@ -209,20 +142,8 @@ func (UnimplementedGuiServer) LoginEx(context.Context, *GuiLoginExRequest) (*Gui
 func (UnimplementedGuiServer) CloseDialogs(context.Context, *GuiCloseDialogsRequest) (*GuiCloseDialogsReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CloseDialogs not implemented")
 }
-func (UnimplementedGuiServer) DemoFindCompanies(context.Context, *GuiDemoFindCompaniesRequest) (*GuiDemoFindCompaniesReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DemoFindCompanies not implemented")
-}
-func (UnimplementedGuiServer) DemoServersAndTypes(context.Context, *GuiDemoServersAndTypesRequest) (*GuiDemoServersAndTypesReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DemoServersAndTypes not implemented")
-}
 func (UnimplementedGuiServer) DemoOpenAccount(context.Context, *GuiDemoOpenAccountRequest) (*GuiDemoOpenAccountReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DemoOpenAccount not implemented")
-}
-func (UnimplementedGuiServer) DemoEnumControls(context.Context, *GuiDemoEnumControlsRequest) (*GuiDemoEnumControlsReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DemoEnumControls not implemented")
-}
-func (UnimplementedGuiServer) DemoOpenAccountWithProgress(*GuiDemoOpenAccountRequest, Gui_DemoOpenAccountWithProgressServer) error {
-	return status.Errorf(codes.Unimplemented, "method DemoOpenAccountWithProgress not implemented")
 }
 func (UnimplementedGuiServer) DemoOpenAccountInteractive(Gui_DemoOpenAccountInteractiveServer) error {
 	return status.Errorf(codes.Unimplemented, "method DemoOpenAccountInteractive not implemented")
@@ -311,42 +232,6 @@ func _Gui_CloseDialogs_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Gui_DemoFindCompanies_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GuiDemoFindCompaniesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(GuiServer).DemoFindCompanies(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/mt5_term_api.Gui/DemoFindCompanies",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GuiServer).DemoFindCompanies(ctx, req.(*GuiDemoFindCompaniesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Gui_DemoServersAndTypes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GuiDemoServersAndTypesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(GuiServer).DemoServersAndTypes(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/mt5_term_api.Gui/DemoServersAndTypes",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GuiServer).DemoServersAndTypes(ctx, req.(*GuiDemoServersAndTypesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Gui_DemoOpenAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GuiDemoOpenAccountRequest)
 	if err := dec(in); err != nil {
@@ -363,45 +248,6 @@ func _Gui_DemoOpenAccount_Handler(srv interface{}, ctx context.Context, dec func
 		return srv.(GuiServer).DemoOpenAccount(ctx, req.(*GuiDemoOpenAccountRequest))
 	}
 	return interceptor(ctx, in, info, handler)
-}
-
-func _Gui_DemoEnumControls_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GuiDemoEnumControlsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(GuiServer).DemoEnumControls(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/mt5_term_api.Gui/DemoEnumControls",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GuiServer).DemoEnumControls(ctx, req.(*GuiDemoEnumControlsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Gui_DemoOpenAccountWithProgress_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(GuiDemoOpenAccountRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(GuiServer).DemoOpenAccountWithProgress(m, &guiDemoOpenAccountWithProgressServer{stream})
-}
-
-type Gui_DemoOpenAccountWithProgressServer interface {
-	Send(*GuiDemoProgressEvent) error
-	grpc.ServerStream
-}
-
-type guiDemoOpenAccountWithProgressServer struct {
-	grpc.ServerStream
-}
-
-func (x *guiDemoOpenAccountWithProgressServer) Send(m *GuiDemoProgressEvent) error {
-	return x.ServerStream.SendMsg(m)
 }
 
 func _Gui_DemoOpenAccountInteractive_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -454,28 +300,11 @@ var Gui_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Gui_CloseDialogs_Handler,
 		},
 		{
-			MethodName: "DemoFindCompanies",
-			Handler:    _Gui_DemoFindCompanies_Handler,
-		},
-		{
-			MethodName: "DemoServersAndTypes",
-			Handler:    _Gui_DemoServersAndTypes_Handler,
-		},
-		{
 			MethodName: "DemoOpenAccount",
 			Handler:    _Gui_DemoOpenAccount_Handler,
 		},
-		{
-			MethodName: "DemoEnumControls",
-			Handler:    _Gui_DemoEnumControls_Handler,
-		},
 	},
 	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "DemoOpenAccountWithProgress",
-			Handler:       _Gui_DemoOpenAccountWithProgress_Handler,
-			ServerStreams: true,
-		},
 		{
 			StreamName:    "DemoOpenAccountInteractive",
 			Handler:       _Gui_DemoOpenAccountInteractive_Handler,

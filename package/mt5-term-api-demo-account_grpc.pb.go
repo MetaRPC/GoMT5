@@ -22,22 +22,6 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DemoAccountClient interface {
-	// Search for broker companies by name.
-	// Returns a list of matching companies from the wizard's ListView.
-	// [DefaultValues]
-	//
-	//	{
-	//	  "searchText": "MetaQuotes"
-	//	}
-	FindCompanies(ctx context.Context, in *GuiDemoFindCompaniesRequest, opts ...grpc.CallOption) (*GuiDemoFindCompaniesReply, error)
-	// Get available servers and account types for a company.
-	// Navigates: company selection → demo account → reads dropdown options.
-	// [DefaultValues]
-	//
-	//	{
-	//	  "companyName": "MetaQuotes Ltd."
-	//	}
-	ServersAndAccountTypes(ctx context.Context, in *GuiDemoServersAndTypesRequest, opts ...grpc.CallOption) (*GuiDemoServersAndTypesReply, error)
 	// Open a demo account. Full wizard flow: search → select → fill form → register.
 	// Returns login, password, and investor password for the new demo account.
 	// [DefaultValues]
@@ -51,20 +35,9 @@ type DemoAccountClient interface {
 	//	  "timeoutSeconds": "60"
 	//	}
 	OpenDemoAccount(ctx context.Context, in *GuiDemoOpenAccountRequest, opts ...grpc.CallOption) (*GuiDemoOpenAccountReply, error)
-	// Same as OpenDemoAccount but streams real-time progress events.
-	// Does NOT require 'id' header — auto-picks any available terminal.
-	// Swagger does not support streaming — use /demo-account-stream interactive viewer.
-	// [DefaultValues]
-	//
-	//	{
-	//	  "company": "MetaQuotes Ltd.",
-	//	  "firstName": "Test",
-	//	  "lastName": "User",
-	//	  "email": "test@test.com",
-	//	  "phone": "+1234567890",
-	//	  "timeoutSeconds": "60"
-	//	}
-	OpenDemoAccountStream(ctx context.Context, in *GuiDemoOpenAccountRequest, opts ...grpc.CallOption) (DemoAccount_OpenDemoAccountStreamClient, error)
+	// Interactive step-by-step demo account opening wizard.
+	// Bidirectional streaming session: search company -> select -> form schema -> submit -> 2FA (if any) -> completed.
+	DemoOpenAccountInteractive(ctx context.Context, opts ...grpc.CallOption) (DemoAccount_DemoOpenAccountInteractiveClient, error)
 }
 
 type demoAccountClient struct {
@@ -73,24 +46,6 @@ type demoAccountClient struct {
 
 func NewDemoAccountClient(cc grpc.ClientConnInterface) DemoAccountClient {
 	return &demoAccountClient{cc}
-}
-
-func (c *demoAccountClient) FindCompanies(ctx context.Context, in *GuiDemoFindCompaniesRequest, opts ...grpc.CallOption) (*GuiDemoFindCompaniesReply, error) {
-	out := new(GuiDemoFindCompaniesReply)
-	err := c.cc.Invoke(ctx, "/mt5_term_api.DemoAccount/FindCompanies", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *demoAccountClient) ServersAndAccountTypes(ctx context.Context, in *GuiDemoServersAndTypesRequest, opts ...grpc.CallOption) (*GuiDemoServersAndTypesReply, error) {
-	out := new(GuiDemoServersAndTypesReply)
-	err := c.cc.Invoke(ctx, "/mt5_term_api.DemoAccount/ServersAndAccountTypes", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *demoAccountClient) OpenDemoAccount(ctx context.Context, in *GuiDemoOpenAccountRequest, opts ...grpc.CallOption) (*GuiDemoOpenAccountReply, error) {
@@ -102,32 +57,31 @@ func (c *demoAccountClient) OpenDemoAccount(ctx context.Context, in *GuiDemoOpen
 	return out, nil
 }
 
-func (c *demoAccountClient) OpenDemoAccountStream(ctx context.Context, in *GuiDemoOpenAccountRequest, opts ...grpc.CallOption) (DemoAccount_OpenDemoAccountStreamClient, error) {
-	stream, err := c.cc.NewStream(ctx, &DemoAccount_ServiceDesc.Streams[0], "/mt5_term_api.DemoAccount/OpenDemoAccountStream", opts...)
+func (c *demoAccountClient) DemoOpenAccountInteractive(ctx context.Context, opts ...grpc.CallOption) (DemoAccount_DemoOpenAccountInteractiveClient, error) {
+	stream, err := c.cc.NewStream(ctx, &DemoAccount_ServiceDesc.Streams[0], "/mt5_term_api.DemoAccount/DemoOpenAccountInteractive", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &demoAccountOpenDemoAccountStreamClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
+	x := &demoAccountDemoOpenAccountInteractiveClient{stream}
 	return x, nil
 }
 
-type DemoAccount_OpenDemoAccountStreamClient interface {
-	Recv() (*DemoAccountStreamEvent, error)
+type DemoAccount_DemoOpenAccountInteractiveClient interface {
+	Send(*GuiDemoInteractiveClientMessage) error
+	Recv() (*GuiDemoInteractiveServerMessage, error)
 	grpc.ClientStream
 }
 
-type demoAccountOpenDemoAccountStreamClient struct {
+type demoAccountDemoOpenAccountInteractiveClient struct {
 	grpc.ClientStream
 }
 
-func (x *demoAccountOpenDemoAccountStreamClient) Recv() (*DemoAccountStreamEvent, error) {
-	m := new(DemoAccountStreamEvent)
+func (x *demoAccountDemoOpenAccountInteractiveClient) Send(m *GuiDemoInteractiveClientMessage) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *demoAccountDemoOpenAccountInteractiveClient) Recv() (*GuiDemoInteractiveServerMessage, error) {
+	m := new(GuiDemoInteractiveServerMessage)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -138,22 +92,6 @@ func (x *demoAccountOpenDemoAccountStreamClient) Recv() (*DemoAccountStreamEvent
 // All implementations should embed UnimplementedDemoAccountServer
 // for forward compatibility
 type DemoAccountServer interface {
-	// Search for broker companies by name.
-	// Returns a list of matching companies from the wizard's ListView.
-	// [DefaultValues]
-	//
-	//	{
-	//	  "searchText": "MetaQuotes"
-	//	}
-	FindCompanies(context.Context, *GuiDemoFindCompaniesRequest) (*GuiDemoFindCompaniesReply, error)
-	// Get available servers and account types for a company.
-	// Navigates: company selection → demo account → reads dropdown options.
-	// [DefaultValues]
-	//
-	//	{
-	//	  "companyName": "MetaQuotes Ltd."
-	//	}
-	ServersAndAccountTypes(context.Context, *GuiDemoServersAndTypesRequest) (*GuiDemoServersAndTypesReply, error)
 	// Open a demo account. Full wizard flow: search → select → fill form → register.
 	// Returns login, password, and investor password for the new demo account.
 	// [DefaultValues]
@@ -167,37 +105,20 @@ type DemoAccountServer interface {
 	//	  "timeoutSeconds": "60"
 	//	}
 	OpenDemoAccount(context.Context, *GuiDemoOpenAccountRequest) (*GuiDemoOpenAccountReply, error)
-	// Same as OpenDemoAccount but streams real-time progress events.
-	// Does NOT require 'id' header — auto-picks any available terminal.
-	// Swagger does not support streaming — use /demo-account-stream interactive viewer.
-	// [DefaultValues]
-	//
-	//	{
-	//	  "company": "MetaQuotes Ltd.",
-	//	  "firstName": "Test",
-	//	  "lastName": "User",
-	//	  "email": "test@test.com",
-	//	  "phone": "+1234567890",
-	//	  "timeoutSeconds": "60"
-	//	}
-	OpenDemoAccountStream(*GuiDemoOpenAccountRequest, DemoAccount_OpenDemoAccountStreamServer) error
+	// Interactive step-by-step demo account opening wizard.
+	// Bidirectional streaming session: search company -> select -> form schema -> submit -> 2FA (if any) -> completed.
+	DemoOpenAccountInteractive(DemoAccount_DemoOpenAccountInteractiveServer) error
 }
 
 // UnimplementedDemoAccountServer should be embedded to have forward compatible implementations.
 type UnimplementedDemoAccountServer struct {
 }
 
-func (UnimplementedDemoAccountServer) FindCompanies(context.Context, *GuiDemoFindCompaniesRequest) (*GuiDemoFindCompaniesReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method FindCompanies not implemented")
-}
-func (UnimplementedDemoAccountServer) ServersAndAccountTypes(context.Context, *GuiDemoServersAndTypesRequest) (*GuiDemoServersAndTypesReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ServersAndAccountTypes not implemented")
-}
 func (UnimplementedDemoAccountServer) OpenDemoAccount(context.Context, *GuiDemoOpenAccountRequest) (*GuiDemoOpenAccountReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OpenDemoAccount not implemented")
 }
-func (UnimplementedDemoAccountServer) OpenDemoAccountStream(*GuiDemoOpenAccountRequest, DemoAccount_OpenDemoAccountStreamServer) error {
-	return status.Errorf(codes.Unimplemented, "method OpenDemoAccountStream not implemented")
+func (UnimplementedDemoAccountServer) DemoOpenAccountInteractive(DemoAccount_DemoOpenAccountInteractiveServer) error {
+	return status.Errorf(codes.Unimplemented, "method DemoOpenAccountInteractive not implemented")
 }
 
 // UnsafeDemoAccountServer may be embedded to opt out of forward compatibility for this service.
@@ -209,42 +130,6 @@ type UnsafeDemoAccountServer interface {
 
 func RegisterDemoAccountServer(s grpc.ServiceRegistrar, srv DemoAccountServer) {
 	s.RegisterService(&DemoAccount_ServiceDesc, srv)
-}
-
-func _DemoAccount_FindCompanies_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GuiDemoFindCompaniesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DemoAccountServer).FindCompanies(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/mt5_term_api.DemoAccount/FindCompanies",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DemoAccountServer).FindCompanies(ctx, req.(*GuiDemoFindCompaniesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _DemoAccount_ServersAndAccountTypes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GuiDemoServersAndTypesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DemoAccountServer).ServersAndAccountTypes(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/mt5_term_api.DemoAccount/ServersAndAccountTypes",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DemoAccountServer).ServersAndAccountTypes(ctx, req.(*GuiDemoServersAndTypesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _DemoAccount_OpenDemoAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -265,25 +150,30 @@ func _DemoAccount_OpenDemoAccount_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DemoAccount_OpenDemoAccountStream_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(GuiDemoOpenAccountRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(DemoAccountServer).OpenDemoAccountStream(m, &demoAccountOpenDemoAccountStreamServer{stream})
+func _DemoAccount_DemoOpenAccountInteractive_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DemoAccountServer).DemoOpenAccountInteractive(&demoAccountDemoOpenAccountInteractiveServer{stream})
 }
 
-type DemoAccount_OpenDemoAccountStreamServer interface {
-	Send(*DemoAccountStreamEvent) error
+type DemoAccount_DemoOpenAccountInteractiveServer interface {
+	Send(*GuiDemoInteractiveServerMessage) error
+	Recv() (*GuiDemoInteractiveClientMessage, error)
 	grpc.ServerStream
 }
 
-type demoAccountOpenDemoAccountStreamServer struct {
+type demoAccountDemoOpenAccountInteractiveServer struct {
 	grpc.ServerStream
 }
 
-func (x *demoAccountOpenDemoAccountStreamServer) Send(m *DemoAccountStreamEvent) error {
+func (x *demoAccountDemoOpenAccountInteractiveServer) Send(m *GuiDemoInteractiveServerMessage) error {
 	return x.ServerStream.SendMsg(m)
+}
+
+func (x *demoAccountDemoOpenAccountInteractiveServer) Recv() (*GuiDemoInteractiveClientMessage, error) {
+	m := new(GuiDemoInteractiveClientMessage)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // DemoAccount_ServiceDesc is the grpc.ServiceDesc for DemoAccount service.
@@ -294,23 +184,16 @@ var DemoAccount_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*DemoAccountServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "FindCompanies",
-			Handler:    _DemoAccount_FindCompanies_Handler,
-		},
-		{
-			MethodName: "ServersAndAccountTypes",
-			Handler:    _DemoAccount_ServersAndAccountTypes_Handler,
-		},
-		{
 			MethodName: "OpenDemoAccount",
 			Handler:    _DemoAccount_OpenDemoAccount_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "OpenDemoAccountStream",
-			Handler:       _DemoAccount_OpenDemoAccountStream_Handler,
+			StreamName:    "DemoOpenAccountInteractive",
+			Handler:       _DemoAccount_DemoOpenAccountInteractive_Handler,
 			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "mt5-term-api-demo-account.proto",

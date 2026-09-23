@@ -88,13 +88,13 @@ import (
 	"io"
 	"log"
 	"math/rand"
-	"os"
 	"time"
 	"net"
 	"strings"
 
-	pb "github.com/MetaRPC/GoMT5/package"
+	pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
 
+	mt5errors "github.com/MetaRPC/GoMT5/examples/errors"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -129,8 +129,6 @@ type MT5Account struct {
 	TradeFunctionsClient     pb.TradeFunctionsClient
 	HealthClient             pb.HealthClient
 	Id                       uuid.UUID
-	ApiKey                   string
-	Name                     string
 }
 
 type mrpcError interface {
@@ -207,30 +205,21 @@ func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID
 		HealthClient:             pb.NewHealthClient(conn),
 		Id:                       id,
 		Port:                     443,
-		ApiKey:                   func() string { if k := os.Getenv("MRPC_API_KEY"); k != "" { return k }; return "TRIAL" }(),
+		ConnectTimeout:           30,
 	}, nil
 }
 
 // isConnected checks if the account has an active gRPC connection.
 func (a *MT5Account) isConnected() bool {
-	return a != nil && a.GrpcConn != nil
+	return a != nil && a.GrpcConn != nil && a.Id != uuid.Nil
 }
 
-// getHeaders returns metadata headers with session ID and API key for gRPC calls.
+// getHeaders returns metadata headers with session ID for gRPC calls.
 func (a *MT5Account) getHeaders() metadata.MD {
-	if a == nil {
+	if !a.isConnected() {
 		return nil
 	}
-	var pairs []string
-	if a.Id != uuid.Nil {
-		pairs = append(pairs, "id", a.Id.String())
-	}
-	apiKey := a.ApiKey
-	if apiKey == "" {
-		apiKey = "TRIAL"
-	}
-	pairs = append(pairs, "apikey", apiKey)
-	return metadata.Pairs(pairs...)
+	return metadata.Pairs("id", a.Id.String())
 }
 
 // Close closes the gRPC connection and cleans up resources.
@@ -338,7 +327,7 @@ func ExecuteWithReconnect[T any](
 			}
 			// Convert mrpcError to *pb.Error and wrap in ApiError
 			if pbErr, ok := apiErr.(*pb.Error); ok {
-					return zeroT, NewApiError(pbErr)
+				return zeroT, mt5errors.NewApiError(pbErr)
 			}
 			return zeroT, fmt.Errorf("API error (code=%s): unknown error type", code)
 		}
@@ -438,7 +427,7 @@ func ExecuteStreamWithReconnect[TRequest any, TReply any, TData any](
 					}
 					// Convert mrpcError to *pb.Error and wrap in ApiError
 					if pbErr, ok := apiErr.(*pb.Error); ok {
-						errCh <- NewApiError(pbErr)
+						errCh <- mt5errors.NewApiError(pbErr)
 					} else {
 						errCh <- fmt.Errorf("API error: unknown error type")
 					}
@@ -496,9 +485,6 @@ func (a *MT5Account) ConnectEx(ctx context.Context, req *pb.ConnectExRequest) (*
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
 	}
-	if req.Name == nil && a.Name != "" {
-		req.Name = &a.Name
-	}
 
 	if ctx == nil {
 		ctx = context.Background()
@@ -523,14 +509,7 @@ func (a *MT5Account) ConnectEx(ctx context.Context, req *pb.ConnectExRequest) (*
 		return nil, err
 	}
 
-	data := reply.GetData()
-	if data != nil && data.GetTerminalInstanceGuid() != "" {
-		if parsedId, parseErr := uuid.Parse(data.GetTerminalInstanceGuid()); parseErr == nil {
-			a.Id = parsedId
-		}
-	}
-
-	return data, nil
+	return reply.GetData(), nil
 }
 
 // Connect establishes basic connection to MT5 terminal.
@@ -549,9 +528,6 @@ func (a *MT5Account) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.C
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
-	}
-	if req.Name == nil && a.Name != "" {
-		req.Name = &a.Name
 	}
 
 	if ctx == nil {
@@ -577,14 +553,7 @@ func (a *MT5Account) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.C
 		return nil, err
 	}
 
-	data := reply.GetData()
-	if data != nil && data.GetTerminalInstanceGuid() != "" {
-		if parsedId, parseErr := uuid.Parse(data.GetTerminalInstanceGuid()); parseErr == nil {
-			a.Id = parsedId
-		}
-	}
-
-	return data, nil
+	return reply.GetData(), nil
 }
 
 // ConnectProxy establishes connection to MT5 terminal through proxy server.
@@ -627,14 +596,7 @@ func (a *MT5Account) ConnectProxy(ctx context.Context, req *pb.ConnectProxyReque
 		return nil, err
 	}
 
-	proxyData := reply.GetData()
-	if proxyData != nil && proxyData.GetUniqueIdentifier() != "" {
-		if parsedId, parseErr := uuid.Parse(proxyData.GetUniqueIdentifier()); parseErr == nil {
-			a.Id = parsedId
-		}
-	}
-
-	return proxyData, nil
+	return reply.GetData(), nil
 }
 
 // CheckConnect verifies the current connection status to MT5 terminal.
