@@ -76,6 +76,11 @@ type AdminApiClient interface {
 	GetSessionRestoreLogs(ctx context.Context, in *GetSessionRestoreLogsRequest, opts ...grpc.CallOption) (*GetSessionRestoreLogsReply, error)
 	// Session restore watcher status (terminals loaded, queue count, state, diagnostics) for THIS pod.
 	GetSessionRestoreStatus(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*GetSessionRestoreStatusReply, error)
+	// Kills all active trial terminals across ALL pods of this StatefulSet/Deployment
+	// and marks them stopped in database.
+	KillAllTrialTerminals(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*KillAllTrialTerminalsReply, error)
+	// Kills all active trial terminals on THIS pod.
+	KillAllTrialTerminalsLocal(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*KillAllTrialTerminalsReply, error)
 }
 
 type adminApiClient struct {
@@ -212,6 +217,24 @@ func (c *adminApiClient) GetSessionRestoreStatus(ctx context.Context, in *Active
 	return out, nil
 }
 
+func (c *adminApiClient) KillAllTrialTerminals(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*KillAllTrialTerminalsReply, error) {
+	out := new(KillAllTrialTerminalsReply)
+	err := c.cc.Invoke(ctx, "/mrpc_admin.AdminApi/KillAllTrialTerminals", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminApiClient) KillAllTrialTerminalsLocal(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*KillAllTrialTerminalsReply, error) {
+	out := new(KillAllTrialTerminalsReply)
+	err := c.cc.Invoke(ctx, "/mrpc_admin.AdminApi/KillAllTrialTerminalsLocal", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminApiServer is the server API for AdminApi service.
 // All implementations should embed UnimplementedAdminApiServer
 // for forward compatibility
@@ -270,6 +293,11 @@ type AdminApiServer interface {
 	GetSessionRestoreLogs(context.Context, *GetSessionRestoreLogsRequest) (*GetSessionRestoreLogsReply, error)
 	// Session restore watcher status (terminals loaded, queue count, state, diagnostics) for THIS pod.
 	GetSessionRestoreStatus(context.Context, *ActiveTerminalsRequest) (*GetSessionRestoreStatusReply, error)
+	// Kills all active trial terminals across ALL pods of this StatefulSet/Deployment
+	// and marks them stopped in database.
+	KillAllTrialTerminals(context.Context, *ActiveTerminalsRequest) (*KillAllTrialTerminalsReply, error)
+	// Kills all active trial terminals on THIS pod.
+	KillAllTrialTerminalsLocal(context.Context, *ActiveTerminalsRequest) (*KillAllTrialTerminalsReply, error)
 }
 
 // UnimplementedAdminApiServer should be embedded to have forward compatible implementations.
@@ -317,6 +345,12 @@ func (UnimplementedAdminApiServer) GetSessionRestoreLogs(context.Context, *GetSe
 }
 func (UnimplementedAdminApiServer) GetSessionRestoreStatus(context.Context, *ActiveTerminalsRequest) (*GetSessionRestoreStatusReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSessionRestoreStatus not implemented")
+}
+func (UnimplementedAdminApiServer) KillAllTrialTerminals(context.Context, *ActiveTerminalsRequest) (*KillAllTrialTerminalsReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method KillAllTrialTerminals not implemented")
+}
+func (UnimplementedAdminApiServer) KillAllTrialTerminalsLocal(context.Context, *ActiveTerminalsRequest) (*KillAllTrialTerminalsReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method KillAllTrialTerminalsLocal not implemented")
 }
 
 // UnsafeAdminApiServer may be embedded to opt out of forward compatibility for this service.
@@ -582,6 +616,42 @@ func _AdminApi_GetSessionRestoreStatus_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminApi_KillAllTrialTerminals_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ActiveTerminalsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminApiServer).KillAllTrialTerminals(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mrpc_admin.AdminApi/KillAllTrialTerminals",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminApiServer).KillAllTrialTerminals(ctx, req.(*ActiveTerminalsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminApi_KillAllTrialTerminalsLocal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ActiveTerminalsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminApiServer).KillAllTrialTerminalsLocal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mrpc_admin.AdminApi/KillAllTrialTerminalsLocal",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminApiServer).KillAllTrialTerminalsLocal(ctx, req.(*ActiveTerminalsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminApi_ServiceDesc is the grpc.ServiceDesc for AdminApi service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -644,6 +714,14 @@ var AdminApi_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetSessionRestoreStatus",
 			Handler:    _AdminApi_GetSessionRestoreStatus_Handler,
+		},
+		{
+			MethodName: "KillAllTrialTerminals",
+			Handler:    _AdminApi_KillAllTrialTerminals_Handler,
+		},
+		{
+			MethodName: "KillAllTrialTerminalsLocal",
+			Handler:    _AdminApi_KillAllTrialTerminalsLocal_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
