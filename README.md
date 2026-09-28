@@ -17,6 +17,28 @@ go get github.com/MetaRPC/GoMT5
 
 ---
 
+## 🏃 How to Run Examples
+
+Clone the repository and run the examples out-of-the-box:
+
+```bash
+git clone https://github.com/MetaRPC/GoMT5.git
+cd GoMT5/examples/demos
+go mod download
+
+# 1. Run with default TRIAL key:
+go run main.go lowlevel01
+
+# 2. Or pass your MetaRPC API key directly as an argument:
+go run main.go lowlevel01 your_api_key_here
+
+# 3. Or use the MRPC_API_KEY environment variable:
+export MRPC_API_KEY="your_api_key_here"        # Windows CMD: set MRPC_API_KEY=your_api_key_here
+go run main.go lowlevel01                      # Windows PowerShell: $env:MRPC_API_KEY="your_api_key_here"
+```
+
+---
+
 ## 🔑 API Key & Authentication
 
 Connecting to MetaRPC production endpoints (`mt5.mrpc.pro:443`) requires an API key:
@@ -24,9 +46,6 @@ Connecting to MetaRPC production endpoints (`mt5.mrpc.pro:443`) requires an API 
 1. **Sign Up**: Create an account for free at [https://mrpc.pro/signup](https://mrpc.pro/signup).
 2. **Generate API Key**: In your MetaRPC Portal dashboard at [https://mrpc.pro/my](https://mrpc.pro/my), go to **API Keys** to generate and copy your personal API token.
 3. **Configure Connection**: Pass your API key / token along with the server address (`mt5.mrpc.pro:443`) in your connection settings.
-
----
-
 
 ---
 
