@@ -261,11 +261,11 @@ func (s *MT5Sugar) GetAccount() *helpers.MT5Account {
 }
 
 // Disconnect gracefully disconnects from the MT5 terminal and closes resources.
-func (s *MT5Sugar) Disconnect() error {
+func (s *MT5Sugar) Disconnect(deleteOnDisconnect ...bool) error {
 	if s == nil || s.service == nil {
 		return nil
 	}
-	return s.service.Disconnect()
+	return s.service.Disconnect(deleteOnDisconnect...)
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

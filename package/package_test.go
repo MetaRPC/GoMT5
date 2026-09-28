@@ -97,3 +97,19 @@ func TestGetIdRequest(t *testing.T) {
 		t.Errorf("Expected Id='68c935ee-a2b1-4f3e-bb36-3982845cfa85', got %s", reply.GetData().GetId())
 	}
 }
+
+func TestDisconnectRequest(t *testing.T) {
+	reqDefault := &DisconnectRequest{}
+	if reqDefault.GetDelete() != false {
+		t.Errorf("Expected GetDelete()=false by default, got %v", reqDefault.GetDelete())
+	}
+
+	del := true
+	reqDelete := &DisconnectRequest{
+		Delete: &del,
+	}
+	if reqDelete.GetDelete() != true {
+		t.Errorf("Expected GetDelete()=true when set, got %v", reqDelete.GetDelete())
+	}
+}
+

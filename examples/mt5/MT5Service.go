@@ -97,11 +97,11 @@ func (s *MT5Service) GetAccount() *helpers.MT5Account {
 }
 
 // Disconnect gracefully disconnects from the MT5 terminal and closes resources.
-func (s *MT5Service) Disconnect() error {
+func (s *MT5Service) Disconnect(deleteOnDisconnect ...bool) error {
 	if s == nil || s.account == nil {
 		return nil
 	}
-	return s.account.DisconnectAndClose()
+	return s.account.DisconnectAndClose(deleteOnDisconnect...)
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

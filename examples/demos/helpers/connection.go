@@ -61,7 +61,7 @@ func CreateAndConnectAccount() (*mt5.MT5Account, *config.MT5Config, error) {
 func DisconnectAccount(account *mt5.MT5Account) {
 	if account != nil {
 		fmt.Println("Disconnecting from MT5 terminal...")
-		if err := account.DisconnectAndClose(); err != nil {
+		if err := account.DisconnectAndClose(true); err != nil {
 			PrintWarning(fmt.Sprintf("Disconnect warning: %v\n", err))
 		} else {
 			PrintSuccess("✓ Disconnected successfully.\n\n")
