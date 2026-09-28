@@ -260,6 +260,14 @@ func (s *MT5Sugar) GetAccount() *helpers.MT5Account {
 	return s.service.account
 }
 
+// Disconnect gracefully disconnects from the MT5 terminal and closes resources.
+func (s *MT5Sugar) Disconnect() error {
+	if s == nil || s.service == nil {
+		return nil
+	}
+	return s.service.Disconnect()
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // #region CONNECTION METHODS
 // ══════════════════════════════════════════════════════════════════════════════
@@ -277,12 +285,10 @@ func (s *MT5Sugar) QuickConnect(clusterName string) error {
 	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
 
-	baseSymbol := "EURUSD"
 	req := &pb.ConnectExRequest{
-		User:            s.user,
-		Password:        s.password,
-		MtClusterName:   clusterName,
-		BaseChartSymbol: &baseSymbol,
+		User:          s.user,
+		Password:      s.password,
+		MtClusterName: clusterName,
 	}
 
 	_, err := s.GetAccount().ConnectEx(ctx, req)

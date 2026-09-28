@@ -97,7 +97,7 @@ func RunServiceStreaming05() error {
 	if err != nil {
 		return fmt.Errorf("failed to create MT5Account: %w", err)
 	}
-	defer account.Close()
+	account.ApiKey = cfg.ApiKey
 
 	service := mt5.NewMT5Service(account)
 
@@ -107,18 +107,17 @@ func RunServiceStreaming05() error {
 	connCtx, connCancel := context.WithTimeout(ctx, 180*time.Second)
 	defer connCancel()
 
-	baseSymbol := cfg.TestSymbol
 	data, err := account.ConnectEx(connCtx, &pb.ConnectExRequest{
-		User:            cfg.User,
-		Password:        cfg.Password,
-		MtClusterName:   cfg.MtCluster,
-		BaseChartSymbol: &baseSymbol,
+		User:          cfg.User,
+		Password:      cfg.Password,
+		MtClusterName: cfg.MtCluster,
 	})
 	if err != nil {
 		return fmt.Errorf("connection failed: %w", err)
 	}
 
-	account.Id = uuid.MustParse(data.TerminalInstanceGuid)
+	account.TerminalInstanceGuid = data.TerminalInstanceGuid
+	account.Id = helpers_mt5.ParseGuidSafe(data.TerminalInstanceGuid)
 	fmt.Printf("  ✓ Connected successfully (Terminal GUID: %s)\n", data.TerminalInstanceGuid)
 	fmt.Printf("  Account: %d | Server: %s\n", cfg.User, cfg.MtCluster)
 

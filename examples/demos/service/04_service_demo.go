@@ -147,8 +147,9 @@ func RunService04() error {
 	if err != nil {
 		return fmt.Errorf("failed to create MT5Account: %w", err)
 	}
+	account.ApiKey = cfg.ApiKey
 	fmt.Printf("✓ MT5Account created (UUID: %s)\n", account.Id)
-	defer account.Close()
+	defer account.DisconnectAndClose()
 
 	// Create MT5Service wrapper
 	service := mt5.NewMT5Service(account)
@@ -157,12 +158,10 @@ func RunService04() error {
 	ctx := context.Background()
 
 	// ConnectEx - Connect to MT5 cluster
-	baseSymbol := cfg.TestSymbol
 	connectExReq := &pb.ConnectExRequest{
-		User:            cfg.User,
-		Password:        cfg.Password,
-		MtClusterName:   cfg.MtCluster,
-		BaseChartSymbol: &baseSymbol,
+		User:          cfg.User,
+		Password:      cfg.Password,
+		MtClusterName: cfg.MtCluster,
 	}
 
 	// Use context timeout for ConnectEx (replaces old TerminalReadinessWaitingTimeoutSeconds)
@@ -174,7 +173,8 @@ func RunService04() error {
 		return fmt.Errorf("ConnectEx failed: %w", err)
 	}
 
-	account.Id = uuid.MustParse(connectData.TerminalInstanceGuid)
+	account.TerminalInstanceGuid = connectData.TerminalInstanceGuid
+	account.Id = helpers_mt5.ParseGuidSafe(connectData.TerminalInstanceGuid)
 	fmt.Printf("✓ Connected (Terminal GUID: %s)\n", connectData.TerminalInstanceGuid)
 
 	// #endregion

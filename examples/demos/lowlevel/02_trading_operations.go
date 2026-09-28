@@ -86,8 +86,11 @@ func RunTrading02() error {
 	fmt.Println("───────────────────────────────────────────────────────────")
 
 	account, err := mt5.NewMT5Account(cfg.User, cfg.Password, cfg.GrpcServer, uuid.New())
-
 	helpers.Fatal(err, "Failed to create MT5Account")
+	if cfg.ApiKey != "" {
+		account.ApiKey = cfg.ApiKey
+	}
+	defer account.DisconnectAndClose()
 	fmt.Printf("✓ MT5Account created (UUID: %s)\n", account.Id)
 
 	// Create cancellable context for proper cleanup
@@ -95,12 +98,10 @@ func RunTrading02() error {
 	defer cancel()
 
 	// ConnectEx - Connect to MT5 cluster
-	baseSymbol := cfg.TestSymbol
 	connectExReq := &pb.ConnectExRequest{
-		User:            cfg.User,
-		Password:        cfg.Password,
-		MtClusterName:   cfg.MtCluster,
-		BaseChartSymbol: &baseSymbol,
+		User:          cfg.User,
+		Password:      cfg.Password,
+		MtClusterName: cfg.MtCluster,
 	}
 
 	// Use context timeout for ConnectEx (replaces old TerminalReadinessWaitingTimeoutSeconds)
@@ -111,7 +112,8 @@ func RunTrading02() error {
 	helpers.Fatal(err, "ConnectEx failed")
 
 	// CRITICAL: Update account GUID with the one returned by server
-	account.Id = uuid.MustParse(connectData.TerminalInstanceGuid)
+	account.TerminalInstanceGuid = connectData.TerminalInstanceGuid
+	account.Id = mt5.ParseGuidSafe(connectData.TerminalInstanceGuid)
 	fmt.Printf("✓ Connected (Terminal GUID: %s)\n", connectData.TerminalInstanceGuid)
 
 	// ═══════════════════════════════════════════════════════════════════════

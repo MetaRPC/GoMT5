@@ -74,9 +74,11 @@ func RunSugarTradingDemo() {
 	fmt.Println("\n📡 Connecting to MT5...")
 	sugar, err := mt5.NewMT5Sugar(cfg.User, cfg.Password, cfg.GrpcServer)
 	helpers.Fatal(err, "Failed to create Sugar instance")
+	sugar.GetAccount().ApiKey = cfg.ApiKey
 
 	err = sugar.QuickConnect(cfg.MtCluster)
 	helpers.Fatal(err, "Connection failed")
+	defer sugar.Disconnect()
 	fmt.Println("  ✓ Connected!")
 
 	ctx := context.Background()

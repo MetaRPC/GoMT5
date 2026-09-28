@@ -96,6 +96,14 @@ func (s *MT5Service) GetAccount() *helpers.MT5Account {
 	return s.account
 }
 
+// Disconnect gracefully disconnects from the MT5 terminal and closes resources.
+func (s *MT5Service) Disconnect() error {
+	if s == nil || s.account == nil {
+		return nil
+	}
+	return s.account.DisconnectAndClose()
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // #region DATA TRANSFER OBJECTS (DTOs)
 //

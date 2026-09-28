@@ -73,9 +73,16 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"strconv"
+	"time"
 )
+
+// ApiKeyOverride allows setting API key from command-line arguments
+var ApiKeyOverride string
 
 // MT5Config contains connection settings for MT5
 type MT5Config struct {
@@ -85,28 +92,109 @@ type MT5Config struct {
 	Port       int32   `json:"port"`
 	GrpcServer string  `json:"grpc_server"`
 	MtCluster  string  `json:"mt_cluster"`
+	ApiKey     string  `json:"api_key"`
 	TestSymbol string  `json:"test_symbol"`
 	TestVolume float64 `json:"test_volume"`
+}
+
+type demoAccountResponse struct {
+	ResultCode int    `json:"resultCode"`
+	Login      any    `json:"login"`
+	Password   string `json:"password"`
+	Server     string `json:"server"`
+	Error      string `json:"error"`
+}
+
+// OpenDemoAccount provisions a new live demo account on the specified server
+func OpenDemoAccount(server, apiKey string) (uint64, string, string, error) {
+	if server == "" || server == "FxPro-MT5 Demo" {
+		server = "MetaQuotes-Demo"
+	}
+	if apiKey == "" {
+		apiKey = "TRIAL"
+	}
+	u := fmt.Sprintf("https://mt5.mrpc.pro/DemoAccount/Open?server=%s", url.QueryEscape(server))
+	req, err := http.NewRequest("GET", u, nil)
+	if err != nil {
+		return 0, "", "", err
+	}
+	req.Header.Set("APIKey", apiKey)
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, "", "", err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, "", "", err
+	}
+	var res demoAccountResponse
+	if err := json.Unmarshal(body, &res); err != nil {
+		return 0, "", "", fmt.Errorf("failed to parse demo account response: %w", err)
+	}
+	var login uint64
+	switch v := res.Login.(type) {
+	case float64:
+		login = uint64(v)
+	case string:
+		login, _ = strconv.ParseUint(v, 10, 64)
+	}
+	srv := res.Server
+	if srv == "" {
+		srv = server
+	}
+	return login, res.Password, srv, nil
 }
 
 // LoadConfig loads configuration from file or environment variables
 // Priority: 1. config.json file, 2. environment variables
 func LoadConfig() (*MT5Config, error) {
-	// Try to load from config.json first
-	config, err := loadFromFile("config/config.json")
-	if err == nil {
-		fmt.Println("✓ Loaded configuration from config.json")
-		return config, nil
+	var cfg *MT5Config
+	for _, p := range []string{"config/config.json", "examples/demos/config/config.json", "config.json"} {
+		if c, err := loadFromFile(p); err == nil {
+			cfg = c
+			break
+		}
+	}
+	if cfg == nil {
+		var err error
+		cfg, err = loadFromEnv()
+		if err != nil {
+			apiKey := os.Getenv("MRPC_API_KEY")
+			if apiKey == "" {
+				apiKey = "TRIAL"
+			}
+			if ApiKeyOverride != "" {
+				apiKey = ApiKeyOverride
+			}
+			cfg = &MT5Config{
+				Host:       "mt5.mrpc.pro",
+				Port:       443,
+				GrpcServer: "mt5.mrpc.pro:443",
+				MtCluster:  "MetaQuotes-Demo",
+				ApiKey:     apiKey,
+				TestSymbol: "EURUSD",
+				TestVolume: 0.01,
+			}
+		}
 	}
 
-	// If config file not found, try environment variables
-	config, err = loadFromEnv()
-	if err == nil {
-		fmt.Println("✓ Loaded configuration from environment variables")
-		return config, nil
+	if cfg.User == 0 || cfg.Password == "" || cfg.MtCluster == "FxPro-MT5 Demo" {
+		fmt.Println("  Auto-provisioning live demo account on MetaQuotes-Demo...")
+		login, pwd, srv, err := OpenDemoAccount(cfg.MtCluster, cfg.ApiKey)
+		if err != nil {
+			return nil, fmt.Errorf("demo auto-provisioning failed: %w", err)
+		}
+		cfg.User = login
+		cfg.Password = pwd
+		if srv != "" {
+			cfg.MtCluster = srv
+		}
+		fmt.Printf("✓ Live Demo Account Provisioned: #%d (Server: %s)\n", cfg.User, cfg.MtCluster)
 	}
 
-	return nil, fmt.Errorf("no configuration found: %w", err)
+	return cfg, nil
 }
 
 // loadFromFile loads configuration from JSON file
@@ -119,6 +207,17 @@ func loadFromFile(filename string) (*MT5Config, error) {
 	var config MT5Config
 	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	if config.ApiKey == "" {
+		if envKey := os.Getenv("MRPC_API_KEY"); envKey != "" {
+			config.ApiKey = envKey
+		} else {
+			config.ApiKey = "TRIAL"
+		}
+	}
+	if ApiKeyOverride != "" {
+		config.ApiKey = ApiKeyOverride
 	}
 
 	return &config, nil
@@ -154,6 +253,11 @@ func loadFromEnv() (*MT5Config, error) {
 		grpcServer = fmt.Sprintf("%s:%d", host, portInt)
 	}
 
+	apiKey := getEnvOrDefault("MRPC_API_KEY", "TRIAL")
+	if ApiKeyOverride != "" {
+		apiKey = ApiKeyOverride
+	}
+
 	return &MT5Config{
 		User:       userInt,
 		Password:   password,
@@ -161,6 +265,7 @@ func loadFromEnv() (*MT5Config, error) {
 		Port:       portInt,
 		GrpcServer: grpcServer,
 		MtCluster:  os.Getenv("MT5_CLUSTER"),
+		ApiKey:     apiKey,
 		TestSymbol: getEnvOrDefault("MT5_TEST_SYMBOL", "EURUSD"),
 		TestVolume: getEnvFloatOrDefault("MT5_TEST_VOLUME", 0.01),
 	}, nil

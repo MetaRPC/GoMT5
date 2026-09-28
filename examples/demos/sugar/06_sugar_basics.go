@@ -84,6 +84,7 @@ func RunSugarBasicsDemo() {
 
 	sugar, err := mt5.NewMT5Sugar(cfg.User, cfg.Password, cfg.GrpcServer)
 	helpers.Fatal(err, "NewMT5Sugar failed")
+	sugar.GetAccount().ApiKey = cfg.ApiKey
 	fmt.Println("  ✓ Sugar instance created!")
 
 	// ══════════════════════════════════════════════════════════════
@@ -91,6 +92,7 @@ func RunSugarBasicsDemo() {
 
 	err = sugar.QuickConnect(cfg.MtCluster)
 	helpers.Fatal(err, "QuickConnect failed")
+	defer sugar.Disconnect()
 	fmt.Println("  ✓ Connected to MT5!")
 
 

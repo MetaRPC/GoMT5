@@ -37,6 +37,9 @@ func CreateAndConnectAccount() (*mt5.MT5Account, *config.MT5Config, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create MT5Account: %w", err)
 	}
+	if cfg.ApiKey != "" {
+		account.ApiKey = cfg.ApiKey
+	}
 
 	fmt.Println("\n→ Connecting to MT5 terminal...")
 	fmt.Printf("  Method: ConnectEx (via server name)\n")
@@ -54,16 +57,28 @@ func CreateAndConnectAccount() (*mt5.MT5Account, *config.MT5Config, error) {
 	return account, cfg, nil
 }
 
+// DisconnectAccount gracefully disconnects and closes the MT5 account
+func DisconnectAccount(account *mt5.MT5Account) {
+	if account != nil {
+		fmt.Println("Disconnecting from MT5 terminal...")
+		if err := account.DisconnectAndClose(); err != nil {
+			PrintWarning(fmt.Sprintf("Disconnect warning: %v\n", err))
+		} else {
+			PrintSuccess("✓ Disconnected successfully.\n\n")
+		}
+	}
+}
+
 // ConnectByServerName connects to MT5 using the server name
 func ConnectByServerName(account *mt5.MT5Account, serverName, baseSymbol string, timeoutSeconds int) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds+30)*time.Second)
 	defer cancel()
 
+	_ = baseSymbol
 	req := &pb.ConnectExRequest{
-		User:            account.User,
-		Password:        account.Password,
-		MtClusterName:   serverName,
-		BaseChartSymbol: &baseSymbol,
+		User:          account.User,
+		Password:      account.Password,
+		MtClusterName: serverName,
 	}
 
 	// ConnectEx
@@ -78,7 +93,8 @@ func ConnectByServerName(account *mt5.MT5Account, serverName, baseSymbol string,
 	}
 
 	// CRITICAL: Updating the GUID with a value from the server
-	account.Id = uuid.MustParse(reply.TerminalInstanceGuid)
+	account.TerminalInstanceGuid = reply.TerminalInstanceGuid
+	account.Id = mt5.ParseGuidSafe(reply.TerminalInstanceGuid)
 
 	// Connection check
 	checkCtx, checkCancel := context.WithTimeout(context.Background(), 5*time.Second)

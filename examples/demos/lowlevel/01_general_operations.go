@@ -113,9 +113,12 @@ func RunGeneral01() error {
 
 	account, err := mt5.NewMT5Account(cfg.User, cfg.Password, cfg.GrpcServer, uuid.New())
 	helpers.Fatal(err, "Failed to create MT5Account")
+	if cfg.ApiKey != "" {
+		account.ApiKey = cfg.ApiKey
+	}
 
 	fmt.Printf("✓ MT5Account created (UUID: %s)\n", account.Id)
-	defer account.Close()
+	defer account.DisconnectAndClose()
 
 	// Create cancellable context for proper cleanup
 	ctx, cancel := context.WithCancel(context.Background())
@@ -127,17 +130,15 @@ func RunGeneral01() error {
 	fmt.Println("\n\nSTEP 2: Connection to MT5 Server")
 	fmt.Println("───────────────────────────────────────────────────────────")
 
-	baseSymbol := cfg.TestSymbol
 	connectExReq := &pb.ConnectExRequest{
-		User:            cfg.User,
-		Password:        cfg.Password,
-		MtClusterName:   cfg.MtCluster,
-		BaseChartSymbol: &baseSymbol,
+		User:          cfg.User,
+		Password:      cfg.Password,
+		MtClusterName: cfg.MtCluster,
 	}
 
 	fmt.Printf("  User:          %d\n", cfg.User)
 	fmt.Printf("  Cluster:       %s\n", cfg.MtCluster)
-	fmt.Printf("  Base Symbol:   %s\n", baseSymbol)
+	fmt.Printf("  Base Symbol:   %s\n", cfg.TestSymbol)
 	fmt.Printf("  Context Timeout: 180 seconds\n")
 	fmt.Println()
 
@@ -149,7 +150,8 @@ func RunGeneral01() error {
 	helpers.Fatal(err, "ConnectEx failed")
 
 	// CRITICAL: Update account GUID with the one returned by server
-	account.Id = uuid.MustParse(connectData.TerminalInstanceGuid)
+	account.TerminalInstanceGuid = connectData.TerminalInstanceGuid
+	account.Id = mt5.ParseGuidSafe(connectData.TerminalInstanceGuid)
 	fmt.Printf("✓ Connected successfully\n")
 	fmt.Printf("  Terminal GUID: %s\n", connectData.TerminalInstanceGuid)
 

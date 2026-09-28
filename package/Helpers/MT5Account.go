@@ -88,13 +88,13 @@ import (
 	"io"
 	"log"
 	"math/rand"
+	"os"
 	"time"
 	"net"
 	"strings"
 
-	pb "git.mtapi.io/root/mrpc-proto/mt5/libraries/go"
+	pb "github.com/MetaRPC/GoMT5/package"
 
-	mt5errors "github.com/MetaRPC/GoMT5/examples/errors"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -129,6 +129,29 @@ type MT5Account struct {
 	TradeFunctionsClient     pb.TradeFunctionsClient
 	HealthClient             pb.HealthClient
 	Id                       uuid.UUID
+	TerminalInstanceGuid     string
+	ApiKey                   string
+	Name                     string
+}
+
+// ParseGuidSafe parses a GUID string into uuid.UUID safely, stripping mt5_live_ or mt4_live_ prefix if present.
+func ParseGuidSafe(guidStr string) uuid.UUID {
+	if guidStr == "" {
+		return uuid.New()
+	}
+	if parsed, err := uuid.Parse(guidStr); err == nil {
+		return parsed
+	}
+	clean := guidStr
+	if strings.HasPrefix(clean, "mt5_live_") {
+		clean = strings.TrimPrefix(clean, "mt5_live_")
+	} else if strings.HasPrefix(clean, "mt4_live_") {
+		clean = strings.TrimPrefix(clean, "mt4_live_")
+	}
+	if parsed, err := uuid.Parse(clean); err == nil {
+		return parsed
+	}
+	return uuid.New()
 }
 
 type mrpcError interface {
@@ -205,21 +228,50 @@ func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID
 		HealthClient:             pb.NewHealthClient(conn),
 		Id:                       id,
 		Port:                     443,
-		ConnectTimeout:           30,
+		ApiKey:                   func() string { if k := os.Getenv("MRPC_API_KEY"); k != "" { return k }; return "TRIAL" }(),
 	}, nil
 }
 
 // isConnected checks if the account has an active gRPC connection.
 func (a *MT5Account) isConnected() bool {
-	return a != nil && a.GrpcConn != nil && a.Id != uuid.Nil
+	return a != nil && a.GrpcConn != nil
 }
 
-// getHeaders returns metadata headers with session ID for gRPC calls.
+// getHeaders returns metadata headers with session ID and API key for gRPC calls.
 func (a *MT5Account) getHeaders() metadata.MD {
-	if !a.isConnected() {
+	if a == nil {
 		return nil
 	}
-	return metadata.Pairs("id", a.Id.String())
+	var pairs []string
+	if a.TerminalInstanceGuid != "" {
+		pairs = append(pairs, "id", a.TerminalInstanceGuid)
+	} else if a.Id != uuid.Nil {
+		pairs = append(pairs, "id", a.Id.String())
+	}
+	apiKey := a.ApiKey
+	if apiKey == "" {
+		apiKey = "TRIAL"
+	}
+	pairs = append(pairs, "apikey", apiKey)
+	return metadata.Pairs(pairs...)
+}
+
+// DisconnectAndClose sends a Disconnect RPC to the server and closes the underlying gRPC connection.
+func (a *MT5Account) DisconnectAndClose() error {
+	if a == nil {
+		return nil
+	}
+	var disconnectErr error
+	if a.isConnected() && (a.TerminalInstanceGuid != "" || a.Id != uuid.Nil) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_, disconnectErr = a.Disconnect(ctx, &pb.DisconnectRequest{})
+	}
+	closeErr := a.Close()
+	if disconnectErr != nil {
+		return disconnectErr
+	}
+	return closeErr
 }
 
 // Close closes the gRPC connection and cleans up resources.
@@ -237,7 +289,7 @@ func (a *MT5Account) Close() error {
 
 // IsConnected returns true if the account has an active gRPC connection.
 func (a *MT5Account) IsConnected() bool {
-	return a != nil && a.GrpcConn != nil && a.Id != uuid.Nil
+	return a != nil && a.GrpcConn != nil && (a.TerminalInstanceGuid != "" || a.Id != uuid.Nil)
 }
 
 // ExecuteWithReconnect is THE CORE PATTERN used by ALL non-streaming methods in this file.
@@ -327,7 +379,7 @@ func ExecuteWithReconnect[T any](
 			}
 			// Convert mrpcError to *pb.Error and wrap in ApiError
 			if pbErr, ok := apiErr.(*pb.Error); ok {
-				return zeroT, mt5errors.NewApiError(pbErr)
+					return zeroT, NewApiError(pbErr)
 			}
 			return zeroT, fmt.Errorf("API error (code=%s): unknown error type", code)
 		}
@@ -427,7 +479,7 @@ func ExecuteStreamWithReconnect[TRequest any, TReply any, TData any](
 					}
 					// Convert mrpcError to *pb.Error and wrap in ApiError
 					if pbErr, ok := apiErr.(*pb.Error); ok {
-						errCh <- mt5errors.NewApiError(pbErr)
+						errCh <- NewApiError(pbErr)
 					} else {
 						errCh <- fmt.Errorf("API error: unknown error type")
 					}
@@ -485,6 +537,9 @@ func (a *MT5Account) ConnectEx(ctx context.Context, req *pb.ConnectExRequest) (*
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
 	}
+	if req.Name == nil && a.Name != "" {
+		req.Name = &a.Name
+	}
 
 	if ctx == nil {
 		ctx = context.Background()
@@ -509,7 +564,13 @@ func (a *MT5Account) ConnectEx(ctx context.Context, req *pb.ConnectExRequest) (*
 		return nil, err
 	}
 
-	return reply.GetData(), nil
+	data := reply.GetData()
+	if data != nil && data.GetTerminalInstanceGuid() != "" {
+		a.TerminalInstanceGuid = data.GetTerminalInstanceGuid()
+		a.Id = ParseGuidSafe(data.GetTerminalInstanceGuid())
+	}
+
+	return data, nil
 }
 
 // Connect establishes basic connection to MT5 terminal.
@@ -528,6 +589,9 @@ func (a *MT5Account) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.C
 	}
 	if req == nil {
 		return nil, fmt.Errorf("nil request")
+	}
+	if req.Name == nil && a.Name != "" {
+		req.Name = &a.Name
 	}
 
 	if ctx == nil {
@@ -553,7 +617,13 @@ func (a *MT5Account) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.C
 		return nil, err
 	}
 
-	return reply.GetData(), nil
+	data := reply.GetData()
+	if data != nil && data.GetTerminalInstanceGuid() != "" {
+		a.TerminalInstanceGuid = data.GetTerminalInstanceGuid()
+		a.Id = ParseGuidSafe(data.GetTerminalInstanceGuid())
+	}
+
+	return data, nil
 }
 
 // ConnectProxy establishes connection to MT5 terminal through proxy server.
@@ -596,7 +666,14 @@ func (a *MT5Account) ConnectProxy(ctx context.Context, req *pb.ConnectProxyReque
 		return nil, err
 	}
 
-	return reply.GetData(), nil
+	proxyData := reply.GetData()
+	if proxyData != nil && proxyData.GetUniqueIdentifier() != "" {
+		if parsedId, parseErr := uuid.Parse(proxyData.GetUniqueIdentifier()); parseErr == nil {
+			a.Id = parsedId
+		}
+	}
+
+	return proxyData, nil
 }
 
 // CheckConnect verifies the current connection status to MT5 terminal.

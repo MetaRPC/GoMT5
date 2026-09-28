@@ -102,6 +102,25 @@ import (
 )
 
 func main() {
+	var filteredArgs []string
+	filteredArgs = append(filteredArgs, os.Args[0])
+	for i := 1; i < len(os.Args); i++ {
+		arg := os.Args[i]
+		if arg == "--api-key" && i+1 < len(os.Args) {
+			config.ApiKeyOverride = os.Args[i+1]
+			i++
+		} else if strings.HasPrefix(arg, "--api-key=") {
+			config.ApiKeyOverride = strings.TrimPrefix(arg, "--api-key=")
+		} else {
+			filteredArgs = append(filteredArgs, arg)
+		}
+	}
+	if len(filteredArgs) > 2 && config.ApiKeyOverride == "" {
+		config.ApiKeyOverride = filteredArgs[2]
+		filteredArgs = filteredArgs[:2]
+	}
+	os.Args = filteredArgs
+
 	// Main loop
 	for {
 		var command string
@@ -140,8 +159,6 @@ func main() {
 
 		// Command line mode: exit after a single run
 		if len(os.Args) > 1 {
-			fmt.Println("\n\nPress Enter to exit...")
-			fmt.Scanln()
 			return
 		}
 
@@ -395,7 +412,7 @@ func RunOrchestrator_TrailingStop() error {
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	defer sugar.GetService().GetAccount().Close()
+	defer sugar.Disconnect()
 
 	// ╔════════════════════════════════════════════════════════════╗
 	// ║  CONFIGURATION - MODIFY THESE SETTINGS                     ║
@@ -475,7 +492,7 @@ func RunOrchestrator_PositionScaler() error {
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	defer sugar.GetService().GetAccount().Close()
+	defer sugar.Disconnect()
 
 	// ╔════════════════════════════════════════════════════════════╗
 	// ║  CONFIGURATION - MODIFY THESE SETTINGS                     ║
@@ -562,7 +579,7 @@ func RunOrchestrator_Grid() error {
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	defer sugar.GetService().GetAccount().Close()
+	defer sugar.Disconnect()
 
 	// ╔════════════════════════════════════════════════════════════╗
 	// ║  CONFIGURATION - MODIFY THESE SETTINGS                     ║
@@ -647,7 +664,7 @@ func RunOrchestrator_RiskManager() error {
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	defer sugar.GetService().GetAccount().Close()
+	defer sugar.Disconnect()
 
 	// ╔════════════════════════════════════════════════════════════╗
 	// ║  CONFIGURATION - MODIFY THESE SETTINGS                     ║
@@ -748,7 +765,7 @@ func RunOrchestrator_PortfolioRebalancer() error {
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	defer sugar.GetService().GetAccount().Close()
+	defer sugar.Disconnect()
 
 	// ╔════════════════════════════════════════════════════════════╗
 	// ║  CONFIGURATION - MODIFY THESE SETTINGS                     ║
@@ -856,7 +873,7 @@ func RunOrchestrator_AdaptivePreset() error {
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	defer sugar.GetService().GetAccount().Close()
+	defer sugar.Disconnect()
 
 	// Create and execute preset
 	preset := presets.NewAdaptiveOrchestratorPreset(sugar)

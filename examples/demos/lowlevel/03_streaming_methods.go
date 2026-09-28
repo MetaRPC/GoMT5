@@ -110,6 +110,10 @@ func RunStreaming03() error {
 
 	account, err := mt5.NewMT5Account(cfg.User, cfg.Password, cfg.GrpcServer, uuid.New())
 	helpers.Fatal(err, "Failed to create MT5Account")
+	if cfg.ApiKey != "" {
+		account.ApiKey = cfg.ApiKey
+	}
+	defer account.DisconnectAndClose()
 	fmt.Printf("✓ MT5Account created (UUID: %s)\n", account.Id)
 
 	// Create cancellable context for proper stream cleanup
@@ -117,12 +121,10 @@ func RunStreaming03() error {
 	defer cancel() // Ensures all streams are properly closed
 
 	// ConnectEx - Connect to MT5 cluster
-	baseSymbol := cfg.TestSymbol
 	connectExReq := &pb.ConnectExRequest{
-		User:            cfg.User,
-		Password:        cfg.Password,
-		MtClusterName:   cfg.MtCluster,
-		BaseChartSymbol: &baseSymbol,
+		User:          cfg.User,
+		Password:      cfg.Password,
+		MtClusterName: cfg.MtCluster,
 	}
 
 	// Use context timeout for ConnectEx (replaces old TerminalReadinessWaitingTimeoutSeconds)
@@ -132,7 +134,8 @@ func RunStreaming03() error {
 	connectData, err := account.ConnectEx(connectCtx, connectExReq)
 	helpers.Fatal(err, "ConnectEx failed")
 
-	account.Id = uuid.MustParse(connectData.TerminalInstanceGuid)
+	account.TerminalInstanceGuid = connectData.TerminalInstanceGuid
+	account.Id = mt5.ParseGuidSafe(connectData.TerminalInstanceGuid)
 	fmt.Printf("✓ Connected (Terminal GUID: %s)\n", connectData.TerminalInstanceGuid)
 
 	// ═══════════════════════════════════════════════════════════════════════

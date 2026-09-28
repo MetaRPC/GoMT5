@@ -55,9 +55,11 @@ func RunUserCode() {
 
 	sugar, err := mt5.NewMT5Sugar(cfg.User, cfg.Password, cfg.GrpcServer)
 	helpers.Fatal(err, "Failed to create Sugar")
+	sugar.GetAccount().ApiKey = cfg.ApiKey
 
 	err = sugar.QuickConnect(cfg.MtCluster)
 	helpers.Fatal(err, "Failed to connect")
+	defer sugar.Disconnect()
 
 	service := sugar.GetService() // Mid-level
 	account := sugar.GetAccount() // Low-level

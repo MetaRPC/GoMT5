@@ -80,11 +80,13 @@ func RunSugarAdvancedDemo() {
 	// Create Sugar instance
 	sugar, err := mt5.NewMT5Sugar(cfg.User, cfg.Password, cfg.GrpcServer)
 	helpers.Fatal(err, "Failed to create Sugar instance")
+	sugar.GetAccount().ApiKey = cfg.ApiKey
 
 	// Connect to MT5
 	fmt.Println("\n🔌 Connecting to MT5...")
 	err = sugar.QuickConnect(cfg.MtCluster)
 	helpers.Fatal(err, "Failed to connect to MT5")
+	defer sugar.Disconnect()
 	fmt.Println("✅ Connected successfully!")
 
 	printHeader("🎯 ADVANCED SUGAR API DEMO - RISK MANAGEMENT & MORE")
