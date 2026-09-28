@@ -257,8 +257,7 @@ func (a *MT5Account) getHeaders() metadata.MD {
 }
 
 // DisconnectAndClose sends a Disconnect RPC to the server and closes the underlying gRPC connection.
-// If deleteOnDisconnect is true, the terminal instance will be permanently deleted instead of stopped.
-func (a *MT5Account) DisconnectAndClose(deleteOnDisconnect ...bool) error {
+func (a *MT5Account) DisconnectAndClose() error {
 	if a == nil {
 		return nil
 	}
@@ -266,12 +265,7 @@ func (a *MT5Account) DisconnectAndClose(deleteOnDisconnect ...bool) error {
 	if a.isConnected() && (a.TerminalInstanceGuid != "" || a.Id != uuid.Nil) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		req := &pb.DisconnectRequest{}
-		if len(deleteOnDisconnect) > 0 && deleteOnDisconnect[0] {
-			del := true
-			req.Delete = &del
-		}
-		_, disconnectErr = a.Disconnect(ctx, req)
+		_, disconnectErr = a.Disconnect(ctx, &pb.DisconnectRequest{})
 	}
 	closeErr := a.Close()
 	if disconnectErr != nil {
