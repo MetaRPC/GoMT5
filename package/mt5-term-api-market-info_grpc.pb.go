@@ -69,10 +69,12 @@ type MarketInfoClient interface {
 	MarketBookGet(ctx context.Context, in *MarketBookGetRequest, opts ...grpc.CallOption) (*MarketBookGetReply, error)
 	// Returns a collection of a broker symbols
 	SymbolList(ctx context.Context, in *SymbolListRequest, opts ...grpc.CallOption) (*SymbolListReply, error)
+	// Deprecated: Do not use.
 	// Historical bars for a symbol - what a chart is drawn from.
 	//
 	// This API had no such call, so a client holding a terminal id could list symbols, read a live
 	// price and trade, and still not draw a chart. Ticks are not candles.
+	// DEPRECATED: use QuoteHistory.Bars (mt5-term-api-quote-history.proto): paged, bounded, oldest first.
 	PriceHistory(ctx context.Context, in *PriceHistoryRequest, opts ...grpc.CallOption) (*PriceHistoryReply, error)
 }
 
@@ -228,6 +230,7 @@ func (c *marketInfoClient) SymbolList(ctx context.Context, in *SymbolListRequest
 	return out, nil
 }
 
+// Deprecated: Do not use.
 func (c *marketInfoClient) PriceHistory(ctx context.Context, in *PriceHistoryRequest, opts ...grpc.CallOption) (*PriceHistoryReply, error) {
 	out := new(PriceHistoryReply)
 	err := c.cc.Invoke(ctx, "/mt5_term_api.MarketInfo/PriceHistory", in, out, opts...)
@@ -288,10 +291,12 @@ type MarketInfoServer interface {
 	MarketBookGet(context.Context, *MarketBookGetRequest) (*MarketBookGetReply, error)
 	// Returns a collection of a broker symbols
 	SymbolList(context.Context, *SymbolListRequest) (*SymbolListReply, error)
+	// Deprecated: Do not use.
 	// Historical bars for a symbol - what a chart is drawn from.
 	//
 	// This API had no such call, so a client holding a terminal id could list symbols, read a live
 	// price and trade, and still not draw a chart. Ticks are not candles.
+	// DEPRECATED: use QuoteHistory.Bars (mt5-term-api-quote-history.proto): paged, bounded, oldest first.
 	PriceHistory(context.Context, *PriceHistoryRequest) (*PriceHistoryReply, error)
 }
 
