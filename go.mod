@@ -1,4 +1,4 @@
-module test
+module github.com/MetaRPC/GoMT5
 
 go 1.23.6
 

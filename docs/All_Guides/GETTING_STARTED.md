@@ -21,7 +21,7 @@
 Install GoMT5 via your standard Go package manager:
 
 ```bash
-go get github.com/MetaRPC/GoMT5
+go get github.com/MetaRPC/GoMT5/package
 ```
 
 ---
