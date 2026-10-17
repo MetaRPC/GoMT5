@@ -17,7 +17,7 @@
 fmt.Println("\n5.2. OpenedOrders() - Get all opened orders & positions")
 
 openedOrdersReq := &pb.OpenedOrdersRequest{
-    InputSortMode: pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_OPENED_ORDER_SORT_BY_OPEN_TIME,
+    InputSortMode: pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC,
 }
 openedOrdersData, err := account.OpenedOrders(ctx, openedOrdersReq)
 if err != nil {
@@ -54,15 +54,16 @@ if err != nil {
 
 ```go
 openedOrdersReq := &pb.OpenedOrdersRequest{
-    InputSortMode: pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_OPENED_ORDER_SORT_BY_OPEN_TIME,
+    InputSortMode: pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC,
 }
 ```
 
 A request is created with a sort mode parameter. The method accepts `InputSortMode` to control how results are sorted:
 
-- `OPENED_ORDER_SORT_BY_OPEN_TIME` (0) - sort by open time
-- `OPENED_ORDER_SORT_BY_CLOSE_TIME` (1) - sort by close time
-- `OPENED_ORDER_SORT_BY_TICKET_ID` (2) - sort by ticket ID
+- `BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC` (0) - sort by open time, ascending
+- `BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_DESC` (1) - sort by open time, descending
+- `BMT5_OPENED_ORDER_SORT_BY_ORDER_TICKET_ID_ASC` (2) - sort by ticket ID, ascending
+- `BMT5_OPENED_ORDER_SORT_BY_ORDER_TICKET_ID_DESC` (3) - sort by ticket ID, descending
 
 ---
 

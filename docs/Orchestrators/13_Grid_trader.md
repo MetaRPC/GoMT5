@@ -7,9 +7,9 @@
 **Strategy Principle**: A symmetrical grid of pending orders is created above AND below current price:
 - **SELL LIMIT orders** placed above current price (profit when price rises then falls back)
 - **BUY LIMIT orders** placed below current price (profit when price falls then rises back)
-- Each level acts as a profit target for the opposite direction
-- Grid automatically rebuilds when price moves significantly
-- Works 24/7 capturing small profits from price oscillations
+- With `TakeProfit > 0` (or `StopLoss > 0`) each order gets a TP; with `TakeProfit = 0` that TP is one grid step away. With the default config (both 0) the orders are placed **without TP/SL**
+- Grid is rebuilt around the new mid price when price drifts more than 2 grid steps from the grid center
+- Captures small profits from price oscillations while it runs
 
 **File**: `examples/demos/orchestrators/13_grid_trader.go`
 
@@ -27,13 +27,13 @@ GRID TRADER ORCHESTRATOR
 MT5Sugar Instance
     |
     |  |  |
-BuyLimit  SellLimit  GetPositions
-(below)   (above)    (monitoring)
+BuyLimit(WithSLTP)  SellLimit(WithSLTP)  GetPositionsBySymbol  GetPriceInfo
+(below)             (above)              (monitoring)          (grid center)
 ```
 
 ### Dependencies
 
-- **MT5Sugar**: High-level convenience API (`BuyLimit`, `SellLimit`, `GetPositionsBySymbol`)
+- **MT5Sugar**: High-level convenience API (`GetPriceInfo`, `BuyLimit`, `BuyLimitWithSLTP`, `SellLimit`, `SellLimitWithSLTP`, `GetPositionsBySymbol`)
 - **MT5Service**: Mid-level API for cleanup operations (`CloseOrder`)
 - **BaseOrchestrator**: Foundation pattern with metrics tracking
 - **protobuf types**: `pb.OrderCloseRequest` for order management
@@ -44,15 +44,19 @@ BuyLimit  SellLimit  GetPositions
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `Symbol` | string | *required* | Trading instrument (e.g., "EURUSD") |
+| `Symbol` | string | `symbol` argument | Trading instrument (e.g., "EURUSD") |
 | `GridSize` | int | `5` | Number of grid levels above AND below current price |
 | `GridStep` | float64 | `100` | Distance between levels in points (100pts=10pips for EURUSD) |
 | `LotSize` | float64 | `0.01` | Volume (lots) for each order in the grid |
 | `MaxPositions` | int | `10` | Maximum concurrent open positions allowed |
-| `TakeProfit` | float64 | `0` | Take profit in points (0=use GridStep as TP) |
+| `TakeProfit` | float64 | `0` | Take profit in points. 0 = GridStep is used as TP, **but only when `StopLoss > 0`**: with both 0 the orders are sent with plain `BuyLimit`/`SellLimit`, i.e. without TP |
 | `StopLoss` | float64 | `0` | Stop loss in points (0=no SL) |
 | `CheckInterval` | time.Duration | `5s` | How often to check and update grid |
-| `RebuildOnFill` | bool | `false` | Whether to rebuild entire grid when order fills |
+| `RebuildOnFill` | bool | `false` | Declared "rebuild entire grid when order fills", but **not read by the current code** |
+
+Defaults are those of `orchestrators.DefaultGridTraderConfig(symbol string)`.
+
+> **Point size and prices:** the grid uses a hard-coded point of `0.00001` (`initializeSymbol()` does not query the symbol), so distances are only correct for 5-digit symbols such as EURUSD. Grid levels are built around the Bid/Ask midpoint and are **not rounded** to the symbol's digits - MT5Sugar sends prices exactly as given.
 
 ### Configuration Example
 
@@ -63,7 +67,7 @@ config := orchestrators.GridTraderConfig{
     GridStep:      100,              // 100 points = 10 pips spacing
     LotSize:       0.01,             // 0.01 lots per order
     MaxPositions:  10,               // Max 10 concurrent positions
-    TakeProfit:    0,                // Use grid step as TP
+    TakeProfit:    0,                // 0 + StopLoss 0 = orders WITHOUT TP/SL
     StopLoss:      0,                // No SL by default
     CheckInterval: 5 * time.Second,  // Check every 5 seconds
     RebuildOnFill: false,            // Don't rebuild on each fill
@@ -89,7 +93,7 @@ go run main.go 13
 go run main.go grid
 ```
 
-Both commands will launch the **GridTrader** orchestrator with the configuration specified in `main.go -> RunOrchestrator_Grid()`.
+Both commands will launch the **GridTrader** orchestrator with the configuration specified in `main.go -> RunOrchestrator_Grid()` (symbol `cfg.TestSymbol`, `TakeProfit: 0`, `StopLoss: 0` - so the pending orders are placed without TP/SL). The runner runs the grid for 10 minutes (600 s), then calls `Stop()` and prints the final metrics.
 
 ---
 
@@ -100,32 +104,36 @@ Both commands will launch the **GridTrader** orchestrator with the configuration
 ```
 START
   |
-Initialize symbol parameters (digits, point value)
+Initialize symbol parameters (digits = 5, point = 0.00001, hard-coded)
   |
-Get current price (Bid/Ask midpoint)
+Delete previously tracked pending orders (none on first build)
+  |
+Get current price (Bid/Ask midpoint) = grid center
   |
 Calculate grid levels:
-  Levels ABOVE: currentPrice + (1×step), (2×step), ..., (GridSize×step)
-  Levels BELOW: currentPrice - (1×step), (2×step), ..., (GridSize×step)
+  Levels ABOVE: center + (1×step), (2×step), ..., (GridSize×step)
+  Levels BELOW: center - (1×step), (2×step), ..., (GridSize×step)
   |
 FOR each level ABOVE current price:
   | Place SELL LIMIT at level
-  | Set TP at (level - GridStep)
+  | TP/SL only if TakeProfit > 0 or StopLoss > 0
+  |   (TP = level - TakeProfit, or level - GridStep when TakeProfit = 0)
   |
 FOR each level BELOW current price:
   | Place BUY LIMIT at level
-  | Set TP at (level + GridStep)
+  | TP/SL only if TakeProfit > 0 or StopLoss > 0
+  |   (TP = level + TakeProfit, or level + GridStep when TakeProfit = 0)
   |
 MONITORING LOOP (every CheckInterval):
-  | Get current positions count
-  | Check if max positions reached -> pause if yes
+  | Get positions count for the symbol
+  | If count >= MaxPositions -> skip the rest of this check
   | Get current price
-  | If price moved > 2×GridStep from center -> rebuild grid
+  | If mid price moved > 2×GridStep from center -> rebuild grid
   | Track total P/L of open positions
   |
 ON STOP:
-  | Cancel all pending orders
-  | Close all positions (if configured)
+  | Delete all tracked pending orders (Service.CloseOrder)
+  | Open positions are NOT closed
   |
 END
 ```
@@ -139,24 +147,27 @@ END
 
 ```go
 func (g *GridTrader) initializeSymbol() error {
-    priceInfo, err := g.sugar.GetPriceInfo(g.config.Symbol)
-    if err != nil {
-        return fmt.Errorf("failed to get price: %w", err)
-    }
-    g.currentPrice = priceInfo.Bid
+	// Get current price
+	priceInfo, err := g.sugar.GetPriceInfo(g.config.Symbol)
+	if err != nil {
+		return fmt.Errorf("failed to get price: %w", err)
+	}
+	g.currentPrice = priceInfo.Bid
 
-    g.digits = 5         // Symbol decimal digits
-    g.point = 0.00001    // Point value for EURUSD
+	// Calculate point value from price info
+	// For EURUSD with 5 digits: point = 0.00001
+	g.digits = 5 // Default, could query from symbol info
+	g.point = 0.00001
 
-    return nil
+	return nil
 }
 ```
 
 **What happens**:
 
-- Current Bid price is obtained for grid center calculation
-- Symbol parameters (digits, point value) are initialized
-- For EURUSD: 5 digits, point = 0.00001
+- Checks that a price is available for the symbol (the Bid is stored, but `buildGrid()` replaces it with the Bid/Ask midpoint right after)
+- Digits and point are **hard-coded** to 5 and 0.00001 for every symbol - the symbol is not queried
+- So the grid distances are only correct for 5-digit symbols such as EURUSD
 
 #### 2. Building the Grid
 
@@ -165,35 +176,58 @@ func (g *GridTrader) initializeSymbol() error {
 
 ```go
 func (g *GridTrader) buildGrid() error {
-    g.cleanupOrders()  // Remove old grid first
+	// Clean existing orders first
+	g.cleanupOrders()
 
-    // Get fresh current price
-    priceInfo, err := g.sugar.GetPriceInfo(g.config.Symbol)
-    g.currentPrice = (priceInfo.Bid + priceInfo.Ask) / 2
+	// Get current price
+	priceInfo, err := g.sugar.GetPriceInfo(g.config.Symbol)
+	if err != nil {
+		return fmt.Errorf("failed to get price: %w", err)
+	}
+	g.currentPrice = (priceInfo.Bid + priceInfo.Ask) / 2
 
-    // Calculate grid step in price units
-    gridStepPrice := g.config.GridStep * g.point
+	// Calculate grid levels
+	g.gridLevels = make([]float64, 0)
+	gridStepPrice := g.config.GridStep * g.point
 
-    // Build levels above and below
-    for i := 1; i <= g.config.GridSize; i++ {
-        levelAbove := g.currentPrice + float64(i)*gridStepPrice
-        levelBelow := g.currentPrice - float64(i)*gridStepPrice
+	// Build levels above and below current price
+	for i := 1; i <= g.config.GridSize; i++ {
+		levelAbove := g.currentPrice + float64(i)*gridStepPrice
+		levelBelow := g.currentPrice - float64(i)*gridStepPrice
+		g.gridLevels = append(g.gridLevels, levelAbove, levelBelow)
+	}
 
-        g.placeSellLimit(levelAbove)  // SELL above
-        g.placeBuyLimit(levelBelow)   // BUY below
-    }
+	// Place orders at each grid level
+	for _, level := range g.gridLevels {
+		if level > g.currentPrice {
+			// Place SELL LIMIT above current price
+			if err := g.placeSellLimit(level); err != nil {
+				g.IncrementError(fmt.Sprintf("failed to place sell limit: %v", err))
+			}
+		} else {
+			// Place BUY LIMIT below current price
+			if err := g.placeBuyLimit(level); err != nil {
+				g.IncrementError(fmt.Sprintf("failed to place buy limit: %v", err))
+			}
+		}
+	}
 
-    return nil
+	g.UpdateMetrics(func(m *OrchestratorMetrics) {
+		m.LastOperation = fmt.Sprintf("Built grid with %d levels", len(g.gridLevels))
+	})
+
+	return nil
 }
 ```
 
 **Critical Details**:
 
 - Grid center = (Bid + Ask) / 2 for balanced placement
-- Each level is `GridStep × point` distance from center
+- Each level is `GridStep × point` distance from center (levels are not rounded to the symbol's digits)
 - SELL LIMIT orders go **ABOVE** current price
 - BUY LIMIT orders go **BELOW** current price
 - Old grid is cleaned up before rebuilding
+- A failed order is only counted as an error; the remaining levels are still placed
 
 **Example with GridSize=5, GridStep=100, CurrentPrice=1.10000**:
 
@@ -221,35 +255,61 @@ Total: 10 pending orders
 
 ```go
 func (g *GridTrader) placeBuyLimit(price float64) error {
-    // Calculate TP/SL
-    tp := price + g.config.GridStep*g.point  // TP one grid level up
-    sl := 0.0
-    if g.config.StopLoss > 0 {
-        sl = price - g.config.StopLoss*g.point
-    }
+	// Calculate TP/SL if configured
+	tp := 0.0
+	sl := 0.0
 
-    // Place order
-    ticket, err := g.sugar.BuyLimitWithSLTP(
-        g.config.Symbol,
-        g.config.LotSize,
-        price,
-        sl,
-        tp,
-    )
+	if g.config.TakeProfit > 0 {
+		tp = price + g.config.TakeProfit*g.point
+	} else {
+		tp = price + g.config.GridStep*g.point
+	}
 
-    g.activeOrders = append(g.activeOrders, ticket)
-    return nil
+	if g.config.StopLoss > 0 {
+		sl = price - g.config.StopLoss*g.point
+	}
+
+	var ticket uint64
+	var err error
+
+	if g.config.StopLoss > 0 || g.config.TakeProfit > 0 {
+		ticket, err = g.sugar.BuyLimitWithSLTP(g.config.Symbol, g.config.LotSize, price, sl, tp)
+	} else {
+		ticket, err = g.sugar.BuyLimit(g.config.Symbol, g.config.LotSize, price)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	g.activeOrders = append(g.activeOrders, ticket)
+	g.IncrementSuccess()
+
+	// Log with numbering
+	orderNum := len(g.activeOrders)
+	totalOrders := g.config.GridSize * 2 // GridSize levels above + GridSize levels below
+
+	// Print to console immediately
+	fmt.Printf("  [GRID #%d/%d] ✅ Placed BUY LIMIT @ %.5f (ticket #%d)\n",
+		orderNum, totalOrders, price, ticket)
+
+	g.UpdateMetrics(func(m *OrchestratorMetrics) {
+		m.LastOperation = fmt.Sprintf("[GRID #%d/%d] Placed BUY LIMIT @ %.5f (ticket #%d)",
+			orderNum, totalOrders, price, ticket)
+	})
+
+	return nil
 }
 ```
 
 **Key Points**:
 
-- **TP is set one grid level ABOVE entry** (price + GridStep)
-- This means: when BUY fills at 1.09900, TP is at 1.10000
-- As price rises back to grid center, position closes with profit
+- **TP/SL are only sent when `TakeProfit > 0` or `StopLoss > 0`** (`BuyLimitWithSLTP`); otherwise plain `BuyLimit` is used and the order has **no TP and no SL**, even though a TP value is computed
+- When TP is sent: `price + TakeProfit` points, or `price + GridStep` points when `TakeProfit = 0`
+- Example (`StopLoss > 0` or `TakeProfit = 100`): BUY fills at 1.09900, TP is at 1.10000
 - SL is optional (default 0 = no SL)
 
-**Example BUY order placement**:
+**Example BUY order placement** (`TakeProfit = 100`, `StopLoss = 0`):
 ```
 Price: 1.09900 (BUY LIMIT)
 TP:    1.10000 (price + 100pts)
@@ -261,36 +321,36 @@ SL:    none (StopLoss = 0)
 > Lines `382–427`  
 
 
+Same structure as `placeBuyLimit`, mirrored (excerpt of the TP/SL part):
+
 ```go
-func (g *GridTrader) placeSellLimit(price float64) error {
-    // Calculate TP/SL
-    tp := price - g.config.GridStep*g.point  // TP one grid level down
-    sl := 0.0
-    if g.config.StopLoss > 0 {
-        sl = price + g.config.StopLoss*g.point
-    }
+	if g.config.TakeProfit > 0 {
+		tp = price - g.config.TakeProfit*g.point
+	} else {
+		tp = price - g.config.GridStep*g.point
+	}
 
-    // Place order
-    ticket, err := g.sugar.SellLimitWithSLTP(
-        g.config.Symbol,
-        g.config.LotSize,
-        price,
-        sl,
-        tp,
-    )
+	if g.config.StopLoss > 0 {
+		sl = price + g.config.StopLoss*g.point
+	}
 
-    g.activeOrders = append(g.activeOrders, ticket)
-    return nil
-}
+	var ticket uint64
+	var err error
+
+	if g.config.StopLoss > 0 || g.config.TakeProfit > 0 {
+		ticket, err = g.sugar.SellLimitWithSLTP(g.config.Symbol, g.config.LotSize, price, sl, tp)
+	} else {
+		ticket, err = g.sugar.SellLimit(g.config.Symbol, g.config.LotSize, price)
+	}
 ```
 
 **Key Points**:
 
-- **TP is set one grid level BELOW entry** (price - GridStep)
-- This means: when SELL fills at 1.10100, TP is at 1.10000
-- As price falls back to grid center, position closes with profit
+- Again, TP/SL are only sent when `TakeProfit > 0` or `StopLoss > 0`
+- When sent, TP is `price - TakeProfit` points (or `price - GridStep` points when `TakeProfit = 0`)
+- Example: when SELL fills at 1.10100, TP is at 1.10000
 
-**Example SELL order placement**:
+**Example SELL order placement** (`TakeProfit = 100`, `StopLoss = 0`):
 ```
 Price: 1.10100 (SELL LIMIT)
 TP:    1.10000 (price - 100pts)
@@ -320,8 +380,8 @@ func (g *GridTrader) monitorLoop() {
 
 **Monitoring actions every CheckInterval**:
 
-1. **Get current positions**: Count open positions for the symbol
-2. **Check max positions**: If `CurrentPositions >= MaxPositions`, pause
+1. **Get current positions**: Count open positions for the symbol (`GetPositionsBySymbol`)
+2. **Check max positions**: If `CurrentPositions >= MaxPositions`, the rest of this check is skipped (existing pending orders stay in place)
 3. **Get current price**: Fetch latest Bid/Ask
 4. **Check price drift**: If price moved > 2×GridStep from center, rebuild grid
 5. **Track P/L**: Sum profit/loss of all open positions
@@ -330,13 +390,20 @@ func (g *GridTrader) monitorLoop() {
 **Grid rebuild trigger**:
 
 ```go
-priceDiff := currentPrice - g.currentPrice
-gridStepPrice := g.config.GridStep * g.point
+	// Check if price moved significantly from grid center
+	priceDiff := ((priceInfo.Bid + priceInfo.Ask) / 2) - g.currentPrice
+	gridStepPrice := g.config.GridStep * g.point
 
-// Rebuild if price moved more than 2 grid steps
-if priceDiff > 2*gridStepPrice || priceDiff < -2*gridStepPrice {
-    g.buildGrid()  // Rebuild centered on new price
-}
+	// Rebuild grid if price moved more than 2 grid steps
+	if priceDiff > 2*gridStepPrice || priceDiff < -2*gridStepPrice {
+		if err := g.buildGrid(); err != nil {
+			g.IncrementError(fmt.Sprintf("failed to rebuild grid: %v", err))
+		} else {
+			g.UpdateMetrics(func(m *OrchestratorMetrics) {
+				m.LastOperation = "Grid rebuilt due to price movement"
+			})
+		}
+	}
 ```
 
 #### 6. Cleanup on Stop
@@ -346,30 +413,55 @@ if priceDiff > 2*gridStepPrice || priceDiff < -2*gridStepPrice {
 
 ```go
 func (g *GridTrader) cleanupOrders() {
-    ctx := context.Background()
-    service := g.sugar.GetService()
+	// Cancel all active pending orders using Service.CloseOrder
+	ctx := context.Background()
+	service := g.sugar.GetService()
 
-    for _, ticket := range g.activeOrders {
-        req := &pb.OrderCloseRequest{Ticket: ticket}
-        service.CloseOrder(ctx, req)  // Delete pending order
-    }
+	totalOrders := len(g.activeOrders)
+	if totalOrders > 0 {
+		fmt.Printf("\n  🧹 Cleaning up %d pending orders...\n", totalOrders)
+	}
 
-    g.activeOrders = make([]uint64, 0)  // Clear list
+	deletedCount := 0
+	for i, ticket := range g.activeOrders {
+		// CloseOrder can delete pending orders (not just close positions)
+		req := &pb.OrderCloseRequest{
+			Ticket: ticket,
+		}
+		_, err := service.CloseOrder(ctx, req)
+		if err != nil {
+			g.IncrementError(fmt.Sprintf("failed to delete order #%d: %v", ticket, err))
+			fmt.Printf("  [CLEANUP %d/%d] ❌ Failed to delete order #%d: %v\n", i+1, totalOrders, ticket, err)
+		} else {
+			deletedCount++
+			fmt.Printf("  [CLEANUP %d/%d] ✅ Deleted order #%d\n", i+1, totalOrders, ticket)
+		}
+	}
+
+	// Clear tracking list
+	g.activeOrders = make([]uint64, 0)
+
+	if totalOrders > 0 {
+		fmt.Printf("  ✓ Cleanup complete: %d/%d orders deleted\n\n", deletedCount, totalOrders)
+	}
 }
 ```
 
 **What happens**:
 
-- All pending orders in `activeOrders` list are canceled
-- Uses `Service.CloseOrder()` which can delete pending orders
-- Grid is fully cleaned up to prevent hanging orders
-- Orchestrator exits cleanly
+- An `OrderClose` request is sent for every ticket in `activeOrders` (MT5 OrderClose deletes a pending order or closes a position)
+- The list is not pruned when an order fills, so tickets of already-filled orders are sent too
+- `CloseOrder` returns `(uint32 retcode, error)`; the retcode is ignored here - an order counts as deleted whenever no error is returned
+- The call uses `context.Background()` (no timeout)
+- Open positions are not closed explicitly by `Stop()`
 
 ---
 
 ## Grid Visualization
 
-### Scenario: GridSize=5, GridStep=100, CurrentPrice=1.10000
+### Scenario: GridSize=5, GridStep=100, CurrentPrice=1.10000, TakeProfit=100
+
+(The TP column applies only when `TakeProfit > 0` or `StopLoss > 0`; with the default config the orders have no TP.)
 
 ```
 1.10500  [SELL LIMIT #5]  <- Level +5 (+500pts)      TP: 1.10400
@@ -428,39 +520,42 @@ Status:    1 position open, 9 pending orders remain
 **Time 2: Price Returns to 1.10000**
 ```
 Event:     BUY position CLOSED by TP @ 1.10000
-Profit:    +100 points = +$10 (for 0.01 lots)
-Action:    Grid rebuilds, new 10 pending orders placed
-Total P/L: +$10
+Profit:    +100 points = +$1 (for 0.01 lots EURUSD)
+Action:    No rebuild (price is not > 2 grid steps from the center);
+           the filled BUY LIMIT level stays empty, 9 pending orders remain
+Total P/L: +$1
 ```
 
 **Time 3: Price Rises to 1.10200**
 ```
-Event:     SELL LIMIT #2 @ 1.10200 TRIGGERED
-Position:  SHORT 0.01 lots @ 1.10200
-TP:        1.10100 (next grid level down)
-Status:    1 position open, 9 pending orders remain
+Event:     SELL LIMIT #1 @ 1.10100 and SELL LIMIT #2 @ 1.10200 TRIGGERED
+Positions: SHORT 0.01 @ 1.10100 (TP 1.10000), SHORT 0.01 @ 1.10200 (TP 1.10100)
+Status:    2 positions open, 7 pending orders remain
+           (exactly 2 grid steps from the center: not > 2, so no rebuild)
 ```
 
 **Time 4: Price Falls to 1.10100**
 ```
-Event:     SELL position CLOSED by TP @ 1.10100
-Profit:    +100 points = +$10
-Total P/L: +$20
+Event:     SHORT @ 1.10200 CLOSED by TP @ 1.10100
+Profit:    +100 points = +$1
+Status:    SHORT @ 1.10100 still open (its TP is 1.10000)
+Total P/L: +$2 realized
 ```
 
 **Time 5: Multiple Oscillations**
 ```
-Price oscillates: 1.09900 -> 1.10000 -> 1.09800 -> 1.10100
-Result:  4 trades triggered, each with +100pts profit
-Total profit: 4 × $10 = $40
+Filled levels are not re-placed (there is no refill logic); the grid
+is only rebuilt - all tracked orders deleted and 10 new ones placed
+around the new mid price - when price drifts > 2 grid steps (200pts)
+from the center, e.g. at 1.10210.
+Each trade closed by TP earns +100pts = +$1 at 0.01 lots.
 ```
 
 **Summary**:
 
-- Range-bound market (1.09500 - 1.10500): Grid captures EVERY oscillation
+- Range-bound market (1.09500 - 1.10500): each grid level can be filled once until the next rebuild
 - Without grid: Hard to catch manually, many small movements missed
-- With grid: Automatic profit on each bounce
-- Typical result: 10-20 small wins per day in choppy markets
+- With grid (and a TP configured): automatic profit on each bounce to a TP
 
 ---
 
@@ -469,15 +564,9 @@ Total profit: 4 × $10 = $40
 ### 1. BuyLimit / BuyLimitWithSLTP
 
 ```go
-func (s *MT5Sugar) BuyLimit(symbol string, volume float64, price float64) (uint64, error)
+func (s *MT5Sugar) BuyLimit(symbol string, volume, price float64) (uint64, error)
 
-func (s *MT5Sugar) BuyLimitWithSLTP(
-    symbol string,
-    volume float64,
-    price float64,
-    sl float64,
-    tp float64,
-) (uint64, error)
+func (s *MT5Sugar) BuyLimitWithSLTP(symbol string, volume, price, sl, tp float64) (uint64, error)
 ```
 
 **Purpose**: Places pending Buy Limit order at specified price.
@@ -488,22 +577,18 @@ func (s *MT5Sugar) BuyLimitWithSLTP(
 - `volume`: `config.LotSize` (e.g., 0.01)
 - `price`: Calculated grid level BELOW current price
 - `sl`: Stop loss price (0 if disabled)
-- `tp`: Take profit price (price + GridStep)
+- `tp`: Take profit price (price + TakeProfit, or price + GridStep when TakeProfit = 0)
+- `BuyLimitWithSLTP` is used only when `TakeProfit > 0` or `StopLoss > 0`; otherwise `BuyLimit` (no TP/SL)
+- Volume and price are sent exactly as given (no rounding)
 
-**Returns**: Order ticket number or error
+**Returns**: Order ticket number or error ("order rejected, code: ..." unless the return code is 10009)
 
 ### 2. SellLimit / SellLimitWithSLTP
 
 ```go
-func (s *MT5Sugar) SellLimit(symbol string, volume float64, price float64) (uint64, error)
+func (s *MT5Sugar) SellLimit(symbol string, volume, price float64) (uint64, error)
 
-func (s *MT5Sugar) SellLimitWithSLTP(
-    symbol string,
-    volume float64,
-    price float64,
-    sl float64,
-    tp float64,
-) (uint64, error)
+func (s *MT5Sugar) SellLimitWithSLTP(symbol string, volume, price, sl, tp float64) (uint64, error)
 ```
 
 **Purpose**: Places pending Sell Limit order at specified price.
@@ -511,12 +596,12 @@ func (s *MT5Sugar) SellLimitWithSLTP(
 **Parameters in GridTrader**:
 
 - `price`: Calculated grid level ABOVE current price
-- `tp`: Take profit price (price - GridStep)
+- `tp`: Take profit price (price - TakeProfit, or price - GridStep when TakeProfit = 0); sent only when `TakeProfit > 0` or `StopLoss > 0`
 
 ### 3. GetPositionsBySymbol
 
 ```go
-func (s *MT5Sugar) GetPositionsBySymbol(symbol string) ([]*mt5.Position, error)
+func (s *MT5Sugar) GetPositionsBySymbol(symbol string) ([]*pb.PositionInfo, error)
 ```
 
 **Purpose**: Retrieves all open positions for a symbol.
@@ -530,7 +615,7 @@ func (s *MT5Sugar) GetPositionsBySymbol(symbol string) ([]*mt5.Position, error)
 ### 4. GetPriceInfo
 
 ```go
-func (s *MT5Sugar) GetPriceInfo(symbol string) (*mt5.PriceInfo, error)
+func (s *MT5Sugar) GetPriceInfo(symbol string) (*PriceInfo, error)
 ```
 
 **Purpose**: Gets current Bid/Ask prices for a symbol.
@@ -543,11 +628,17 @@ func (s *MT5Sugar) GetPriceInfo(symbol string) (*mt5.PriceInfo, error)
 ### 5. Service.CloseOrder (via GetService)
 
 ```go
-service := sugar.GetService()
-service.CloseOrder(ctx context.Context, req *pb.OrderCloseRequest) (*pb.OrderCloseData, error)
+func (s *MT5Service) CloseOrder(ctx context.Context, req *pb.OrderCloseRequest) (uint32, error)
 ```
 
-**Purpose**: Closes position or deletes pending order.
+Call in GridTrader (`cleanupOrders`):
+
+```go
+service := g.sugar.GetService()
+_, err := service.CloseOrder(ctx, &pb.OrderCloseRequest{Ticket: ticket})
+```
+
+**Purpose**: Closes position or deletes pending order. Returns the MT5 return code (10009 = done) or an error.
 
 **Usage in GridTrader**:
 
@@ -564,14 +655,14 @@ service.CloseOrder(ctx context.Context, req *pb.OrderCloseRequest) (*pb.OrderClo
 ```
 Risk per level = LotSize × StopLoss × PointValue
 
-For EURUSD (PointValue ~$10 per 1.0 lot):
+For EURUSD (PointValue ~$1 per point per 1.0 lot):
 - LotSize = 0.01
 - StopLoss = 500 points (if configured)
-- Risk per level = 0.01 × 500 × $10 = $50
+- Risk per level = 0.01 × 500 × $1 = $5
 
 Total maximum risk (if all orders trigger):
 - GridSize = 5 -> 10 orders total
-- Maximum risk = 10 × $50 = $500
+- Maximum risk = 10 × $5 = $50
 ```
 
 ### Risk Considerations
@@ -598,8 +689,8 @@ Total maximum risk (if all orders trigger):
 
 4. **MaxPositions Safety**:
 
-   - Limits concurrent exposure
-   - Prevents runaway position accumulation
+   - Limits concurrent exposure: at the limit the check is skipped (no rebuild), but pending orders already placed stay active and can still fill
+   - Reduces runaway position accumulation
    - Set to `GridSize × 2` or higher for buffer
 
 ### Recommended Settings by Account Size

@@ -121,13 +121,8 @@ Uses the `select` construct to listen to multiple sources simultaneously:
 fmt.Printf("  Event #%d: Type=%v\n", eventCount, tradeData.Type)
 ```
 
-Display the type of trading event.
-Examples of possible types:
-
-* `TRADE_EVENT_ORDER_ADDED`
-* `TRADE_EVENT_ORDER_DELETED`
-* `TRADE_EVENT_POSITION_ADDED`
-* `TRADE_EVENT_POSITION_CLOSED`
+Display the event group type (`MT5_SUB_ENUM_EVENT_GROUP_TYPE`). For `OnTrade()` it is always `OrderUpdate` (1);
+what actually changed is described by the lists in `EventData` (new/disappeared orders, positions, history orders and deals).
 
 ---
 
@@ -156,6 +151,8 @@ Each event contains an **`EventData`** object, which indicates which elements ch
 | `NewHistoryOrders`     | New orders added to history                        |
 | `NewHistoryDeals`      | New deals added to history                         |
 
+`EventData` also has `StateChangedOrders`, `DisappearedHistoryOrders`, `UpdatedHistoryOrders`, `DisappearedHistoryDeals`, `UpdatedHistoryDeals` and `UpdatedPositions`.
+
 > Thus, `OnTrade()` returns a **delta of changes** — allowing you to synchronize local data with the server.
 
 ---
@@ -170,17 +167,25 @@ The stream closes when the event limit (`MAX_EVENTS`) is reached, timeout expire
 
 ```protobuf
 message OnTradeData {
-  ENUM_TRADE_EVENT_TYPE Type = 1; // Event type
-  EventData EventData = 2;         // Change details
+  MT5_SUB_ENUM_EVENT_GROUP_TYPE type = 1;  // Event type (OrderUpdate)
+  OnTadeEventData event_data = 2;          // Change details
+  OnEventAccountInfo account_info = 3;
+  string terminal_instance_guid_id = 4;
 }
 
-message EventData {
-  repeated OrderInfo NewOrders = 1;
-  repeated OrderInfo DisappearedOrders = 2;
-  repeated PositionInfo NewPositions = 3;
-  repeated PositionInfo DisappearedPositions = 4;
-  repeated HistoryOrderInfo NewHistoryOrders = 5;
-  repeated HistoryDealInfo NewHistoryDeals = 6;
+message OnTadeEventData {
+  repeated OnTradeOrderInfo new_orders = 1;
+  repeated OnTradeOrderInfo disappeared_orders = 2;
+  repeated OnTradeOrderStateChange state_changed_orders = 3;
+  repeated OnTradeHistoryOrderInfo new_history_orders = 4;
+  repeated OnTradeHistoryOrderInfo disappeared_history_orders = 5;
+  repeated OnTradeHistoryOrderUpdate updated_history_orders = 6;
+  repeated OnTradeHistoryDealInfo new_history_deals = 7;
+  repeated OnTradeHistoryDealInfo disappeared_history_deals = 8;
+  repeated OnTradeHistoryDealUpdate updated_history_deals = 9;
+  repeated OnTradePositionInfo new_positions = 10;
+  repeated OnTradePositionInfo disappeared_positions = 11;
+  repeated OnTradePositionUpdate updated_positions = 12;
 }
 ```
 
@@ -191,7 +196,7 @@ message EventData {
 ```
 Streaming trade events (max 3 events or 10 seconds)...
   NOTE: This stream sends events only when trades occur
-  Event #1: Type=TRADE_EVENT_ORDER_ADDED
+  Event #1: Type=OrderUpdate
     New Orders: 1, Disappeared Orders: 0
     New Positions: 0, Disappeared Positions: 0
     New History Orders: 0, New History Deals: 0

@@ -12,11 +12,11 @@
 fmt.Println("\n5.5. PositionsHistory() - Get historical positions with P&L")
 
 positionsHistoryReq := &pb.PositionsHistoryRequest{
-    SortType:             pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_POSITIONS_HISTORY_SORT_BY_OPEN_TIME,
-    PositionOpenTimeFrom: fromTimestamp,
-    PositionOpenTimeTo:   toTimestamp,
-    PageNumber:           nil,  // nil for all items
-    ItemsPerPage:         nil,  // nil for all items
+    SortType:                pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_ASC,
+    PositionOpenTimeFromUtc: fromTimestamp, // time.Now() is UTC-based: use the *Utc fields
+    PositionOpenTimeToUtc:   toTimestamp,
+    PageNumber:              nil,  // nil for all items
+    ItemsPerPage:            nil,  // nil for all items
 }
 positionsHistoryData, err := account.PositionsHistory(ctx, positionsHistoryReq)
 if err != nil {
@@ -46,11 +46,11 @@ if err != nil {
 
 ```go
 positionsHistoryReq := &pb.PositionsHistoryRequest{
-    SortType:             pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_POSITIONS_HISTORY_SORT_BY_OPEN_TIME,
-    PositionOpenTimeFrom: fromTimestamp,
-    PositionOpenTimeTo:   toTimestamp,
-    PageNumber:           nil,
-    ItemsPerPage:         nil,
+    SortType:                pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_ASC,
+    PositionOpenTimeFromUtc: fromTimestamp,
+    PositionOpenTimeToUtc:   toTimestamp,
+    PageNumber:              nil,
+    ItemsPerPage:            nil,
 }
 ```
 
@@ -59,13 +59,13 @@ Time format is `timestamppb.Timestamp`, as in the `OrderHistory()` method.
 
 **Request Parameters:**
 
-- `SortType` - sort type (required):
-  - `POSITIONS_HISTORY_SORT_BY_OPEN_TIME` (0) - sort by open time
-  - `POSITIONS_HISTORY_SORT_BY_CLOSE_TIME` (1) - sort by close time
-  - `POSITIONS_HISTORY_SORT_BY_TICKET_ID` (2) - sort by ticket ID
-  - `POSITIONS_HISTORY_SORT_BY_PROFIT` (3) - sort by profit
-- `PositionOpenTimeFrom` - start time for position open time filter (optional)
-- `PositionOpenTimeTo` - end time for position open time filter (optional)
+- `SortType` - sort type:
+  - `AH_POSITION_OPEN_TIME_ASC` (0) - sort by open time, ascending
+  - `AH_POSITION_OPEN_TIME_DESC` (1) - sort by open time, descending
+  - `AH_POSITION_TICKET_ASC` (2) - sort by ticket, ascending
+  - `AH_POSITION_TICKET_DESC` (3) - sort by ticket, descending
+- `PositionOpenTimeFrom` / `PositionOpenTimeFromUtc` - start of the position open time filter (optional); the first is in the broker server's time zone, the second in UTC: send one of them, not both
+- `PositionOpenTimeTo` / `PositionOpenTimeToUtc` - end of the position open time filter (optional), same rule
 - `PageNumber` - page number for pagination (optional, nil for all items)
 - `ItemsPerPage` - number of items per page (optional, nil for all items)
 

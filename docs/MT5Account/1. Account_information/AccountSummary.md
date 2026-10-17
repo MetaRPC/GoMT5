@@ -29,7 +29,7 @@ Use it to display real‑time account state and sanity‑check connectivity:
 
 * Dashboard/CLI status in one call.
 * Verify balance & equity before trading.
-* Terminal heartbeat via `ServerTime` and `UtcTimezoneServerTimeShiftMinutes`.
+* Terminal heartbeat via `ServerTime` / `ServerTimeUtc` and `ServerUtcOffsetSeconds`.
 
 ---
 
@@ -106,12 +106,14 @@ defer cancel()
 | `AccountEquity`                      | `double`              | `float64`                  | Equity = balance + floating P/L.                 |
 | `AccountUserName`                    | `string`              | `string`                   | Account holder name.                             |
 | `AccountLeverage`                    | `int64`               | `int64`                    | Leverage (e.g., `100` for 1:100).                |
-| `AccountTradeMode`                   | `MrpcEnumAccountTradeMode` (enum) | `int32` | See `MrpcEnumAccountTradeMode` below.            |
+| `AccountTradeMode`                   | `MrpcEnumAccountTradeMode` (enum) | `pb.MrpcEnumAccountTradeMode` | See `MrpcEnumAccountTradeMode` below.            |
 | `AccountCompanyName`                 | `string`              | `string`                   | Broker/company display name.                     |
 | `AccountCurrency`                    | `string`              | `string`                   | Deposit currency (e.g., `"USD"`, `"EUR"`).       |
-| `ServerTime`                         | `google.protobuf.Timestamp` | `*timestamppb.Timestamp` | Server time (UTC) at response.                   |
+| `ServerTime`                         | `google.protobuf.Timestamp` | `*timestamppb.Timestamp` | Server time at response, in the broker server's time zone. |
+| `ServerTimeUtc`                      | `google.protobuf.Timestamp` | `*timestamppb.Timestamp` | The same moment as `ServerTime`, in UTC.         |
 | `UtcTimezoneServerTimeShiftMinutes`  | `int64`               | `int64`                    | Server offset relative to UTC (minutes).         |
 | `AccountCredit`                      | `double`              | `float64`                  | Credit amount.                                   |
+| `ServerUtcOffsetSeconds`             | `int32`               | `int32`                    | Broker server's offset from UTC in seconds (positive = ahead of UTC); `0` while the account is not connected yet. |
 
 ---
 
@@ -140,22 +142,22 @@ enum MrpcEnumAccountTradeMode {
 
 ```go
 const (
-    MrpcEnumAccountTradeMode_MRPC_ACCOUNT_TRADE_MODE_DEMO    = 0
-    MrpcEnumAccountTradeMode_MRPC_ACCOUNT_TRADE_MODE_CONTEST = 1
-    MrpcEnumAccountTradeMode_MRPC_ACCOUNT_TRADE_MODE_REAL    = 2
+    MrpcEnumAccountTradeMode_MRPC_ACCOUNT_TRADE_MODE_DEMO    MrpcEnumAccountTradeMode = 0
+    MrpcEnumAccountTradeMode_MRPC_ACCOUNT_TRADE_MODE_CONTEST MrpcEnumAccountTradeMode = 1
+    MrpcEnumAccountTradeMode_MRPC_ACCOUNT_TRADE_MODE_REAL    MrpcEnumAccountTradeMode = 2
 )
 ```
 
 **Helper function to convert enum to string:**
 
 ```go
-func AccountTradeModeToString(mode int32) string {
+func AccountTradeModeToString(mode pb.MrpcEnumAccountTradeMode) string {
     switch mode {
-    case 0:
+    case pb.MrpcEnumAccountTradeMode_MRPC_ACCOUNT_TRADE_MODE_DEMO:
         return "DEMO"
-    case 1:
+    case pb.MrpcEnumAccountTradeMode_MRPC_ACCOUNT_TRADE_MODE_CONTEST:
         return "CONTEST"
-    case 2:
+    case pb.MrpcEnumAccountTradeMode_MRPC_ACCOUNT_TRADE_MODE_REAL:
         return "REAL"
     default:
         return fmt.Sprintf("UNKNOWN(%d)", mode)
@@ -193,14 +195,14 @@ import (
 )
 
 func main() {
-    account, err := mt5.NewMT5Account(591129415, "password", "server:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
     if err != nil {
         panic(err)
     }
     defer account.Close()
 
     // Connect first
-    err = account.Connect()
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
     if err != nil {
         panic(err)
     }
@@ -262,16 +264,13 @@ func PrintServerTime(account *mt5.MT5Account) {
         panic(err)
     }
 
-    // Convert protobuf Timestamp to time.Time
-    serverUTC := s.ServerTime.AsTime()
-
-    // Apply timezone shift
-    shift := time.Duration(s.UtcTimezoneServerTimeShiftMinutes) * time.Minute
-    serverLocal := serverUTC.Add(shift)
+    // ServerTime is the broker server's wall clock; ServerTimeUtc is the same moment in UTC
+    serverUTC := s.ServerTimeUtc.AsTime()
+    serverBroker := s.ServerTime.AsTime()
 
     fmt.Printf("Server time (UTC): %s\n", serverUTC.Format(time.RFC3339))
-    fmt.Printf("Server time (local): %s\n", serverLocal.Format(time.RFC3339))
-    fmt.Printf("Timezone shift: %+d minutes\n", s.UtcTimezoneServerTimeShiftMinutes)
+    fmt.Printf("Server time (broker): %s\n", serverBroker.Format("2006-01-02 15:04:05"))
+    fmt.Printf("Broker offset from UTC: %+d seconds\n", s.ServerUtcOffsetSeconds)
 }
 ```
 
@@ -279,13 +278,13 @@ func PrintServerTime(account *mt5.MT5Account) {
 
 ```go
 func main() {
-    account, err := mt5.NewMT5Account(591129415, "password", "server:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
     if err != nil {
         panic(err)
     }
     defer account.Close()
 
-    err = account.Connect()
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
     if err != nil {
         panic(err)
     }

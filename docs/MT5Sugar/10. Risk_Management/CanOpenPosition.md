@@ -6,8 +6,8 @@
 
 * **Method:** `sugar.CanOpenPosition(symbol, volume)`
 * **Package:** `mt5` (MT5Sugar)
-* **Underlying calls:** `IsSymbolAvailable()`, `GetSymbolInfo()`, `GetFreeMargin()`, `service.CalculateMargin()`
-* **Timeout:** 5 seconds
+* **Underlying calls:** `IsSymbolAvailable()`, `GetSymbolInfo()`, `service.GetSymbolTick()`, `service.CalculateMargin()`, `GetFreeMargin()`
+* **Timeout:** 5 seconds (for the tick and margin queries; `IsSymbolAvailable`, `GetSymbolInfo` and `GetFreeMargin` use their own 3 s / 5 s / 3 s timeouts)
 * **Returns:** Three values (bool, string, error)
 
 ---
@@ -55,9 +55,9 @@ func (s *MT5Sugar) CanOpenPosition(symbol string, volume float64) (bool, string,
 
 ## 💬 Just the Essentials
 
-* **What it is:** Pre-flight check before trading - validates EVERYTHING.
-* **Why you need it:** **ALWAYS call this before trading** to avoid order rejections.
-* **Sanity check:** Checks 6 things: symbol availability, volume limits, volume step, margin requirement, free margin sufficiency.
+* **What it is:** Pre-flight check before trading - validates symbol, volume and margin.
+* **Why you need it:** **Call this before trading** to catch the most common rejection causes early.
+* **Sanity check:** Checks 5 things: symbol availability, volume minimum, volume maximum, volume step, required margin vs free margin. It does NOT check trade mode, market hours, SL/TP or stop levels - the broker can still reject the order.
 
 ---
 
@@ -65,19 +65,19 @@ func (s *MT5Sugar) CanOpenPosition(symbol string, volume float64) (bool, string,
 
 This method validates:
 
-1. ✅ **Symbol availability** - Is symbol tradeable?
+1. ✅ **Symbol availability** - Does the symbol exist and is it synchronized? (`IsSymbolAvailable`; trade mode is not checked)
 
 2. ✅ **Volume minimum** - Is volume >= VolumeMin?
 
 3. ✅ **Volume maximum** - Is volume <= VolumeMax?
 
-4. ✅ **Volume step** - Is volume a multiple of VolumeStep?
+4. ✅ **Volume step** - Is volume a multiple of VolumeStep? (tolerance 0.0001)
 
-5. ✅ **Margin calculation** - Can we calculate required margin?
-
-6. ✅ **Free margin** - Do we have enough free margin?
+5. ✅ **Free margin** - Is the required margin <= free margin? The margin is calculated with `OrderCalcMargin` for a **BUY** at the current **Ask**, whatever direction you intend to trade (no safety buffer).
 
 **If ANY check fails → returns (false, reason, nil)**
+
+**If a query fails (symbol check, symbol info, tick, margin calculation, free margin) → returns (false, "", err)**
 
 ---
 
@@ -112,8 +112,8 @@ fmt.Printf("Position #%d opened\n", ticket)
 ```go
 symbol := "EURUSD"
 riskPercent := 2.0
-stopLoss := 50.0
-takeProfit := 100.0
+stopLoss := 500.0    // points
+takeProfit := 1000.0 // points
 
 // Step 1: Calculate position size
 lotSize, err := sugar.CalculatePositionSize(symbol, riskPercent, stopLoss)
@@ -146,7 +146,7 @@ if err != nil {
 
 fmt.Printf("✅ Position #%d opened successfully\n", ticket)
 fmt.Printf("   Lot size: %.2f\n", lotSize)
-fmt.Printf("   SL: %.0f pips, TP: %.0f pips\n", stopLoss, takeProfit)
+fmt.Printf("   SL: %.0f points, TP: %.0f points\n", stopLoss, takeProfit)
 ```
 
 ---
@@ -181,7 +181,7 @@ func OpenPositionSafely(sugar *mt5.MT5Sugar, symbol string, volume float64) {
             fmt.Printf("   → Volume must be multiple of %.2f\n", info.VolumeStep)
         } else if strings.Contains(reason, "available") {
             fmt.Printf("❌ Symbol unavailable: %s\n", reason)
-            fmt.Println("   → Check symbol name or market hours")
+            fmt.Println("   → Check symbol name (or wait until the symbol is synchronized)")
         } else {
             fmt.Printf("⚠️  Cannot open: %s\n", reason)
         }
@@ -533,6 +533,11 @@ if !canOpen {
 ### 9) Batch validation with statistics
 
 ```go
+type TradeRequest struct {
+    Symbol string
+    Volume float64
+}
+
 func BatchValidateAndReport(sugar *mt5.MT5Sugar, requests []TradeRequest) {
     passCount := 0
     failCount := 0
@@ -632,7 +637,7 @@ func (pv *PositionValidator) Validate(
     }
 
     // Check 2: Maximum positions limit
-    posCount, _ := pv.sugar.GetOpenPositionsCount()
+    posCount, _ := pv.sugar.CountOpenPositions()
     if posCount >= pv.maxPositions {
         return false, fmt.Sprintf(
             "maximum positions reached (%d/%d)",
@@ -718,10 +723,11 @@ if err != nil {
 
 **📦 Methods used internally:**
 
-* `IsSymbolAvailable()` - Check symbol is tradeable
+* `IsSymbolAvailable()` - Check symbol exists and is synchronized
 * `GetSymbolInfo()` - Get volume limits
+* `service.GetSymbolTick()` - Get current Ask
+* `service.CalculateMargin()` - Calculate required margin (BUY at Ask)
 * `GetFreeMargin()` - Get available margin
-* `service.CalculateMargin()` - Calculate required margin
 
 **🍬 Complementary sugar methods:**
 
@@ -733,7 +739,7 @@ if err != nil {
 **Recommended workflow:**
 ```go
 // 1. Calculate lot size
-lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 50)
+lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 500) // 500-point SL
 
 // 2. ALWAYS validate before trading
 canOpen, reason, _ := sugar.CanOpenPosition("EURUSD", lotSize)
@@ -849,9 +855,9 @@ sugar.BuyMarket("EURUSD", 0.1)
 
 5. **Validate calculated sizes** - Even CalculatePositionSize() results should be validated
 
-6. **Fast check** - Lightweight, no trade execution, safe to call frequently
+6. **No trade execution** - Read-only, but it makes several server queries (symbol exist/sync, symbol params, stop level, tick, margin, free margin)
 
-7. **Multi-check** - Validates 6 different things in one call
+7. **Multi-check** - Validates 5 different things in one call
 
 ---
 
@@ -861,7 +867,7 @@ sugar.BuyMarket("EURUSD", 0.1)
 Three return values:
 
 (true, "", nil)
-→ ✅ All checks passed, safe to trade
+→ ✅ All 5 checks passed (the broker can still reject for other reasons)
 
 (false, "reason", nil)
 → ❌ Can't open (not an error, just blocked)

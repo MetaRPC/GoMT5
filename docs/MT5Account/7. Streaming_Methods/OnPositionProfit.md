@@ -6,7 +6,7 @@
 
 * **Low-level API:** `MT5Account.OnPositionProfit(...)` (from Go package `github.com/MetaRPC/GoMT5/package/Helpers`)
 * **gRPC service:** `mt5_term_api.SubscriptionService`
-* **Proto definition:** `OnPositionProfit` (defined in `mt5-term-api-subscription.proto`)
+* **Proto definition:** `OnPositionProfit` (defined in `mt5-term-api-subscriptions.proto`)
 
 ### RPC
 
@@ -46,7 +46,7 @@ OnPositionProfitRequest {
 | --------- | ------------------------------ | --------------------------------------------- |
 | `ctx`     | `context.Context`              | Context for cancellation (cancel to stop stream) |
 | `req`     | `*pb.OnPositionProfitRequest`  | Request with update interval settings          |
-| `req.TimerPeriodMilliseconds` | `int32` | Update interval in milliseconds (e.g., 1000 = 1 second) |
+| `req.TimerPeriodMilliseconds` | `int32` | Update interval in milliseconds (e.g., 1000 = 1 second; 0 = default 1000 ms) |
 | `req.IgnoreEmptyData` | `bool` | If true, skip updates when no positions changed |
 
 ---
@@ -62,7 +62,7 @@ OnPositionProfitRequest {
 
 | Field          | Type     | Go Type   | Description                    |
 | -------------- | -------- | --------- | ------------------------------ |
-| `Type` | `MT5_SUB_ENUM_EVENT_GROUP_TYPE` (enum) | `int32` | Event type (always OrderProfit) - **ENUM!** |
+| `Type` | `MT5_SUB_ENUM_EVENT_GROUP_TYPE` (enum) | `pb.MT5_SUB_ENUM_EVENT_GROUP_TYPE` | Event type (always OrderProfit) - **ENUM!** |
 | `NewPositions` | `repeated OnPositionProfitPositionInfo` | `[]*OnPositionProfitPositionInfo` | Newly opened positions |
 | `UpdatedPositions` | `repeated OnPositionProfitPositionInfo` | `[]*OnPositionProfitPositionInfo` | Positions with P&L changes |
 | `DeletedPositions` | `repeated OnPositionProfitPositionInfo` | `[]*OnPositionProfitPositionInfo` | Closed positions |
@@ -119,17 +119,12 @@ For a detailed line-by-line explanation with examples, see:
 **Usage in code:**
 
 ```go
-profitStream, _ := account.OnPositionProfit(ctx, &pb.OnPositionProfitRequest{
+profitChan, errChan := account.OnPositionProfit(ctx, &pb.OnPositionProfitRequest{
     TimerPeriodMilliseconds: 1000,
     IgnoreEmptyData:         true,
 })
 
-for {
-    event, err := profitStream.Recv()
-    if err != nil {
-        break
-    }
-
+for event := range profitChan { // closed when ctx is cancelled or the stream ends
     // Check event type (always OrderProfit for this stream)
     switch event.Type {
     case pb.MT5_SUB_ENUM_EVENT_GROUP_TYPE_OrderProfit:
@@ -139,6 +134,9 @@ for {
             len(event.DeletedPositions))
     }
 }
+if err := <-errChan; err != nil {
+    fmt.Printf("Stream ended: %v\n", err)
+}
 ```
 
 **Note:** The `Type` field will always be `OrderProfit` for OnPositionProfit stream. This ENUM is shared across all streaming methods (OnTrade, OnPositionProfit, OnTradeTransaction) to maintain consistent event identification.
@@ -147,7 +145,7 @@ for {
 
 ## 🧩 Notes & Tips
 
-* **Automatic reconnection:** All `MT5Account` methods have built-in protection against transient gRPC errors with automatic reconnection via `ExecuteWithReconnect`.
+* **Automatic reconnection:** Streaming methods restart the stream automatically on transient errors (Unavailable, terminal not found) via `ExecuteStreamWithReconnect`.
 * **Default timeout:** If context has no deadline, streams run indefinitely until cancelled.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
 * **Channel buffering:** Data channel is unbuffered, error channel is buffered (size 1).
@@ -178,13 +176,18 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
-    defer account.Close()
-
-    err := account.Connect()
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
     if err != nil {
         panic(err)
     }
+    defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
+
 
     ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
     defer cancel()
@@ -331,10 +334,9 @@ func AutoTakeProfitMonitor(account *mt5.MT5Account, targetProfit float64) {
 
                         // Close position
                         _, err := account.OrderClose(context.Background(), &pb.OrderCloseRequest{
-                            Ticket:    uint64(pos.Ticket),
-                            Volume:    0, // Close all
-                            Deviation: 20,
-                            Comment:   "Auto TP",
+                            Ticket:   uint64(pos.Ticket),
+                            Volume:   0, // Close all
+                            Slippage: 20,
                         })
 
                         if err != nil {

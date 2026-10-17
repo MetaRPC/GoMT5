@@ -60,11 +60,15 @@ func (a *MT5Account) PositionsHistory(
 
 ```protobuf
 PositionsHistoryRequest {
-  AH_ENUM_POSITIONS_HISTORY_SORT_TYPE sort_type = 1;           // Sort mode (optional)
-  google.protobuf.Timestamp position_open_time_from = 2;       // Start date (optional)
-  google.protobuf.Timestamp position_open_time_to = 3;         // End date (optional)
-  int32 page_number = 4;                                        // Page number (optional)
-  int32 items_per_page = 5;                                     // Items per page (optional)
+  AH_ENUM_POSITIONS_HISTORY_SORT_TYPE sort_type = 1;                  // Sort mode (optional)
+  optional google.protobuf.Timestamp position_open_time_from = 2;     // Start date, broker server time (optional)
+  optional google.protobuf.Timestamp position_open_time_from_utc = 8; // Start date in UTC: send this or position_open_time_from, not both
+  optional google.protobuf.Timestamp position_open_time_to = 3;       // End date, broker server time (optional)
+  optional google.protobuf.Timestamp position_open_time_to_utc = 9;   // End date in UTC: send this or position_open_time_to, not both
+  optional int32 page_number = 4;                                     // Page-number paging: 1-based page (optional)
+  optional int32 items_per_page = 5;                                  // Page-number paging: items per page (optional)
+  string page_token = 6;                                              // Cursor paging: next_page_token of the previous page
+  int32 page_size = 7;                                                // Cursor paging: positions per page, 1..5000
 }
 ```
 
@@ -93,10 +97,14 @@ PositionsHistoryReply {
 | Field                   | Type                                        | Description                                                           |
 | ----------------------- | ------------------------------------------- | --------------------------------------------------------------------- |
 | `SortType`              | `AH_ENUM_POSITIONS_HISTORY_SORT_TYPE`       | Sort mode (0=open time asc, 1=open time desc, 2=ticket asc, 3=ticket desc) |
-| `PositionOpenTimeFrom`  | `google.protobuf.Timestamp`                 | Start date (optional)                                                 |
-| `PositionOpenTimeTo`    | `google.protobuf.Timestamp`                 | End date (optional)                                                   |
-| `PageNumber`            | `int32`                                     | Page number for pagination (optional, default 0)                      |
-| `ItemsPerPage`          | `int32`                                     | Number of items per page (optional, default 0 = all)                  |
+| `PositionOpenTimeFrom`  | `*timestamppb.Timestamp`                    | Start date in the broker server's time zone (optional)                |
+| `PositionOpenTimeFromUtc` | `*timestamppb.Timestamp`                  | Start date in UTC (optional; send this or `PositionOpenTimeFrom`, not both) |
+| `PositionOpenTimeTo`    | `*timestamppb.Timestamp`                    | End date in the broker server's time zone (optional)                  |
+| `PositionOpenTimeToUtc` | `*timestamppb.Timestamp`                    | End date in UTC (optional; send this or `PositionOpenTimeTo`, not both) |
+| `PageNumber`            | `*int32`                                    | Page-number paging: 1-based page (optional pointer; nil = not used)   |
+| `ItemsPerPage`          | `*int32`                                    | Page-number paging: items per page (optional pointer; nil = all)      |
+| `PageToken`             | `string`                                    | Cursor paging (preferred): `NextPageToken` of the previous page       |
+| `PageSize`              | `int32`                                     | Cursor paging: positions per page, 1..5000                            |
 
 ---
 
@@ -105,6 +113,8 @@ PositionsHistoryReply {
 | Field              | Type                     | Go Type                       | Description                              |
 | ------------------ | ------------------------ | ----------------------------- | ---------------------------------------- |
 | `HistoryPositions` | `PositionHistoryInfo[]`  | `[]*pb.PositionHistoryInfo`   | Array of closed positions with P&L data  |
+| `TotalCount`       | `int32`                  | `int32`                       | Total number of positions for the query  |
+| `NextPageToken`    | `string`                 | `string`                      | Cursor paging: pass back as `PageToken`; empty on the last page |
 
 **PositionHistoryInfo main fields:**
 
@@ -112,7 +122,7 @@ PositionsHistoryReply {
 - `PositionTicket` (uint64) - Position ticket number
 - `OrderType` (AH_ENUM_POSITIONS_HISTORY_ORDER_TYPE) - Order type (BUY=0, SELL=1, etc.)
 
-- `OpenTime`, `CloseTime` (google.protobuf.Timestamp) - Open and close timestamps
+- `OpenTime`, `CloseTime` (google.protobuf.Timestamp) - Open and close timestamps (broker server time; `OpenTimeUtc`, `CloseTimeUtc` = UTC)
 
 - `Volume` (double) - Position volume
 - `OpenPrice`, `ClosePrice` (double) - Open and close prices
@@ -163,8 +173,8 @@ PositionsHistoryReply {
 * **Automatic reconnection:** All `MT5Account` methods have built-in protection against transient gRPC errors with automatic reconnection via `ExecuteWithReconnect`.
 * **Default timeout:** If context has no deadline, a default `15s` timeout is applied automatically.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
-* **Time range:** PositionOpenTimeFrom and PositionOpenTimeTo are `google.protobuf.Timestamp` (use `timestamppb.New()` to convert).
-* **Pagination:** Use PageNumber and ItemsPerPage for large datasets.
+* **Time range:** PositionOpenTimeFrom/To (broker server time) or PositionOpenTimeFromUtc/ToUtc (UTC) are `google.protobuf.Timestamp` (use `timestamppb.New()` to convert). Values built from `time.Now()` belong in the `*Utc` fields.
+* **Pagination:** Use PageNumber and ItemsPerPage (both `*int32`, 1-based pages) or the preferred cursor paging (PageToken/PageSize with NextPageToken) for large datasets.
 * **Sort mode:** SortType allows sorting by open time or ticket number (ascending/descending).
 
 ---
@@ -177,29 +187,41 @@ PositionsHistoryReply {
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
 
     pb "github.com/MetaRPC/GoMT5/package"
     "github.com/MetaRPC/GoMT5/package/Helpers"
+    "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
     defer cancel()
 
     now := time.Now()
     monthAgo := now.Add(-30 * 24 * time.Hour)
+    page, perPage := int32(1), int32(100) // PageNumber/ItemsPerPage are *int32
 
     data, err := account.PositionsHistory(ctx, &pb.PositionsHistoryRequest{
-        PositionOpenTimeFrom: timestamppb.New(monthAgo),
-        PositionOpenTimeTo:   timestamppb.New(now),
-        PageNumber:           0,
-        ItemsPerPage:         100,
+        PositionOpenTimeFromUtc: timestamppb.New(monthAgo),
+        PositionOpenTimeToUtc:   timestamppb.New(now),
+        PageNumber:              &page,
+        ItemsPerPage:            &perPage,
     })
     if err != nil {
         panic(err)
@@ -225,8 +247,8 @@ func CalculateWinRate(account *mt5.MT5Account, days int) (float64, error) {
     fromDate := now.Add(-time.Duration(days) * 24 * time.Hour)
 
     data, err := account.PositionsHistory(ctx, &pb.PositionsHistoryRequest{
-        PositionOpenTimeFrom: timestamppb.New(fromDate),
-        PositionOpenTimeTo:   timestamppb.New(now),
+        PositionOpenTimeFromUtc: timestamppb.New(fromDate),
+        PositionOpenTimeToUtc:   timestamppb.New(now),
     })
     if err != nil {
         return 0, err
@@ -270,8 +292,8 @@ func GetPnLBreakdown(account *mt5.MT5Account, fromDate, toDate time.Time) (*PnLB
     ctx := context.Background()
 
     data, err := account.PositionsHistory(ctx, &pb.PositionsHistoryRequest{
-        PositionOpenTimeFrom: timestamppb.New(fromDate),
-        PositionOpenTimeTo:   timestamppb.New(toDate),
+        PositionOpenTimeFromUtc: timestamppb.New(fromDate),
+        PositionOpenTimeToUtc:   timestamppb.New(toDate),
     })
     if err != nil {
         return nil, err
@@ -316,8 +338,8 @@ func FindBestWorstTrades(account *mt5.MT5Account, days int) {
     fromDate := now.Add(-time.Duration(days) * 24 * time.Hour)
 
     data, err := account.PositionsHistory(ctx, &pb.PositionsHistoryRequest{
-        PositionOpenTimeFrom: timestamppb.New(fromDate),
-        PositionOpenTimeTo:   timestamppb.New(now),
+        PositionOpenTimeFromUtc: timestamppb.New(fromDate),
+        PositionOpenTimeToUtc:   timestamppb.New(now),
     })
     if err != nil {
         fmt.Printf("Error: %v\n", err)
@@ -354,8 +376,8 @@ func GetProfitBySymbol(account *mt5.MT5Account, days int) map[string]float64 {
     fromDate := now.Add(-time.Duration(days) * 24 * time.Hour)
 
     data, err := account.PositionsHistory(ctx, &pb.PositionsHistoryRequest{
-        PositionOpenTimeFrom: timestamppb.New(fromDate),
-        PositionOpenTimeTo:   timestamppb.New(now),
+        PositionOpenTimeFromUtc: timestamppb.New(fromDate),
+        PositionOpenTimeToUtc:   timestamppb.New(now),
     })
     if err != nil {
         return nil
@@ -390,8 +412,8 @@ func GetTodayClosedPositions(account *mt5.MT5Account) ([]*pb.PositionHistoryInfo
     startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
     data, err := account.PositionsHistory(ctx, &pb.PositionsHistoryRequest{
-        PositionOpenTimeFrom: timestamppb.New(startOfDay),
-        PositionOpenTimeTo:   timestamppb.New(now),
+        PositionOpenTimeFromUtc: timestamppb.New(startOfDay),
+        PositionOpenTimeToUtc:   timestamppb.New(now),
     })
     if err != nil {
         return nil, err
@@ -411,8 +433,8 @@ func CalculateAverageProfit(account *mt5.MT5Account, days int) (float64, error) 
     fromDate := now.Add(-time.Duration(days) * 24 * time.Hour)
 
     data, err := account.PositionsHistory(ctx, &pb.PositionsHistoryRequest{
-        PositionOpenTimeFrom: timestamppb.New(fromDate),
-        PositionOpenTimeTo:   timestamppb.New(now),
+        PositionOpenTimeFromUtc: timestamppb.New(fromDate),
+        PositionOpenTimeToUtc:   timestamppb.New(now),
     })
     if err != nil {
         return 0, err

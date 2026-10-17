@@ -23,6 +23,10 @@ func (s *MT5Sugar) GetMarginLevel() (float64, error)
 * **What it is:** Ratio of Equity to Margin, expressed as percentage.
 * **Why you need it:** Monitor margin call risk. Below 100% = margin call territory!
 * **Sanity check:** Higher is better. 1000% = safe, 100% = dangerous, <100% = margin call.
+* **No margin used = 0:** With no open positions the value is `0` (not infinity) - treat `0` as "no margin used",
+  not as danger.
+* **Under the hood:** `service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_MARGIN_LEVEL)` - the
+  value comes from the terminal as is.
 
 ---
 
@@ -76,7 +80,16 @@ func MonitorMarginLevel(sugar *mt5.MT5Sugar) {
     defer ticker.Stop()
 
     for range ticker.C {
-        marginLevel, _ := sugar.GetMarginLevel()
+        marginLevel, err := sugar.GetMarginLevel()
+        if err != nil {
+            fmt.Printf("Margin level unavailable: %v\n", err)
+            continue
+        }
+
+        if marginLevel == 0 {
+            fmt.Println("No margin used (no open positions)")
+            continue
+        }
 
         fmt.Printf("Margin Level: %.2f%% ", marginLevel)
 
@@ -102,7 +115,14 @@ go MonitorMarginLevel(sugar)
 
 ```go
 func SafeToTrade(sugar *mt5.MT5Sugar, minMarginLevel float64) bool {
-    marginLevel, _ := sugar.GetMarginLevel()
+    marginLevel, err := sugar.GetMarginLevel()
+    if err != nil {
+        return false
+    }
+
+    if marginLevel == 0 {
+        return true // no margin used yet
+    }
 
     if marginLevel < minMarginLevel {
         fmt.Printf("❌ Margin level %.2f%% below minimum %.2f%%\n",
@@ -143,7 +163,9 @@ fmt.Printf("Free Margin:      $%.2f\n", freeMargin)
 fmt.Printf("Margin Level:     %.2f%%\n", marginLevel)
 fmt.Println()
 
-if marginLevel >= 500 {
+if margin == 0 {
+    fmt.Println("Status: 🟢 No margin used")
+} else if marginLevel >= 500 {
     fmt.Println("Status: 🟢 EXCELLENT - Very safe")
 } else if marginLevel >= 200 {
     fmt.Println("Status: 🟡 MODERATE - Monitor closely")

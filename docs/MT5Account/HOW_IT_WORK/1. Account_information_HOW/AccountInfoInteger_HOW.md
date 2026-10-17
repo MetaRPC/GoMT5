@@ -94,7 +94,7 @@ The value is returned as an **integer** (`int32`).
 ### Wrapper Example for Repeated Calls
 
 ```go
-func GetAccountIntegerProp(ctx context.Context, account AccountServiceClient, prop pb.AccountInfoIntegerPropertyType) (int64, error) {
+func GetAccountIntegerProp(ctx context.Context, account *mt5.MT5Account, prop pb.AccountInfoIntegerPropertyType) (int64, error) {
     req := &pb.AccountInfoIntegerRequest{PropertyId: prop}
     resp, err := account.AccountInfoInteger(ctx, req)
     if err != nil {

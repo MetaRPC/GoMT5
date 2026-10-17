@@ -7,6 +7,9 @@
 * **Method:** `sugar.GetSpread(symbol)`
 * **Timeout:** 3 seconds
 * **Returns:** Spread in points as `float64`
+* **Underlying call:** `service.GetSymbolInteger(ctx, symbol, pb.SymbolInfoIntegerProperty_SYMBOL_SPREAD)` - the
+  terminal's integer `SYMBOL_SPREAD` property, converted to `float64` (always a whole number of points; it is not
+  computed from BID/ASK)
 
 ---
 
@@ -35,7 +38,7 @@ For 5-digit broker (EURUSD):
   ASK: 1.08460, BID: 1.08450
   Spread = (1.08460 - 1.08450) / 0.00001 = 10 points
 
-Trading cost = Spread × Point × ContractSize × Volume
+Trading cost = Spread × Point × ContractSize × Volume   (in the symbol's quote currency)
 ```
 
 ---
@@ -128,7 +131,8 @@ volume := 1.0 // 1 lot
 spread, _ := sugar.GetSpread(symbol)
 info, _ := sugar.GetSymbolInfo(symbol)
 
-// Calculate cost in account currency
+// Calculate cost in the quote currency (= account currency only when they match,
+// e.g. EURUSD on a USD account; no currency conversion here)
 spreadCost := spread * info.Point * info.ContractSize * volume
 
 fmt.Printf("Symbol: %s\n", symbol)
@@ -407,7 +411,7 @@ TrackSpreads(sugar, "EURUSD", 1*time.Hour)
 // ❌ WRONG - forgetting spread cost
 entry := 1.08460
 target := 1.08560
-profit := target - entry // 100 pips
+profit := target - entry // 0.00100 = 100 points
 // Real profit is less due to spread!
 
 // ✅ CORRECT - account for spread
@@ -425,7 +429,7 @@ realProfit := (target - entry) - spreadInPrice
 2. **Volatile times = wide spreads** - News events widen spreads
 3. **Major pairs = tight spreads** - EUR/USD, GBP/USD have lowest
 4. **Check before scalping** - Scalpers need spreads < 10 points
-5. **Use GetPriceInfo()** - More efficient than calculating manually
+5. **Use GetPriceInfo()** - BID, ASK and a spread computed from the same tick, if you need all three
 
 ---
 

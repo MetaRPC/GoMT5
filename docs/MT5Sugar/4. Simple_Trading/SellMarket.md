@@ -6,7 +6,12 @@
 
 * **Method:** `sugar.SellMarket(symbol, volume)`
 * **Timeout:** 10 seconds
-* **Returns:** Position ticket number
+* **Returns:** Ticket number - `result.Order`, the order ticket; for a market order MT5 uses the same number as the
+  position ticket
+* **Request:** `service.PlaceOrder(ctx, &pb.OrderSendRequest{Symbol, Operation: pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_SELL, Volume})` -
+  no price, SL/TP, slippage, comment or magic number; the volume is sent exactly as given (not rounded to the volume step)
+* **Success:** only return code `10009` (TRADE_RETCODE_DONE); any other code gives the error
+  `order rejected, code: N, comment: ...`, a failed call gives `SellMarket failed: ...`
 
 ---
 
@@ -27,7 +32,7 @@ func (s *MT5Sugar) SellMarket(symbol string, volume float64) (uint64, error)
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `ticket` | `uint64` | Position ticket number (for tracking/closing) |
+| `ticket` | `uint64` | Order ticket = position ticket of the new position (for tracking/closing); 0 on error |
 | `error` | `error` | Error if order rejected or execution failed |
 
 ---
@@ -45,7 +50,7 @@ func (s *MT5Sugar) SellMarket(symbol string, volume float64) (uint64, error)
 **This method does NOT set Stop Loss or Take Profit!**
 
 - Use `SellMarketWithSLTP()` for trades with risk management
-- Use `SellMarketWithPips()` for trades with SL/TP in pips
+- Use `SellMarketWithPips()` for trades with SL/TP as distances (in points, despite the name)
 - Or manually add SL/TP after: `ModifyPositionSLTP(ticket, sl, tp)`
 
 ---
@@ -93,7 +98,7 @@ if err != nil {
 
 fmt.Printf("Position #%d opened\n", ticket)
 
-// SELL: SL above entry, TP below entry
+// SELL: SL above entry, TP below entry (50 / 100 points from the current BID)
 sl, tp, _ := sugar.CalculateSLTP(symbol, "SELL", 0, 50, 100)
 
 // Set SL/TP
@@ -130,8 +135,8 @@ fmt.Printf("SELL order #%d placed\n", ticket)
 ```go
 symbol := "EURUSD"
 riskPercent := 2.0
-stopLossPips := 50.0
-takeProfitPips := 100.0
+stopLossPips := 50.0    // distance in POINTS (the Sugar "Pips" parameters are points)
+takeProfitPips := 100.0 // points
 
 // Calculate position size
 lotSize, _ := sugar.CalculatePositionSize(symbol, riskPercent, stopLossPips)
@@ -161,19 +166,23 @@ fmt.Printf("   Ticket: #%d, Size: %.2f lots\n", ticket, lotSize)
 ```go
 symbol := "EURUSD"
 
-// Get existing BUY positions
-buyPositions, _ := sugar.GetPositionsBySymbol(symbol)
+// GetPositionsBySymbol returns BUY and SELL positions - keep only the BUYs
+positions, _ := sugar.GetPositionsBySymbol(symbol)
 
-if len(buyPositions) == 0 {
+var totalBuyVolume float64
+for _, pos := range positions {
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
+        totalBuyVolume += pos.Volume
+    }
+}
+
+if totalBuyVolume == 0 {
     fmt.Println("No BUY positions to hedge")
     return
 }
 
-// Calculate total BUY volume
-var totalBuyVolume float64
-for _, pos := range buyPositions {
-    totalBuyVolume += pos.Volume
-}
+// Note: a separate opposite position needs a hedging account;
+// on a netting account this SELL reduces/closes the BUY instead.
 
 fmt.Printf("Total BUY volume: %.2f lots\n", totalBuyVolume)
 
@@ -279,7 +288,7 @@ if spread > 10 {
 ticket, _ := sugar.SellMarket(symbol, volume)
 fmt.Printf("Scalp SELL opened: #%d\n", ticket)
 
-// Set tight TP (10 pips)
+// Set tight SL/TP (15 / 10 points)
 sl, tp, _ := sugar.CalculateSLTP(symbol, "SELL", 0, 15, 10)
 sugar.ModifyPositionSLTP(ticket, sl, tp)
 
@@ -313,7 +322,7 @@ func OpenSellPosition(sugar *mt5.MT5Sugar, symbol string) error {
     bid, _ := sugar.GetBid(symbol)
     fmt.Printf("✅ Current BID: %.5f\n", bid)
 
-    // Step 4: Calculate position size (2% risk, 50 pip SL)
+    // Step 4: Calculate position size (2% risk, 50-point SL)
     lotSize, _ := sugar.CalculatePositionSize(symbol, 2.0, 50)
     fmt.Printf("✅ Position size: %.2f lots\n", lotSize)
 
@@ -351,7 +360,7 @@ err := OpenSellPosition(sugar, "EURUSD")
 **🍬 Better alternatives with SL/TP:**
 
 * `SellMarketWithSLTP()` - SELL with SL/TP prices
-* `SellMarketWithPips()` - SELL with SL/TP in pips ⭐ **RECOMMENDED**
+* `SellMarketWithPips()` - SELL with SL/TP distances in points ⭐ **RECOMMENDED**
 
 **🍬 Other market orders:**
 
@@ -371,11 +380,12 @@ err := OpenSellPosition(sugar, "EURUSD")
 ```go
 // ❌ WRONG - SL/TP in wrong direction for SELL
 bid := 1.08500
-sl := bid - 50_pips  // WRONG! SL should be ABOVE for SELL
-tp := bid + 100_pips // WRONG! TP should be BELOW for SELL
+point := 0.00001
+sl := bid - 50*point  // WRONG! SL should be ABOVE for SELL
+tp := bid + 100*point // WRONG! TP should be BELOW for SELL
 
-// ✅ CORRECT - use CalculateSLTP
-sl, tp, _ := sugar.CalculateSLTP("EURUSD", "SELL", bid, 50, 100)
+// ✅ CORRECT - use CalculateSLTP (distances in points)
+sl, tp, _ = sugar.CalculateSLTP("EURUSD", "SELL", bid, 50, 100)
 // SELL: SL is ABOVE entry, TP is BELOW entry
 ```
 

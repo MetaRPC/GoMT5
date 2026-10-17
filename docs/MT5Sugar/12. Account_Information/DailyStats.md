@@ -6,7 +6,7 @@
 
 ```go
 type DailyStats struct {
-    TotalDeals   int       // Total closed deals today
+    TotalDeals   int       // Number of closed positions returned by GetDealsToday()
     WinningDeals int       // Number of profitable deals
     LosingDeals  int       // Number of losing deals
     WinRate      float64   // Win rate % (0-100)
@@ -20,7 +20,7 @@ type DailyStats struct {
 
 ### TotalDeals (int)
 
-- **What:** Total number of closed positions today (00:00 to now)
+- **What:** Number of closed positions returned by `GetDealsToday()` - positions whose OPEN time is between today 00:00 and now (local clock of the machine running the code)
 - **Example:** `15`
 - **Includes:** Both winning and losing trades
 - **Excludes:** Open positions (not yet closed)
@@ -42,7 +42,7 @@ type DailyStats struct {
 ### WinRate (float64)
 
 - **What:** Percentage of winning trades
-- **Formula:** (WinningDeals / TotalDeals) × 100
+- **Formula:** (WinningDeals / TotalDeals) × 100 (zero-profit positions count in TotalDeals)
 - **Range:** 0.0 to 100.0
 - **Example:** `60.0` (means 60% win rate)
 - **Important:**
@@ -53,7 +53,7 @@ type DailyStats struct {
 ### TotalProfit (float64)
 
 - **What:** Sum of all realized profits/losses today
-- **Formula:** Sum of all deal profits
+- **Formula:** Sum of the `Profit` field of each closed position (swap and commission are NOT included)
 - **Example:** `350.75` (positive = profit, negative = loss)
 - **Currency:** Account base currency
 - **Excludes:** Floating P/L from open positions
@@ -420,7 +420,7 @@ func recordDailyStats(stats *mt5.DailyStats) {
 
 ## ⚠️ Important Notes
 
-1. **Today's range** - 00:00 to current time (server time, not local)
+1. **Today's range** - 00:00 to current time of the local clock (`time.Now()` of the machine running the code, not the broker's server time); positions are selected by their OPEN time
 
 2. **Closed positions only** - Open positions not included
 
@@ -428,7 +428,9 @@ func recordDailyStats(stats *mt5.DailyStats) {
 
 4. **Best/Worst** - Absolute values, not averages
 
-5. **Zero-profit deals** - Excluded from win rate calculation
+5. **Zero-profit deals** - Counted in `TotalDeals` (so they lower `WinRate`) but neither in `WinningDeals` nor `LosingDeals`
+
+6. **Profit only** - `TotalProfit`, `BestDeal`, `WorstDeal` use the `Profit` field only (no swap / commission)
 
 ## 💡 Quick Reference
 

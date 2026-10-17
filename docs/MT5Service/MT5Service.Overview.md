@@ -12,12 +12,12 @@
 
 ```go
 // Low-Level (MT5Account):
-req := &pb.AccountInfoDoubleRequest{PropertyId: ACCOUNT_BALANCE}
+req := &pb.AccountInfoDoubleRequest{PropertyId: pb.AccountInfoDoublePropertyType_ACCOUNT_BALANCE}
 data, _ := account.AccountInfoDouble(ctx, req)
 balance := data.GetRequestedValue()  // ← unpacking
 
 // Mid-Level (MT5Service):
-balance, _ := service.GetAccountDouble(ctx, ACCOUNT_BALANCE)  // ← direct value
+balance, _ := service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_BALANCE)  // ← direct value
 ```
 
 **Key difference**: MT5Service **automatically unpacks** protobuf `Data` wrappers and **converts** types (`Timestamp` → `time.Time`), but the underlying gRPC calls and logic remain identical.
@@ -89,7 +89,7 @@ fmt.Printf("Price at %s: %.5f\n", tick.Time.Format("15:04:05"), tick.Bid)
 
 ```
 ┌─────────────────────────────────────────────
-│  HIGH-LEVEL: MT5Sugar                         ← Ready-made patterns (future)
+│  HIGH-LEVEL: MT5Sugar                         ← Ready-made patterns
 │  (ready strategies, patterns)               
 └─────────────────────────────────────────────
                     ↓
@@ -121,18 +121,21 @@ fmt.Printf("Price at %s: %.5f\n", tick.Time.Format("15:04:05"), tick.Bid)
 ```go
 import (
     pb "github.com/MetaRPC/GoMT5/package"
-    "your-project/mt5"
+    helpers "github.com/MetaRPC/GoMT5/package/Helpers"
+    mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
+    "github.com/google/uuid"
 )
 
-// 1. Create MT5Account (low-level)
-account, err := mt5.NewMT5Account(
-    login,
-    password,
-    host,
-    port,
-    grpcServer,
-    mtCluster,
-)
+// 1. Create MT5Account (low-level) and connect it
+account, err := helpers.NewMT5Account(login, password, "mt5.mrpc.pro:443", uuid.New())
+if err != nil {
+    return err
+}
+_, err = account.ConnectEx(ctx, &pb.ConnectExRequest{
+    User:          login,
+    Password:      password,
+    MtClusterName: "YourBroker-MT5 Demo",
+})
 if err != nil {
     return err
 }
@@ -146,6 +149,10 @@ balance, _ := service.GetAccountDouble(ctx,
 fmt.Printf("Balance: %.2f\n", balance)
 ```
 
+> `MT5Service` (and `MT5Sugar`) live in `examples/mt5` of the repository's **examples** module
+> (`github.com/MetaRPC/GoMT5/examples`). Get them by cloning the repository; `go get` of the
+> `github.com/MetaRPC/GoMT5/package` module gives you only `pb` and `MT5Account`.
+
 **Access to low-level:**
 ```go
 // If you need direct access to MT5Account:
@@ -155,9 +162,9 @@ account := service.GetAccount()
 
 ---
 
-## 📚 All 37 MT5Service Methods
+## 📚 All 36 MT5Service Methods
 
-MT5Service contains **37 methods**, divided into **6 categories**:
+MT5Service contains **36 methods**, divided into **6 categories** (plus the helpers `GetAccount()` and `Disconnect(deleteOnDisconnect ...bool)`):
 
 ### 1️⃣ Account Methods (4 methods)
 
@@ -192,7 +199,7 @@ Working with symbols, parameters, quotes.
 | `GetSymbolTick(ctx, symbol)` | `*SymbolTick` | Last tick (with time.Time) |
 | `GetSymbolSessionQuote(ctx, symbol, day, idx)` | `*SessionTime` | Quote session time |
 | `GetSymbolSessionTrade(ctx, symbol, day, idx)` | `*SessionTime` | Trade session time |
-| `GetSymbolParamsMany(ctx, name, sort, page, perPage)` | `[]SymbolParams` | **RECOMMENDED** - parameters of multiple symbols |
+| `GetSymbolParamsMany(ctx, name, sort, page, perPage)` | `([]SymbolParams, int32)` | **RECOMMENDED** - parameters of multiple symbols |
 
 📖 **[Full documentation: Symbol Methods](./2.%20Symbol_Methods.md)**
 
@@ -458,11 +465,18 @@ func SafePlaceOrder(service *mt5.MT5Service) error {
     ctx := context.Background()
 
     // 1. Validate order
+    tick, err := service.GetSymbolTick(ctx, "EURUSD")
+    if err != nil {
+        return err
+    }
     checkReq := &pb.OrderCheckRequest{
-        Symbol: "EURUSD",
-        Action: pb.ENUM_TRADE_REQUEST_ACTIONS_TRADE_ACTION_DEAL,
-        Type:   pb.ENUM_ORDER_TYPE_ORDER_TYPE_BUY,
-        Volume: 1.0,
+        MqlTradeRequest: &pb.MrpcMqlTradeRequest{
+            Action:    pb.MRPC_ENUM_TRADE_REQUEST_ACTIONS_TRADE_ACTION_DEAL,
+            Symbol:    "EURUSD",
+            OrderType: pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY,
+            Volume:    1.0,
+            Price:     tick.Ask,
+        },
     }
 
     checkResult, err := service.CheckOrder(ctx, checkReq)
@@ -478,14 +492,13 @@ func SafePlaceOrder(service *mt5.MT5Service) error {
     fmt.Printf("  Margin required: %.2f\n", checkResult.Margin)
     fmt.Printf("  Free margin after: %.2f\n", checkResult.MarginFree)
 
-    // 2. Place order
+    // 2. Place order (market BUY: no Price)
+    slippage := uint64(10)
     orderReq := &pb.OrderSendRequest{
         Symbol:    "EURUSD",
-        Action:    pb.ENUM_TRADE_REQUEST_ACTIONS_TRADE_ACTION_DEAL,
-        Type:      pb.ENUM_ORDER_TYPE_ORDER_TYPE_BUY,
+        Operation: pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_BUY,
         Volume:    1.0,
-        Price:     0,
-        Deviation: 10,
+        Slippage:  &slippage,
     }
 
     result, err := service.PlaceOrder(ctx, orderReq)
@@ -534,11 +547,9 @@ func MonitorPriceAndProfit(service *mt5.MT5Service) {
             if !ok {
                 return
             }
-            totalProfit := 0.0
-            for _, pos := range data.OpenedPositions {
-                totalProfit += pos.Profit
+            if data.AccountInfo != nil {
+                fmt.Printf("📊 Total P&L: %.2f\n", data.AccountInfo.Profit)
             }
-            fmt.Printf("📊 Total P&L: %.2f\n", totalProfit)
 
         case err := <-tickErrCh:
             fmt.Printf("❌ Tick error: %v\n", err)
@@ -609,8 +620,8 @@ summary, _ := service.GetAccountSummary(ctx)
 fmt.Printf("Balance: %.2f, Equity: %.2f\n", summary.Balance, summary.Equity)
 
 // ❌ BAD - don't make 2 calls for 2 properties
-balance, _ := service.GetAccountDouble(ctx, ACCOUNT_BALANCE)
-equity, _ := service.GetAccountDouble(ctx, ACCOUNT_EQUITY)
+balance, _ := service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_BALANCE)
+equity, _ := service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_EQUITY)
 ```
 
 ```go
@@ -620,8 +631,8 @@ symbols, _, _ := service.GetSymbolParamsMany(ctx, &symbolName, nil, nil, nil)
 s := symbols[0]  // All properties in one structure
 
 // ❌ BAD - don't make 10 calls GetSymbolDouble/Integer
-bid, _ := service.GetSymbolDouble(ctx, "EURUSD", SYMBOL_BID)
-ask, _ := service.GetSymbolDouble(ctx, "EURUSD", SYMBOL_ASK)
+bid, _ := service.GetSymbolDouble(ctx, "EURUSD", pb.SymbolInfoDoubleProperty_SYMBOL_BID)
+ask, _ := service.GetSymbolDouble(ctx, "EURUSD", pb.SymbolInfoDoubleProperty_SYMBOL_ASK)
 // ... 8 more calls
 ```
 
@@ -631,13 +642,13 @@ ask, _ := service.GetSymbolDouble(ctx, "EURUSD", SYMBOL_ASK)
 
 ```go
 // ✅ GOOD - always check errors
-balance, err := service.GetAccountDouble(ctx, ACCOUNT_BALANCE)
+balance, err := service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_BALANCE)
 if err != nil {
     return fmt.Errorf("failed to get balance: %w", err)
 }
 
 // ❌ BAD - don't ignore errors
-balance, _ := service.GetAccountDouble(ctx, ACCOUNT_BALANCE)
+balance, _ := service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_BALANCE)
 ```
 
 ---
@@ -649,7 +660,7 @@ balance, _ := service.GetAccountDouble(ctx, ACCOUNT_BALANCE)
 ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 defer cancel()
 
-balance, err := service.GetAccountDouble(ctx, ACCOUNT_BALANCE)
+balance, err := service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_BALANCE)
 
 // ❌ BAD - context.Background() without timeout
 ctx := context.Background()
@@ -711,7 +722,7 @@ service.SubscribeMarketDepth(ctx, "EURUSD")
 
 ### Was (Low-Level):
 ```go
-req := &pb.AccountInfoDoubleRequest{PropertyId: ACCOUNT_BALANCE}
+req := &pb.AccountInfoDoubleRequest{PropertyId: pb.AccountInfoDoublePropertyType_ACCOUNT_BALANCE}
 data, _ := account.AccountInfoDouble(ctx, req)
 balance := data.GetRequestedValue()
 
@@ -721,7 +732,7 @@ t := time.Unix(tickData.Time, 0)
 
 ### Became (Mid-Level):
 ```go
-balance, _ := service.GetAccountDouble(ctx, ACCOUNT_BALANCE)
+balance, _ := service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_BALANCE)
 
 tick, _ := service.GetSymbolTick(ctx, "EURUSD")
 // tick.Time is already time.Time!

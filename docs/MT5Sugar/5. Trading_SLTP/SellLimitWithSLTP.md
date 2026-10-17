@@ -6,7 +6,12 @@
 
 * **Method:** `sugar.SellLimitWithSLTP(symbol, volume, price, sl, tp)`
 * **Timeout:** 10 seconds
-* **Returns:** Pending order ticket number
+* **Returns:** Pending order ticket number (`result.Order`)
+* **Request:** `service.PlaceOrder(ctx, &pb.OrderSendRequest{Symbol, Operation: pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_SELL_LIMIT, Volume, Price: &price, StopLoss: &sl, TakeProfit: &tp})` -
+  no expiration, comment or magic number; price, volume, SL and TP are sent exactly as given (no rounding, no check
+  against the current price or of the stop distances - the trade server rejects invalid values)
+* **Success:** only return code `10009` (TRADE_RETCODE_DONE); any other code gives the error
+  `order rejected, code: N, comment: ...`, a failed call gives `SellLimitWithSLTP failed: ...`
 
 ---
 
@@ -105,15 +110,15 @@ volume := 0.1
 info, _ := sugar.GetSymbolInfo(symbol)
 
 // Calculate SL/TP relative to entry
-sl := entryPrice + (50 * info.Point)  // 50 pips SL (above entry)
-tp := entryPrice - (100 * info.Point) // 100 pips TP (below entry)
+sl := entryPrice + (50 * info.Point)  // 50 points SL (above entry)
+tp := entryPrice - (100 * info.Point) // 100 points TP (below entry)
 
 ticket, _ := sugar.SellLimitWithSLTP(symbol, volume, entryPrice, sl, tp)
 
 fmt.Printf("✅ SELL LIMIT with calculated SL/TP\n")
 fmt.Printf("   Entry: %.5f\n", entryPrice)
-fmt.Printf("   SL:    %.5f (50 pips above)\n", sl)
-fmt.Printf("   TP:    %.5f (100 pips below)\n", tp)
+fmt.Printf("   SL:    %.5f (50 points above)\n", sl)
+fmt.Printf("   TP:    %.5f (100 points below)\n", tp)
 fmt.Printf("   R:R:   1:2\n")
 ```
 
@@ -125,7 +130,7 @@ fmt.Printf("   R:R:   1:2\n")
 symbol := "EURUSD"
 entryPrice := 1.09000
 volume := 0.1
-slPips := 50.0
+slPips := 50.0  // distances in POINTS (the Sugar "Pips" parameters are points)
 tpPips := 100.0
 
 // Calculate SL/TP from entry price
@@ -135,8 +140,8 @@ ticket, _ := sugar.SellLimitWithSLTP(symbol, volume, entryPrice, sl, tp)
 
 fmt.Printf("✅ SELL LIMIT using helper\n")
 fmt.Printf("   Entry: %.5f\n", entryPrice)
-fmt.Printf("   SL:    %.5f (%.0f pips)\n", sl, slPips)
-fmt.Printf("   TP:    %.5f (%.0f pips)\n", tp, tpPips)
+fmt.Printf("   SL:    %.5f (%.0f points)\n", sl, slPips)
+fmt.Printf("   TP:    %.5f (%.0f points)\n", tp, tpPips)
 ```
 
 ---
@@ -190,14 +195,14 @@ fib50 := swingLow + (range_ * 0.50)
 info, _ := sugar.GetSymbolInfo(symbol)
 
 // SL above Fib level, TP at swing low
-sl := fib50 + (30 * info.Point)  // 30 pips SL
+sl := fib50 + (30 * info.Point)  // 30 points SL
 tp := swingLow                    // Target swing low
 
 ticket, _ := sugar.SellLimitWithSLTP(symbol, 0.1, fib50, sl, tp)
 
 fmt.Printf("✅ Fibonacci SELL LIMIT\n")
 fmt.Printf("   Entry: %.5f (Fib 50%%)\n", fib50)
-fmt.Printf("   SL:    %.5f (30 pips)\n", sl)
+fmt.Printf("   SL:    %.5f (30 points)\n", sl)
 fmt.Printf("   TP:    %.5f (swing low)\n", tp)
 ```
 
@@ -224,8 +229,8 @@ fmt.Printf("✅ Risk-managed SELL LIMIT\n")
 fmt.Printf("   Entry:  %.5f\n", entryPrice)
 fmt.Printf("   Risk:   %.1f%% of balance\n", riskPercent)
 fmt.Printf("   Size:   %.2f lots\n", lotSize)
-fmt.Printf("   SL:     %.0f pips\n", slPips)
-fmt.Printf("   TP:     %.0f pips\n", tpPips)
+fmt.Printf("   SL:     %.0f points\n", slPips)
+fmt.Printf("   TP:     %.0f points\n", tpPips)
 fmt.Printf("   Ticket: #%d\n", ticket)
 ```
 
@@ -243,15 +248,15 @@ info, _ := sugar.GetSymbolInfo(symbol)
 
 // Entry at round number
 entry := roundNumber
-sl := entry + (40 * info.Point)  // 40 pips SL
-tp := entry - (80 * info.Point)  // 80 pips TP
+sl := entry + (40 * info.Point)  // 40 points SL
+tp := entry - (80 * info.Point)  // 80 points TP
 
 ticket, _ := sugar.SellLimitWithSLTP(symbol, 0.1, entry, sl, tp)
 
 fmt.Printf("✅ Round number SELL LIMIT\n")
 fmt.Printf("   Entry: %.5f (psychological level)\n", entry)
-fmt.Printf("   SL:    %.5f (40 pips)\n", sl)
-fmt.Printf("   TP:    %.5f (80 pips, 1:2 R:R)\n", tp)
+fmt.Printf("   SL:    %.5f (40 points)\n", sl)
+fmt.Printf("   TP:    %.5f (80 points, 1:2 R:R)\n", tp)
 ```
 
 ---
@@ -268,15 +273,15 @@ volume := 0.1
 info, _ := sugar.GetSymbolInfo(symbol)
 
 // Tight SL above trendline
-sl := trendlinePrice + (25 * info.Point)  // 25 pips
-tp := trendlinePrice - (75 * info.Point)  // 75 pips (1:3 R:R)
+sl := trendlinePrice + (25 * info.Point)  // 25 points
+tp := trendlinePrice - (75 * info.Point)  // 75 points (1:3 R:R)
 
 ticket, _ := sugar.SellLimitWithSLTP(symbol, volume, trendlinePrice, sl, tp)
 
 fmt.Printf("✅ Trendline resistance SELL\n")
 fmt.Printf("   Entry: %.5f (trendline)\n", trendlinePrice)
-fmt.Printf("   SL:    %.5f (25 pips)\n", sl)
-fmt.Printf("   TP:    %.5f (75 pips)\n", tp)
+fmt.Printf("   SL:    %.5f (25 points)\n", sl)
+fmt.Printf("   TP:    %.5f (75 points)\n", tp)
 fmt.Printf("   R:R:   1:3\n")
 ```
 
@@ -326,14 +331,8 @@ fmt.Printf("✅ Validated SELL LIMIT placed - Ticket #%d\n", ticket)
 ### 10) Complete sell limit function
 
 ```go
-func PlaceSellLimitWithProtection(
-    sugar *mt5.MT5Sugar,
-    symbol string,
-    entryPrice float64,
-    riskPercent float64,
-    slPips float64,
-    tpPips float64,
-) (uint64, error) {
+// slPips/tpPips are distances in POINTS (as CalculatePositionSize/CalculateSLTP expect)
+func PlaceSellLimitWithProtection(sugar *mt5.MT5Sugar, symbol string, entryPrice, riskPercent, slPips, tpPips float64) (uint64, error) {
     fmt.Println("╔═══════════════════════════════════════╗")
     fmt.Println("║    SELL LIMIT WITH SL/TP              ║")
     fmt.Println("╚═══════════════════════════════════════╝")
@@ -343,7 +342,7 @@ func PlaceSellLimitWithProtection(
     if entryPrice <= currentBid {
         return 0, fmt.Errorf("entry %.5f must be above BID %.5f", entryPrice, currentBid)
     }
-    fmt.Printf("✅ Entry: %.5f (%.0f pips above current)\n",
+    fmt.Printf("✅ Entry: %.5f (%.0f points above current)\n",
         entryPrice, (entryPrice-currentBid)/0.00001)
 
     // Calculate position size
@@ -355,8 +354,8 @@ func PlaceSellLimitWithProtection(
 
     // Calculate SL/TP
     sl, tp, _ := sugar.CalculateSLTP(symbol, "SELL", entryPrice, slPips, tpPips)
-    fmt.Printf("✅ SL: %.5f (%.0f pips)\n", sl, slPips)
-    fmt.Printf("✅ TP: %.5f (%.0f pips)\n", tp, tpPips)
+    fmt.Printf("✅ SL: %.5f (%.0f points)\n", sl, slPips)
+    fmt.Printf("✅ TP: %.5f (%.0f points)\n", tp, tpPips)
 
     // Place order
     ticket, err := sugar.SellLimitWithSLTP(symbol, lotSize, entryPrice, sl, tp)
@@ -380,7 +379,7 @@ ticket, _ := PlaceSellLimitWithProtection(sugar, "EURUSD", 1.09000, 2.0, 50, 100
 **🍬 Other pending orders with SL/TP:**
 
 * `BuyLimitWithSLTP()` - BUY LIMIT with protection
-* `SellStopWithSLTP()` - SELL STOP with protection
+* SELL STOP with protection - no Sugar method; use `GetService().PlaceOrder()` with `Operation: pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_SELL_STOP`, `Price`, `StopLoss`, `TakeProfit`
 
 **🍬 Market orders with SL/TP:**
 
@@ -388,8 +387,8 @@ ticket, _ := PlaceSellLimitWithProtection(sugar, "EURUSD", 1.09000, 2.0, 50, 100
 
 **🍬 Helper methods:**
 
-* `CalculateSLTP()` - Calculate SL/TP from pips
-* `SellLimit()` - Without SL/TP (add manually later)
+* `CalculateSLTP()` - Calculate SL/TP from distances in points
+* `SellLimit()` - Without SL/TP
 
 ---
 
@@ -410,12 +409,13 @@ sugar.SellLimitWithSLTP("EURUSD", 0.1, entry, 1.09500, 1.08000)
 
 ```go
 // ❌ WRONG - SL/TP calculated from current price
+point := 0.00001 // EURUSD point (info.Point from GetSymbolInfo)
 bid, _ := sugar.GetBid("EURUSD")
 entry := 1.09000
 sl := bid + (50 * point) // Wrong! Should be from entry!
 
 // ✅ CORRECT - calculate from entry price
-sl := entry + (50 * point)
+sl = entry + (50 * point)
 tp := entry - (100 * point)
 ```
 
@@ -446,4 +446,4 @@ sugar.SellLimitWithSLTP("EURUSD", 0.1, 1.09000, sl, tp)
 
 ---
 
-**See also:** [`SellLimit.md`](../4. Simple_Trading/SellLimit.md), [`BuyLimitWithSLTP.md`](BuyLimitWithSLTP.md), [`CalculateSLTP.md`](../11. Trading_Helpers/CalculateSLTP.md)
+**See also:** [`SellLimit.md`](../4.%20Simple_Trading/SellLimit.md), [`BuyLimitWithSLTP.md`](BuyLimitWithSLTP.md), [`CalculateSLTP.md`](../11.%20Trading_Helpers/CalculateSLTP.md)

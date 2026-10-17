@@ -41,7 +41,7 @@ METHOD GROUPS:
    • SymbolInfoSessionQuote     - Get quote session times
    • SymbolInfoSessionTrade     - Get trade session times
    • SymbolParamsMany           - Get detailed parameters for multiple symbols
-   • TickValueWithSize          - DEPRECATED - use SymbolInfoDouble instead
+   • TickValueWithSize          - Tick value, tick size and contract size of several symbols
 
 4. POSITIONS & ORDERS INFORMATION (5 methods)
    • PositionsTotal             - Count open positions
@@ -1559,6 +1559,43 @@ func (a *MT5Account) SymbolParamsMany(ctx context.Context, req *pb.SymbolParamsM
 	}
 
 	errorSelector := func(reply *pb.SymbolParamsManyReply) mrpcError {
+		return reply.GetError()
+	}
+
+	reply, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
+	if err != nil {
+		return nil, err
+	}
+
+	return reply.GetData(), nil
+}
+
+// TickValueWithSize returns the tick value and tick size data of several symbols (AccountHelper.TickValueWithSize):
+// TradeTickValue, TradeTickValueProfit, TradeTickValueLoss, TradeTickSize and TradeContractSize per symbol.
+// req.SymbolNames lists the symbols (at most 1000); an empty list means every symbol in Market Watch.
+func (a *MT5Account) TickValueWithSize(ctx context.Context, req *pb.TickValueWithSizeRequest) (*pb.TickValueWithSizeData, error) {
+	if !a.isConnected() {
+		return nil, errors.New("not connected")
+	}
+	if req == nil {
+		return nil, fmt.Errorf("nil request")
+	}
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+	}
+
+	grpcCall := func(headers metadata.MD) (*pb.TickValueWithSizeReply, error) {
+		c := metadata.NewOutgoingContext(ctx, headers)
+		return a.AccountClient.TickValueWithSize(c, req)
+	}
+
+	errorSelector := func(reply *pb.TickValueWithSizeReply) mrpcError {
 		return reply.GetError()
 	}
 

@@ -101,8 +101,8 @@ case transactionData, ok := <-transactionChan:
 The loop receives each new event.
 Each message contains:
 
-* type (`transactionData.Type`),
-* `TradeTransaction` structure with details.
+* event group type (`transactionData.Type`, always `OrderUpdate` for this stream),
+* `TradeTransaction` structure with details (plus `TradeRequest`, `TradeResult` and `AccountInfo`).
 
 ---
 
@@ -118,7 +118,7 @@ Useful fields:
 
 | Field          | Description                                              |
 | ------------- | -------------------------------------------------------- |
-| `Type`        | Event type (DEAL_ADD, ORDER_ADD, ORDER_DELETE, etc.)     |
+| `Type`        | Transaction type (`SUB_TRADE_TRANSACTION_DEAL_ADD`, `..._ORDER_ADD`, `..._ORDER_DELETE`, etc.) |
 | `OrderTicket` | Order number                                             |
 | `DealTicket`  | Deal number                                              |
 | `Symbol`      | Trading instrument                                       |
@@ -154,17 +154,22 @@ The stream stops when:
 
 ```protobuf
 message OnTradeTransactionData {
-  ENUM_TRADE_TRANSACTION_TYPE Type = 1;
-  TradeTransaction TradeTransaction = 2;
+  MT5_SUB_ENUM_EVENT_GROUP_TYPE type = 1;   // OrderUpdate for transaction events
+  MqlTradeTransaction trade_transaction = 2;
+  MqlTradeRequest trade_request = 3;
+  MqlTradeResult trade_result = 4;
+  string terminal_instance_guid_id = 5;
+  OnEventAccountInfo account_info = 6;
 }
 
-message TradeTransaction {
-  ENUM_TRADE_TRANSACTION_TYPE Type = 1;
-  uint64 OrderTicket = 2;
-  uint64 DealTicket = 3;
-  string Symbol = 4;
-  double Price = 5;
-  double Volume = 6;
+message MqlTradeTransaction {
+  uint64 deal_ticket = 1;
+  uint64 order_ticket = 2;
+  string symbol = 3;
+  SUB_ENUM_TRADE_TRANSACTION_TYPE type = 4;
+  // ... order_type, order_state, deal_type, order_time_type, expiration times,
+  // price = 10, price_trigger_stop_limit, price_stop_loss, price_take_profit,
+  // volume = 14, position_ticket, position_by_opposite_position
 }
 ```
 
@@ -177,11 +182,11 @@ message TradeTransaction {
 ```
 Streaming trade transactions (max 5 events or 10 seconds)...
   NOTE: This stream sends events for all trade-related transactions
-  Event #1: Type=DEAL_ADD
-    Transaction Type=DEAL_ADD Order=12345678 Deal=98765432
+  Event #1: Type=OrderUpdate
+    Transaction Type=SUB_TRADE_TRANSACTION_DEAL_ADD Order=12345678 Deal=98765432
     Symbol=EURUSD Price=1.08645 Volume=0.10
-  Event #2: Type=ORDER_DELETE
-    Transaction Type=ORDER_DELETE Order=12345678 Deal=0
+  Event #2: Type=OrderUpdate
+    Transaction Type=SUB_TRADE_TRANSACTION_ORDER_DELETE Order=12345678 Deal=0
   ✓ Received 5 events, stopping stream
 ```
 

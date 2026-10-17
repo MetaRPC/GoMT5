@@ -65,7 +65,8 @@ OrderModifyRequest {
   optional double take_profit  = 3;                         // New TP for position or pending order
   optional double price = 4;                                // New price ONLY for pending order modification
   optional TMT5_ENUM_ORDER_TYPE_TIME expiration_time_type = 5;  // Expiration type ONLY for pending order
-  optional google.protobuf.Timestamp expiration_time = 6;   // Order expiration time (for ORDER_TIME_SPECIFIED)
+  optional google.protobuf.Timestamp expiration_time = 6;   // Order expiration time (for ORDER_TIME_SPECIFIED), broker server time
+  optional google.protobuf.Timestamp expiration_time_utc = 9; // expiration_time in UTC: send either expiration_time or expiration_time_utc, not both
   optional double stop_limit = 8;                           // New stop limit ONLY for pending order modification
 }
 ```
@@ -84,12 +85,13 @@ OrderModifyRequest {
 | Field               | Type                                | Required | Description                                       |
 | ------------------- | ----------------------------------- | -------- | ------------------------------------------------- |
 | `Ticket`            | `uint64`                            | ✅       | Order ticket number to modify                     |
-| `StopLoss`          | `double`                            | optional | New stop loss level (0 = remove)                  |
-| `TakeProfit`        | `double`                            | optional | New take profit level (0 = remove)                |
-| `Price`             | `double`                            | optional | New entry price (for pending orders only)         |
-| `ExpirationTimeType`| `TMT5_ENUM_ORDER_TYPE_TIME`         | optional | Expiration type (GTC, DAY, SPECIFIED, etc)        |
-| `ExpirationTime`    | `google.protobuf.Timestamp`         | optional | Expiration time (for SPECIFIED type)              |
-| `StopLimit`         | `double`                            | optional | New stop limit level (for stop-limit orders)      |
+| `StopLoss`          | `*float64`                          | optional | New stop loss level (0 = remove)                  |
+| `TakeProfit`        | `*float64`                          | optional | New take profit level (0 = remove)                |
+| `Price`             | `*float64`                          | optional | New entry price (for pending orders only)         |
+| `ExpirationTimeType`| `*TMT5_ENUM_ORDER_TYPE_TIME`        | optional | Expiration type (GTC, DAY, SPECIFIED, etc)        |
+| `ExpirationTime`    | `*timestamppb.Timestamp`            | optional | Expiration time (for SPECIFIED type), broker server time |
+| `ExpirationTimeUtc` | `*timestamppb.Timestamp`            | optional | Expiration time in UTC (send this or `ExpirationTime`, not both) |
+| `StopLimit`         | `*float64`                          | optional | New stop limit level (for stop-limit orders)      |
 
 ---
 
@@ -149,6 +151,7 @@ OrderModifyRequest {
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -158,8 +161,17 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
     defer cancel()
@@ -227,30 +239,30 @@ func TrailingStop(account *mt5.MT5Account, ticket uint64, trailDistance float64)
         return err
     }
 
-    var order *pb.Order
-    for _, o := range positions.Orders {
-        if o.Ticket == ticket {
-            order = o
+    var pos *pb.PositionInfo
+    for _, p := range positions.PositionInfos {
+        if p.Ticket == ticket {
+            pos = p
             break
         }
     }
 
-    if order == nil {
+    if pos == nil {
         return fmt.Errorf("position not found")
     }
 
     // Calculate new SL
     var newSL float64
-    if order.Type == 0 { // Buy position
-        newSL = order.CurrentPrice - trailDistance
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
+        newSL = pos.PriceCurrent - trailDistance
         // Only move SL up, never down
-        if newSL <= order.StopLoss {
+        if newSL <= pos.StopLoss {
             return nil // No change needed
         }
     } else { // Sell position
-        newSL = order.CurrentPrice + trailDistance
+        newSL = pos.PriceCurrent + trailDistance
         // Only move SL down, never up
-        if order.StopLoss > 0 && newSL >= order.StopLoss {
+        if pos.StopLoss > 0 && newSL >= pos.StopLoss {
             return nil // No change needed
         }
     }
@@ -329,12 +341,16 @@ func SafeModifySLTP(account *mt5.MT5Account, ticket uint64, newSL, newTP float64
     ctx := context.Background()
 
     // Validate stop levels first
-    stopsLevel, _ := account.SymbolInfoInteger(ctx, &pb.SymbolInfoIntegerRequest{
-        Symbol:     "EURUSD", // Should get symbol from position
-        PropertyId: 19,       // SYMBOL_STOPS_LEVEL
+    stopsLevel, err := account.SymbolInfoInteger(ctx, &pb.SymbolInfoIntegerRequest{
+        Symbol: "EURUSD", // Should get symbol from position
+        Type:   pb.SymbolInfoIntegerProperty_SYMBOL_TRADE_STOPS_LEVEL,
     })
+    if err != nil {
+        return err
+    }
 
-    // Add validation logic here...
+    // Add validation logic here (stopsLevel.Value = minimum SL/TP distance in points)...
+    _ = stopsLevel.Value
 
     data, err := account.OrderModify(ctx, &pb.OrderModifyRequest{
         Ticket:     ticket,

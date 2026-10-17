@@ -8,10 +8,12 @@
 
 - **Drawdown Protection**: Monitors both percentage and absolute drawdown from peak balance
 - **Daily Loss Limit**: Enforces maximum daily loss caps (prevents revenge trading)
-- **Daily Profit Target**: Locks in good days by stopping trading at profit goal
-- **Margin Safety**: Monitors margin levels and prevents margin calls
-- **Position Limits**: Controls maximum position counts and per-symbol exposure
-- **Emergency Actions**: Automatically closes positions or blocks new trades when limits hit
+- **Daily Profit Target**: Raises the "trading blocked" flag when the daily profit goal is reached
+- **Margin Safety**: Monitors the margin level and closes the most losing position when it falls below the minimum
+- **Position Limits**: Logs warnings when position counts or per-symbol counts exceed the limits
+- **Emergency Actions**: Automatically closes positions (`EnableAutoClose`) and raises the trading-blocked flag (`EnableTradeBlocking`) when limits hit
+
+> **"Blocking" is only a flag.** The risk manager does not intercept or reject orders. It sets an internal flag that you read with `IsTradingBlocked()`; your own trading code must check it before opening positions.
 
 **File**: `examples/demos/orchestrators/14_risk_manager.go`
 
@@ -53,13 +55,17 @@ CloseAllPositions / ClosePosition
 | `DailyLossLimit` | float64 | `500.0` | Maximum daily loss allowed |
 | `DailyProfitTarget` | float64 | `1000.0` | Stop trading after hitting this profit |
 | `MinMarginLevel` | float64 | `150.0` | Minimum margin level percentage |
-| `MaxMarginUsed` | float64 | `80.0` | Maximum margin usage percentage |
+| `MaxMarginUsed` | float64 | `80.0` | Declared "maximum margin usage", but **not read by the current code** |
 | `MaxOpenPositions` | int | `20` | Maximum concurrent positions |
 | `MaxSymbolExposure` | int | `5` | Maximum positions per symbol |
-| `MaxPositionSize` | float64 | `1.0` | Maximum lot size per position |
+| `MaxPositionSize` | float64 | `1.0` | Declared "maximum lot size per position", but **not read by the current code** |
 | `CheckInterval` | time.Duration | `5s` | How often to check risk metrics |
 | `EnableAutoClose` | bool | `true` | Automatically close positions on breach |
-| `EnableTradeBlocking` | bool | `true` | Block new trades when limits hit |
+| `EnableTradeBlocking` | bool | `true` | Set the trading-blocked flag (`IsTradingBlocked()`) when a daily limit is hit |
+
+Defaults are those of `orchestrators.DefaultRiskManagerConfig()`.
+
+Besides `Start`/`Stop`/`GetStatus`/`GetMetrics`/`IsRunning`, the `*RiskManager` has `GetRiskEvents() []RiskEvent`, `IsTradingBlocked() bool`, `GetTodayProfit() float64`, `GetPeakBalance() float64` and `GetDailyStartBalance() float64`.
 
 ### Configuration Example
 
@@ -99,7 +105,9 @@ go run main.go 14
 go run main.go risk
 ```
 
-Both commands will launch the **RiskManager** orchestrator with the configuration specified in `main.go -> RunOrchestrator_RiskManager()`.
+Both commands will launch the **RiskManager** orchestrator with the configuration specified in `main.go -> RunOrchestrator_RiskManager()`. The runner monitors for 15 minutes (900 s), showing drawdown, today's profit, the number of risk events and the blocked flag, then calls `Stop()` and prints the final metrics.
+
+> **Warning:** the runner uses `EnableAutoClose: true` - a breach closes ALL open positions of the account.
 
 ---
 
@@ -121,12 +129,11 @@ MONITORING LOOP (every CheckInterval):
   Check if new day -> Reset daily counters
   |
   Get current account state:
-    - Equity
-    - Balance
-    - Margin Level
-    - Open positions
+    - Equity (error -> count error, skip this check)
+    - Balance, Margin Level (errors ignored)
   |
-  Update peak balance if equity higher
+  Update peak if equity higher (peak starts at the starting balance,
+  then tracks the highest EQUITY; it is never reset while running)
   |
   Calculate metrics:
     - Current drawdown = peak - equity
@@ -148,18 +155,18 @@ MONITORING LOOP (every CheckInterval):
        | If today loss >= DailyLossLimit:
        |   -> Log CRITICAL event
        |   -> If EnableAutoClose: CLOSE ALL POSITIONS
-       |   -> If EnableTradeBlocking: Block trading
+       |   -> If EnableTradeBlocking: set trading-blocked flag
        |
-       | If today profit >= DailyProfitTarget:
+       | If DailyProfitTarget > 0 and today profit >= DailyProfitTarget:
        |   -> Log INFO event
-       |   -> If EnableTradeBlocking: Block trading
+       |   -> If EnableTradeBlocking: set trading-blocked flag
     |
     3. MARGIN LIMITS:
-       | If margin level < MinMarginLevel:
+       | If 0 < margin level < MinMarginLevel:
        |   -> Log CRITICAL event
        |   -> If EnableAutoClose: Close most losing position
     |
-    4. POSITION LIMITS:
+    4. POSITION LIMITS (GetOpenPositions):
        | If open positions > MaxOpenPositions:
        |   -> Log WARNING event
        |
@@ -173,9 +180,13 @@ REPEAT until stopped
   |
 ON STOP:
   | Cancel monitoring loop
-  | Print risk event summary
+  | (main.go then prints the final metrics)
   |
 END
+
+NOTE: every breach is re-evaluated on every check. Because the peak is
+never reset, a drawdown breach repeats (event + CloseAllPositions) on
+each check until the orchestrator is restarted.
 ```
 
 ### 🛠️ Step-by-step Description
@@ -205,10 +216,11 @@ func (r *RiskManager) initialize() error {
 **What happens**:
 
 - Gets current account balance as baseline
-- Sets peak balance (tracks highest equity reached)
+- Sets the peak to the starting balance (afterwards it tracks the highest equity seen)
 - Sets daily start balance (for daily P/L calculations)
 - Initializes trading as unblocked
 - All subsequent drawdown is measured from this peak
+- `Start()` fails if the balance cannot be read
 
 #### 2. Monitoring Loop
  
@@ -245,24 +257,28 @@ func (r *RiskManager) monitorLoop() {
 
 ```go
 func (r *RiskManager) checkDailyReset() {
-    now := time.Now()
-    if now.Day() != r.lastResetDate.Day() {
-        balance, err := r.sugar.GetBalance()
-        if err == nil {
-            r.dailyStartBalance = balance
-            r.tradingBlocked = false
-            r.lastResetDate = now
-        }
-    }
+	now := time.Now()
+	if now.Day() != r.lastResetDate.Day() {
+		balance, err := r.sugar.GetBalance()
+		if err == nil {
+			r.dailyStartBalance = balance
+			r.tradingBlocked = false
+			r.lastResetDate = now
+
+			r.UpdateMetrics(func(m *OrchestratorMetrics) {
+				m.LastOperation = "Daily reset performed"
+			})
+		}
+	}
 }
 ```
 
 **What happens**:
 
-- Checks if current day differs from last reset day
+- Checks if the current day of month (local clock of the machine running the program) differs from the last reset day
 - If new day: resets daily start balance to current balance
-- Unblocks trading (allows new trading day to begin)
-- Resets today's profit to zero (new calculations start)
+- Clears the trading-blocked flag
+- Today's profit (`balance - dailyStartBalance`) starts again from zero
 
 #### 4. Drawdown Protection
  
@@ -303,7 +319,8 @@ func (r *RiskManager) checkDrawdownLimit(drawdownPercent, drawdownAbsolute float
 - **Absolute drawdown**: Triggers when equity drops $X from peak
   - Example: Peak = $10,000, MaxDrawdownAbsolute = $1000
   - Trigger at equity = $9,000 ($1000 drop from peak)
-- **Both are checked**: Whichever threshold is hit first triggers emergency action
+- **Both are checked**: Whichever threshold is hit first triggers emergency action (when both are hit in one check, both events are logged and `CloseAllPositions` runs twice)
+- A drawdown breach does **not** set the trading-blocked flag
 
 #### 5. Daily Limits Protection
  
@@ -312,42 +329,45 @@ func (r *RiskManager) checkDrawdownLimit(drawdownPercent, drawdownAbsolute float
 
 ```go
 func (r *RiskManager) checkDailyLimits() {
-    // Check daily loss limit
-    if r.todayProfit < 0 && (-r.todayProfit) >= r.config.DailyLossLimit {
-        r.logRiskEvent("DAILY_LOSS_LIMIT", "CRITICAL",
-            fmt.Sprintf("Daily loss $%.2f exceeds limit $%.2f", -r.todayProfit, r.config.DailyLossLimit),
-            -r.todayProfit, r.config.DailyLossLimit)
+	// Check daily loss limit
+	if r.todayProfit < 0 && (-r.todayProfit) >= r.config.DailyLossLimit {
+		r.logRiskEvent("DAILY_LOSS_LIMIT", "CRITICAL",
+			fmt.Sprintf("Daily loss $%.2f exceeds limit $%.2f", -r.todayProfit, r.config.DailyLossLimit),
+			-r.todayProfit, r.config.DailyLossLimit)
 
-        if r.config.EnableAutoClose {
-            r.closeAllPositionsEmergency("Daily loss limit exceeded")
-        }
+		if r.config.EnableAutoClose {
+			r.closeAllPositionsEmergency("Daily loss limit exceeded")
+		}
 
-        if r.config.EnableTradeBlocking {
-            r.tradingBlocked = true
-        }
-    }
+		if r.config.EnableTradeBlocking {
+			r.tradingBlocked = true
+		}
+	}
 
-    // Check daily profit target
-    if r.config.DailyProfitTarget > 0 && r.todayProfit >= r.config.DailyProfitTarget {
-        r.logRiskEvent("DAILY_PROFIT_TARGET", "INFO",
-            fmt.Sprintf("Daily profit target $%.2f reached", r.config.DailyProfitTarget),
-            r.todayProfit, r.config.DailyProfitTarget)
+	// Check daily profit target
+	if r.config.DailyProfitTarget > 0 && r.todayProfit >= r.config.DailyProfitTarget {
+		r.logRiskEvent("DAILY_PROFIT_TARGET", "INFO",
+			fmt.Sprintf("Daily profit target $%.2f reached", r.config.DailyProfitTarget),
+			r.todayProfit, r.config.DailyProfitTarget)
 
-        if r.config.EnableTradeBlocking {
-            r.tradingBlocked = true
-        }
-    }
+		if r.config.EnableTradeBlocking {
+			r.tradingBlocked = true
+			r.UpdateMetrics(func(m *OrchestratorMetrics) {
+				m.LastOperation = "Daily profit target reached - trading blocked"
+			})
+		}
+	}
 }
 ```
 
 **Daily protections**:
 
-- **Daily loss limit**: Stops trading after losing too much today
-  - Prevents "revenge trading" after bad day
-  - Closes all positions and blocks new trades
-- **Daily profit target**: Stops trading after hitting profit goal
-  - Locks in good days
-  - Only blocks new trades (keeps existing positions open)
+- Today's profit is `balance - dailyStartBalance`, i.e. **realized** P/L only (floating P/L of open positions is not included)
+- **Daily loss limit**: reacts after losing too much today
+  - Closes all positions (if `EnableAutoClose`) and sets the trading-blocked flag (if `EnableTradeBlocking`)
+  - Helps prevent "revenge trading" - if your code checks `IsTradingBlocked()`
+- **Daily profit target**: reacts after hitting the profit goal
+  - Only sets the trading-blocked flag (keeps existing positions open)
 
 #### 6. Margin Safety
   
@@ -372,13 +392,14 @@ func (r *RiskManager) checkMarginLimits(marginLevel float64) {
 
 **Margin protection**:
 
-- **Margin Level** = (Equity / Margin Used) × 100
-- When margin level drops below threshold:
-  - Closes most losing position to free up margin
-  - Prevents broker margin call (typically at 50-100%)
+- **Margin Level** = (Equity / Margin Used) × 100, read with `GetMarginLevel()`; 0 (no margin used, or a read error) is ignored
+- When margin level drops below threshold (strictly `<`):
+  - Closes the single position with the most negative `Profit` (if `EnableAutoClose`) to free up margin
+  - Helps avoid a broker margin call (typically at 50-100%)
+  - Repeats on every check while the level stays below the minimum
 - **Example**: MinMarginLevel = 150%
   - Equity = $10,000, Margin = $6,667
-  - Margin Level = 150% (borderline)
+  - Margin Level = 150% (borderline, not below)
   - If drops to 149%: close worst position
 
 #### 7. Emergency Close All
@@ -407,9 +428,9 @@ func (r *RiskManager) closeAllPositionsEmergency(reason string) {
 
 **Emergency action**:
 
-- Immediately closes ALL open positions
+- Calls `sugar.CloseAllPositions()`: closes every open position of the account (pending orders are not touched; positions that fail to close are skipped silently)
 - Cannot be undone
-- Triggered by:
+- Triggered by (only when `EnableAutoClose` is true):
   - Maximum drawdown exceeded (% or $)
   - Daily loss limit exceeded
 - Logs critical event for analysis
@@ -430,44 +451,46 @@ func (r *RiskManager) closeAllPositionsEmergency(reason string) {
 ```
 TIME 0: Trading Starts
 
-Balance:      $10,000
-Peak Balance: $10,000
+Equity:       $10,000
+Peak:         $10,000
 Drawdown:     $0 (0%)
 Positions:    0
 Status:       Monitoring
 
 TIME 1: Good Trading Day
 
-Balance:      $11,500
-Peak Balance: $11,500 (new peak!)
+Equity:       $11,500
+Peak:         $11,500 (new peak!)
 Drawdown:     $0 (0%)
 Positions:    3
 Status:       Monitoring - all good
 
 TIME 2: Market Turns Against Positions
 
-Balance:      $10,800
-Peak Balance: $11,500 (unchanged - peak is max)
+Equity:       $10,800
+Peak:         $11,500 (unchanged - peak is max)
 Drawdown:     $700 (6.1%)
 Positions:    5
 Status:       Monitoring - within limits
 
 TIME 3: Drawdown Approaching Limit
 
-Balance:      $10,400
-Peak Balance: $11,500
-Drawdown:     $1,100 (9.6%)
-Status:       WARNING - approaching 10% limit
+Equity:       $10,550
+Peak:         $11,500
+Drawdown:     $950 (8.3%)
+Status:       Within limits (no event; there is no "approaching" warning)
 
 TIME 4: DRAWDOWN LIMIT EXCEEDED
 
-Balance:      $10,350
-Peak Balance: $11,500
-Drawdown:     $1,150 (10.0%)
-TRIGGER:      MaxDrawdownPercent HIT!
-ACTION:       EMERGENCY CLOSE ALL 5 POSITIONS
-Result:       Trading stopped, account protected at $10,350
-Prevented:    Further losses from uncontrolled drawdown
+Equity:       $10,500
+Peak:         $11,500
+Drawdown:     $1,000 (8.7%)
+TRIGGER:      MaxDrawdownAbsolute HIT ($1,000 >= $1,000)
+              (the 10% limit would only be reached at $1,150)
+ACTION:       EMERGENCY CLOSE ALL 5 POSITIONS (CloseAllPositions)
+Result:       Positions closed, equity ~$10,500
+Note:         The peak stays at $11,500, so every following check logs
+              the breach again and closes any position opened since
 
 WITHOUT RISK MANAGER:
 - Positions could continue losing
@@ -475,8 +498,8 @@ WITHOUT RISK MANAGER:
 - Account could blow up completely
 
 WITH RISK MANAGER:
-- Loss limited to 10% from peak
-- $1,150 loss vs potential $3,000+ loss
+- Loss limited to about $1,000 from peak (whichever limit hits first)
+- $1,000 loss vs potential $3,000+ loss
 - Account survives to trade another day
 ```
 
@@ -514,14 +537,16 @@ Current Balance:     $9,500
 Today Profit:        -$500
 TRIGGER:             DailyLossLimit HIT!
 ACTION:              1. CLOSE ALL POSITIONS
-                     2. BLOCK NEW TRADES
-Status:              Trading blocked for rest of day
+                     2. SET TRADING-BLOCKED FLAG
+Status:              IsTradingBlocked() == true for rest of day
 
 TIME 4: Attempt to Trade (14:00)
 
-Status:              Trading blocked - limit reached
-Result:              Cannot open new positions
-                     Prevents revenge trading
+Status:              IsTradingBlocked() == true
+Result:              A strategy that checks IsTradingBlocked() skips the
+                     trade. The risk manager itself does NOT reject orders:
+                     a trade opened anyway is closed again on the next check
+                     (the daily loss is still >= the limit)
 
 TIME 5: Next Day (Midnight Reset)
 
@@ -530,9 +555,12 @@ Today Profit:        $0 (reset)
 Trading Blocked:     false (unblocked)
 Status:              New day, trading allowed again
 
+Note: today's profit is balance-based (realized P/L). The closing
+trades themselves can push the day's loss beyond $500.
+
 BENEFIT:
-- Prevented emotional "revenge trading"
-- Limited daily loss to exactly $500
+- Prevented emotional "revenge trading" (if your code checks the flag)
+- Limited the daily loss to about $500
 - Forced break to reassess strategy
 - Protected remaining capital
 ```
@@ -569,10 +597,10 @@ Status:       Getting close to limit
 
 TIME 3: MARGIN LEVEL LOW
 
-Equity:       $7,500
+Equity:       $7,450
 Margin Used:  $5,000
-Margin Level: 150%
-TRIGGER:      MarginLevel = MinMarginLevel
+Margin Level: 149%
+TRIGGER:      MarginLevel < MinMarginLevel
 ACTION:       Close most losing position
 
 Position Details:
@@ -586,9 +614,9 @@ ACTION TAKEN: Close Position #3 (worst loser)
 
 TIME 4: After Closing Worst Position
 
-Equity:       $7,500
+Equity:       $7,450
 Margin Used:  $4,000 (reduced)
-Margin Level: 187.5% (improved!)
+Margin Level: 186% (improved!)
 Positions:    4 remaining
 Status:       Margin level safe again
 
@@ -613,9 +641,9 @@ func (s *MT5Sugar) GetEquity() (float64, error)
 
 **Usage in RiskManager**:
 
-- Called every CheckInterval
+- Called every CheckInterval (3 s timeout)
 - Used to calculate current drawdown from peak
-- Core metric for drawdown protection
+- Core metric for drawdown protection; if it fails, the whole check is skipped
 
 **Returns**: Current equity or error
 
@@ -629,7 +657,8 @@ func (s *MT5Sugar) GetBalance() (float64, error)
 
 **Usage in RiskManager**:
 
-- Used for daily profit/loss calculations
+- Read once in `initialize()` (starting balance, peak, daily start)
+- Used for daily profit/loss calculations (an error in the monitoring loop is ignored)
 - Compared to dailyStartBalance to get today's performance
 - Reset baseline at start of each day
 
@@ -646,8 +675,10 @@ func (s *MT5Sugar) GetMarginLevel() (float64, error)
 **Usage in RiskManager**:
 
 - Monitors risk of margin call
-- Triggers protective action when too low
+- Triggers protective action when too low (a value of 0 is ignored)
 - Formula: (Equity / Margin) × 100
+
+`GetProfit()` is also called every check, but its value is not used.
 
 **Returns**: Margin level percentage or error
 
@@ -680,8 +711,9 @@ func (s *MT5Sugar) CloseAllPositions() (int, error)
 - Emergency action when critical limits breached
 - Used for drawdown limits and daily loss limits
 - Cannot be undone - final protective measure
+- Closes positions only (pending orders are not touched); failures are skipped silently
 
-**Returns**: Number of positions closed or error
+**Returns**: Number of positions closed; an error only if listing the positions fails
 
 ### 6. ClosePosition
 
@@ -709,7 +741,7 @@ func (s *MT5Sugar) ClosePosition(ticket uint64) error
 ### Conservative Profile (Beginners)
 
 ```go
-RiskManagerConfig{
+config := orchestrators.RiskManagerConfig{
     MaxDrawdownPercent:  5.0,              // Very tight
     MaxDrawdownAbsolute: 500.0,            // Small absolute limit
     DailyLossLimit:      200.0,            // Stop early on losses
@@ -735,7 +767,7 @@ RiskManagerConfig{
 ### Moderate Profile (Default)
 
 ```go
-RiskManagerConfig{
+config := orchestrators.RiskManagerConfig{
     MaxDrawdownPercent:  10.0,             // Moderate tolerance
     MaxDrawdownAbsolute: 1000.0,           // Reasonable limit
     DailyLossLimit:      500.0,            // Balanced daily limit
@@ -761,7 +793,7 @@ RiskManagerConfig{
 ### Aggressive Profile (Experienced)
 
 ```go
-RiskManagerConfig{
+config := orchestrators.RiskManagerConfig{
     MaxDrawdownPercent:  20.0,             // Wider tolerance
     MaxDrawdownAbsolute: 5000.0,           // Large absolute limit
     DailyLossLimit:      2000.0,           // Higher daily tolerance
@@ -773,7 +805,7 @@ RiskManagerConfig{
     MaxPositionSize:     5.0,              // Large sizes
     CheckInterval:       10 * time.Second, // Less frequent checks
     EnableAutoClose:     true,
-    EnableTradeBlocking: false,            // No trade blocking
+    EnableTradeBlocking: false,            // No trading-blocked flag
 }
 ```
 
@@ -808,6 +840,8 @@ RiskManagerConfig{
 
 8. **EMERGENCY_CLOSE**: Positions closed by risk manager
 
+Every risk event is also counted as an error in the orchestrator status (`logRiskEvent` calls `IncrementError`), including INFO events.
+
 ### Severity Levels
 
 - **INFO**: Informational (profit target reached)
@@ -823,8 +857,8 @@ RiskManagerConfig{
   - EventType
   - Severity
   - Description
-  - Current value vs limit
-  - Action taken
+  - Value and Limit
+  - ActionTaken (always `"Logged"` in the current code)
 
 ---
 

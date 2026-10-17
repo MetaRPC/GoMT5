@@ -9,7 +9,7 @@
 * **[SymbolInfoMarginRate](./SymbolInfoMarginRate.md)** - margin rates for symbol and order type.
 * **[SymbolInfoSessionQuote](./SymbolInfoSessionQuote.md)** - quote session times.
 * **[SymbolInfoSessionTrade](./SymbolInfoSessionTrade.md)** - trade session times.
-* **[SymbolParamsMany](./SymbolParamsMany.md)** - detailed parameters for multiple symbols (112 fields!).
+* **[SymbolParamsMany](./SymbolParamsMany.md)** - detailed parameters for one or all symbols (116 fields!).
 * **[TickValueWithSize](./TickValueWithSize.md)** - tick value and size information for symbols.
 
 ---
@@ -31,7 +31,7 @@ Want detailed explanations with line-by-line code breakdown? Check these guides:
 * **SymbolInfoMarginRate** → get **margin multiplier** for different order types.
 * **SymbolInfoSessionQuote** → get **quote session** times (when quotes are available).
 * **SymbolInfoSessionTrade** → get **trading session** times (when trading is allowed).
-* **SymbolParamsMany** → get **complete symbol specifications** for multiple symbols in one call (most efficient).
+* **SymbolParamsMany** → get **complete symbol specifications** for one symbol or all symbols in one call (most efficient).
 * **TickValueWithSize** → get **tick value and contract size** for position value and P&L calculations.
 
 > Rule of thumb: need **session times** → use Session methods; need **complete symbol data** → use `SymbolParamsMany`; need **margin rates** → use `SymbolInfoMarginRate`; need **tick value/P&L data** → use `TickValueWithSize`.
@@ -42,23 +42,23 @@ Want detailed explanations with line-by-line code breakdown? Check these guides:
 
 | If you need…                                     | Use                         | Returns                    | Key inputs                          |
 | ------------------------------------------------ | --------------------------- | -------------------------- | ----------------------------------- |
-| Margin rates for order type                      | `SymbolInfoMarginRate`      | MarginRates                | Symbol, order type                  |
-| Quote session times                              | `SymbolInfoSessionQuote`    | SessionInfo                | Symbol, day of week, session index  |
-| Trading session times                            | `SymbolInfoSessionTrade`    | SessionInfo                | Symbol, day of week, session index  |
-| Complete specs for multiple symbols              | `SymbolParamsMany`          | Array of SymbolParams      | Symbol list, optional filters       |
-| Tick value and size for P&L calculations         | `TickValueWithSize`         | TickSizeSymbol array       | Symbol names array                  |
+| Margin rates for order type                      | `SymbolInfoMarginRate`      | SymbolInfoMarginRateData   | Symbol, OrderType                   |
+| Quote session times                              | `SymbolInfoSessionQuote`    | SymbolInfoSessionQuoteData (From, To) | Symbol, DayOfWeek, SessionIndex |
+| Trading session times                            | `SymbolInfoSessionTrade`    | SymbolInfoSessionTradeData (From, To) | Symbol, DayOfWeek, SessionIndex |
+| Complete specs for one or all symbols            | `SymbolParamsMany`          | SymbolParamsManyData (`SymbolInfos` array of SymbolParameters) | SymbolName (optional), SortType, PageNumber/ItemsPerPage |
+| Tick value and size for P&L calculations         | `TickValueWithSize`         | TickValueWithSizeData (`SymbolTickSizeInfos` array of TickSizeSymbol) | SymbolNames array |
 
 ---
 
 ## ❌ Cross‑refs & gotchas
 
-* **SymbolParamsMany** - THE MOST EFFICIENT way to get complete symbol data (112 fields per symbol).
-* **Session times** - In seconds from day start (0-86400).
+* **SymbolParamsMany** - THE MOST EFFICIENT way to get complete symbol data (116 fields per symbol).
+* **Session times** - `From`/`To` are timestamps whose time of day is the session boundary; ignore the date part.
 * **Day of week** - SUNDAY=0, MONDAY=1, ..., SATURDAY=6.
 * **Session index** - Most symbols have 1 session, some have multiple (e.g., 24h = 1 session, day+night = 2 sessions).
 * **Margin rates** - Different rates for BUY/SELL, LONG/SHORT positions.
-* **SymbolParamsMany filters** - Can filter by Bid, Ask, Point, Volume to reduce data size.
-* **Batch operations** - SymbolParamsMany can query 100+ symbols in one call.
+* **SymbolParamsMany filters** - Only `SymbolName` (one symbol), sorting and paging; there is no field filter or symbol list. Filter other things on the client side.
+* **Batch operations** - SymbolParamsMany without `SymbolName` returns all symbols in one call.
 
 ---
 
@@ -83,7 +83,7 @@ fmt.Printf("  Maintenance: %.2f\n", rates.MaintenanceMarginRate)
 // Get trading session times for Monday
 sessionInfo, _ := account.SymbolInfoSessionTrade(ctx, &pb.SymbolInfoSessionTradeRequest{
     Symbol:       "EURUSD",
-    DayOfWeek:    1, // Monday
+    DayOfWeek:    pb.DayOfWeek_MONDAY,
     SessionIndex: 0,
 })
 
@@ -100,17 +100,19 @@ fmt.Printf("  To: %d seconds (%.2f hours)\n",
 ```
 
 ```go
-// Get complete symbol parameters for multiple symbols
-symbols := []string{"EURUSD", "GBPUSD", "USDJPY"}
+// Get complete symbol parameters for several symbols:
+// one call for all symbols, then keep the wanted ones (there is no symbol-list filter)
+wanted := map[string]bool{"EURUSD": true, "GBPUSD": true, "USDJPY": true}
 
-params, err := account.SymbolParamsMany(ctx, &pb.SymbolParamsManyRequest{
-    Symbols: symbols,
-})
+params, err := account.SymbolParamsMany(ctx, &pb.SymbolParamsManyRequest{})
 if err != nil {
     log.Fatalf("Failed: %v", err)
 }
 
-for _, symbolParam := range params.SymbolParams {
+for _, symbolParam := range params.SymbolInfos {
+    if !wanted[symbolParam.Name] {
+        continue
+    }
     fmt.Printf("\n%s:\n", symbolParam.Name)
     fmt.Printf("  Bid: %.5f, Ask: %.5f\n", symbolParam.Bid, symbolParam.Ask)
     fmt.Printf("  Digits: %d, Point: %.5f\n", symbolParam.Digits, symbolParam.Point)
@@ -125,7 +127,9 @@ for _, symbolParam := range params.SymbolParams {
 // Get all trading sessions for a week
 symbol := "EURUSD"
 
-days := []int32{1, 2, 3, 4, 5} // Monday through Friday
+var days []pb.DayOfWeek // Monday through Friday
+days = append(days, pb.DayOfWeek_MONDAY, pb.DayOfWeek_TUESDAY, pb.DayOfWeek_WEDNESDAY,
+    pb.DayOfWeek_THURSDAY, pb.DayOfWeek_FRIDAY)
 
 dayNames := []string{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday"}
 
@@ -154,22 +158,23 @@ for i, day := range days {
 ```
 
 ```go
-// Batch query all forex majors with SymbolParamsMany
-majors := []string{
-    "EURUSD", "GBPUSD", "USDJPY", "USDCHF",
-    "AUDUSD", "USDCAD", "NZDUSD",
+// Batch query all forex majors with SymbolParamsMany (all symbols, filtered on the client side)
+majors := map[string]bool{
+    "EURUSD": true, "GBPUSD": true, "USDJPY": true, "USDCHF": true,
+    "AUDUSD": true, "USDCAD": true, "NZDUSD": true,
 }
 
-params, _ := account.SymbolParamsMany(ctx, &pb.SymbolParamsManyRequest{
-    Symbols: majors,
-})
+params, _ := account.SymbolParamsMany(ctx, &pb.SymbolParamsManyRequest{})
 
 fmt.Println("Forex Majors Summary:")
 fmt.Println("─────────────────────────────────────────────────────")
 fmt.Printf("%-8s  %-10s  %-10s  %-8s\n", "Symbol", "Bid", "Ask", "Spread")
 fmt.Println("─────────────────────────────────────────────────────")
 
-for _, sp := range params.SymbolParams {
+for _, sp := range params.SymbolInfos {
+    if !majors[sp.Name] {
+        continue
+    }
     fmt.Printf("%-8s  %-10.5f  %-10.5f  %-8d\n",
         sp.Name, sp.Bid, sp.Ask, sp.Spread)
 }

@@ -120,6 +120,7 @@ SymbolSelectReply {
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -129,8 +130,17 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
@@ -181,9 +191,9 @@ func PrepareSymbolForTrading(account *mt5.MT5Account, symbol string) error {
 
     // First check if it exists
     existData, err := account.SymbolExist(ctx, &pb.SymbolExistRequest{
-        Symbol: symbol,
+        Name: symbol,
     })
-    if err != nil || !existData.Exist {
+    if err != nil || !existData.Exists {
         return fmt.Errorf("symbol %s does not exist", symbol)
     }
 
@@ -242,7 +252,7 @@ func CleanMarketWatch(account *mt5.MT5Account, keepSymbols []string) error {
 
     // Get current Market Watch symbols
     totalData, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{
-        Selected: true,
+        Mode: true,
     })
     if err != nil {
         return err
@@ -255,9 +265,9 @@ func CleanMarketWatch(account *mt5.MT5Account, keepSymbols []string) error {
     }
 
     // Remove symbols not in keep list
-    for i := int64(0); i < totalData.Total; i++ {
+    for i := int32(0); i < totalData.Total; i++ {
         nameData, err := account.SymbolName(ctx, &pb.SymbolNameRequest{
-            Pos:      i,
+            Index:    i,
             Selected: true,
         })
         if err != nil {

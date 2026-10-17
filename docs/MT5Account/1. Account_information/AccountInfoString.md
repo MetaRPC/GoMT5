@@ -81,8 +81,8 @@ message AccountInfoStringReply {
 | Parameter     | Type                              | Description                                             |
 | ------------- | --------------------------------- | ------------------------------------------------------- |
 | `ctx`         | `context.Context`                 | Context for deadline/timeout and cancellation           |
-| `req`         | `*pb.AccountInfoStringRequest`    | Request with property_id specifying which property to retrieve |
-| `req.property_id` | `AccountInfoStringPropertyType` (enum) | Property identifier (see enum below) |
+| `req`         | `*pb.AccountInfoStringRequest`    | Request with `PropertyId` specifying which property to retrieve |
+| `req.PropertyId` | `pb.AccountInfoStringPropertyType` (enum) | Property identifier (see enum below) |
 
 ---
 
@@ -90,7 +90,7 @@ message AccountInfoStringReply {
 
 | Field             | Type     | Go Type  | Description                                      |
 | ----------------- | -------- | -------- | ------------------------------------------------ |
-| `requested_value` | `string` | `string` | The value of the requested account property      |
+| `RequestedValue`  | `string` | `string` | The value of the requested account property      |
 
 ---
 
@@ -157,13 +157,13 @@ import (
 )
 
 func main() {
-    account, err := mt5.NewMT5Account(591129415, "password", "server:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
     if err != nil {
         panic(err)
     }
     defer account.Close()
 
-    err = account.Connect()
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
     if err != nil {
         panic(err)
     }

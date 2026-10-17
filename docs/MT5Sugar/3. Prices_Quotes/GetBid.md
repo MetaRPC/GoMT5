@@ -7,6 +7,7 @@
 * **Method:** `sugar.GetBid(symbol)`
 * **Timeout:** 3 seconds
 * **Returns:** BID price as `float64`
+* **Underlying call:** `service.GetSymbolTick(ctx, symbol)` (`SymbolInfoTick`), returns `tick.Bid`
 
 ---
 
@@ -35,7 +36,7 @@ func (s *MT5Sugar) GetBid(symbol string) (float64, error)
 
 * **What it is:** Current BID price - the price you get when **SELLING**.
 * **Why you need it:** Check entry price for SELL orders, calculate SL/TP levels.
-* **Sanity check:** BID < ASK (always lower than ask price).
+* **Sanity check:** BID ≤ ASK (equal only on a zero spread).
 
 ---
 
@@ -96,15 +97,17 @@ bid, _ := sugar.GetBid(symbol)
 info, _ := sugar.GetSymbolInfo(symbol)
 
 // Calculate SL/TP (SELL: SL above, TP below)
-sl := bid + (50 * info.Point)  // 50 pips above entry
-tp := bid - (100 * info.Point) // 100 pips below entry
+sl := bid + (50 * info.Point)  // 50 points above entry
+tp := bid - (100 * info.Point) // 100 points below entry
 
 fmt.Printf("Entry (BID):    %.5f\n", bid)
-fmt.Printf("Stop Loss:      %.5f (+50 pips)\n", sl)
-fmt.Printf("Take Profit:    %.5f (-100 pips)\n", tp)
+fmt.Printf("Stop Loss:      %.5f (+50 points)\n", sl)
+fmt.Printf("Take Profit:    %.5f (-100 points)\n", tp)
 
-// Better: use CalculateSLTP helper
+// Same result with the CalculateSLTP helper (its distances are points too;
+// any direction other than "BUY" is treated as SELL)
 sl2, tp2, _ := sugar.CalculateSLTP(symbol, "SELL", bid, 50, 100)
+fmt.Printf("CalculateSLTP:  SL %.5f, TP %.5f\n", sl2, tp2)
 ```
 
 ---
@@ -188,7 +191,7 @@ for {
 
 ---
 
-### 7) Calculate pip distance
+### 7) Calculate distance in points
 
 ```go
 symbol := "EURUSD"
@@ -197,14 +200,14 @@ referencePrice := 1.08500
 currentBid, _ := sugar.GetBid(symbol)
 info, _ := sugar.GetSymbolInfo(symbol)
 
-// Calculate distance in pips
-pipDistance := (currentBid - referencePrice) / info.Point
+// Calculate distance in points (info.Point = smallest price step)
+pointDistance := (currentBid - referencePrice) / info.Point
 
 fmt.Printf("Reference:  %.5f\n", referencePrice)
 fmt.Printf("Current:    %.5f\n", currentBid)
-fmt.Printf("Distance:   %.0f pips\n", pipDistance)
+fmt.Printf("Distance:   %.0f points\n", pointDistance)
 
-if pipDistance > 0 {
+if pointDistance > 0 {
     fmt.Println("Price moved UP")
 } else {
     fmt.Println("Price moved DOWN")
@@ -227,7 +230,7 @@ priceInfo, _ := sugar.GetPriceInfo(symbol)
 fmt.Printf("Symbol: %s\n", symbol)
 fmt.Printf("BID:    %.5f\n", bid)
 fmt.Printf("ASK:    %.5f\n", ask)
-fmt.Printf("Spread: %.1f pips\n", priceInfo.SpreadPips)
+fmt.Printf("Spread: %.1f points\n", priceInfo.SpreadPips) // SpreadPips holds POINTS
 ```
 
 ---
@@ -334,8 +337,8 @@ if err != nil {
 ## 💎 Pro Tips
 
 1. **BID = SELL price** - Remember: BID is always for selling
-2. **Use GetPriceInfo()** - More efficient than calling GetBid + GetAsk separately
-3. **BID < ASK** - BID is always lower (spread is the difference)
+2. **Use GetPriceInfo()** - BID and ASK come from the same tick (GetBid + GetAsk are two separate requests that may see different ticks)
+3. **BID ≤ ASK** - BID is lower by the spread
 4. **Price changes** - BID updates with every tick, call frequently
 5. **For monitoring** - Use GetPriceInfo() to get complete price snapshot
 

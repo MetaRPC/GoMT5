@@ -151,8 +151,11 @@ If the code is different — the broker rejected the request. The helper functio
 ```protobuf
 message OrderModifyData {
   uint32 ReturnedCode = 1;  // Result code (TRADE_RETCODE_*)
-  uint64 Order = 2;         // Order number
-  string Comment = 3;       // Broker comment
+  uint64 Deal = 2;          // Deal ticket, if performed
+  uint64 Order = 3;         // Order number
+  // Volume = 4, Price = 5, Bid = 6, Ask = 7
+  string Comment = 8;       // Broker comment
+  // RequestId = 9, RetCodeExternal = 10, ReturnedStringCode = 11, ReturnedCodeDescription = 12
 }
 ```
 

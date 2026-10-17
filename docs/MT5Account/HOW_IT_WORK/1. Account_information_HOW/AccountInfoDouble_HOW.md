@@ -113,7 +113,7 @@ The `.GetRequestedValue()` method returns **float64** — the actual numeric val
 ### Wrapper Example for Property Requests
 
 ```go
-func GetAccountDoubleProp(ctx context.Context, account AccountServiceClient, prop pb.AccountInfoDoublePropertyType) (float64, error) {
+func GetAccountDoubleProp(ctx context.Context, account *mt5.MT5Account, prop pb.AccountInfoDoublePropertyType) (float64, error) {
     req := &pb.AccountInfoDoubleRequest{PropertyId: prop}
     resp, err := account.AccountInfoDouble(ctx, req)
     if err != nil {

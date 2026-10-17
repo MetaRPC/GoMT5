@@ -16,6 +16,9 @@
 func (s *MT5Sugar) CountOpenPositions() (int, error)
 ```
 
+It calls `MT5Service.GetPositionsTotal(ctx)` (MT5 `PositionsTotal`) and converts the `int32` result to `int`.
+Pending orders are not counted.
+
 ---
 
 ## 🔽 Input / ⬆️ Output
@@ -27,7 +30,7 @@ func (s *MT5Sugar) CountOpenPositions() (int, error)
 | Output | Type | Description |
 |--------|------|-------------|
 | `int` | integer | Number of open positions |
-| `error` | `error` | Error if count failed |
+| `error` | `error` | `"CountOpenPositions failed: ..."` if the call failed (count is 0 then) |
 
 ---
 
@@ -408,13 +411,13 @@ if manager.CanOpenNew(sugar) {
 
 **🍬 Symbol-specific:**
 
-* `CountOpenPositionsBySymbol()` - Count for specific symbol
+* There is no per-symbol count method - use `len(sugar.GetPositionsBySymbol(symbol))`
 
 **🍬 Related checks:**
 
-* `HasOpenPosition()` - Boolean check (faster)
-* `GetPositionTickets()` - Get tickets (slower but still fast)
-* `GetOpenPositions()` - Full data (slowest)
+* `HasOpenPosition(symbol)` - Boolean check for one symbol (fetches the full position list)
+* `sugar.GetService().GetOpenedTickets(ctx)` - Ticket numbers only (position tickets, pending order tickets)
+* `GetOpenPositions()` - Full data
 
 ---
 
@@ -477,18 +480,19 @@ if count > 0 {
 
 4. **Dashboards** - Display count without overhead
 
-5. **Combine with Has** - Use `HasOpenPosition()` for boolean, this for count
+5. **Per symbol** - Use `HasOpenPosition(symbol)` for a per-symbol boolean, this for the total count
 
 ---
 
-## 🔍 Performance Hierarchy
+## 🔍 Payload Comparison
 
-From fastest to slowest:
+From smallest to largest response:
 ```
-1. HasOpenPosition()           - Boolean only
-2. CountOpenPositions()        - Integer count ⭐ YOU ARE HERE
-3. GetPositionTickets()        - Ticket numbers only
-4. GetOpenPositions()          - Full position data
+1. CountOpenPositions()                  - Integer count ⭐ YOU ARE HERE (PositionsTotal)
+2. GetService().GetOpenedTickets(ctx)    - Ticket numbers only
+3. GetOpenPositions()                    - Full position data
+   HasOpenPosition(symbol),
+   GetPositionsBySymbol(symbol)          - call GetOpenPositions() and filter in Go
 ```
 
 Use `CountOpenPositions()` when you:

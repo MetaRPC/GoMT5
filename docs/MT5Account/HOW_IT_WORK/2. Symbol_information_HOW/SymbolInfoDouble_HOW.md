@@ -151,7 +151,7 @@ Usually this is a quote, price step, volume, or other market indicator.
 
 Below is a list of the most commonly used properties that can be requested via `SymbolInfoDouble()`:
 
-### 📘 All PropertyId enum values (SymbolInfoDoubleProperty)
+### 📘 All Type enum values (SymbolInfoDoubleProperty)
 
 | Constant | Value | Description |
 |----------|-------|-------------|

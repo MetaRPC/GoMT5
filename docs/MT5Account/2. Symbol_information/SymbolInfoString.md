@@ -18,7 +18,7 @@
 
 * **What it is.** Retrieves text (string) properties of a trading symbol.
 * **Why you need it.** Get symbol description, currency information, and metadata.
-* **Property ID required.** Must specify which property to retrieve using PropertyId enum.
+* **Property type required.** Must specify which property to retrieve in the `Type` field (`SymbolInfoStringProperty` enum).
 
 ---
 
@@ -49,7 +49,7 @@ type MT5Account struct {
 }
 
 // SymbolInfoString retrieves a string-type symbol property.
-// Use PropertyId to specify which property (DESCRIPTION, CURRENCY_BASE, etc).
+// Use Type to specify which property (DESCRIPTION, CURRENCY_BASE, etc).
 func (a *MT5Account) SymbolInfoString(
     ctx context.Context,
     req *pb.SymbolInfoStringRequest,
@@ -60,8 +60,8 @@ func (a *MT5Account) SymbolInfoString(
 
 ```protobuf
 SymbolInfoStringRequest {
-  string Symbol = 1;       // Symbol name
-  int32 PropertyId = 2;    // Property identifier (DESCRIPTION, CURRENCY_BASE, etc)
+  string symbol = 1;                  // Symbol name
+  SymbolInfoStringProperty type = 2;  // Property identifier (DESCRIPTION, CURRENCY_BASE, etc)
 }
 ```
 
@@ -83,16 +83,16 @@ SymbolInfoStringReply {
 | Parameter | Type                            | Description                                   |
 | --------- | ------------------------------- | --------------------------------------------- |
 | `ctx`     | `context.Context`               | Context for deadline/timeout and cancellation |
-| `req`     | `*pb.SymbolInfoStringRequest`   | Request with Symbol and PropertyId            |
+| `req`     | `*pb.SymbolInfoStringRequest`   | Request with Symbol and Type                  |
 
 **Request fields:**
 
 | Field        | Type     | Description                                                        |
 | ------------ | -------- | ------------------------------------------------------------------ |
 | `Symbol`     | `string` | Symbol name (e.g., "EURUSD")                                       |
-| `PropertyId` | `int32`  | Property identifier from SymbolInfoStringProperty enum             |
+| `Type`       | `pb.SymbolInfoStringProperty` | Property identifier from SymbolInfoStringProperty enum (e.g. `pb.SymbolInfoStringProperty_SYMBOL_DESCRIPTION`) |
 
-**PropertyId enum values (SymbolInfoStringProperty):**
+**Type enum values (SymbolInfoStringProperty):**
 
 | Constant | Value | Description |
 |----------|-------|-------------|
@@ -142,6 +142,7 @@ SymbolInfoStringReply {
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -151,15 +152,24 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
 
     data, err := account.SymbolInfoString(ctx, &pb.SymbolInfoStringRequest{
-        Symbol:     "EURUSD",
-        PropertyId: 9, // SYMBOL_DESCRIPTION
+        Symbol: "EURUSD",
+        Type:   pb.SymbolInfoStringProperty_SYMBOL_DESCRIPTION,
     })
     if err != nil {
         panic(err)
@@ -177,8 +187,8 @@ func GetBaseCurrency(account *mt5.MT5Account, symbol string) (string, error) {
     defer cancel()
 
     data, err := account.SymbolInfoString(ctx, &pb.SymbolInfoStringRequest{
-        Symbol:     symbol,
-        PropertyId: 5, // SYMBOL_CURRENCY_BASE
+        Symbol: symbol,
+        Type:   pb.SymbolInfoStringProperty_SYMBOL_CURRENCY_BASE,
     })
     if err != nil {
         return "", fmt.Errorf("failed to get base currency: %w", err)
@@ -199,8 +209,8 @@ func GetProfitCurrency(account *mt5.MT5Account, symbol string) (string, error) {
     ctx := context.Background()
 
     data, err := account.SymbolInfoString(ctx, &pb.SymbolInfoStringRequest{
-        Symbol:     symbol,
-        PropertyId: 6, // SYMBOL_CURRENCY_PROFIT
+        Symbol: symbol,
+        Type:   pb.SymbolInfoStringProperty_SYMBOL_CURRENCY_PROFIT,
     })
     if err != nil {
         return "", err
@@ -230,8 +240,8 @@ func GetSymbolInfo(account *mt5.MT5Account, symbol string) (*SymbolInfo, error) 
 
     // Get description
     desc, err := account.SymbolInfoString(ctx, &pb.SymbolInfoStringRequest{
-        Symbol:     symbol,
-        PropertyId: 9, // SYMBOL_DESCRIPTION
+        Symbol: symbol,
+        Type:   pb.SymbolInfoStringProperty_SYMBOL_DESCRIPTION,
     })
     if err != nil {
         return nil, err
@@ -239,8 +249,8 @@ func GetSymbolInfo(account *mt5.MT5Account, symbol string) (*SymbolInfo, error) 
 
     // Get base currency
     base, err := account.SymbolInfoString(ctx, &pb.SymbolInfoStringRequest{
-        Symbol:     symbol,
-        PropertyId: 5, // SYMBOL_CURRENCY_BASE
+        Symbol: symbol,
+        Type:   pb.SymbolInfoStringProperty_SYMBOL_CURRENCY_BASE,
     })
     if err != nil {
         return nil, err
@@ -248,8 +258,8 @@ func GetSymbolInfo(account *mt5.MT5Account, symbol string) (*SymbolInfo, error) 
 
     // Get profit currency
     profit, err := account.SymbolInfoString(ctx, &pb.SymbolInfoStringRequest{
-        Symbol:     symbol,
-        PropertyId: 6, // SYMBOL_CURRENCY_PROFIT
+        Symbol: symbol,
+        Type:   pb.SymbolInfoStringProperty_SYMBOL_CURRENCY_PROFIT,
     })
     if err != nil {
         return nil, err
@@ -257,8 +267,8 @@ func GetSymbolInfo(account *mt5.MT5Account, symbol string) (*SymbolInfo, error) 
 
     // Get margin currency
     margin, err := account.SymbolInfoString(ctx, &pb.SymbolInfoStringRequest{
-        Symbol:     symbol,
-        PropertyId: 7, // SYMBOL_CURRENCY_MARGIN
+        Symbol: symbol,
+        Type:   pb.SymbolInfoStringProperty_SYMBOL_CURRENCY_MARGIN,
     })
     if err != nil {
         return nil, err
@@ -282,7 +292,7 @@ func GetSymbolsByBaseCurrency(account *mt5.MT5Account, baseCurrency string) ([]s
 
     // Get all symbols
     totalData, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{
-        Selected: false,
+        Mode: false,
     })
     if err != nil {
         return nil, err
@@ -290,10 +300,10 @@ func GetSymbolsByBaseCurrency(account *mt5.MT5Account, baseCurrency string) ([]s
 
     symbols := []string{}
 
-    for i := int64(0); i < totalData.Total; i++ {
+    for i := int32(0); i < totalData.Total; i++ {
         // Get symbol name
         nameData, err := account.SymbolName(ctx, &pb.SymbolNameRequest{
-            Pos:      i,
+            Index:    i,
             Selected: false,
         })
         if err != nil {
@@ -302,8 +312,8 @@ func GetSymbolsByBaseCurrency(account *mt5.MT5Account, baseCurrency string) ([]s
 
         // Get base currency
         currData, err := account.SymbolInfoString(ctx, &pb.SymbolInfoStringRequest{
-            Symbol:     nameData.Name,
-            PropertyId: 5, // SYMBOL_CURRENCY_BASE
+            Symbol: nameData.Name,
+            Type:   pb.SymbolInfoStringProperty_SYMBOL_CURRENCY_BASE,
         })
         if err != nil {
             continue
@@ -330,25 +340,25 @@ func DisplaySymbolDetails(account *mt5.MT5Account, symbol string) {
 
     // Get description
     desc, _ := account.SymbolInfoString(ctx, &pb.SymbolInfoStringRequest{
-        Symbol:     symbol,
-        PropertyId: 9, // SYMBOL_DESCRIPTION
+        Symbol: symbol,
+        Type:   pb.SymbolInfoStringProperty_SYMBOL_DESCRIPTION,
     })
 
     // Get currencies
     base, _ := account.SymbolInfoString(ctx, &pb.SymbolInfoStringRequest{
-        Symbol:     symbol,
-        PropertyId: 5, // SYMBOL_CURRENCY_BASE
+        Symbol: symbol,
+        Type:   pb.SymbolInfoStringProperty_SYMBOL_CURRENCY_BASE,
     })
 
     profit, _ := account.SymbolInfoString(ctx, &pb.SymbolInfoStringRequest{
-        Symbol:     symbol,
-        PropertyId: 6, // SYMBOL_CURRENCY_PROFIT
+        Symbol: symbol,
+        Type:   pb.SymbolInfoStringProperty_SYMBOL_CURRENCY_PROFIT,
     })
 
     // Get path
     path, _ := account.SymbolInfoString(ctx, &pb.SymbolInfoStringRequest{
-        Symbol:     symbol,
-        PropertyId: 14, // SYMBOL_PATH
+        Symbol: symbol,
+        Type:   pb.SymbolInfoStringProperty_SYMBOL_PATH,
     })
 
     fmt.Printf("Symbol: %s\n", symbol)
@@ -370,16 +380,16 @@ func FormatCurrencyPair(account *mt5.MT5Account, symbol string) string {
     ctx := context.Background()
 
     base, err := account.SymbolInfoString(ctx, &pb.SymbolInfoStringRequest{
-        Symbol:     symbol,
-        PropertyId: 5, // SYMBOL_CURRENCY_BASE
+        Symbol: symbol,
+        Type:   pb.SymbolInfoStringProperty_SYMBOL_CURRENCY_BASE,
     })
     if err != nil {
         return symbol
     }
 
     profit, err := account.SymbolInfoString(ctx, &pb.SymbolInfoStringRequest{
-        Symbol:     symbol,
-        PropertyId: 6, // SYMBOL_CURRENCY_PROFIT
+        Symbol: symbol,
+        Type:   pb.SymbolInfoStringProperty_SYMBOL_CURRENCY_PROFIT,
     })
     if err != nil {
         return symbol
@@ -400,8 +410,8 @@ func IsAccountCurrencyCompatible(account *mt5.MT5Account, symbol string, account
     ctx := context.Background()
 
     profitCurrency, err := account.SymbolInfoString(ctx, &pb.SymbolInfoStringRequest{
-        Symbol:     symbol,
-        PropertyId: 6, // SYMBOL_CURRENCY_PROFIT
+        Symbol: symbol,
+        Type:   pb.SymbolInfoStringProperty_SYMBOL_CURRENCY_PROFIT,
     })
     if err != nil {
         return false, err

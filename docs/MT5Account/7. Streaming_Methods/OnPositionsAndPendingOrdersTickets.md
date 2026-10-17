@@ -6,7 +6,7 @@
 
 * **Low-level API:** `MT5Account.OnPositionsAndPendingOrdersTickets(...)` (from Go package `github.com/MetaRPC/GoMT5/package/Helpers`)
 * **gRPC service:** `mt5_term_api.SubscriptionService`
-* **Proto definition:** `OnPositionsAndPendingOrdersTickets` (defined in `mt5-term-api-subscription.proto`)
+* **Proto definition:** `OnPositionsAndPendingOrdersTickets` (defined in `mt5-term-api-subscriptions.proto`)
 
 ### RPC
 
@@ -36,7 +36,7 @@ func (a *MT5Account) OnPositionsAndPendingOrdersTickets(
 | Parameter | Type                                               | Description                                   |
 | --------- | -------------------------------------------------- | --------------------------------------------- |
 | `ctx`     | `context.Context`                                  | Context for cancellation (cancel to stop stream) |
-| `req`     | `*pb.OnPositionsAndPendingOrdersTicketsRequest`    | Request (empty structure)                     |
+| `req`     | `*pb.OnPositionsAndPendingOrdersTicketsRequest`    | Request with `TimerPeriodMilliseconds` (`int32`, update interval; 0 = default 1000 ms) |
 
 ---
 
@@ -53,6 +53,9 @@ func (a *MT5Account) OnPositionsAndPendingOrdersTickets(
 | ---------------------- | ---------- | ------------ | ---------------------------------------- |
 | `PositionTickets`      | `uint64[]` | `[]uint64`   | Array of open position ticket numbers    |
 | `PendingOrderTickets`  | `uint64[]` | `[]uint64`   | Array of pending order ticket numbers    |
+| `ServerTime`           | `google.protobuf.Timestamp` | `*timestamppb.Timestamp` | Server time of the snapshot (broker server time) |
+| `ServerTimeUtc`        | `google.protobuf.Timestamp` | `*timestamppb.Timestamp` | `ServerTime` in UTC |
+| `TerminalInstanceGuidId` | `string` | `string`   | Terminal instance ID                     |
 
 ---
 
@@ -86,7 +89,7 @@ For a detailed line-by-line explanation with examples, see:
 
 ## 🧩 Notes & Tips
 
-* **Automatic reconnection:** All `MT5Account` methods have built-in protection against transient gRPC errors with automatic reconnection via `ExecuteWithReconnect`.
+* **Automatic reconnection:** Streaming methods restart the stream automatically on transient errors (Unavailable, terminal not found) via `ExecuteStreamWithReconnect`.
 * **Default timeout:** If context has no deadline, streams run indefinitely until cancelled.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
 * **Channel buffering:** Data channel is unbuffered, error channel is buffered (size 1).
@@ -105,6 +108,7 @@ For a detailed line-by-line explanation with examples, see:
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -114,8 +118,17 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
     defer cancel()

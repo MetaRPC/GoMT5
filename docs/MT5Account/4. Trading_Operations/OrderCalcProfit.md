@@ -52,7 +52,7 @@ For a detailed line-by-line explanation with examples, see:
 //
 // Parameters:
 //   - ctx: Context for timeout and cancellation control
-//   - req: OrderCalcProfitRequest with Action, Symbol, Volume, PriceOpen, and PriceClose
+//   - req: OrderCalcProfitRequest with OrderType, Symbol, Volume, OpenPrice, and ClosePrice
 //
 // Returns OrderCalcProfitData with Profit value in account currency.
 func (a *MT5Account) OrderCalcProfit(
@@ -72,7 +72,7 @@ func (a *MT5Account) OrderCalcProfit(
 | Parameter | Type                          | Description                                             |
 | --------- | ----------------------------- | ------------------------------------------------------- |
 | `ctx`     | `context.Context`             | Context for deadline/timeout and cancellation           |
-| `req`     | `*pb.OrderCalcProfitRequest`  | Request with Action, Symbol, Volume, PriceOpen, PriceClose |
+| `req`     | `*pb.OrderCalcProfitRequest`  | Request with OrderType, Symbol, Volume, OpenPrice, ClosePrice |
 
 **OrderCalcProfitRequest fields:**
 
@@ -136,6 +136,7 @@ func (a *MT5Account) OrderCalcProfit(
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -145,13 +146,17 @@ import (
 )
 
 func main() {
-    account := mt5.NewMT5Account("user", "password", "server:443")
-
-    err := account.Connect()
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
     if err != nil {
         panic(err)
     }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()

@@ -2,15 +2,17 @@
 
 > **High-level convenience methods** for MetaTrader 5 trading automation in Go
 
-**MT5Sugar** extends `MT5Service` with convenient methods for:
+**MT5Sugar** wraps `MT5Service` (and the underlying `MT5Account`) with convenient methods for:
 
-- 🎯 Risk-based position sizing (percentage risk, pip-based SL/TP)
-- 📊 Automatic volume and price normalization
+- 🎯 Risk-based position sizing (percentage risk, SL/TP as point distances)
+- 📊 Symbol information (digits, point, volume limits, stop level)
 - 🔄 Bulk operations (close all positions, manage multiple trades)
 - 📈 Historical analysis and statistics
 - ✅ Pre-trade validation and margin checking
 - 📉 Real-time P&L monitoring and position tracking
 - 🔌 Simplified connection management
+
+> **Note:** MT5Sugar does NOT normalize volumes or prices - they are sent exactly as given (no rounding to `Digits` / `VolumeStep`).
 
 ---
 
@@ -30,6 +32,7 @@
 
 - `GetService()` - access underlying MT5Service
 - `GetAccount()` - access underlying MT5Account
+- `Disconnect(deleteOnDisconnect ...bool)` - disconnect and release resources
 
 ---
 
@@ -61,6 +64,8 @@
 | `ClosePositionPartial()` | Partial close with volume | [→ Docs](6.%20Position_Management/ClosePositionPartial.md) |
 | `CloseAllPositions()` | Close ALL open positions | [→ Docs](6.%20Position_Management/CloseAllPositions.md) |
 | `ModifyPositionSLTP()` | Modify both SL and TP | [→ Docs](6.%20Position_Management/ModifyPositionSLTP.md) |
+
+**Also available (no separate page):** `CloseAllBySymbol(symbol)` - close all positions of one symbol, `ModifyPositionSL(ticket, sl)`, `ModifyPositionTP(ticket, tp)`.
 
 ---
 
@@ -117,6 +122,8 @@
 | `HasOpenPosition()` | Check if symbol has open positions | [→ Docs](7.%20Position_Information/HasOpenPosition.md) |
 | `CountOpenPositions()` | Total number of open positions | [→ Docs](7.%20Position_Information/CountOpenPositions.md) |
 
+**Also available (no separate page):** `GetTotalProfit()` - floating P/L of all open positions, `GetProfitBySymbol(symbol)` - floating P/L of one symbol.
+
 ---
 
 ### [07] 📜 HISTORY & STATISTICS
@@ -125,14 +132,14 @@
 
 | Method | Description | Documentation |
 |--------|-------------|---------------|
-| `GetDealsToday()` | All closed deals from today (00:00 to now) | [→ Docs](8.%20History_Statistics/GetDealsToday.md) |
-| `GetDealsYesterday()` | Yesterday's closed deals | [→ Docs](8.%20History_Statistics/GetDealsYesterday.md) |
-| `GetDealsThisWeek()` | This week's deals (Monday to now) | [→ Docs](8.%20History_Statistics/GetDealsThisWeek.md) |
-| `GetDealsThisMonth()` | This month's deals (1st to now) | [→ Docs](8.%20History_Statistics/GetDealsThisMonth.md) |
-| `GetDealsDateRange()` | Custom date range deals | [→ Docs](8.%20History_Statistics/GetDealsDateRange.md) |
-| `GetProfitToday()` | Total realized profit today | [→ Docs](8.%20History_Statistics/GetProfitToday.md) |
-| `GetProfitThisWeek()` | Total realized profit this week | [→ Docs](8.%20History_Statistics/GetProfitThisWeek.md) |
-| `GetProfitThisMonth()` | Total realized profit this month | [→ Docs](8.%20History_Statistics/GetProfitThisMonth.md) |
+| `GetDealsToday()` | Closed positions opened today (00:00 to now, local clock) | [→ Docs](8.%20History_Statistics/GetDealsToday.md) |
+| `GetDealsYesterday()` | Closed positions opened yesterday | [→ Docs](8.%20History_Statistics/GetDealsYesterday.md) |
+| `GetDealsThisWeek()` | Closed positions opened this week (Monday 00:00 to now) | [→ Docs](8.%20History_Statistics/GetDealsThisWeek.md) |
+| `GetDealsThisMonth()` | Closed positions opened this month (1st to now) | [→ Docs](8.%20History_Statistics/GetDealsThisMonth.md) |
+| `GetDealsDateRange()` | Closed positions opened in a custom date range | [→ Docs](8.%20History_Statistics/GetDealsDateRange.md) |
+| `GetProfitToday()` | Sum of `Profit` of today's closed positions (no swap/commission) | [→ Docs](8.%20History_Statistics/GetProfitToday.md) |
+| `GetProfitThisWeek()` | Sum of `Profit` of this week's closed positions | [→ Docs](8.%20History_Statistics/GetProfitThisWeek.md) |
+| `GetProfitThisMonth()` | Sum of `Profit` of this month's closed positions | [→ Docs](8.%20History_Statistics/GetProfitThisMonth.md) |
 
 ---
 
@@ -144,7 +151,7 @@
 |--------|-------------|---------------|
 | `GetSymbolInfo()` | Complete symbol information (all properties) | [→ Docs](9.%20Symbol_Information/GetSymbolInfo.md) |
 | `GetAllSymbols()` | List of all available symbols | [→ Docs](9.%20Symbol_Information/GetAllSymbols.md) |
-| `IsSymbolAvailable()` | Check if symbol exists and is tradable | [→ Docs](9.%20Symbol_Information/IsSymbolAvailable.md) |
+| `IsSymbolAvailable()` | Check if symbol exists and is synchronized (trade mode not checked) | [→ Docs](9.%20Symbol_Information/IsSymbolAvailable.md) |
 | `GetMinStopLevel()` | Minimum distance for SL/TP in points | [→ Docs](9.%20Symbol_Information/GetMinStopLevel.md) |
 | `GetSymbolDigits()` | Decimal precision for symbol | [→ Docs](9.%20Symbol_Information/GetSymbolDigits.md) |
 
@@ -167,26 +174,26 @@
 
 **Example:**
 ```go
-// Auto-calculate lot size to risk 2% with 50 pip SL
-lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 50)
+// Auto-calculate lot size to risk 2% with a 500-point SL (= 50 pips on 5-digit EURUSD)
+lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 500)
 ```
 
 ---
 
 ### [10] 🎯 TRADING HELPERS
 
-**Pip-based trading - the intuitive way to trade**
+**Distance-based trading - SL/TP as distances in POINTS (despite the `...Pips` names)**
 
 | Method | Description | Documentation |
 |--------|-------------|---------------|
-| `CalculateSLTP()` | Convert pip distances to SL/TP prices | [→ Docs](11.%20Trading_Helpers/CalculateSLTP.md) |
-| `BuyMarketWithPips()` | **MOST USED** - BUY with SL/TP in pips ⭐ | [→ Docs](11.%20Trading_Helpers/BuyMarketWithPips.md) |
-| `SellMarketWithPips()` | **MOST USED** - SELL with SL/TP in pips ⭐ | [→ Docs](11.%20Trading_Helpers/SellMarketWithPips.md) |
+| `CalculateSLTP()` | Convert point distances to SL/TP prices | [→ Docs](11.%20Trading_Helpers/CalculateSLTP.md) |
+| `BuyMarketWithPips()` | **MOST USED** - BUY with SL/TP as point distances ⭐ | [→ Docs](11.%20Trading_Helpers/BuyMarketWithPips.md) |
+| `SellMarketWithPips()` | **MOST USED** - SELL with SL/TP as point distances ⭐ | [→ Docs](11.%20Trading_Helpers/SellMarketWithPips.md) |
 
 **Example:**
 ```go
-// Buy EURUSD: 50 pip SL, 100 pip TP (1:2 R:R)
-ticket, _ := sugar.BuyMarketWithPips("EURUSD", 0.1, 50, 100)
+// Buy EURUSD: 500-point SL, 1000-point TP (1:2 R:R)
+ticket, _ := sugar.BuyMarketWithPips("EURUSD", 0.1, 500, 1000)
 ```
 
 ---
@@ -219,10 +226,10 @@ if err != nil {
 fmt.Printf("Position opened: #%d\n", ticket)
 ```
 
-### 2. Market order with pips (intuitive!)
+### 2. Market order with SL/TP distances (intuitive!)
 ```go
-// Buy EURUSD: 50 pip SL, 100 pip TP
-ticket, _ := sugar.BuyMarketWithPips("EURUSD", 0.1, 50, 100)
+// Buy EURUSD: 500-point SL, 1000-point TP
+ticket, _ := sugar.BuyMarketWithPips("EURUSD", 0.1, 500, 1000)
 fmt.Printf("✅ BUY #%d opened (1:2 R:R)\n", ticket)
 ```
 
@@ -230,7 +237,7 @@ fmt.Printf("✅ BUY #%d opened (1:2 R:R)\n", ticket)
 ```go
 symbol := "EURUSD"
 riskPercent := 2.0      // Risk 2% of balance
-stopLossPips := 50.0    // 50 pip stop loss
+stopLossPips := 500.0   // 500-point stop loss (= 50 pips on 5-digit EURUSD)
 
 // Calculate lot size automatically
 lotSize, _ := sugar.CalculatePositionSize(symbol, riskPercent, stopLossPips)
@@ -243,7 +250,7 @@ if !canOpen {
 }
 
 // Trade with calculated size
-ticket, _ := sugar.BuyMarketWithPips(symbol, lotSize, 50, 100)
+ticket, _ := sugar.BuyMarketWithPips(symbol, lotSize, 500, 1000)
 fmt.Printf("Position #%d opened (risking %.1f%%)\n", ticket, riskPercent)
 ```
 
@@ -260,8 +267,8 @@ if !available {
     log.Fatal("Symbol not available")
 }
 
-// Step 3: Calculate position size (risk 2%)
-lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 50)
+// Step 3: Calculate position size (risk 2%, 500-point SL)
+lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 500)
 
 // Step 4: Validate
 canOpen, reason, _ := sugar.CanOpenPosition("EURUSD", lotSize)
@@ -270,7 +277,7 @@ if !canOpen {
 }
 
 // Step 5: Trade
-ticket, _ := sugar.BuyMarketWithPips("EURUSD", lotSize, 50, 100)
+ticket, _ := sugar.BuyMarketWithPips("EURUSD", lotSize, 500, 1000)
 fmt.Printf("✅ Position #%d opened\n", ticket)
 ```
 
@@ -317,9 +324,9 @@ fmt.Printf("%s has open position: %v\n", symbol, hasPosition)
 profit, _ := sugar.GetProfitBySymbol(symbol)
 fmt.Printf("%s floating P/L: $%.2f\n", symbol, profit)
 
-// Close all positions if losing
+// Close all positions of this symbol if losing
 if profit < -100 {
-    closed, _ := sugar.CloseAllPositions()
+    closed, _ := sugar.CloseAllBySymbol(symbol)
     fmt.Printf("Closed %d positions\n", closed)
 }
 ```
@@ -406,8 +413,8 @@ fmt.Printf("\nTotal floating P/L: $%.2f\n", totalFloating)
 
 ## 🔗 Related Documentation
 
-- **[MT5Account Documentation](../API_Reference/MT5Account.md)** - Low-level gRPC/Proto methods
-- **[MT5Service Documentation](../API_Reference/MT5Service.md)** - Mid-level service layer
+- **[MT5Account Documentation](../MT5Account/MT5Account.Master.Overview.md)** - Low-level gRPC/Proto methods
+- **[MT5Service Documentation](../MT5Service/MT5Service.Overview.md)** - Mid-level service layer
 - **MT5Sugar** (this document) - High-level convenience methods
 
 ---
@@ -436,21 +443,22 @@ MetaTrader 5 Terminal
 | Verbosity | High | Medium | Low |
 | Risk management | Manual | Manual | Built-in |
 | Position sizing | Manual | Manual | Automatic |
-| SL/TP | Prices only | Prices only | Pips or prices |
+| SL/TP | Prices only | Prices only | Point distances or prices |
 | Use case | Custom wrappers | Standard apps | Trading bots |
 
 ---
 
 ## 📝 Conventions
 
-- All methods return `(result, error)` - always check errors
+- Most methods return `(result, error)` (or just `error`) - always check errors; `IsConnected()` returns only `bool`
 - Prices are always **absolute** (e.g., 1.08500), not relative
 - Volumes are always in **lots** (e.g., 0.1), not currency units
 - **Points** - minimum price increment (for 5-digit: 0.00001)
 - **Pips** - standard trader unit (for 5-digit: 1 pip = 10 points = 0.0001)
-- SL/TP in "pips" methods use **points** (for compatibility with broker systems)
-- Timeouts are built-in (typically 5 seconds) - no need to specify
-- All times are MT5 server time (not local time)
+- SL/TP distances in the `...WithPips` methods, `CalculateSLTP` and `CalculatePositionSize` are **points**, despite the "pips" names
+- No normalization - volumes and prices are sent exactly as given
+- Timeouts are built-in (3-30 seconds depending on the operation) - no need to specify
+- History ranges (today / yesterday / week / month) are computed from the local clock (`time.Now()`), and positions are selected by their open time
 
 ---
 
@@ -460,7 +468,7 @@ MetaTrader 5 Terminal
 
 ```go
 // ALWAYS use CalculatePositionSize for risk-based trading
-lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 50)  // ✅ Good
+lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 500)  // ✅ Good (500-point SL)
 
 // Don't use fixed lot sizes (ignores account size)
 lotSize := 0.1  // ❌ Bad - doesn't scale with account
@@ -476,7 +484,7 @@ if !canOpen {
 }
 
 // Then trade
-ticket, _ := sugar.BuyMarketWithPips("EURUSD", lotSize, 50, 100)
+ticket, _ := sugar.BuyMarketWithPips("EURUSD", lotSize, 500, 1000)
 ```
 
 ### Error Handling
@@ -490,10 +498,10 @@ if err != nil {
 fmt.Printf("Success: #%d\n", ticket)
 ```
 
-### Use Pip-Based Methods
+### Use Distance-Based Methods
 ```go
-// Prefer pip-based methods (more intuitive)
-sugar.BuyMarketWithPips("EURUSD", 0.1, 50, 100)  // ✅ Easy to understand
+// Prefer distance-based methods (more intuitive; distances in points)
+sugar.BuyMarketWithPips("EURUSD", 0.1, 500, 1000)  // ✅ Easy to understand
 
 // Instead of price-based (error-prone)
 sugar.BuyMarketWithSLTP("EURUSD", 0.1, 1.08450, 1.08950)  // ❌ Manual calculation
@@ -518,41 +526,54 @@ if err := sugar.Ping(); err != nil {
 
 ## 🚀 Quick Start
 
+MT5Sugar lives in the repository's **examples** module (`github.com/MetaRPC/GoMT5/examples`, package `mt5` in `examples/mt5`). Get it by cloning the repository and building your program inside that module - it is not a separate `go get` package.
+
 ```go
 package main
 
 import (
     "fmt"
     "log"
-    "github.com/yourusername/gomt5/mt5"
+
+    mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
 )
 
 func main() {
-    // 1. Create MT5Sugar instance
-    sugar := mt5.NewMT5Sugar()
+    // 1. Create MT5Sugar instance (login, password, gRPC server; "" = default mt5.mrpc.pro:443)
+    sugar, err := mt5.NewMT5Sugar(12345678, "your_password", "mt5.mrpc.pro:443")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer sugar.Disconnect()
 
     // 2. Connect
-    if err := sugar.QuickConnect("FxPro-MT5 Demo"); err != nil {
+    if err := sugar.QuickConnect("YourBroker-MT5 Demo"); err != nil {
         log.Fatal(err)
     }
 
-    // 3. Calculate position size (risk 2%)
-    lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 50)
+    // 3. Calculate position size (risk 2%, 500-point SL)
+    lotSize, err := sugar.CalculatePositionSize("EURUSD", 2.0, 500)
+    if err != nil {
+        log.Fatal(err)
+    }
 
     // 4. Validate
-    canOpen, reason, _ := sugar.CanOpenPosition("EURUSD", lotSize)
+    canOpen, reason, err := sugar.CanOpenPosition("EURUSD", lotSize)
+    if err != nil {
+        log.Fatal(err)
+    }
     if !canOpen {
         log.Fatalf("Cannot trade: %s", reason)
     }
 
-    // 5. Trade with pips
-    ticket, err := sugar.BuyMarketWithPips("EURUSD", lotSize, 50, 100)
+    // 5. Trade with SL/TP distances in points
+    ticket, err := sugar.BuyMarketWithPips("EURUSD", lotSize, 500, 1000)
     if err != nil {
         log.Fatal(err)
     }
 
     fmt.Printf("✅ Position #%d opened!\n", ticket)
-    fmt.Printf("   Risk: 2%% | SL: 50 pips | TP: 100 pips | R:R 1:2\n")
+    fmt.Printf("   Risk: 2%% | SL: 500 points | TP: 1000 points | R:R 1:2\n")
 }
 ```
 

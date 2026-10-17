@@ -6,8 +6,8 @@
 
 * **Method:** `sugar.GetMaxLotSize(symbol)`
 * **Package:** `mt5` (MT5Sugar)
-* **Underlying calls:** `GetFreeMargin()`, `GetSymbolInfo()`, `service.CalculateMargin()`
-* **Timeout:** 5 seconds
+* **Underlying calls:** `GetFreeMargin()`, `GetSymbolInfo()`, `service.GetSymbolTick()`, `service.CalculateMargin()`
+* **Timeout:** 5 seconds (for the tick and margin queries; `GetFreeMargin` and `GetSymbolInfo` use their own 3 s / 5 s timeouts)
 * **Safety buffer:** Uses 80% of free margin (20% buffer to prevent margin calls)
 
 ---
@@ -33,13 +33,14 @@ func (s *MT5Sugar) GetMaxLotSize(symbol string) (float64, error)
 | Return | Type | Description |
 |--------|------|-------------|
 | `maxLots` | `float64` | Maximum safe lot size you can trade |
-| `error` | `error` | Error if calculation fails |
+| `error` | `error` | Error if a query fails, or `failed to calculate margin for <symbol>` if the margin for 1 lot is 0 |
 
 **Special cases:**
 
 - Returns `0.0` (no error) if you don't have enough margin even for minimum lot
-- Already rounded to symbol's `VolumeStep`
-- Already clamped between `VolumeMin` and `VolumeMax`
+- Rounded DOWN to symbol's `VolumeStep`
+- Capped at `VolumeMax` (a result below `VolumeMin` returns `0.0`, it is not raised to `VolumeMin`)
+- Margin per lot is calculated for a **BUY** at the current **Ask**
 
 ---
 
@@ -67,11 +68,11 @@ func (s *MT5Sugar) GetMaxLotSize(symbol string) (float64, error)
 
 ```
 Step 1: Get your free margin (e.g., $5,000)
-Step 2: Calculate margin required for 1 lot of the symbol
+Step 2: Calculate margin required for 1 lot of the symbol (OrderCalcMargin, BUY at Ask)
 Step 3: Apply safety buffer (80% of free margin)
 Step 4: Calculate: maxLots = (freeMargin × 0.8) / marginPerLot
 Step 5: Round down to VolumeStep
-Step 6: Clamp to VolumeMin/VolumeMax
+Step 6: Below VolumeMin → return 0; above VolumeMax → return VolumeMax
 
 Example:
 - Free margin: $5,000
@@ -111,13 +112,15 @@ symbol := "EURUSD"
 maxLots, _ := sugar.GetMaxLotSize(symbol)
 
 // Use only 50% of max capacity for safety
-safeLots := maxLots * 0.5
+// (round to VolumeStep yourself - MT5Sugar sends the volume exactly as given)
+info, _ := sugar.GetSymbolInfo(symbol)
+safeLots := float64(int(maxLots*0.5/info.VolumeStep)) * info.VolumeStep
 
 fmt.Printf("Maximum capacity:  %.2f lots\n", maxLots)
 fmt.Printf("Safe position:     %.2f lots (50%% of max)\n", safeLots)
 
 // Trade with safe size
-if safeLots >= 0.01 {
+if safeLots >= info.VolumeMin {
     ticket, _ := sugar.BuyMarket(symbol, safeLots)
     fmt.Printf("Opened position #%d\n", ticket)
 }
@@ -164,7 +167,7 @@ if lotsPerPosition >= info.VolumeMin {
 ```go
 symbol := "EURUSD"
 riskPercent := 2.0
-stopLoss := 50.0
+stopLoss := 500.0 // points
 
 // Get risk-based position size
 calculatedLots, _ := sugar.CalculatePositionSize(symbol, riskPercent, stopLoss)
@@ -339,7 +342,7 @@ func OpenPositionWithCapacityCheck(
 }
 
 // Usage:
-ticket, err := OpenPositionWithCapacityCheck(sugar, "EURUSD", 2.0, 50)
+ticket, err := OpenPositionWithCapacityCheck(sugar, "EURUSD", 2.0, 500) // 500-point SL
 if err != nil {
     fmt.Printf("Failed: %v\n", err)
 } else {
@@ -543,8 +546,8 @@ if !canOpen {
 
 **Recommended workflow:**
 ```go
-// 1. Calculate risk-based size
-lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 50)
+// 1. Calculate risk-based size (500-point SL)
+lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 500)
 
 // 2. Check against max capacity
 maxLots, _ := sugar.GetMaxLotSize("EURUSD")
@@ -576,7 +579,8 @@ sugar.BuyMarket("EURUSD", maxLots) // Dangerous!
 
 // ✅ CORRECT - use percentage of max for safety
 maxLots, _ := sugar.GetMaxLotSize("EURUSD")
-safeLots := maxLots * 0.5 // Use 50% of capacity
+info, _ := sugar.GetSymbolInfo("EURUSD")
+safeLots := float64(int(maxLots*0.5/info.VolumeStep)) * info.VolumeStep // 50% of capacity, rounded down to step
 sugar.BuyMarket("EURUSD", safeLots)
 ```
 
@@ -604,7 +608,7 @@ maxLots, _ := sugar.GetMaxLotSize("EURUSD")
 
 // ✅ CORRECT - consider total exposure
 maxLots, _ := sugar.GetMaxLotSize("EURUSD")
-openPositions, _ := sugar.GetOpenPositionsCount()
+openPositions, _ := sugar.CountOpenPositions()
 if openPositions >= 3 {
     fmt.Println("Too many positions already open")
     return
@@ -622,7 +626,7 @@ maxLots, _ := sugar.GetMaxLotSize("EURUSD") // Maybe 10 lots
 // Just because you CAN doesn't mean you SHOULD!
 
 // ✅ CORRECT - use risk-based, check against max
-riskLots, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 50)
+riskLots, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 500)
 maxLots, _ := sugar.GetMaxLotSize("EURUSD")
 lotSize := math.Min(riskLots, maxLots)
 ```

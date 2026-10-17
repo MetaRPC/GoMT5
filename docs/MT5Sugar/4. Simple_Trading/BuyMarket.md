@@ -6,7 +6,12 @@
 
 * **Method:** `sugar.BuyMarket(symbol, volume)`
 * **Timeout:** 10 seconds
-* **Returns:** Position ticket number
+* **Returns:** Ticket number - `result.Order`, the order ticket; for a market order MT5 uses the same number as the
+  position ticket
+* **Request:** `service.PlaceOrder(ctx, &pb.OrderSendRequest{Symbol, Operation: pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_BUY, Volume})` -
+  no price, SL/TP, slippage, comment or magic number; the volume is sent exactly as given (not rounded to the volume step)
+* **Success:** only return code `10009` (TRADE_RETCODE_DONE); any other code gives the error
+  `order rejected, code: N, comment: ...`, a failed call gives `BuyMarket failed: ...`
 
 ---
 
@@ -27,7 +32,7 @@ func (s *MT5Sugar) BuyMarket(symbol string, volume float64) (uint64, error)
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `ticket` | `uint64` | Position ticket number (for tracking/closing) |
+| `ticket` | `uint64` | Order ticket = position ticket of the new position (for tracking/closing); 0 on error |
 | `error` | `error` | Error if order rejected or execution failed |
 
 ---
@@ -45,7 +50,7 @@ func (s *MT5Sugar) BuyMarket(symbol string, volume float64) (uint64, error)
 **This method does NOT set Stop Loss or Take Profit!**
 
 - Use `BuyMarketWithSLTP()` for trades with risk management
-- Use `BuyMarketWithPips()` for trades with SL/TP in pips
+- Use `BuyMarketWithPips()` for trades with SL/TP as distances (in points, despite the name)
 - Or manually add SL/TP after: `ModifyPositionSLTP(ticket, sl, tp)`
 
 ---
@@ -112,7 +117,7 @@ if err != nil {
 
 fmt.Printf("Position #%d opened\n", ticket)
 
-// Calculate SL/TP (50 pips SL, 100 pips TP)
+// Calculate SL/TP (50 points SL, 100 points TP)
 sl, tp, _ := sugar.CalculateSLTP(symbol, "BUY", 0, 50, 100)
 
 // Set SL/TP
@@ -154,8 +159,8 @@ fmt.Printf("BUY order #%d placed at ~%.5f\n", ticket, ask)
 ```go
 symbol := "EURUSD"
 riskPercent := 2.0
-stopLossPips := 50.0
-takeProfitPips := 100.0
+stopLossPips := 50.0    // distance in POINTS (the Sugar "Pips" parameters are points)
+takeProfitPips := 100.0 // points
 
 // Step 1: Calculate position size based on risk
 lotSize, err := sugar.CalculatePositionSize(symbol, riskPercent, stopLossPips)
@@ -185,7 +190,7 @@ sugar.ModifyPositionSLTP(ticket, sl, tp)
 fmt.Printf("✅ Complete setup!\n")
 fmt.Printf("   Ticket: #%d\n", ticket)
 fmt.Printf("   Size: %.2f lots (%.1f%% risk)\n", lotSize, riskPercent)
-fmt.Printf("   SL: %.0f pips, TP: %.0f pips\n", stopLossPips, takeProfitPips)
+fmt.Printf("   SL: %.0f points, TP: %.0f points\n", stopLossPips, takeProfitPips)
 ```
 
 ---
@@ -373,7 +378,7 @@ ticket, err := PlaceBuyOrder(sugar, "EURUSD", 0.1)
 **🍬 Better alternatives with SL/TP:**
 
 * `BuyMarketWithSLTP()` - BUY with SL/TP prices
-* `BuyMarketWithPips()` - BUY with SL/TP in pips ⭐ **RECOMMENDED**
+* `BuyMarketWithPips()` - BUY with SL/TP distances in points ⭐ **RECOMMENDED**
 
 **🍬 Other market orders:**
 

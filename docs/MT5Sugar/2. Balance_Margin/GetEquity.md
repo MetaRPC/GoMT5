@@ -222,7 +222,7 @@ if profit > 0 {
 ```go
 // ❌ WRONG - don't use Equity for risk calculation
 equity, _ := sugar.GetEquity()
-lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 50) // Uses Balance internally ✅
+lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 50) // Uses Balance internally ✅ (50 = stop distance in points)
 
 // Equity changes with every tick - use Balance for consistent risk!
 ```

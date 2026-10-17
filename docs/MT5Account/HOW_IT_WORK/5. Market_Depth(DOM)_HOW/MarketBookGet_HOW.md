@@ -24,23 +24,23 @@ if err != nil {
     fmt.Println("     → This is EXPECTED for forex pairs on demo accounts")
     fmt.Println("     → Not an error - just a limitation of forex market structure")
 } else {
-    if len(marketBookGetData.Book) > 0 {
-        fmt.Printf("  ✅ SUCCESS! Received %d price levels\n", len(marketBookGetData.Book))
+    if len(marketBookGetData.MqlBookInfos) > 0 {
+        fmt.Printf("  ✅ SUCCESS! Received %d price levels\n", len(marketBookGetData.MqlBookInfos))
         fmt.Println("     → This is UNUSUAL for forex - broker provides limited DOM")
         fmt.Println()
 
         maxShow := 5
-        if len(marketBookGetData.Book) < maxShow {
-            maxShow = len(marketBookGetData.Book)
+        if len(marketBookGetData.MqlBookInfos) < maxShow {
+            maxShow = len(marketBookGetData.MqlBookInfos)
         }
         fmt.Println("  First few levels:")
         for i := 0; i < maxShow; i++ {
-            level := marketBookGetData.Book[i]
+            level := marketBookGetData.MqlBookInfos[i]
             bookType := "SELL"
             if level.Type == pb.BookType_BOOK_TYPE_BUY {
                 bookType = "BUY"
             }
-            fmt.Printf("    [%d] %s  Price: %.5f  Volume: %.2f\n", i+1, bookType, level.Price, level.VolumeDouble)
+            fmt.Printf("    [%d] %s  Price: %.5f  Volume: %.2f\n", i+1, bookType, level.Price, level.VolumeReal)
         }
     } else {
         fmt.Println("  ⚠️  Call succeeded but no data returned")
@@ -91,8 +91,8 @@ if err != nil {
 * **Data available:**
 
   ```go
-  if len(marketBookGetData.Book) > 0 {
-      fmt.Printf("  ✅ SUCCESS! Received %d price levels\n", len(marketBookGetData.Book))
+  if len(marketBookGetData.MqlBookInfos) > 0 {
+      fmt.Printf("  ✅ SUCCESS! Received %d price levels\n", len(marketBookGetData.MqlBookInfos))
   }
   ```
 
@@ -102,8 +102,8 @@ if err != nil {
 
   ```go
   for i := 0; i < maxShow; i++ {
-      level := marketBookGetData.Book[i]
-      fmt.Printf("[%d] %s Price: %.5f Volume: %.2f\n", i+1, bookType, level.Price, level.VolumeDouble)
+      level := marketBookGetData.MqlBookInfos[i]
+      fmt.Printf("[%d] %s Price: %.5f Volume: %.2f\n", i+1, bookType, level.Price, level.VolumeReal)
   }
   ```
 
@@ -115,14 +115,14 @@ if err != nil {
 
 ```protobuf
 message MarketBookGetData {
-  repeated BookStruct Book = 1;
+  repeated MrpcMqlBookInfo mql_book_infos = 1;
 }
 
-message BookStruct {
-  BookType Type = 1;      // BUY or SELL
-  double Price = 2;       // price level
-  int64 Volume = 3;       // volume at level (deprecated)
-  double VolumeDouble = 4; // volume at level with extended precision
+message MrpcMqlBookInfo {
+  BookType type = 1;       // BUY or SELL
+  double price = 2;        // price level
+  int64 volume = 3;        // volume at level
+  double volume_real = 4;  // volume at level with extended precision
 }
 ```
 

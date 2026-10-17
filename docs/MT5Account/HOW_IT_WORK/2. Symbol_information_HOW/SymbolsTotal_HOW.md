@@ -104,19 +104,24 @@ After this, `EURUSD` is considered active — and will appear in the `SymbolsTot
 After adding a symbol to Market Watch, you can subscribe to the quote stream:
 
 ```go
-ticks, err := account.TicksSubscribe(ctx, &pb.TicksSubscribeRequest{
-    Symbol: "EURUSD",
+ticks, errs := account.OnSymbolTick(ctx, &pb.OnSymbolTickRequest{
+    SymbolNames: []string{"EURUSD"},
 })
-if err != nil {
-    log.Fatalf("Subscribe failed: %v", err)
-}
 
 for {
-    tick, err := ticks.Recv()
-    if err != nil {
-        break
+    select {
+    case tick, ok := <-ticks:
+        if !ok {
+            return
+        }
+        t := tick.SymbolTick
+        fmt.Printf("[%s] Bid: %.5f | Ask: %.5f\n", t.Symbol, t.Bid, t.Ask)
+    case err := <-errs:
+        if err != nil {
+            log.Printf("Stream error: %v", err)
+        }
+        return
     }
-    fmt.Printf("[%s] Bid: %.5f | Ask: %.5f\n", tick.Symbol, tick.Bid, tick.Ask)
 }
 ```
 
@@ -132,7 +137,7 @@ Now the gateway receives real quotes — analogous to how the MetaTrader termina
 | Check how many instruments are active             | `SymbolsTotal(Mode: true)`                 |
 | Add symbol to Market Watch                        | `SymbolSelect(Symbol, true)`               |
 | Remove symbol from Market Watch                   | `SymbolSelect(Symbol, false)`              |
-| Receive quotes for a symbol                       | `TicksSubscribe()` or `SymbolSubscribe()` |
+| Receive quotes for a symbol                       | `OnSymbolTick()` (streaming)               |
 
 ---
 

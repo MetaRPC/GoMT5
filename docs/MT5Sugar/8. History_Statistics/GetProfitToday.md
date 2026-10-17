@@ -1,11 +1,11 @@
 # 💰📅 Get Profit Today (`GetProfitToday`)
 
-> **Sugar method:** Returns total realized profit/loss from today's closed positions.
+> **Sugar method:** Returns the summed `Profit` of the closed positions returned by `GetDealsToday()`.
 
 **API Information:**
 
 * **Method:** `sugar.GetProfitToday()`
-* **Timeout:** 5 seconds
+* **Timeout:** 5 seconds (the `GetDealsToday()` call)
 * **Returns:** Total profit as float64
 
 ---
@@ -15,6 +15,9 @@
 ```go
 func (s *MT5Sugar) GetProfitToday() (float64, error)
 ```
+
+Implementation: calls `GetDealsToday()` and adds up `deal.Profit`. Swap, commission and fee are **not** included,
+and the set of positions is that of `GetDealsToday()`: closed positions **opened** today (00:00 to now on your machine's clock).
 
 ---
 
@@ -26,14 +29,14 @@ func (s *MT5Sugar) GetProfitToday() (float64, error)
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `float64` | float | Total realized profit/loss from today |
-| `error` | `error` | Error if calculation failed |
+| `float64` | float | Sum of `Profit` of today's closed positions |
+| `error` | `error` | The `GetDealsToday()` error if retrieval failed |
 
 ---
 
 ## 💬 Just the Essentials
 
-* **What it is:** Get today's total profit/loss from closed positions (00:00 to now).
+* **What it is:** Get today's total profit/loss from closed positions opened today (00:00 to now).
 * **Why you need it:** Quick profit check, daily targets, performance dashboards.
 * **Sanity check:** Returns 0 if no closed positions today. Positive = profit, negative = loss.
 
@@ -427,8 +430,8 @@ for range ticker.C {
 
 **🍬 Detailed data:**
 
-* `GetDealsToday()` - Get full deal information
-* `GetProfit()` - Get floating profit from OPEN positions
+* `GetDealsToday()` - Get full deal information (also `Swap`, `Commission`, `Fee`)
+* `GetProfit()` - Get floating profit from OPEN positions (`ACCOUNT_PROFIT`)
 
 ---
 
@@ -467,11 +470,26 @@ if len(deals) > 0 {
 ### 3) Timezone assumptions
 
 ```go
-// ❌ WRONG - "today" is server's today
+// ❌ WRONG - assuming "today" is the broker's trading day
+// The range is 00:00..now on YOUR machine's clock, matched against position OPEN time
 
-// ✅ CORRECT - aware that it's server time
+// ✅ CORRECT - aware of how the window is built
 profit, _ := sugar.GetProfitToday()
-fmt.Println("Today's profit (server time): $%.2f", profit)
+fmt.Printf("Profit of positions opened today (local clock): $%.2f\n", profit)
+```
+
+### 4) Expecting net profit
+
+```go
+// ❌ WRONG - GetProfitToday sums only Profit (no swap, commission, fee)
+net, _ := sugar.GetProfitToday()
+
+// ✅ CORRECT - add the other fields yourself
+deals, _ := sugar.GetDealsToday()
+netProfit := 0.0
+for _, d := range deals {
+    netProfit += d.Profit + d.Swap + d.Commission + d.Fee
+}
 ```
 
 ---
@@ -482,11 +500,11 @@ fmt.Println("Today's profit (server time): $%.2f", profit)
 
 2. **Zero OK** - Returns 0 if no closed positions (not an error)
 
-3. **Fast** - Single number result, faster than `GetDealsToday()`
+3. **Same cost** - It calls `GetDealsToday()` internally; if you need the deals too, sum them yourself
 
-4. **Real-time safe** - Can call frequently for dashboards
+4. **Profit only** - Swap, commission and fee are not included
 
-5. **Server time** - "Today" based on MT5 server timezone
+5. **Local clock** - "Today" is 00:00..now on your machine's clock, matched against open time
 
 ---
 

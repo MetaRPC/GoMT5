@@ -6,7 +6,12 @@
 
 * **Method:** `sugar.BuyLimitWithSLTP(symbol, volume, price, sl, tp)`
 * **Timeout:** 10 seconds
-* **Returns:** Pending order ticket number
+* **Returns:** Pending order ticket number (`result.Order`)
+* **Request:** `service.PlaceOrder(ctx, &pb.OrderSendRequest{Symbol, Operation: pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_BUY_LIMIT, Volume, Price: &price, StopLoss: &sl, TakeProfit: &tp})` -
+  no expiration, comment or magic number; price, volume, SL and TP are sent exactly as given (no rounding, no check
+  against the current price or of the stop distances - the trade server rejects invalid values)
+* **Success:** only return code `10009` (TRADE_RETCODE_DONE); any other code gives the error
+  `order rejected, code: N, comment: ...`, a failed call gives `BuyLimitWithSLTP failed: ...`
 
 ---
 
@@ -105,15 +110,15 @@ volume := 0.1
 info, _ := sugar.GetSymbolInfo(symbol)
 
 // Calculate SL/TP relative to entry
-sl := entryPrice - (50 * info.Point)  // 50 pips SL
-tp := entryPrice + (100 * info.Point) // 100 pips TP
+sl := entryPrice - (50 * info.Point)  // 50 points SL
+tp := entryPrice + (100 * info.Point) // 100 points TP
 
 ticket, _ := sugar.BuyLimitWithSLTP(symbol, volume, entryPrice, sl, tp)
 
 fmt.Printf("✅ BUY LIMIT with calculated SL/TP\n")
 fmt.Printf("   Entry: %.5f\n", entryPrice)
-fmt.Printf("   SL:    %.5f (50 pips)\n", sl)
-fmt.Printf("   TP:    %.5f (100 pips)\n", tp)
+fmt.Printf("   SL:    %.5f (50 points)\n", sl)
+fmt.Printf("   TP:    %.5f (100 points)\n", tp)
 fmt.Printf("   R:R:   1:2\n")
 ```
 
@@ -125,7 +130,7 @@ fmt.Printf("   R:R:   1:2\n")
 symbol := "EURUSD"
 entryPrice := 1.08000
 volume := 0.1
-slPips := 50.0
+slPips := 50.0  // distances in POINTS (the Sugar "Pips" parameters are points)
 tpPips := 100.0
 
 // Calculate SL/TP from entry price
@@ -135,8 +140,8 @@ ticket, _ := sugar.BuyLimitWithSLTP(symbol, volume, entryPrice, sl, tp)
 
 fmt.Printf("✅ BUY LIMIT using helper\n")
 fmt.Printf("   Entry: %.5f\n", entryPrice)
-fmt.Printf("   SL:    %.5f (%.0f pips)\n", sl, slPips)
-fmt.Printf("   TP:    %.5f (%.0f pips)\n", tp, tpPips)
+fmt.Printf("   SL:    %.5f (%.0f points)\n", sl, slPips)
+fmt.Printf("   TP:    %.5f (%.0f points)\n", tp, tpPips)
 ```
 
 ---
@@ -190,14 +195,14 @@ fib618 := swingHigh - (range_ * 0.618)
 info, _ := sugar.GetSymbolInfo(symbol)
 
 // Tight SL below Fib level, TP at swing high
-sl := fib618 - (30 * info.Point)  // 30 pips SL
+sl := fib618 - (30 * info.Point)  // 30 points SL
 tp := swingHigh                    // Target swing high
 
 ticket, _ := sugar.BuyLimitWithSLTP(symbol, 0.1, fib618, sl, tp)
 
 fmt.Printf("✅ Fibonacci BUY LIMIT\n")
 fmt.Printf("   Entry: %.5f (Fib 61.8%%)\n", fib618)
-fmt.Printf("   SL:    %.5f (30 pips)\n", sl)
+fmt.Printf("   SL:    %.5f (30 points)\n", sl)
 fmt.Printf("   TP:    %.5f (swing high)\n", tp)
 ```
 
@@ -224,8 +229,8 @@ fmt.Printf("✅ Risk-managed BUY LIMIT\n")
 fmt.Printf("   Entry:  %.5f\n", entryPrice)
 fmt.Printf("   Risk:   %.1f%% of balance\n", riskPercent)
 fmt.Printf("   Size:   %.2f lots\n", lotSize)
-fmt.Printf("   SL:     %.0f pips\n", slPips)
-fmt.Printf("   TP:     %.0f pips\n", tpPips)
+fmt.Printf("   SL:     %.0f points\n", slPips)
+fmt.Printf("   TP:     %.0f points\n", tpPips)
 fmt.Printf("   Ticket: #%d\n", ticket)
 ```
 
@@ -248,7 +253,7 @@ baseSL := 1.07500
 baseTP := 1.09000
 
 for i := 0; i < entries; i++ {
-    // Each entry 20 pips lower
+    // Each entry 20 points lower
     entry := baseEntry - (float64(i) * 20 * info.Point)
     sl := baseSL - (float64(i) * 20 * info.Point)
     tp := baseTP // Same TP for all
@@ -328,7 +333,7 @@ ticket, _ := sugar.BuyLimitWithSLTP(symbol, volume, entryPrice, sl, tp)
 fmt.Printf("Weekend gap strategy:\n")
 fmt.Printf("   Friday close: 1.08500\n")
 fmt.Printf("   Entry:        %.5f (gap down)\n", entryPrice)
-fmt.Printf("   SL:           %.5f (30 pips)\n", sl)
+fmt.Printf("   SL:           %.5f (30 points)\n", sl)
 fmt.Printf("   TP:           %.5f (gap fill)\n", tp)
 ```
 
@@ -337,14 +342,8 @@ fmt.Printf("   TP:           %.5f (gap fill)\n", tp)
 ### 10) Complete limit order function
 
 ```go
-func PlaceBuyLimitWithProtection(
-    sugar *mt5.MT5Sugar,
-    symbol string,
-    entryPrice float64,
-    riskPercent float64,
-    slPips float64,
-    tpPips float64,
-) (uint64, error) {
+// slPips/tpPips are distances in POINTS (as CalculatePositionSize/CalculateSLTP expect)
+func PlaceBuyLimitWithProtection(sugar *mt5.MT5Sugar, symbol string, entryPrice, riskPercent, slPips, tpPips float64) (uint64, error) {
     fmt.Println("╔═══════════════════════════════════════╗")
     fmt.Println("║    BUY LIMIT WITH SL/TP               ║")
     fmt.Println("╚═══════════════════════════════════════╝")
@@ -354,7 +353,7 @@ func PlaceBuyLimitWithProtection(
     if entryPrice >= currentAsk {
         return 0, fmt.Errorf("entry %.5f must be below ASK %.5f", entryPrice, currentAsk)
     }
-    fmt.Printf("✅ Entry: %.5f (%.0f pips below current)\n",
+    fmt.Printf("✅ Entry: %.5f (%.0f points below current)\n",
         entryPrice, (currentAsk-entryPrice)/0.00001)
 
     // Calculate position size
@@ -366,8 +365,8 @@ func PlaceBuyLimitWithProtection(
 
     // Calculate SL/TP
     sl, tp, _ := sugar.CalculateSLTP(symbol, "BUY", entryPrice, slPips, tpPips)
-    fmt.Printf("✅ SL: %.5f (%.0f pips)\n", sl, slPips)
-    fmt.Printf("✅ TP: %.5f (%.0f pips)\n", tp, tpPips)
+    fmt.Printf("✅ SL: %.5f (%.0f points)\n", sl, slPips)
+    fmt.Printf("✅ TP: %.5f (%.0f points)\n", tp, tpPips)
 
     // Place order
     ticket, err := sugar.BuyLimitWithSLTP(symbol, lotSize, entryPrice, sl, tp)
@@ -391,7 +390,7 @@ ticket, _ := PlaceBuyLimitWithProtection(sugar, "EURUSD", 1.08000, 2.0, 50, 100)
 **🍬 Other pending orders with SL/TP:**
 
 * `SellLimitWithSLTP()` - SELL LIMIT with protection
-* `BuyStopWithSLTP()` - BUY STOP with protection
+* BUY STOP with protection - no Sugar method; use `GetService().PlaceOrder()` with `Operation: pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_BUY_STOP`, `Price`, `StopLoss`, `TakeProfit`
 
 **🍬 Market orders with SL/TP:**
 
@@ -399,8 +398,8 @@ ticket, _ := PlaceBuyLimitWithProtection(sugar, "EURUSD", 1.08000, 2.0, 50, 100)
 
 **🍬 Helper methods:**
 
-* `CalculateSLTP()` - Calculate SL/TP from pips
-* `BuyLimit()` - Without SL/TP (add manually later)
+* `CalculateSLTP()` - Calculate SL/TP from distances in points
+* `BuyLimit()` - Without SL/TP
 
 ---
 
@@ -421,12 +420,13 @@ sugar.BuyLimitWithSLTP("EURUSD", 0.1, entry, 1.07500, 1.09000)
 
 ```go
 // ❌ WRONG - SL/TP calculated from current price
+point := 0.00001 // EURUSD point (info.Point from GetSymbolInfo)
 ask, _ := sugar.GetAsk("EURUSD")
 entry := 1.08000
 sl := ask - (50 * point) // Wrong! Should be from entry!
 
 // ✅ CORRECT - calculate from entry price
-sl := entry - (50 * point)
+sl = entry - (50 * point)
 tp := entry + (100 * point)
 ```
 
@@ -446,4 +446,4 @@ tp := entry + (100 * point)
 
 ---
 
-**See also:** [`BuyLimit.md`](../4. Simple_Trading/BuyLimit.md), [`SellLimitWithSLTP.md`](SellLimitWithSLTP.md), [`CalculateSLTP.md`](../11. Trading_Helpers/CalculateSLTP.md)
+**See also:** [`BuyLimit.md`](../4.%20Simple_Trading/BuyLimit.md), [`SellLimitWithSLTP.md`](SellLimitWithSLTP.md), [`CalculateSLTP.md`](../11.%20Trading_Helpers/CalculateSLTP.md)

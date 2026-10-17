@@ -1,8 +1,5 @@
 # GoMT5 SDK Documentation
 
-> ℹ️ **Account ID / Session ID**: When connecting via `Connect` / `ConnectEx`, MetaRPC automatically generates a terminal session GUID and returns it in `terminalInstanceGuid`. There is no need to call `GetId` or supply an `id` header prior to connecting. Subsequent calls (such as subscriptions or order requests) use this session ID automatically.
-
-
 **Complete Go SDK for MetaTrader 5 trading automation via gRPC**
 
 <div class="home-grid">
@@ -35,22 +32,23 @@
 </a>
 
 <!-- Bottom Row (4-5-6) - Teal, Mint, Green -->
-<a href="API_Reference/MT5Service/" class="card card-4">
+<a href="MT5Service/MT5Service.Overview/" class="card card-4">
   <span class="material-symbols-rounded">build</span>
   <h3>MT5Service</h3>
   <p>Wrapper methods layer</p>
 </a>
 
-<a href="API_Reference/MT5Account/" class="card card-5">
+<a href="MT5Account/MT5Account.Master.Overview/" class="card card-5">
   <span class="material-symbols-rounded">settings</span>
   <h3>MT5Account</h3>
   <p>Low-level gRPC protocol layer</p>
 </a>
 
-<a href="API_Reference/MT5Sugar/" class="card card-6">
+<a href="MT5Sugar/MT5Sugar.API_Overview/" class="card card-6">
   <span class="material-symbols-rounded">auto_awesome</span>
   <h3>MT5Sugar</h3>
   <p>High-level convenience API</p>
 </a>
 
 </div>
+

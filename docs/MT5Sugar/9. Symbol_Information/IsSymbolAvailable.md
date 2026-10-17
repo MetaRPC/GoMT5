@@ -1,6 +1,6 @@
 # ✅🔍 Is Symbol Available (`IsSymbolAvailable`)
 
-> **Sugar method:** Checks if a symbol exists and is available for trading.
+> **Sugar method:** Checks if a symbol exists and is synchronized (has data) in the terminal.
 
 **API Information:**
 
@@ -33,9 +33,9 @@ func (s *MT5Sugar) IsSymbolAvailable(symbol string) (bool, error)
 
 ## 💬 Just the Essentials
 
-* **What it is:** Check if a symbol exists and can be traded.
+* **What it is:** Check if a symbol exists (`SymbolExist`) and is synchronized (`IsSymbolSynchronized`).
 * **Why you need it:** Validation before trading, symbol verification, error prevention.
-* **Sanity check:** Returns `false` for non-existent or disabled symbols (not an error).
+* **Sanity check:** Returns `false` for non-existent or not-synchronized symbols (not an error). It does NOT check the symbol's trade mode or trading permissions - a `true` result does not guarantee that an order will be accepted.
 
 ---
 
@@ -63,7 +63,7 @@ if err != nil {
 }
 
 if available {
-    fmt.Println("✅ EURUSD is available for trading")
+    fmt.Println("✅ EURUSD exists and is synchronized")
 } else {
     fmt.Println("❌ EURUSD is not available")
 }
@@ -84,7 +84,7 @@ if !available {
     return
 }
 
-// Safe to trade
+// Symbol exists and is synchronized - try to trade (the broker can still reject the order)
 fmt.Printf("✅ %s available - opening position...\n", symbol)
 ticket, err := sugar.BuyMarket(symbol, volume)
 if err != nil {
@@ -520,7 +520,7 @@ available, _ := sugar.IsSymbolAvailable("EURUSD")
 
 ## 💎 Pro Tips
 
-1. **Fast check** - Lightweight operation, safe to call frequently
+1. **Fast check** - Two light queries (SymbolExist + IsSymbolSynchronized), 3-second timeout
 
 2. **Cache results** - Symbol availability rarely changes, can cache
 
@@ -536,17 +536,15 @@ available, _ := sugar.IsSymbolAvailable("EURUSD")
 
 ```
 Symbol states:
-✅ Available (true)   - Symbol exists and can be traded
+✅ Available (true)   - SymbolExist == true AND IsSymbolSynchronized == true
 ❌ Unavailable (false) - Symbol doesn't exist OR
-                       - Symbol exists but trading disabled OR
-                       - Symbol not synchronized
+                       - Symbol exists but is not synchronized
 
-Common reasons for unavailable:
-- Symbol doesn't exist on this broker
-- Symbol is disabled by broker
-- Symbol not in user's watchlist
-- Market is closed for this symbol
-- Insufficient permissions
+NOT checked by this method:
+- Symbol trade mode (trading disabled / close-only)
+- Market hours (market closed)
+- Account trading permissions
+A true result does not guarantee that an order will be accepted.
 ```
 
 ---

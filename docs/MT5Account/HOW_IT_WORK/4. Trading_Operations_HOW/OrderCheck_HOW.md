@@ -91,7 +91,7 @@ The gateway passes the request to MetaTrader, which validates the order for corr
 
 ### 3️. Process the Result
 
-If there is an error (`err != nil`) — this means the broker or server does not support `OrderCheck` (common on demo accounts).
+If there is an error (`err != nil`), the check did not pass (MetaTrader's OrderCheck failed, e.g. not enough money or invalid stops) or the call itself failed; the error (`*mt5.ApiError`) carries the trade return code and its description.
 If a result is received, the validation fields are displayed:
 
 ```go
@@ -149,13 +149,14 @@ message OrderCheckData {
 }
 
 message MrpcMqlTradeCheckResult {
-  int32 ReturnedCode = 1;
-  string Comment = 2;
-  double Margin = 3;
-  double BalanceAfterDeal = 4;
-  double EquityAfterDeal = 5;
+  uint32 ReturnedCode = 1;
+  double BalanceAfterDeal = 2;
+  double EquityAfterDeal = 3;
+  double Profit = 4;
+  double Margin = 5;
   double FreeMargin = 6;
   double MarginLevel = 7;
+  string Comment = 8;
 }
 ```
 

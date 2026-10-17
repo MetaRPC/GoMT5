@@ -17,11 +17,11 @@ fromTimestamp := timestamppb.New(now.AddDate(0, 0, -30))
 toTimestamp := timestamppb.New(now)
 
 orderHistoryReq := &pb.OrderHistoryRequest{
-    InputFrom:     fromTimestamp,
-    InputTo:       toTimestamp,
-    InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_ORDER_HISTORY_SORT_BY_OPEN_TIME,
-    PageNumber:    0,  // 0 for all items
-    ItemsPerPage:  0,  // 0 for all items
+    InputFromUtc:  fromTimestamp, // time.Now() is UTC-based: use the *Utc fields
+    InputToUtc:    toTimestamp,
+    InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_BMT5_SORT_BY_OPEN_TIME_ASC,
+    PageNumber:    0,  // 0 = page-number paging not used (all items)
+    ItemsPerPage:  0,  // 0 = page-number paging not used (all items)
 }
 orderHistoryData, err := account.OrderHistory(ctx, orderHistoryReq)
 if err != nil {
@@ -65,26 +65,27 @@ MetaTrader requires fields of type `timestamppb.Timestamp`, so conversion from `
 
 ```go
 orderHistoryReq := &pb.OrderHistoryRequest{
-    InputFrom:     fromTimestamp,
-    InputTo:       toTimestamp,
-    InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_ORDER_HISTORY_SORT_BY_OPEN_TIME,
+    InputFromUtc:  fromTimestamp,
+    InputToUtc:    toTimestamp,
+    InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_BMT5_SORT_BY_OPEN_TIME_ASC,
     PageNumber:    0,
     ItemsPerPage:  0,
 }
 ```
 
-A request is created to get orders for the period between `InputFrom` and `InputTo`.
+A request is created to get orders for the period between `InputFromUtc` and `InputToUtc`.
 
 **Request Parameters:**
 
-- `InputFrom` - start time of history range (required)
-- `InputTo` - end time of history range (required)
+- `InputFrom` / `InputFromUtc` - start time of history range (required): `InputFrom` is in the broker server's time zone, `InputFromUtc` in UTC; send one of them, not both
+- `InputTo` / `InputToUtc` - end time of history range (required), same rule
 - `InputSortMode` - sort mode (optional):
-  - `ORDER_HISTORY_SORT_BY_OPEN_TIME` (0) - sort by open time
-  - `ORDER_HISTORY_SORT_BY_CLOSE_TIME` (1) - sort by close time
-  - `ORDER_HISTORY_SORT_BY_TICKET_ID` (2) - sort by ticket ID
-- `PageNumber` - page number for pagination (default 0 for all items)
-- `ItemsPerPage` - number of items per page (default 0 for all items)
+  - `BMT5_SORT_BY_OPEN_TIME_ASC` (0) / `BMT5_SORT_BY_OPEN_TIME_DESC` (1) - sort by open time
+  - `BMT5_SORT_BY_CLOSE_TIME_ASC` (2) / `BMT5_SORT_BY_CLOSE_TIME_DESC` (3) - sort by close time
+  - `BMT5_SORT_BY_ORDER_TICKET_ID_ASC` (4) / `BMT5_SORT_BY_ORDER_TICKET_ID_DESC` (5) - sort by ticket ID
+- `PageNumber` - page number for legacy page-number paging (1-based, needs `ItemsPerPage`; 0 = not used, all items)
+- `ItemsPerPage` - rows per page for legacy page-number paging (0 = not used)
+- `PageToken` / `PageSize` - cursor paging (preferred); cannot be combined with `PageNumber`/`ItemsPerPage`
 
 ---
 
@@ -135,6 +136,7 @@ message OrdersHistoryData {
   int32 pageNumber = 2;
   int32 itemsPerPage = 3;
   repeated HistoryData history_data = 4;
+  string next_page_token = 5;  // cursor paging: token of the next page
 }
 
 message HistoryData {
@@ -199,8 +201,8 @@ If you see that the **`PriceOpen` = 0.00000** field, this is not a code error. P
 1. **Historical orders were not executed (Pending Orders)**
    If an order was cancelled by the user or expired by time, the server stores it in history but without an opening price.
 
-2. **Order type does not provide an opening price**
-   For example, `BUY_LIMIT` or `SELL_STOP` before execution have only a pending price (`PriceOrder`), not `PriceOpen`.
+2. **Market orders are filled at the market price**
+   A market order may be stored with `PriceOpen` = 0; the actual execution price is in the matching deal (`HistoryDeal.Price`).
 
 3. **Historical data limited by server**
    Some brokers store only basic order attributes, and if an order was closed long ago or was not executed, some fields may be zeroed.

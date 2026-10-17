@@ -125,6 +125,7 @@ OrderCloseRequest {
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -134,8 +135,17 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
     defer cancel()
@@ -204,7 +214,7 @@ func CloseAllPositions(account *mt5.MT5Account) error {
         return err
     }
 
-    for _, order := range positions.Orders {
+    for _, order := range positions.PositionInfos {
         data, err := account.OrderClose(ctx, &pb.OrderCloseRequest{
             Ticket:   order.Ticket,
             Volume:   0, // Full close
@@ -241,7 +251,7 @@ func CloseLosingPositions(account *mt5.MT5Account) error {
         return err
     }
 
-    for _, order := range positions.Orders {
+    for _, order := range positions.PositionInfos {
         if order.Profit < 0 { // Only losing positions
             data, err := account.OrderClose(ctx, &pb.OrderCloseRequest{
                 Ticket:   order.Ticket,
@@ -268,15 +278,17 @@ func CloseLosingPositions(account *mt5.MT5Account) error {
 func CloseSymbolPositions(account *mt5.MT5Account, symbol string) error {
     ctx := context.Background()
 
-    positions, err := account.OpenedOrders(ctx, &pb.OpenedOrdersRequest{
-        Symbol: symbol,
-    })
+    // OpenedOrdersRequest has no symbol filter: filter on the client side
+    positions, err := account.OpenedOrders(ctx, &pb.OpenedOrdersRequest{})
     if err != nil {
         return err
     }
 
     closedCount := 0
-    for _, order := range positions.Orders {
+    for _, order := range positions.PositionInfos {
+        if order.Symbol != symbol {
+            continue
+        }
         data, err := account.OrderClose(ctx, &pb.OrderCloseRequest{
             Ticket:   order.Ticket,
             Volume:   0,
@@ -309,8 +321,8 @@ func ClosePositionWithConfirmation(account *mt5.MT5Account, ticket uint64) error
         return err
     }
 
-    var order *pb.Order
-    for _, o := range positions.Orders {
+    var order *pb.PositionInfo
+    for _, o := range positions.PositionInfos {
         if o.Ticket == ticket {
             order = o
             break
@@ -358,8 +370,8 @@ func IsTicketOpen(account *mt5.MT5Account, ticket uint64) (bool, error) {
         return false, err
     }
 
-    for _, t := range data.Tickets {
-        if t == ticket {
+    for _, t := range data.OpenedPositionTickets { // []int64
+        if uint64(t) == ticket {
             return true, nil
         }
     }

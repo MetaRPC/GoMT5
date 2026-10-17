@@ -1,12 +1,12 @@
 # 📅📊 Get Deals This Week (`GetDealsThisWeek`)
 
-> **Sugar method:** Returns all closed positions (deals) from this week (Monday 00:00 to now).
+> **Sugar method:** Returns closed positions ("deals") that were **opened** this week (Monday 00:00 to now).
 
 **API Information:**
 
 * **Method:** `sugar.GetDealsThisWeek()`
 * **Timeout:** 5 seconds
-* **Returns:** Slice of position history info
+* **Returns:** Slice of position history info, sorted by open time (oldest first)
 
 ---
 
@@ -15,6 +15,15 @@
 ```go
 func (s *MT5Sugar) GetDealsThisWeek() ([]*pb.PositionHistoryInfo, error)
 ```
+
+How it works: Monday 00:00 of the current week (your machine's clock) and `time.Now()` are passed to
+`MT5Service.GetPositionsHistory(ctx, pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_ASC, &startOfWeek, &now, nil, nil)`.
+The range is sent as `PositionOpenTimeFrom` / `PositionOpenTimeTo`, so it filters by the position's **open** time:
+a position opened last week and closed this week is not included. No paging parameters are sent.
+
+**Time zone note:** the boundaries come from your local clock and are sent as absolute instants in the request fields that
+the server reads as broker server time. If your machine, UTC and the broker server use different time zones, the window is
+shifted accordingly - use `GetDealsDateRange()` when you need exact boundaries.
 
 ---
 
@@ -26,16 +35,16 @@ func (s *MT5Sugar) GetDealsThisWeek() ([]*pb.PositionHistoryInfo, error)
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `[]*pb.PositionHistoryInfo` | slice | All closed positions from this week |
-| `error` | `error` | Error if retrieval failed |
+| `[]*pb.PositionHistoryInfo` | slice | Closed positions opened this week |
+| `error` | `error` | `"GetPositionsHistory failed: ..."` if retrieval failed |
 
 ---
 
 ## 💬 Just the Essentials
 
-* **What it is:** Get all closed trades from Monday 00:00 to current time.
+* **What it is:** Get closed trades opened between Monday 00:00 and the current time.
 * **Why you need it:** Weekly performance tracking, strategy analysis, week-over-week comparison.
-* **Sanity check:** Returns empty slice if no deals this week. Week starts on Monday.
+* **Sanity check:** Returns an empty (possibly `nil`) slice if there are no deals - check `len(deals)`. Week starts on Monday (on Sunday the range covers Monday..Sunday).
 
 ---
 
@@ -72,7 +81,7 @@ fmt.Printf("This week's deals: %d\n\n", len(deals))
 totalProfit := 0.0
 for i, deal := range deals {
     fmt.Printf("%d. #%d %s: $%.2f\n",
-        i+1, deal.Ticket, deal.Symbol, deal.Profit)
+        i+1, deal.PositionTicket, deal.Symbol, deal.Profit)
     totalProfit += deal.Profit
 }
 
@@ -134,11 +143,11 @@ if len(deals) == 0 {
     return
 }
 
-// Group by day
+// Group by close day (CloseTime is broker server time)
 dailyDeals := make(map[string][]float64)
 
 for _, deal := range deals {
-    dayKey := deal.TimeClose.Format("Mon 01/02")
+    dayKey := deal.CloseTime.AsTime().Format("Mon 01/02")
     dailyDeals[dayKey] = append(dailyDeals[dayKey], deal.Profit)
 }
 
@@ -235,7 +244,7 @@ if len(deals) == 0 {
 dailyProfit := make(map[string]float64)
 
 for _, deal := range deals {
-    dayKey := deal.TimeClose.Format("Monday 01/02")
+    dayKey := deal.CloseTime.AsTime().Format("Monday 01/02")
     dailyProfit[dayKey] += deal.Profit
 }
 
@@ -309,9 +318,11 @@ if weekday == 0 {
     weekday = 7
 }
 
-// Last week: previous Monday to Sunday
-lastMonday := now.AddDate(0, 0, -(weekday + 6))
-lastSunday := now.AddDate(0, 0, -(weekday))
+// Last week: previous Monday 00:00 to Sunday 23:59:59 (local clock)
+thisMonday := now.AddDate(0, 0, -(weekday - 1))
+thisMonday = time.Date(thisMonday.Year(), thisMonday.Month(), thisMonday.Day(), 0, 0, 0, 0, now.Location())
+lastMonday := thisMonday.AddDate(0, 0, -7)
+lastSunday := thisMonday.Add(-time.Second)
 
 lastWeekDeals, _ := sugar.GetDealsDateRange(lastMonday, lastSunday)
 
@@ -364,7 +375,7 @@ if len(deals) == 0 {
 dailyProfit := make(map[string]float64)
 
 for _, deal := range deals {
-    dayKey := deal.TimeClose.Format("Mon")
+    dayKey := deal.CloseTime.AsTime().Format("Mon")
     dailyProfit[dayKey] += deal.Profit
 }
 
@@ -477,7 +488,7 @@ func AnalyzeWeeklyPerformance(sugar *mt5.MT5Sugar) (*WeeklyStats, error) {
             winCount++
         }
 
-        dayKey := deal.TimeClose.Format("Mon 01/02")
+        dayKey := deal.CloseTime.AsTime().Format("Mon 01/02")
         dailyProfit[dayKey] += deal.Profit
         dailyCount[dayKey]++
     }
@@ -575,12 +586,23 @@ stats.Print()
 ### 1) Assuming week starts on Sunday
 
 ```go
-// ❌ WRONG - week starts Monday in MT5
+// ❌ WRONG - GetDealsThisWeek starts the week on Monday
 // Your local culture might use Sunday
 
 // ✅ CORRECT - aware that week starts Monday
 deals, _ := sugar.GetDealsThisWeek()
-// Returns Monday 00:00 to now
+// Returns closed positions opened from Monday 00:00 (local clock) to now
+```
+
+### 1b) Expecting positions opened last week
+
+```go
+// ❌ WRONG - a position opened last Friday and closed on Monday is NOT returned
+// (the range filters on the position's OPEN time)
+deals, _ := sugar.GetDealsThisWeek()
+
+// ✅ CORRECT - widen the range and filter on CloseTime yourself
+deals, _ := sugar.GetDealsDateRange(time.Now().AddDate(0, 0, -14), time.Now())
 ```
 
 ### 2) Comparing incomplete week to complete week
@@ -600,7 +622,7 @@ fmt.Println("This week (incomplete) vs last week (complete)")
 ```go
 // ❌ WRONG - not handling early week
 deals, _ := sugar.GetDealsThisWeek()
-avgProfit := totalProfit / len(deals) // Panic if empty!
+avgProfit := totalProfit / float64(len(deals)) // NaN if empty!
 
 // ✅ CORRECT - check for empty
 if len(deals) > 0 {
@@ -612,11 +634,11 @@ if len(deals) > 0 {
 
 ## 💎 Pro Tips
 
-1. **Week starts Monday** - MT5 uses Monday as first day of week
+1. **Week starts Monday** - GetDealsThisWeek uses Monday as first day of week
 
 2. **Incomplete data** - Mid-week calls return partial week data
 
-3. **Performance** - 5-second timeout, suitable for regular calls
+3. **Performance** - 5-second timeout
 
 4. **Empty OK** - Returns empty slice if no trades (not error)
 
@@ -632,9 +654,10 @@ now = time.Now()
 weekday = int(now.Weekday())
 if weekday == 0 { weekday = 7 }  // Sunday becomes 7
 
-startOfWeek = now - (weekday - 1) days at 00:00:00
+startOfWeek = now - (weekday - 1) days at 00:00:00 (now.Location())
 
-Returns all deals from startOfWeek to now
+Returns closed positions whose OPEN time is between startOfWeek and now
+(PositionOpenTimeFrom / PositionOpenTimeTo), sorted by open time ascending
 ```
 
 ---

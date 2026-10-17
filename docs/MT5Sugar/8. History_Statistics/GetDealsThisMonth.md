@@ -1,12 +1,12 @@
 # 📅📆 Get Deals This Month (`GetDealsThisMonth`)
 
-> **Sugar method:** Returns all closed positions (deals) from this month (1st day 00:00 to now).
+> **Sugar method:** Returns closed positions ("deals") that were **opened** this month (1st day 00:00 to now).
 
 **API Information:**
 
 * **Method:** `sugar.GetDealsThisMonth()`
-* **Timeout:** 5 seconds
-* **Returns:** Slice of position history info
+* **Timeout:** 30 seconds
+* **Returns:** Slice of position history info, sorted by open time (oldest first)
 
 ---
 
@@ -15,6 +15,15 @@
 ```go
 func (s *MT5Sugar) GetDealsThisMonth() ([]*pb.PositionHistoryInfo, error)
 ```
+
+How it works: the 1st of the current month 00:00 (your machine's clock) and `time.Now()` are passed to
+`MT5Service.GetPositionsHistory(ctx, pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_ASC, &startOfMonth, &now, nil, nil)`.
+The range is sent as `PositionOpenTimeFrom` / `PositionOpenTimeTo`, so it filters by the position's **open** time:
+a position opened last month and closed this month is not included. No paging parameters are sent.
+
+**Time zone note:** the boundaries come from your local clock and are sent as absolute instants in the request fields that
+the server reads as broker server time. If your machine, UTC and the broker server use different time zones, the window is
+shifted accordingly - use `GetDealsDateRange()` when you need exact boundaries.
 
 ---
 
@@ -26,16 +35,16 @@ func (s *MT5Sugar) GetDealsThisMonth() ([]*pb.PositionHistoryInfo, error)
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `[]*pb.PositionHistoryInfo` | slice | All closed positions from this month |
-| `error` | `error` | Error if retrieval failed |
+| `[]*pb.PositionHistoryInfo` | slice | Closed positions opened this month |
+| `error` | `error` | `"GetPositionsHistory failed: ..."` if retrieval failed |
 
 ---
 
 ## 💬 Just the Essentials
 
-* **What it is:** Get all closed trades from 1st day of month 00:00 to current time.
+* **What it is:** Get closed trades opened between the 1st day of the month 00:00 and the current time.
 * **Why you need it:** Monthly performance tracking, strategy evaluation, profit/loss reports.
-* **Sanity check:** Returns empty slice if no deals this month. Auto-calculates month range.
+* **Sanity check:** Returns an empty (possibly `nil`) slice if there are no deals - check `len(deals)`. Auto-calculates month range.
 
 ---
 
@@ -72,7 +81,7 @@ fmt.Printf("This month's deals: %d\n\n", len(deals))
 totalProfit := 0.0
 for i, deal := range deals {
     fmt.Printf("%d. #%d %s: $%.2f\n",
-        i+1, deal.Ticket, deal.Symbol, deal.Profit)
+        i+1, deal.PositionTicket, deal.Symbol, deal.Profit)
     totalProfit += deal.Profit
 }
 
@@ -203,7 +212,7 @@ weeklyStats := make(map[int]struct {
 })
 
 for _, deal := range deals {
-    _, week := deal.TimeClose.ISOWeek()
+    _, week := deal.CloseTime.AsTime().ISOWeek() // CloseTime is broker server time
     stats := weeklyStats[week]
     stats.Count++
     stats.Profit += deal.Profit
@@ -261,7 +270,7 @@ if len(deals) < 5 {
 for i := 0; i < count; i++ {
     deal := deals[i]
     fmt.Printf("%d. #%d %s %.2f lots: $%.2f\n",
-        i+1, deal.Ticket, deal.Symbol,
+        i+1, deal.PositionTicket, deal.Symbol,
         deal.Volume, deal.Profit)
 }
 ```
@@ -516,7 +525,7 @@ func AnalyzeMonthlyPerformance(sugar *mt5.MT5Sugar) (*MonthlyStats, error) {
 
     for _, deal := range deals {
         stats.TotalProfit += deal.Profit
-        tradingDays[deal.TimeClose.Format("2006-01-02")] = true
+        tradingDays[deal.CloseTime.AsTime().Format("2006-01-02")] = true
 
         if deal.Profit > 0 {
             winCount++
@@ -533,7 +542,7 @@ func AnalyzeMonthlyPerformance(sugar *mt5.MT5Sugar) (*MonthlyStats, error) {
             }
         }
 
-        _, week := deal.TimeClose.ISOWeek()
+        _, week := deal.CloseTime.AsTime().ISOWeek()
         weeklyProfit[week] += deal.Profit
     }
 
@@ -634,22 +643,24 @@ dailyAvg := thisMonthProfit / float64(daysPassed)
 fmt.Printf("Daily average: $%.2f\n", dailyAvg)
 ```
 
-### 2) Not handling timezone
+### 2) Not handling timezone and open-time filtering
 
 ```go
-// ❌ WRONG - "this month" is server timezone
-
-// ✅ CORRECT - aware that it's server's month
+// ❌ WRONG - assuming "this month" is the broker's month of CLOSED trades
+// The range is computed from YOUR machine's clock and matched against OPEN time:
+// a position opened on the 31st of last month and closed today is missing
 deals, _ := sugar.GetDealsThisMonth()
-fmt.Println("Server's current month")
+
+// ✅ CORRECT - widen the range and filter on CloseTime yourself when that matters
+deals, _ = sugar.GetDealsDateRange(time.Now().AddDate(0, -2, 0), time.Now())
 ```
 
 ### 3) Assuming deals exist
 
 ```go
-// ❌ WRONG - might panic
+// ❌ WRONG - division by zero
 deals, _ := sugar.GetDealsThisMonth()
-avgProfit := totalProfit / len(deals) // Panic if empty!
+avgProfit := totalProfit / float64(len(deals)) // NaN if empty!
 
 // ✅ CORRECT - check length
 if len(deals) > 0 {
@@ -661,11 +672,11 @@ if len(deals) > 0 {
 
 ## 💎 Pro Tips
 
-1. **Month starts 1st** - Always starts from 1st day 00:00:00
+1. **Month starts 1st** - Always starts from 1st day 00:00:00 (local clock)
 
 2. **Incomplete data** - Mid-month calls return partial month
 
-3. **Performance** - 5-second timeout, suitable for regular calls
+3. **Performance** - 30-second timeout (longer than day/week queries)
 
 4. **Empty OK** - Returns empty slice if no trades (not error)
 
@@ -680,7 +691,8 @@ Month range calculation:
 now = time.Now()
 startOfMonth = Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 
-Returns all deals from startOfMonth to now
+Returns closed positions whose OPEN time is between startOfMonth and now
+(PositionOpenTimeFrom / PositionOpenTimeTo), sorted by open time ascending
 ```
 
 ---

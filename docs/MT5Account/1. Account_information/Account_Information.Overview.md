@@ -4,7 +4,7 @@
 
 ## 📁 What lives here
 
-* **[AccountSummary](./AccountSummary.md)** - **all account info** at once (balance, equity, margin, leverage, profit, etc.). Returns `MrpcEnumAccountTradeMode` enum.
+* **[AccountSummary](./AccountSummary.md)** - **all account info** at once (login, balance, equity, credit, leverage, currency, server time, etc.; no margin or profit). Returns `MrpcEnumAccountTradeMode` enum.
 * **[AccountInfoDouble](./AccountInfoDouble.md)** - **single double value** from account (balance, equity, margin, profit, credit, etc.). Uses `AccountInfoDoublePropertyType` enum as input.
 * **[AccountInfoInteger](./AccountInfoInteger.md)** - **single integer value** from account (login, leverage, limit orders, etc.). Uses `AccountInfoIntegerPropertyType` enum as input.
 * **[AccountInfoString](./AccountInfoString.md)** - **single string value** from account (name, server, currency, company). Uses `AccountInfoStringPropertyType` enum as input.
@@ -24,7 +24,7 @@ Want detailed explanations with line-by-line code breakdown? Check these guides:
 
 ## 🧭 Plain English
 
-* **AccountSummary** → the **one-stop shop** for complete account snapshot (balance, equity, margin level, etc.). Returns trade mode as ENUM.
+* **AccountSummary** → the **one-stop shop** for complete account snapshot (balance, equity, leverage, currency, etc.). Returns trade mode as ENUM.
 * **AccountInfoDouble** → grab **one numeric property** when you need just balance or margin. Requires property ENUM as input.
 * **AccountInfoInteger** → grab **one integer property** like login number or leverage. Requires property ENUM as input.
 * **AccountInfoString** → grab **one text property** like account name or currency. Requires property ENUM as input.
@@ -161,25 +161,25 @@ These ENUMs are used to specify **which property** you want to retrieve:
 
 ```go
 // Example 1: Get balance using AccountInfoDoublePropertyType enum
-req := &pb.AccountInfoDoubleRequest{
+doubleReq := &pb.AccountInfoDoubleRequest{
     PropertyId: pb.AccountInfoDoublePropertyType_ACCOUNT_BALANCE,
 }
-data, _ := account.AccountInfoDouble(ctx, req)
-fmt.Printf("Balance: %.2f\n", data.RequestedValue)
+doubleData, _ := account.AccountInfoDouble(ctx, doubleReq)
+fmt.Printf("Balance: %.2f\n", doubleData.RequestedValue)
 
 // Example 2: Get leverage using AccountInfoIntegerPropertyType enum
-req := &pb.AccountInfoIntegerRequest{
+intReq := &pb.AccountInfoIntegerRequest{
     PropertyId: pb.AccountInfoIntegerPropertyType_ACCOUNT_LEVERAGE,
 }
-data, _ := account.AccountInfoInteger(ctx, req)
-fmt.Printf("Leverage: 1:%d\n", data.RequestedValue)
+intData, _ := account.AccountInfoInteger(ctx, intReq)
+fmt.Printf("Leverage: 1:%d\n", intData.RequestedValue)
 
 // Example 3: Get currency using AccountInfoStringPropertyType enum
-req := &pb.AccountInfoStringRequest{
+strReq := &pb.AccountInfoStringRequest{
     PropertyId: pb.AccountInfoStringPropertyType_ACCOUNT_CURRENCY,
 }
-data, _ := account.AccountInfoString(ctx, req)
-fmt.Printf("Currency: %s\n", data.RequestedValue)
+strData, _ := account.AccountInfoString(ctx, strReq)
+fmt.Printf("Currency: %s\n", strData.RequestedValue)
 ```
 
 ### Output ENUMs (Return Values)
@@ -189,7 +189,7 @@ These ENUMs are **returned in the response** to represent account state:
 | Method | Output ENUM | Field Name | Purpose | Values |
 |--------|-------------|------------|---------|--------|
 | **AccountSummary** | `MrpcEnumAccountTradeMode` | `AccountTradeMode` | Indicates account type | `MRPC_ACCOUNT_TRADE_MODE_DEMO` (0)<br>`MRPC_ACCOUNT_TRADE_MODE_CONTEST` (1)<br>`MRPC_ACCOUNT_TRADE_MODE_REAL` (2) |
-| **AccountInfoInteger** | Various ENUMs returned as int64 | `requested_value` | When querying `ACCOUNT_TRADE_MODE` property, value represents account type | Same as above (0=DEMO, 1=CONTEST, 2=REAL) |
+| **AccountInfoInteger** | Various ENUMs returned as int64 | `RequestedValue` | When querying `ACCOUNT_TRADE_MODE` property, value represents account type | Same as above (0=DEMO, 1=CONTEST, 2=REAL) |
 
 **Usage in code:**
 

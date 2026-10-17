@@ -18,7 +18,7 @@
 
 * **What it is.** Retrieves numeric (double) properties of a trading symbol.
 * **Why you need it.** Get current prices, point size, volume limits, and other trading parameters.
-* **Property ID required.** Must specify which property to retrieve using PropertyId enum.
+* **Property type required.** Must specify which property to retrieve in the `Type` field (`SymbolInfoDoubleProperty` enum).
 
 ---
 
@@ -49,7 +49,7 @@ type MT5Account struct {
 }
 
 // SymbolInfoDouble retrieves a double-type symbol property.
-// Use PropertyId to specify which property (BID, ASK, POINT, VOLUME_MIN, etc).
+// Use Type to specify which property (BID, ASK, POINT, VOLUME_MIN, etc).
 func (a *MT5Account) SymbolInfoDouble(
     ctx context.Context,
     req *pb.SymbolInfoDoubleRequest,
@@ -60,8 +60,8 @@ func (a *MT5Account) SymbolInfoDouble(
 
 ```protobuf
 SymbolInfoDoubleRequest {
-  string Symbol = 1;       // Symbol name
-  int32 PropertyId = 2;    // Property identifier (BID, ASK, POINT, etc)
+  string symbol = 1;                  // Symbol name
+  SymbolInfoDoubleProperty type = 2;  // Property identifier (BID, ASK, POINT, etc)
 }
 ```
 
@@ -83,16 +83,16 @@ SymbolInfoDoubleReply {
 | Parameter | Type                            | Description                                   |
 | --------- | ------------------------------- | --------------------------------------------- |
 | `ctx`     | `context.Context`               | Context for deadline/timeout and cancellation |
-| `req`     | `*pb.SymbolInfoDoubleRequest`   | Request with Symbol and PropertyId            |
+| `req`     | `*pb.SymbolInfoDoubleRequest`   | Request with Symbol and Type                  |
 
 **Request fields:**
 
 | Field        | Type     | Description                                                  |
 | ------------ | -------- | ------------------------------------------------------------ |
 | `Symbol`     | `string` | Symbol name (e.g., "EURUSD")                                 |
-| `PropertyId` | `int32`  | Property identifier from SymbolInfoDoubleProperty enum       |
+| `Type`       | `pb.SymbolInfoDoubleProperty` | Property identifier from SymbolInfoDoubleProperty enum (e.g. `pb.SymbolInfoDoubleProperty_SYMBOL_BID`) |
 
-**PropertyId enum values (SymbolInfoDoubleProperty):**
+**Type enum values (SymbolInfoDoubleProperty):**
 
 | Constant | Value | Description |
 |----------|-------|-------------|
@@ -186,6 +186,7 @@ SymbolInfoDoubleReply {
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -195,15 +196,24 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
 
     data, err := account.SymbolInfoDouble(ctx, &pb.SymbolInfoDoubleRequest{
-        Symbol:     "EURUSD",
-        PropertyId: 0, // SYMBOL_BID
+        Symbol: "EURUSD",
+        Type:   pb.SymbolInfoDoubleProperty_SYMBOL_BID,
     })
     if err != nil {
         panic(err)
@@ -221,8 +231,8 @@ func GetSpread(account *mt5.MT5Account, symbol string) (float64, error) {
 
     // Get Bid
     bidData, err := account.SymbolInfoDouble(ctx, &pb.SymbolInfoDoubleRequest{
-        Symbol:     symbol,
-        PropertyId: 0, // SYMBOL_BID
+        Symbol: symbol,
+        Type:   pb.SymbolInfoDoubleProperty_SYMBOL_BID,
     })
     if err != nil {
         return 0, err
@@ -230,8 +240,8 @@ func GetSpread(account *mt5.MT5Account, symbol string) (float64, error) {
 
     // Get Ask
     askData, err := account.SymbolInfoDouble(ctx, &pb.SymbolInfoDoubleRequest{
-        Symbol:     symbol,
-        PropertyId: 3, // SYMBOL_ASK
+        Symbol: symbol,
+        Type:   pb.SymbolInfoDoubleProperty_SYMBOL_ASK,
     })
     if err != nil {
         return 0, err
@@ -250,8 +260,8 @@ func GetPointSize(account *mt5.MT5Account, symbol string) (float64, error) {
     defer cancel()
 
     data, err := account.SymbolInfoDouble(ctx, &pb.SymbolInfoDoubleRequest{
-        Symbol:     symbol,
-        PropertyId: 13, // SYMBOL_POINT
+        Symbol: symbol,
+        Type:   pb.SymbolInfoDoubleProperty_SYMBOL_POINT,
     })
     if err != nil {
         return 0, fmt.Errorf("failed to get point: %w", err)
@@ -273,8 +283,8 @@ func GetVolumeConstraints(account *mt5.MT5Account, symbol string) (min, max, ste
 
     // Get minimum volume
     minData, err := account.SymbolInfoDouble(ctx, &pb.SymbolInfoDoubleRequest{
-        Symbol:     symbol,
-        PropertyId: 22, // SYMBOL_VOLUME_MIN
+        Symbol: symbol,
+        Type:   pb.SymbolInfoDoubleProperty_SYMBOL_VOLUME_MIN,
     })
     if err != nil {
         return 0, 0, 0, err
@@ -282,8 +292,8 @@ func GetVolumeConstraints(account *mt5.MT5Account, symbol string) (min, max, ste
 
     // Get maximum volume
     maxData, err := account.SymbolInfoDouble(ctx, &pb.SymbolInfoDoubleRequest{
-        Symbol:     symbol,
-        PropertyId: 23, // SYMBOL_VOLUME_MAX
+        Symbol: symbol,
+        Type:   pb.SymbolInfoDoubleProperty_SYMBOL_VOLUME_MAX,
     })
     if err != nil {
         return 0, 0, 0, err
@@ -291,8 +301,8 @@ func GetVolumeConstraints(account *mt5.MT5Account, symbol string) (min, max, ste
 
     // Get volume step
     stepData, err := account.SymbolInfoDouble(ctx, &pb.SymbolInfoDoubleRequest{
-        Symbol:     symbol,
-        PropertyId: 24, // SYMBOL_VOLUME_STEP
+        Symbol: symbol,
+        Type:   pb.SymbolInfoDoubleProperty_SYMBOL_VOLUME_STEP,
     })
     if err != nil {
         return 0, 0, 0, err
@@ -310,8 +320,8 @@ func CalculatePipValue(account *mt5.MT5Account, symbol string) (float64, error) 
 
     // Get tick size
     tickSizeData, err := account.SymbolInfoDouble(ctx, &pb.SymbolInfoDoubleRequest{
-        Symbol:     symbol,
-        PropertyId: 17, // SYMBOL_TRADE_TICK_SIZE
+        Symbol: symbol,
+        Type:   pb.SymbolInfoDoubleProperty_SYMBOL_TRADE_TICK_SIZE,
     })
     if err != nil {
         return 0, err
@@ -319,8 +329,8 @@ func CalculatePipValue(account *mt5.MT5Account, symbol string) (float64, error) 
 
     // Get tick value
     tickValueData, err := account.SymbolInfoDouble(ctx, &pb.SymbolInfoDoubleRequest{
-        Symbol:     symbol,
-        PropertyId: 14, // SYMBOL_TRADE_TICK_VALUE
+        Symbol: symbol,
+        Type:   pb.SymbolInfoDoubleProperty_SYMBOL_TRADE_TICK_VALUE,
     })
     if err != nil {
         return 0, err
@@ -328,8 +338,8 @@ func CalculatePipValue(account *mt5.MT5Account, symbol string) (float64, error) 
 
     // Get point
     pointData, err := account.SymbolInfoDouble(ctx, &pb.SymbolInfoDoubleRequest{
-        Symbol:     symbol,
-        PropertyId: 13, // SYMBOL_POINT
+        Symbol: symbol,
+        Type:   pb.SymbolInfoDoubleProperty_SYMBOL_POINT,
     })
     if err != nil {
         return 0, err
@@ -353,8 +363,8 @@ func MonitorPrice(account *mt5.MT5Account, symbol string, interval time.Duration
 
     for range ticker.C {
         data, err := account.SymbolInfoDouble(ctx, &pb.SymbolInfoDoubleRequest{
-            Symbol:     symbol,
-            PropertyId: 0, // SYMBOL_BID
+            Symbol: symbol,
+            Type:   pb.SymbolInfoDoubleProperty_SYMBOL_BID,
         })
 
         if err != nil {
@@ -388,14 +398,14 @@ func GetCurrentPrice(account *mt5.MT5Account, symbol string, isBid bool) (float6
     ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
     defer cancel()
 
-    propertyId := int32(1) // BID
+    property := pb.SymbolInfoDoubleProperty_SYMBOL_BID
     if !isBid {
-        propertyId = 2 // ASK
+        property = pb.SymbolInfoDoubleProperty_SYMBOL_ASK
     }
 
     data, err := account.SymbolInfoDouble(ctx, &pb.SymbolInfoDoubleRequest{
-        Symbol:     symbol,
-        PropertyId: propertyId,
+        Symbol: symbol,
+        Type:   property,
     })
 
     if err != nil {
@@ -414,8 +424,6 @@ func GetCurrentPrice(account *mt5.MT5Account, symbol string, isBid bool) (float6
 
 ```go
 func ValidateLotSize(account *mt5.MT5Account, symbol string, volume float64) (float64, error) {
-    ctx := context.Background()
-
     min, max, step, err := GetVolumeConstraints(account, symbol)
     if err != nil {
         return 0, err

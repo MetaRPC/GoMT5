@@ -96,12 +96,14 @@ SymbolInfoTickReply {
 
 | Field        | Type     | Go Type   | Description                                    |
 | ------------ | -------- | --------- | ---------------------------------------------- |
-| `Time`       | `int64`  | `int64`   | Last quote time (Unix timestamp seconds)       |
+| `Time`       | `int64`  | `int64`   | Last quote time (Unix seconds, broker server's time zone) |
+| `TimeUtc`    | `int64`  | `int64`   | `Time` in UTC (the same moment)                |
 | `Bid`        | `double` | `float64` | Current Bid price                              |
 | `Ask`        | `double` | `float64` | Current Ask price                              |
 | `Last`       | `double` | `float64` | Last deal price                                |
 | `Volume`     | `uint64` | `uint64`  | Volume for the last deal                       |
-| `TimeMS`     | `int64`  | `int64`   | Last quote time (Unix timestamp milliseconds)  |
+| `TimeMsc`    | `int64`  | `int64`   | Last quote time in milliseconds (broker server's time zone) |
+| `TimeMscUtc` | `int64`  | `int64`   | `TimeMsc` in UTC (the same moment)             |
 | `Flags`      | `uint32` | `uint32`  | Tick flags (bid/ask/last changed indicators)   |
 | `VolumeReal` | `double` | `float64` | Volume with extended accuracy                  |
 
@@ -114,7 +116,8 @@ SymbolInfoTickReply {
 * **Default timeout:** If context has no deadline, a default `3s` timeout is applied automatically.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
 * **Symbol synchronization:** Symbol should be synchronized for accurate tick data.
-* **Millisecond precision:** TimeMS provides millisecond-level timestamp accuracy.
+* **Millisecond precision:** `TimeMsc` / `TimeMscUtc` provide millisecond-level timestamp accuracy.
+* **Time zones:** `Time` and `TimeMsc` are in the broker server's time zone; use `TimeUtc` / `TimeMscUtc` to compare with the local clock.
 
 ---
 
@@ -126,6 +129,7 @@ SymbolInfoTickReply {
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -135,8 +139,17 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
@@ -152,7 +165,7 @@ func main() {
     fmt.Printf("  Bid: %.5f\n", tick.Bid)
     fmt.Printf("  Ask: %.5f\n", tick.Ask)
     fmt.Printf("  Spread: %.5f\n", tick.Ask-tick.Bid)
-    fmt.Printf("  Time: %s\n", time.Unix(tick.Time, 0).Format("2006-01-02 15:04:05"))
+    fmt.Printf("  Time (UTC): %s\n", time.Unix(tick.TimeUtc, 0).UTC().Format("2006-01-02 15:04:05"))
 }
 ```
 
@@ -192,7 +205,7 @@ func IsQuoteFresh(account *mt5.MT5Account, symbol string, maxAge time.Duration) 
         return false, err
     }
 
-    tickTime := time.Unix(tick.Time, 0)
+    tickTime := time.Unix(tick.TimeUtc, 0)
     age := time.Since(tickTime)
 
     return age <= maxAge, nil
@@ -249,7 +262,7 @@ func MonitorPriceChanges(account *mt5.MT5Account, symbol string, interval time.D
             spread := tick.Ask - tick.Bid
 
             fmt.Printf("[%s] %s: Bid=%.5f (%+.5f), Ask=%.5f (%+.5f), Spread=%.5f\n",
-                time.Unix(tick.Time, 0).Format("15:04:05"),
+                time.Unix(tick.TimeUtc, 0).UTC().Format("15:04:05"),
                 symbol,
                 tick.Bid, bidChange,
                 tick.Ask, askChange,
@@ -286,7 +299,7 @@ func GetValidatedTick(account *mt5.MT5Account, symbol string, maxAge time.Durati
         return nil, err
     }
 
-    tickTime := time.Unix(tick.Time, 0)
+    tickTime := time.Unix(tick.TimeUtc, 0)
     age := time.Since(tickTime)
 
     return &ValidatedTick{

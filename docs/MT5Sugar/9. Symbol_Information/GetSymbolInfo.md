@@ -56,6 +56,7 @@ type SymbolInfo struct {
 * **What it is:** Get all important symbol parameters in one call.
 * **Why you need it:** Validation before trading, position sizing, SL/TP calculations.
 * **Sanity check:** More efficient than calling individual methods for each property.
+* **How it works:** One `SymbolParamsMany` query filtered by the symbol name (the first returned entry is used; no entry → error `symbol <name> not found`) plus one `SYMBOL_TRADE_STOPS_LEVEL` query. If the stop-level query fails, `StopLevel` is set to 0 instead of returning an error.
 
 ---
 
@@ -235,7 +236,7 @@ fmt.Printf("Pip value:      $%.2f per lot\n", pipValue)
 ### 7) Round volume to valid step
 
 ```go
-func RoundVolumeToStep(volume float64, info *SymbolInfo) float64 {
+func RoundVolumeToStep(volume float64, info *mt5.SymbolInfo) float64 {
     // Round to nearest valid step
     steps := volume / info.VolumeStep
     roundedSteps := math.Round(steps)
@@ -293,7 +294,7 @@ if spreadCost > 10 {
 ### 9) Symbol quality checker
 
 ```go
-func AssessSymbolQuality(info *SymbolInfo) string {
+func AssessSymbolQuality(info *mt5.SymbolInfo) string {
     issues := []string{}
 
     // Check spread
@@ -332,7 +333,7 @@ fmt.Printf("%s: %s\n", info.Name, assessment)
 
 ```go
 type SymbolAnalyzer struct {
-    Info *SymbolInfo
+    Info *mt5.SymbolInfo
 }
 
 func NewSymbolAnalyzer(sugar *mt5.MT5Sugar, symbol string) (*SymbolAnalyzer, error) {

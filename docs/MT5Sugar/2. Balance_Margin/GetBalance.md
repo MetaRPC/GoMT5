@@ -35,7 +35,8 @@ func (s *MT5Sugar) GetBalance() (float64, error)
 
 * **What it is:** Gets your account balance - the money you have before considering open positions.
 * **Why you need it:** Check available funds, calculate risk amounts, validate before trading.
-* **Sanity check:** Balance ≤ Equity (equity includes floating P/L).
+* **Sanity check:** Equity - Balance = floating P/L (equity is below balance while open positions are losing).
+* **Under the hood:** `service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_BALANCE)`.
 
 ---
 
@@ -96,7 +97,7 @@ riskAmount := balance * riskPercent / 100.0
 fmt.Printf("Balance:     $%.2f\n", balance)
 fmt.Printf("Risk (2%%):   $%.2f\n", riskAmount)
 
-// Better: use CalculatePositionSize()
+// Better: use CalculatePositionSize() (third argument = stop distance in POINTS)
 lotSize, _ := sugar.CalculatePositionSize("EURUSD", riskPercent, 50)
 fmt.Printf("Lot size:    %.2f\n", lotSize)
 ```
@@ -191,6 +192,8 @@ fmt.Println("✅ Balance check passed")
 // Instead of calling GetBalance, GetEquity, etc separately:
 accountInfo, _ := sugar.GetAccountInfo()
 // Now you have: Balance, Equity, Margin, FreeMargin, Profit, etc.
+// (It is still several requests: GetAccountSummary plus GetMargin/GetFreeMargin/
+// GetMarginLevel/GetProfit; errors of those four are ignored and leave the field 0.)
 ```
 
 ---
@@ -227,7 +230,7 @@ fmt.Printf("Balance: $%.2f\n", balance)
 
 ## 💎 Pro Tips
 
-1. **Use GetAccountInfo()** - More efficient than calling multiple methods
+1. **Use GetAccountInfo()** - One call for the whole snapshot (internally 5 requests, not fewer than calling the methods yourself)
 
 2. **Balance for risk calculation** - Use balance (not equity) for position sizing
 

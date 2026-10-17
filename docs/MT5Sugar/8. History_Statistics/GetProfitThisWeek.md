@@ -1,11 +1,11 @@
 # 💰📊 Get Profit This Week (`GetProfitThisWeek`)
 
-> **Sugar method:** Returns total realized profit/loss from this week's closed positions (Monday to now).
+> **Sugar method:** Returns the summed `Profit` of the closed positions returned by `GetDealsThisWeek()` (opened Monday 00:00 to now).
 
 **API Information:**
 
 * **Method:** `sugar.GetProfitThisWeek()`
-* **Timeout:** 5 seconds
+* **Timeout:** 5 seconds (the `GetDealsThisWeek()` call)
 * **Returns:** Total profit as float64
 
 ---
@@ -15,6 +15,9 @@
 ```go
 func (s *MT5Sugar) GetProfitThisWeek() (float64, error)
 ```
+
+Implementation: calls `GetDealsThisWeek()` and adds up `deal.Profit`. Swap, commission and fee are **not** included,
+and the set of positions is that of `GetDealsThisWeek()`: closed positions **opened** since Monday 00:00 (your machine's clock).
 
 ---
 
@@ -26,14 +29,14 @@ func (s *MT5Sugar) GetProfitThisWeek() (float64, error)
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `float64` | float | Total realized profit/loss from this week |
-| `error` | `error` | Error if calculation failed |
+| `float64` | float | Sum of `Profit` of this week's closed positions |
+| `error` | `error` | The `GetDealsThisWeek()` error if retrieval failed |
 
 ---
 
 ## 💬 Just the Essentials
 
-* **What it is:** Get this week's total profit/loss from closed positions (Monday 00:00 to now).
+* **What it is:** Get this week's total profit/loss from closed positions opened Monday 00:00 to now.
 * **Why you need it:** Weekly performance tracking, target monitoring, week-over-week comparison.
 * **Sanity check:** Returns 0 if no closed positions this week. Week starts Monday.
 
@@ -117,8 +120,11 @@ if weekday == 0 {
     weekday = 7
 }
 
-lastWeekStart := now.AddDate(0, 0, -(weekday + 6))
-lastWeekEnd := now.AddDate(0, 0, -(weekday))
+// Previous Monday 00:00 to Sunday 23:59:59 (local clock)
+thisMonday := now.AddDate(0, 0, -(weekday - 1))
+thisMonday = time.Date(thisMonday.Year(), thisMonday.Month(), thisMonday.Day(), 0, 0, 0, 0, now.Location())
+lastWeekStart := thisMonday.AddDate(0, 0, -7)
+lastWeekEnd := thisMonday.Add(-time.Second)
 
 lastWeekDeals, _ := sugar.GetDealsDateRange(lastWeekStart, lastWeekEnd)
 
@@ -495,9 +501,9 @@ totalProfit := closedProfit + floatingProfit
 ```go
 // ❌ WRONG - assuming week starts Sunday
 
-// ✅ CORRECT - MT5 week starts Monday
+// ✅ CORRECT - GetProfitThisWeek's week starts Monday 00:00 (local clock)
 profit, _ := sugar.GetProfitThisWeek()
-fmt.Println("Monday to now profit: $%.2f", profit)
+fmt.Printf("Monday to now profit: $%.2f\n", profit)
 ```
 
 ### 3) Incomplete week comparisons
@@ -516,7 +522,7 @@ fmt.Println("This week (partial) vs last week (complete)")
 
 ## 💎 Pro Tips
 
-1. **Week starts Monday** - MT5 uses Monday as first day of week
+1. **Week starts Monday** - GetDealsThisWeek uses Monday as first day of week
 
 2. **Closed only** - Returns profit from CLOSED positions (not open)
 
@@ -524,21 +530,21 @@ fmt.Println("This week (partial) vs last week (complete)")
 
 4. **Partial data** - Mid-week calls return incomplete week
 
-5. **Server time** - Based on MT5 server timezone
+5. **Local clock, open time, Profit only** - The week is computed from your machine's clock, matched against the position's open time; swap/commission/fee are not added
 
 ---
 
 ## 📊 Week Range
 
 ```
-Week range calculation:
+Week range calculation (GetDealsThisWeek):
 now = time.Now()
 weekday = int(now.Weekday())
 if weekday == 0 { weekday = 7 }  // Sunday becomes 7
 
 startOfWeek = now - (weekday - 1) days at 00:00:00
 
-Returns profit from Monday 00:00 to now
+Returns the sum of Profit of closed positions OPENED between startOfWeek and now
 ```
 
 ---

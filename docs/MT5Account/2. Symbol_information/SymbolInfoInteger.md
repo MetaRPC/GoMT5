@@ -18,7 +18,7 @@
 
 * **What it is.** Retrieves integer properties of a trading symbol.
 * **Why you need it.** Get precision (digits), spread, stop levels, and trading mode information.
-* **Property ID required.** Must specify which property to retrieve using PropertyId enum.
+* **Property type required.** Must specify which property to retrieve in the `Type` field (`SymbolInfoIntegerProperty` enum).
 
 ---
 
@@ -49,7 +49,7 @@ type MT5Account struct {
 }
 
 // SymbolInfoInteger retrieves an integer-type symbol property.
-// Use PropertyId to specify which property (DIGITS, SPREAD, STOPS_LEVEL, etc).
+// Use Type to specify which property (DIGITS, SPREAD, TRADE_STOPS_LEVEL, etc).
 func (a *MT5Account) SymbolInfoInteger(
     ctx context.Context,
     req *pb.SymbolInfoIntegerRequest,
@@ -60,8 +60,8 @@ func (a *MT5Account) SymbolInfoInteger(
 
 ```protobuf
 SymbolInfoIntegerRequest {
-  string Symbol = 1;       // Symbol name
-  int32 PropertyId = 2;    // Property identifier (DIGITS, SPREAD, etc)
+  string symbol = 1;                   // Symbol name
+  SymbolInfoIntegerProperty type = 2;  // Property identifier (DIGITS, SPREAD, etc)
 }
 ```
 
@@ -83,16 +83,16 @@ SymbolInfoIntegerReply {
 | Parameter | Type                             | Description                                   |
 | --------- | -------------------------------- | --------------------------------------------- |
 | `ctx`     | `context.Context`                | Context for deadline/timeout and cancellation |
-| `req`     | `*pb.SymbolInfoIntegerRequest`   | Request with Symbol and PropertyId            |
+| `req`     | `*pb.SymbolInfoIntegerRequest`   | Request with Symbol and Type                  |
 
 **Request fields:**
 
 | Field        | Type     | Description                                                     |
 | ------------ | -------- | --------------------------------------------------------------- |
 | `Symbol`     | `string` | Symbol name (e.g., "EURUSD")                                    |
-| `PropertyId` | `int32`  | Property identifier from SymbolInfoIntegerProperty enum         |
+| `Type`       | `pb.SymbolInfoIntegerProperty` | Property identifier from SymbolInfoIntegerProperty enum (e.g. `pb.SymbolInfoIntegerProperty_SYMBOL_DIGITS`) |
 
-**PropertyId enum values (SymbolInfoIntegerProperty):**
+**Type enum values (SymbolInfoIntegerProperty):**
 
 | Constant | Value | Description |
 |----------|-------|-------------|
@@ -141,6 +141,7 @@ SymbolInfoIntegerReply {
 | Field   | Type    | Go Type | Description                            |
 | ------- | ------- | ------- | -------------------------------------- |
 | `Value` | `int64` | `int64` | The requested integer property value   |
+| `ValueUtc` | `int64` | `int64` | UTC of `Value` when the property is a time (`SYMBOL_TIME`, `SYMBOL_TIME_MSC`, `SYMBOL_START_TIME`, `SYMBOL_EXPIRATION_TIME`); `0` for any other property |
 
 ---
 
@@ -151,7 +152,7 @@ SymbolInfoIntegerReply {
 * **Default timeout:** If context has no deadline, a default `3s` timeout is applied automatically.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
 * **Spread variability:** Spread can change dynamically during trading sessions.
-* **Stop levels:** STOPS_LEVEL is critical for placing orders with SL/TP.
+* **Stop levels:** SYMBOL_TRADE_STOPS_LEVEL is critical for placing orders with SL/TP.
 
 ---
 
@@ -163,6 +164,7 @@ SymbolInfoIntegerReply {
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -172,15 +174,24 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
 
     data, err := account.SymbolInfoInteger(ctx, &pb.SymbolInfoIntegerRequest{
-        Symbol:     "EURUSD",
-        PropertyId: 17, // SYMBOL_DIGITS
+        Symbol: "EURUSD",
+        Type:   pb.SymbolInfoIntegerProperty_SYMBOL_DIGITS,
     })
     if err != nil {
         panic(err)
@@ -198,8 +209,8 @@ func GetSpreadPoints(account *mt5.MT5Account, symbol string) (int64, error) {
     defer cancel()
 
     data, err := account.SymbolInfoInteger(ctx, &pb.SymbolInfoIntegerRequest{
-        Symbol:     symbol,
-        PropertyId: 18, // SYMBOL_SPREAD
+        Symbol: symbol,
+        Type:   pb.SymbolInfoIntegerProperty_SYMBOL_SPREAD,
     })
     if err != nil {
         return 0, fmt.Errorf("failed to get spread: %w", err)
@@ -220,8 +231,8 @@ func GetStopsLevel(account *mt5.MT5Account, symbol string) (int64, error) {
     ctx := context.Background()
 
     data, err := account.SymbolInfoInteger(ctx, &pb.SymbolInfoIntegerRequest{
-        Symbol:     symbol,
-        PropertyId: 25, // SYMBOL_TRADE_STOPS_LEVEL
+        Symbol: symbol,
+        Type:   pb.SymbolInfoIntegerProperty_SYMBOL_TRADE_STOPS_LEVEL,
     })
     if err != nil {
         return 0, err
@@ -243,8 +254,8 @@ func ValidateStopLoss(account *mt5.MT5Account, symbol string, currentPrice, slPr
 
     // Get stops level
     stopsData, err := account.SymbolInfoInteger(ctx, &pb.SymbolInfoIntegerRequest{
-        Symbol:     symbol,
-        PropertyId: 25, // SYMBOL_TRADE_STOPS_LEVEL
+        Symbol: symbol,
+        Type:   pb.SymbolInfoIntegerProperty_SYMBOL_TRADE_STOPS_LEVEL,
     })
     if err != nil {
         return err
@@ -252,8 +263,8 @@ func ValidateStopLoss(account *mt5.MT5Account, symbol string, currentPrice, slPr
 
     // Get point size
     pointData, err := account.SymbolInfoDouble(ctx, &pb.SymbolInfoDoubleRequest{
-        Symbol:     symbol,
-        PropertyId: 13, // SYMBOL_POINT
+        Symbol: symbol,
+        Type:   pb.SymbolInfoDoubleProperty_SYMBOL_POINT,
     })
     if err != nil {
         return err
@@ -278,8 +289,8 @@ func GetTradeMode(account *mt5.MT5Account, symbol string) (string, error) {
     ctx := context.Background()
 
     data, err := account.SymbolInfoInteger(ctx, &pb.SymbolInfoIntegerRequest{
-        Symbol:     symbol,
-        PropertyId: 22, // SYMBOL_TRADE_MODE
+        Symbol: symbol,
+        Type:   pb.SymbolInfoIntegerProperty_SYMBOL_TRADE_MODE,
     })
     if err != nil {
         return "", err
@@ -309,8 +320,8 @@ func IsTradingAllowed(account *mt5.MT5Account, symbol string) (bool, error) {
     ctx := context.Background()
 
     data, err := account.SymbolInfoInteger(ctx, &pb.SymbolInfoIntegerRequest{
-        Symbol:     symbol,
-        PropertyId: 22, // SYMBOL_TRADE_MODE
+        Symbol: symbol,
+        Type:   pb.SymbolInfoIntegerProperty_SYMBOL_TRADE_MODE,
     })
     if err != nil {
         return false, err
@@ -332,8 +343,8 @@ func FormatPrice(account *mt5.MT5Account, symbol string, price float64) (string,
     ctx := context.Background()
 
     data, err := account.SymbolInfoInteger(ctx, &pb.SymbolInfoIntegerRequest{
-        Symbol:     symbol,
-        PropertyId: 17, // SYMBOL_DIGITS
+        Symbol: symbol,
+        Type:   pb.SymbolInfoIntegerProperty_SYMBOL_DIGITS,
     })
     if err != nil {
         return "", err
@@ -356,8 +367,8 @@ func CalculateMinStopDistance(account *mt5.MT5Account, symbol string) (float64, 
 
     // Get stops level in points
     stopsData, err := account.SymbolInfoInteger(ctx, &pb.SymbolInfoIntegerRequest{
-        Symbol:     symbol,
-        PropertyId: 25, // SYMBOL_TRADE_STOPS_LEVEL
+        Symbol: symbol,
+        Type:   pb.SymbolInfoIntegerProperty_SYMBOL_TRADE_STOPS_LEVEL,
     })
     if err != nil {
         return 0, err
@@ -365,8 +376,8 @@ func CalculateMinStopDistance(account *mt5.MT5Account, symbol string) (float64, 
 
     // Get point size
     pointData, err := account.SymbolInfoDouble(ctx, &pb.SymbolInfoDoubleRequest{
-        Symbol:     symbol,
-        PropertyId: 13, // SYMBOL_POINT
+        Symbol: symbol,
+        Type:   pb.SymbolInfoDoubleProperty_SYMBOL_POINT,
     })
     if err != nil {
         return 0, err

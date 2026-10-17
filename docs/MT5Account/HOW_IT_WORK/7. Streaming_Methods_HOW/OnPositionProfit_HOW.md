@@ -161,10 +161,19 @@ The stream closes by event limit (`MAX_EVENTS`), timeout (`MAX_SECONDS`), or con
 
 ```protobuf
 message OnPositionProfitData {
-  ENUM_STREAM_EVENT_TYPE Type = 1;
-  repeated PositionInfo NewPositions = 2;
-  repeated PositionInfo UpdatedPositions = 3;
-  repeated PositionInfo DeletedPositions = 4;
+  MT5_SUB_ENUM_EVENT_GROUP_TYPE type = 1;  // OrderProfit
+  repeated OnPositionProfitPositionInfo new_positions = 2;
+  repeated OnPositionProfitPositionInfo updated_positions = 3;
+  repeated OnPositionProfitPositionInfo deleted_positions = 4;
+  OnEventAccountInfo account_info = 5;
+  string terminal_instance_guid_id = 6;
+}
+
+message OnPositionProfitPositionInfo {
+  int32 index = 1;
+  int64 ticket = 2;
+  double profit = 3;
+  string position_symbol = 4;
 }
 ```
 
@@ -175,9 +184,9 @@ message OnPositionProfitData {
 ```
 Streaming position P&L updates (max 5 events or 10 seconds)...
   NOTE: This stream sends events only when positions exist and prices change
-  Event #1: Type=UPDATE Total=1 (New=0 Updated=1 Deleted=0)
+  Event #1: Type=OrderProfit Total=1 (New=0 Updated=1 Deleted=0)
     Updated Position: Ticket=123456 Symbol=EURUSD Profit=12.45
-  Event #2: Type=UPDATE Total=1 (New=0 Updated=1 Deleted=0)
+  Event #2: Type=OrderProfit Total=1 (New=0 Updated=1 Deleted=0)
     Updated Position: Ticket=123456 Symbol=EURUSD Profit=14.10
   ✓ Received 5 events, stopping stream
 ```

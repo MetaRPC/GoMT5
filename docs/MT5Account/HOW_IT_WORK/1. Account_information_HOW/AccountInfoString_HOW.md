@@ -94,7 +94,7 @@ Company:                  MetaQuotes Software Corp.
 ### Wrapper Example for Simplified Calls
 
 ```go
-func GetAccountStringProp(ctx context.Context, account AccountServiceClient, prop pb.AccountInfoStringPropertyType) (string, error) {
+func GetAccountStringProp(ctx context.Context, account *mt5.MT5Account, prop pb.AccountInfoStringPropertyType) (string, error) {
     req := &pb.AccountInfoStringRequest{PropertyId: prop}
     resp, err := account.AccountInfoString(ctx, req)
     if err != nil {

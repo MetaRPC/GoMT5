@@ -6,7 +6,12 @@
 
 * **Method:** `sugar.BuyStop(symbol, volume, price)`
 * **Timeout:** 10 seconds
-* **Returns:** Pending order ticket number
+* **Returns:** Pending order ticket number (`result.Order`)
+* **Request:** `service.PlaceOrder(ctx, &pb.OrderSendRequest{Symbol, Operation: pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_BUY_STOP, Volume, Price: &price})` -
+  no SL/TP, expiration, comment or magic number; price and volume are sent exactly as given (no rounding, no check
+  against the current price - a wrong price is rejected by the trade server)
+* **Success:** only return code `10009` (TRADE_RETCODE_DONE); any other code gives the error
+  `order rejected, code: N, comment: ...`, a failed call gives `BuyStop failed: ...`
 
 ---
 
@@ -45,7 +50,7 @@ func (s *MT5Sugar) BuyStop(symbol string, volume, price float64) (uint64, error)
 
 ```
 Current ASK: 1.08500
-BUY STOP:    1.09000 (500 pips ABOVE current price)
+BUY STOP:    1.09000 (500 points ABOVE current price)
 
 When price rises to 1.09000 → Order executes automatically
 ```
@@ -87,7 +92,7 @@ if err != nil {
 fmt.Printf("✅ BUY STOP order placed\n")
 fmt.Printf("   Ticket: #%d\n", ticket)
 fmt.Printf("   Entry:  %.5f (current: %.5f)\n", resistanceLevel, currentAsk)
-fmt.Printf("   Will execute when price breaks %.0f pips higher\n",
+fmt.Printf("   Will execute when price breaks %.0f points higher\n",
     (resistanceLevel-currentAsk)/0.00001)
 ```
 
@@ -100,13 +105,13 @@ symbol := "EURUSD"
 
 // Price consolidating between 1.08000 and 1.08500
 rangeHigh := 1.08500
-rangeHigh += 0.00010 // Place stop 10 pips above range high
+rangeHigh += 0.00010 // Place stop 10 points above range high
 
 ticket, _ := sugar.BuyStop(symbol, 0.1, rangeHigh)
 
 fmt.Printf("BUY STOP set for range breakout\n")
 fmt.Printf("Range high: %.5f\n", 1.08500)
-fmt.Printf("Entry:      %.5f (10 pips above)\n", rangeHigh)
+fmt.Printf("Entry:      %.5f (10 points above)\n", rangeHigh)
 fmt.Printf("Strategy:   Buy if price breaks out of range\n")
 ```
 
@@ -141,9 +146,9 @@ for i, level := range breakoutLevels {
         continue
     }
 
-    pipsAway := (level - currentAsk) / 0.00001
-    fmt.Printf("✅ Level %d: %.5f (%.0f pips away) - Ticket #%d\n",
-        i+1, level, pipsAway, ticket)
+    pointsAway := (level - currentAsk) / 0.00001
+    fmt.Printf("✅ Level %d: %.5f (%.0f points away) - Ticket #%d\n",
+        i+1, level, pointsAway, ticket)
 }
 ```
 
@@ -189,25 +194,41 @@ fmt.Printf("✅ BUY STOP placed at %.5f\n", breakoutPrice)
 symbol := "EURUSD"
 breakoutPrice := 1.09000
 
-// Place buy stop
-ticket, _ := sugar.BuyStop(symbol, 0.1, breakoutPrice)
-
-// Calculate SL/TP based on ATR or fixed pips
+// Calculate SL/TP based on ATR or fixed points
 // For breakout: SL below breakout level, TP 2x the distance
 info, _ := sugar.GetSymbolInfo(symbol)
-slDistance := 30.0 // 30 pips SL
-tpDistance := 60.0 // 60 pips TP (2:1 R:R)
+slDistance := 30.0 // 30 points SL
+tpDistance := 60.0 // 60 points TP (2:1 R:R)
 
 sl := breakoutPrice - (slDistance * info.Point)
 tp := breakoutPrice + (tpDistance * info.Point)
 
-// Set SL/TP on pending order
-sugar.ModifyPositionSLTP(ticket, sl, tp)
+// BuyStop sends no SL/TP and Sugar has no BuyStopWithSLTP - place the
+// BUY STOP with SL/TP in one request through the Service layer
+ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+defer cancel()
 
-fmt.Printf("BUY STOP with SL/TP:\n")
+result, err := sugar.GetService().PlaceOrder(ctx, &pb.OrderSendRequest{
+    Symbol:     symbol,
+    Operation:  pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_BUY_STOP,
+    Volume:     0.1,
+    Price:      &breakoutPrice,
+    StopLoss:   &sl,
+    TakeProfit: &tp,
+})
+if err != nil {
+    fmt.Printf("Order failed: %v\n", err)
+    return
+}
+if result.ReturnedCode != 10009 {
+    fmt.Printf("Order rejected: code %d, %s\n", result.ReturnedCode, result.Comment)
+    return
+}
+
+fmt.Printf("BUY STOP with SL/TP: Ticket #%d\n", result.Order)
 fmt.Printf("  Entry: %.5f (breakout)\n", breakoutPrice)
-fmt.Printf("  SL:    %.5f (-30 pips)\n", sl)
-fmt.Printf("  TP:    %.5f (+60 pips)\n", tp)
+fmt.Printf("  SL:    %.5f (-30 points)\n", sl)
+fmt.Printf("  TP:    %.5f (+60 points)\n", tp)
 fmt.Printf("  R:R:   1:2\n")
 ```
 
@@ -220,13 +241,13 @@ symbol := "EURUSD"
 
 // Strong uptrend - previous high at 1.09000
 previousHigh := 1.09000
-entryPrice := previousHigh + 0.00010 // 10 pips above previous high
+entryPrice := previousHigh + 0.00010 // 10 points above previous high
 
 ticket, _ := sugar.BuyStop(symbol, 0.1, entryPrice)
 
 fmt.Printf("Trend continuation BUY STOP\n")
 fmt.Printf("Previous high: %.5f\n", previousHigh)
-fmt.Printf("Entry:         %.5f (+10 pips)\n", entryPrice)
+fmt.Printf("Entry:         %.5f (+10 points)\n", entryPrice)
 fmt.Printf("Strategy:      Buy if uptrend continues\n")
 ```
 
@@ -240,11 +261,11 @@ symbol := "EURUSD"
 currentPrice := 1.08500
 
 // Place buy stop for upside breakout
-buyStopPrice := currentPrice + 0.00030 // 30 pips above
+buyStopPrice := currentPrice + 0.00030 // 30 points above
 buyTicket, _ := sugar.BuyStop(symbol, 0.1, buyStopPrice)
 
 // Also place sell stop for downside breakout
-sellStopPrice := currentPrice - 0.00030 // 30 pips below
+sellStopPrice := currentPrice - 0.00030 // 30 points below
 sellTicket, _ := sugar.SellStop(symbol, 0.1, sellStopPrice)
 
 fmt.Printf("News breakout strategy:\n")
@@ -253,6 +274,7 @@ fmt.Printf("  BUY STOP:  %.5f (ticket #%d)\n", buyStopPrice, buyTicket)
 fmt.Printf("  SELL STOP: %.5f (ticket #%d)\n", sellStopPrice, sellTicket)
 fmt.Printf("  Strategy:  OCO - whichever direction breaks first\n")
 fmt.Printf("  Remember:  Cancel other order when one fills!\n")
+// Cancel = sugar.GetService().CloseOrder(ctx, &pb.OrderCloseRequest{Ticket: otherTicket})
 ```
 
 ---
@@ -277,15 +299,24 @@ for i := 0; i < 10; i++ {
     currentAsk, _ := sugar.GetAsk(symbol)
 
     // If price moves up, move buy stop up (trailing)
-    newStopLevel := currentAsk + 0.00050 // Always 50 pips above
+    newStopLevel := currentAsk + 0.00050 // Always 50 points above
 
     if newStopLevel > resistanceLevel {
         // Modify pending order price
         fmt.Printf("Adjusting BUY STOP from %.5f to %.5f\n",
             resistanceLevel, newStopLevel)
 
-        // Use OrderModify to change pending order price
-        // sugar.ModifyOrder(ticket, newStopLevel, sl, tp)
+        // Sugar has no ModifyOrder - change the pending order price through the Service
+        ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+        result, err := sugar.GetService().ModifyOrder(ctx, &pb.OrderModifyRequest{
+            Ticket: ticket,
+            Price:  &newStopLevel,
+        })
+        cancel()
+        if err != nil || result.ReturnedCode != 10009 {
+            fmt.Println("   Modify failed - keeping old level")
+            continue
+        }
 
         resistanceLevel = newStopLevel
     } else {
@@ -306,13 +337,13 @@ symbol := "EURUSD"
 doubleTopLevel := 1.09000
 
 // Place buy stop above double top (invalidation = strong breakout)
-entryPrice := doubleTopLevel + 0.00015 // 15 pips above
+entryPrice := doubleTopLevel + 0.00015 // 15 points above
 
 ticket, _ := sugar.BuyStop(symbol, 0.1, entryPrice)
 
 fmt.Printf("Double top breakout strategy:\n")
 fmt.Printf("Double top:  %.5f\n", doubleTopLevel)
-fmt.Printf("BUY STOP:    %.5f (+15 pips)\n", entryPrice)
+fmt.Printf("BUY STOP:    %.5f (+15 points)\n", entryPrice)
 fmt.Printf("Logic:       If double top breaks = strong bullish signal\n")
 ```
 
@@ -330,7 +361,7 @@ func PlaceBuyStopWithMonitoring(sugar *mt5.MT5Sugar, symbol string, breakoutLeve
     fmt.Printf("Symbol:       %s\n", symbol)
     fmt.Printf("Current ASK:  %.5f\n", currentAsk)
     fmt.Printf("Breakout:     %.5f\n", breakoutLevel)
-    fmt.Printf("Distance:     %.0f pips\n", (breakoutLevel-currentAsk)/0.00001)
+    fmt.Printf("Distance:     %.0f points\n", (breakoutLevel-currentAsk)/0.00001)
 
     // Place buy stop
     ticket, err := sugar.BuyStop(symbol, 0.1, breakoutLevel)
@@ -357,7 +388,7 @@ func PlaceBuyStopWithMonitoring(sugar *mt5.MT5Sugar, symbol string, breakoutLeve
         case <-ticker.C:
             ask, _ := sugar.GetAsk(symbol)
             distance := breakoutLevel - ask
-            distancePips := distance / 0.00001
+            distancePoints := distance / 0.00001
 
             // Check if filled
             _, err := sugar.GetPositionByTicket(ticket)
@@ -366,12 +397,12 @@ func PlaceBuyStopWithMonitoring(sugar *mt5.MT5Sugar, symbol string, breakoutLeve
                 return
             }
 
-            if distancePips < 10 {
-                fmt.Printf("⚠️  ASK: %.5f (%.0f pips from breakout - CLOSE!)\n",
-                    ask, distancePips)
+            if distancePoints < 10 {
+                fmt.Printf("⚠️  ASK: %.5f (%.0f points from breakout - CLOSE!)\n",
+                    ask, distancePoints)
             } else {
-                fmt.Printf("ASK: %.5f (%.0f pips from breakout)\n",
-                    ask, distancePips)
+                fmt.Printf("ASK: %.5f (%.0f points from breakout)\n",
+                    ask, distancePoints)
             }
         }
     }
@@ -388,7 +419,7 @@ PlaceBuyStopWithMonitoring(sugar, "EURUSD", 1.09000)
 **🍬 Other stop orders:**
 
 * `SellStop()` - SELL when price breaks DOWN
-* `BuyStopWithSLTP()` - BUY STOP with SL/TP
+* BUY STOP with SL/TP - no Sugar method; use `GetService().PlaceOrder()` with `StopLoss`/`TakeProfit` (example 5)
 
 **🍬 Limit orders (for pullbacks):**
 
@@ -428,7 +459,7 @@ sugar.BuyLimit("EURUSD", 0.1, 1.08000) // Buy when drops to 1.08000
 ```go
 // ❌ WRONG - too close to current price (might trigger immediately)
 currentAsk := 1.08495
-sugar.BuyStop("EURUSD", 0.1, 1.08500) // Only 5 pips away!
+sugar.BuyStop("EURUSD", 0.1, 1.08500) // Only 5 points away!
 
 // ✅ CORRECT - proper distance for confirmed breakout
 sugar.BuyStop("EURUSD", 0.1, 1.09000) // Clear breakout level
@@ -442,7 +473,7 @@ sugar.BuyStop("EURUSD", 0.1, 1.09000) // Clear breakout level
 
 2. **Set above resistance** - Use previous highs, round numbers
 
-3. **Add buffer** - Place 10-20 pips above resistance for confirmation
+3. **Add buffer** - Place a buffer (e.g. 10-20 points) above resistance for confirmation
 
 4. **Use SL below breakout** - If price reverses, exit quickly
 

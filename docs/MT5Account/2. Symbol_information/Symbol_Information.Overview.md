@@ -99,7 +99,7 @@ fmt.Printf("EURUSD: Bid=%.5f, Ask=%.5f, Spread=%.5f\n",
 ```go
 // List all available symbols
 totalData, _ := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{
-    Selected: false,
+    Mode: false,
 })
 
 fmt.Printf("Available symbols: %d\n", totalData.Total)

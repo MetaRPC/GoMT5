@@ -5,32 +5,41 @@
 **API Information:**
 
 * **Method:** `sugar.GetPositionByTicket(ticket)`
-* **Timeout:** 3 seconds
-* **Returns:** `*PositionInfo` structure
+* **Timeout:** 5 seconds (it calls `GetOpenPositions()` and searches the result)
+* **Returns:** `*pb.PositionInfo` structure
 
 ---
 
 ## 📋 Method Signature
 
 ```go
-func (s *MT5Sugar) GetPositionByTicket(ticket uint64) (*PositionInfo, error)
-
-// PositionInfo structure
-type PositionInfo struct {
-    Ticket        uint64    // Position ticket
-    Symbol        string    // Trading symbol
-    Type          string    // "BUY" or "SELL"
-    Volume        float64   // Position volume (lots)
-    PriceOpen     float64   // Entry price
-    PriceCurrent  float64   // Current price
-    StopLoss      float64   // Stop Loss price (0 if none)
-    TakeProfit    float64   // Take Profit price (0 if none)
-    Profit        float64   // Current profit/loss ($)
-    Commission    float64   // Commission paid ($)
-    Swap          float64   // Swap/rollover ($)
-    TimeOpen      time.Time // Time position was opened
-}
+func (s *MT5Sugar) GetPositionByTicket(ticket uint64) (*pb.PositionInfo, error)
 ```
+
+`pb.PositionInfo` is the generated protobuf message (`pb "github.com/MetaRPC/GoMT5/package"`). Its fields:
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `Index` | `uint32` | Position index |
+| `Ticket` | `uint64` | Position ticket |
+| `Symbol` | `string` | Trading symbol |
+| `Type` | `pb.BMT5_ENUM_POSITION_TYPE` | `pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY` (0) or `..._SELL` (1) |
+| `Volume` | `float64` | Position volume (lots) |
+| `PriceOpen` | `float64` | Entry price |
+| `PriceCurrent` | `float64` | Current price |
+| `StopLoss` | `float64` | Stop Loss price (0 if none) |
+| `TakeProfit` | `float64` | Take Profit price (0 if none) |
+| `Profit` | `float64` | Current profit/loss |
+| `Swap` | `float64` | Swap/rollover |
+| `PositionCommission` | `float64` | Commission |
+| `OpenTime` | `*timestamppb.Timestamp` | Open time, broker server time |
+| `OpenTimeUtc` | `*timestamppb.Timestamp` | The same moment in UTC |
+| `LastUpdateTime` / `LastUpdateTimeUtc` | `*timestamppb.Timestamp` | Last change |
+| `MagicNumber` | `int64` | Magic number |
+| `Identifier` | `int64` | Position identifier |
+| `Reason` | `pb.BMT5_ENUM_POSITION_REASON` | Why the position was opened |
+| `Comment`, `ExternalId` | `string` | Comment, external id |
+| `AccountLogin` | `int64` | Account login |
 
 ---
 
@@ -42,8 +51,8 @@ type PositionInfo struct {
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `*PositionInfo` | struct | Position details |
-| `error` | `error` | Error if position not found |
+| `*pb.PositionInfo` | struct | Position details |
+| `error` | `error` | `"position with ticket N not found"` if no open position has that ticket, or the `GetOpenPositions` error |
 
 ---
 
@@ -51,7 +60,7 @@ type PositionInfo struct {
 
 * **What it is:** Get all information about a specific position.
 * **Why you need it:** Check profit, check if still open, get entry price, check SL/TP.
-* **Sanity check:** Returns error if position doesn't exist (closed or never existed).
+* **Sanity check:** Returns an error (never `nil, nil`) if the position doesn't exist (closed or never existed). The pointer is `nil` whenever `err != nil`, so check the error before using it. Only open positions are searched - a pending order ticket is "not found".
 
 ---
 
@@ -82,7 +91,7 @@ if err != nil {
 
 fmt.Printf("Position #%d:\n", pos.Ticket)
 fmt.Printf("  Symbol:   %s\n", pos.Symbol)
-fmt.Printf("  Type:     %s\n", pos.Type)
+fmt.Printf("  Type:     %s\n", pos.Type) // BMT5_POSITION_TYPE_BUY / BMT5_POSITION_TYPE_SELL
 fmt.Printf("  Volume:   %.2f lots\n", pos.Volume)
 fmt.Printf("  Entry:    %.5f\n", pos.PriceOpen)
 fmt.Printf("  Current:  %.5f\n", pos.PriceCurrent)
@@ -152,7 +161,7 @@ if err != nil {
 
 // Calculate pips
 var pips float64
-if pos.Type == "BUY" {
+if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
     pips = (pos.PriceCurrent - pos.PriceOpen) / 0.00001
 } else {
     pips = (pos.PriceOpen - pos.PriceCurrent) / 0.00001
@@ -173,12 +182,17 @@ fmt.Printf("  Dollar P/L:  $%.2f\n", pos.Profit)
 ```go
 ticket := uint64(12345)
 
-pos, _ := sugar.GetPositionByTicket(ticket)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    fmt.Printf("Position not found: %v\n", err)
+    return
+}
 
-duration := time.Since(pos.TimeOpen)
+// OpenTimeUtc for durations; OpenTime is the broker server's wall clock
+duration := time.Since(pos.OpenTimeUtc.AsTime())
 
-fmt.Printf("Position #%d opened at %s\n",
-    pos.Ticket, pos.TimeOpen.Format("2006-01-02 15:04:05"))
+fmt.Printf("Position #%d opened at %s (broker time)\n",
+    pos.Ticket, pos.OpenTime.AsTime().Format("2006-01-02 15:04:05"))
 fmt.Printf("Time in trade: %v\n", duration.Round(time.Minute))
 fmt.Printf("Current P/L: $%.2f\n", pos.Profit)
 
@@ -194,7 +208,11 @@ if duration > 24*time.Hour {
 ```go
 ticket := uint64(12345)
 
-pos, _ := sugar.GetPositionByTicket(ticket)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    fmt.Printf("Position not found: %v\n", err)
+    return
+}
 
 fmt.Printf("Position #%d protection check:\n", pos.Ticket)
 
@@ -239,7 +257,7 @@ func ShowPositionSummary(sugar *mt5.MT5Sugar, ticket uint64) {
 
     // Calculate pips
     var pips float64
-    if pos.Type == "BUY" {
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
         pips = (pos.PriceCurrent - pos.PriceOpen) / 0.00001
     } else {
         pips = (pos.PriceOpen - pos.PriceCurrent) / 0.00001
@@ -247,12 +265,12 @@ func ShowPositionSummary(sugar *mt5.MT5Sugar, ticket uint64) {
 
     fmt.Printf("Pips:        %.1f\n", pips)
     fmt.Printf("Profit:      $%.2f\n", pos.Profit)
-    fmt.Printf("Commission:  $%.2f\n", pos.Commission)
+    fmt.Printf("Commission:  $%.2f\n", pos.PositionCommission)
     fmt.Printf("Swap:        $%.2f\n", pos.Swap)
-    fmt.Printf("Net:         $%.2f\n", pos.Profit+pos.Commission+pos.Swap)
+    fmt.Printf("Net:         $%.2f\n", pos.Profit+pos.PositionCommission+pos.Swap)
     fmt.Println()
-    fmt.Printf("Opened:      %s\n", pos.TimeOpen.Format("2006-01-02 15:04:05"))
-    fmt.Printf("Duration:    %v\n", time.Since(pos.TimeOpen).Round(time.Minute))
+    fmt.Printf("Opened:      %s (broker time)\n", pos.OpenTime.AsTime().Format("2006-01-02 15:04:05"))
+    fmt.Printf("Duration:    %v\n", time.Since(pos.OpenTimeUtc.AsTime()).Round(time.Minute))
 }
 
 // Usage:
@@ -266,7 +284,11 @@ ShowPositionSummary(sugar, 12345)
 ```go
 ticket := uint64(12345)
 
-pos, _ := sugar.GetPositionByTicket(ticket)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    fmt.Printf("Position not found: %v\n", err)
+    return
+}
 
 info, _ := sugar.GetSymbolInfo(pos.Symbol)
 
@@ -274,22 +296,22 @@ fmt.Printf("Position #%d distances:\n", pos.Ticket)
 
 if pos.StopLoss > 0 {
     var slDistance float64
-    if pos.Type == "BUY" {
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
         slDistance = (pos.PriceCurrent - pos.StopLoss) / info.Point
     } else {
         slDistance = (pos.StopLoss - pos.PriceCurrent) / info.Point
     }
-    fmt.Printf("  Distance to SL: %.0f pips\n", slDistance)
+    fmt.Printf("  Distance to SL: %.0f points\n", slDistance)
 }
 
 if pos.TakeProfit > 0 {
     var tpDistance float64
-    if pos.Type == "BUY" {
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
         tpDistance = (pos.TakeProfit - pos.PriceCurrent) / info.Point
     } else {
         tpDistance = (pos.PriceCurrent - pos.TakeProfit) / info.Point
     }
-    fmt.Printf("  Distance to TP: %.0f pips\n", tpDistance)
+    fmt.Printf("  Distance to TP: %.0f points\n", tpDistance)
 }
 ```
 
@@ -300,12 +322,16 @@ if pos.TakeProfit > 0 {
 ```go
 ticket := uint64(12345)
 
-pos, _ := sugar.GetPositionByTicket(ticket)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    fmt.Printf("Position not found: %v\n", err)
+    return
+}
 
 if pos.StopLoss > 0 && pos.TakeProfit > 0 {
     var riskPips, rewardPips float64
 
-    if pos.Type == "BUY" {
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
         riskPips = (pos.PriceOpen - pos.StopLoss) / 0.00001
         rewardPips = (pos.TakeProfit - pos.PriceOpen) / 0.00001
     } else {
@@ -369,7 +395,7 @@ func MonitorPosition(sugar *mt5.MT5Sugar, ticket uint64, duration time.Duration)
 
             // Calculate pips
             var pips float64
-            if pos.Type == "BUY" {
+            if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
                 pips = (pos.PriceCurrent - pos.PriceOpen) / 0.00001
             } else {
                 pips = (pos.PriceOpen - pos.PriceCurrent) / 0.00001
@@ -419,7 +445,7 @@ MonitorPosition(sugar, 12345, 30*time.Minute)
 ```go
 // ❌ WRONG - position might not exist
 pos, _ := sugar.GetPositionByTicket(ticket)
-fmt.Printf("Profit: $%.2f\n", pos.Profit) // Might panic!
+fmt.Printf("Profit: $%.2f\n", pos.Profit) // nil pointer panic when not found!
 
 // ✅ CORRECT - check error
 pos, err := sugar.GetPositionByTicket(ticket)
@@ -437,8 +463,9 @@ oldTicket := uint64(12345)
 pos, _ := sugar.GetPositionByTicket(oldTicket) // Might be closed!
 
 // ✅ CORRECT - use fresh ticket from recent open
+// (BuyMarket returns the order ticket; MT5 uses it as the position ticket of a market order)
 ticket, _ := sugar.BuyMarket("EURUSD", 0.1)
-pos, _ := sugar.GetPositionByTicket(ticket)
+pos, err := sugar.GetPositionByTicket(ticket)
 ```
 
 ### 3) Assuming price direction
@@ -449,7 +476,7 @@ pips := (pos.PriceCurrent - pos.PriceOpen) / 0.00001
 
 // ✅ CORRECT - check position type
 var pips float64
-if pos.Type == "BUY" {
+if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
     pips = (pos.PriceCurrent - pos.PriceOpen) / 0.00001
 } else {
     pips = (pos.PriceOpen - pos.PriceCurrent) / 0.00001

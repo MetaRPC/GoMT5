@@ -94,12 +94,13 @@ Using `time.Unix()` it is converted to readable date and time.
 
 ```protobuf
 message MrpcMqlTick {
-  int64 Time = 1;    // Unix time of last update
+  int64 Time = 1;    // Unix time of last update (broker server time)
+  int64 TimeUtc = 9; // Time in UTC (the same moment)
   double Bid = 2;    // Current Bid price
   double Ask = 3;    // Current Ask price
   double Last = 4;   // Last trade price
   uint64 Volume = 5; // Volume of last trade
-  // Also available: TimeMsc, Flags, VolumeReal
+  // Also available: TimeMsc, TimeMscUtc, Flags, VolumeReal
 }
 ```
 

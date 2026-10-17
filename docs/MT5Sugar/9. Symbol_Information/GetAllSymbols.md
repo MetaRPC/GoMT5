@@ -5,7 +5,7 @@
 **API Information:**
 
 * **Method:** `sugar.GetAllSymbols()`
-* **Timeout:** 5 seconds
+* **Timeout:** 15 seconds
 * **Returns:** Slice of symbol names
 
 ---
@@ -36,6 +36,7 @@ func (s *MT5Sugar) GetAllSymbols() ([]string, error)
 * **What it is:** Get a complete list of all symbols available on your broker.
 * **Why you need it:** Symbol discovery, building watchlists, symbol validation.
 * **Sanity check:** Returns symbol names only (not full info). Use GetSymbolInfo() for details.
+* **How it works:** One `SymbolParamsMany` query with no name filter and no paging; only the `Name` of each entry is kept.
 
 ---
 
@@ -480,7 +481,7 @@ if manager.Exists("BTCUSD") {
 **🍬 Symbol details:**
 
 * `GetSymbolInfo()` - Get full symbol information
-* `IsSymbolAvailable()` - Check if specific symbol is tradeable
+* `IsSymbolAvailable()` - Check if specific symbol exists and is synchronized
 
 **🍬 Symbol properties:**
 
@@ -498,11 +499,12 @@ if manager.Exists("BTCUSD") {
 symbols, _ := sugar.GetAllSymbols()
 // Some might be for display only!
 
-// ✅ CORRECT - verify tradeable status
+// ✅ BETTER - at least verify the symbol exists and is synchronized
+// (IsSymbolAvailable does NOT check the symbol's trade mode / trading permissions)
 for _, symbol := range symbols {
     available, _ := sugar.IsSymbolAvailable(symbol)
     if available {
-        // Now safe to trade
+        // Symbol exists and has synchronized data
     }
 }
 ```
@@ -519,8 +521,13 @@ for _, symbol := range symbols {
 
 // ✅ CORRECT - filter first, then get details
 symbols, _ := sugar.GetAllSymbols()
-forexPairs := FilterForexPairs(symbols)
-for _, symbol := range forexPairs {
+usdPairs := []string{}
+for _, s := range symbols {
+    if strings.HasSuffix(s, "USD") {
+        usdPairs = append(usdPairs, s)
+    }
+}
+for _, symbol := range usdPairs {
     info, _ := sugar.GetSymbolInfo(symbol)
 }
 ```

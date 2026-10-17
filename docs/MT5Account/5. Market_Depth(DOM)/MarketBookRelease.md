@@ -55,7 +55,7 @@ func (a *MT5Account) MarketBookRelease(
 
 | Field     | Type   | Description                                                    |
 | --------- | ------ | -------------------------------------------------------------- |
-| `Success` | `bool` | `true` if unsubscribed successfully, `false` otherwise         |
+| `ClosedSuccessfully` | `bool` | `true` if unsubscribed successfully, `false` otherwise |
 
 ---
 
@@ -104,6 +104,7 @@ For a detailed line-by-line explanation with examples, see:
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -113,13 +114,17 @@ import (
 )
 
 func main() {
-    account := mt5.NewMT5Account("user", "password", "server:443")
-
-    err := account.Connect()
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
     if err != nil {
         panic(err)
     }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
@@ -132,7 +137,7 @@ func main() {
         panic(err)
     }
 
-    if result.Success {
+    if result.ClosedSuccessfully {
         fmt.Println("Successfully unsubscribed from EURUSD market depth")
     }
 }
@@ -153,7 +158,7 @@ func AnalyzeMarketDepth(account *mt5.MT5Account, symbol string) error {
         return err
     }
 
-    if !subResult.Success {
+    if !subResult.OpenedSuccessfully {
         return fmt.Errorf("subscription failed")
     }
 
@@ -167,7 +172,7 @@ func AnalyzeMarketDepth(account *mt5.MT5Account, symbol string) error {
         })
         if err != nil {
             fmt.Printf("Warning: cleanup error - %v\n", err)
-        } else if result.Success {
+        } else if result.ClosedSuccessfully {
             fmt.Printf("Cleaned up %s subscription\n", symbol)
         }
     }()
@@ -180,7 +185,7 @@ func AnalyzeMarketDepth(account *mt5.MT5Account, symbol string) error {
         return err
     }
 
-    fmt.Printf("Analyzed %d order book levels\n", len(bookData.Book))
+    fmt.Printf("Analyzed %d order book levels\n", len(bookData.MqlBookInfos))
     return nil
 }
 ```
@@ -201,7 +206,7 @@ func ReleaseMultipleSymbols(account *mt5.MT5Account, symbols []string) {
             continue
         }
 
-        if result.Success {
+        if result.ClosedSuccessfully {
             fmt.Printf("%s: Unsubscribed\n", symbol)
         } else {
             fmt.Printf("%s: Not subscribed\n", symbol)
@@ -233,7 +238,7 @@ func SafeMarketBookCleanup(account *mt5.MT5Account, symbol string) {
         return
     }
 
-    if result.Success {
+    if result.ClosedSuccessfully {
         fmt.Printf("%s: Successfully released\n", symbol)
     } else {
         fmt.Printf("%s: Was not subscribed\n", symbol)
@@ -265,7 +270,7 @@ func NewMarketBookSession(account *mt5.MT5Account, symbol string) (*MarketBookSe
         return nil, err
     }
 
-    if !result.Success {
+    if !result.OpenedSuccessfully {
         return nil, fmt.Errorf("subscription failed for %s", symbol)
     }
 
@@ -293,7 +298,7 @@ func (s *MarketBookSession) Close() error {
 
     s.active = false
 
-    if !result.Success {
+    if !result.ClosedSuccessfully {
         return fmt.Errorf("unsubscribe failed")
     }
 

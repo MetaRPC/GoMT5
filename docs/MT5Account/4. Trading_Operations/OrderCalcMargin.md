@@ -48,7 +48,7 @@ For a detailed line-by-line explanation with examples, see:
 //
 // Parameters:
 //   - ctx: Context for timeout and cancellation control
-//   - req: OrderCalcMarginRequest with Action, Symbol, Volume, and Price
+//   - req: OrderCalcMarginRequest with Symbol, OrderType, Volume, and OpenPrice
 //
 // Returns OrderCalcMarginData with Margin value in account currency.
 func (a *MT5Account) OrderCalcMargin(
@@ -67,7 +67,7 @@ func (a *MT5Account) OrderCalcMargin(
 | Parameter | Type                          | Description                                             |
 | --------- | ----------------------------- | ------------------------------------------------------- |
 | `ctx`     | `context.Context`             | Context for deadline/timeout and cancellation           |
-| `req`     | `*pb.OrderCalcMarginRequest`  | Request with Action, Symbol, Volume, and Price          |
+| `req`     | `*pb.OrderCalcMarginRequest`  | Request with Symbol, OrderType, Volume, and OpenPrice   |
 
 **OrderCalcMarginRequest fields:**
 
@@ -130,6 +130,7 @@ func (a *MT5Account) OrderCalcMargin(
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -139,13 +140,17 @@ import (
 )
 
 func main() {
-    account := mt5.NewMT5Account("user", "password", "server:443")
-
-    err := account.Connect()
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
     if err != nil {
         panic(err)
     }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
@@ -173,13 +178,15 @@ func CanOpenPosition(account *mt5.MT5Account, symbol string, volume float64, pri
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
 
-    // Get account summary to check free margin
-    summary, err := account.AccountSummary(ctx, &pb.AccountSummaryRequest{})
+    // Get free margin (AccountSummary has no free margin field)
+    freeData, err := account.AccountInfoDouble(ctx, &pb.AccountInfoDoubleRequest{
+        PropertyId: pb.AccountInfoDoublePropertyType_ACCOUNT_MARGIN_FREE,
+    })
     if err != nil {
         return false, err
     }
 
-    freeMargin := summary.AccountEquity - summary.AccountBalance // Simplified
+    freeMargin := freeData.RequestedValue
 
     // Calculate required margin
     marginData, err := account.OrderCalcMargin(ctx, &pb.OrderCalcMarginRequest{

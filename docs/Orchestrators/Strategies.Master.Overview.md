@@ -7,6 +7,8 @@ Think of them as *trading robots* that handle complex scenarios like trailing st
 
 🧠 **Presets** are intelligent systems that combine multiple orchestrators and automatically switch between them based on market conditions.
 
+All of them are example code in the repository's `examples` module (get it by cloning the repository): orchestrators in `examples/demos/orchestrators` (import `"github.com/MetaRPC/GoMT5/examples/demos/orchestrators"`), the preset in `examples/demos/presets` (import `"github.com/MetaRPC/GoMT5/examples/demos/presets"`), built on `mt5 "github.com/MetaRPC/GoMT5/examples/mt5"` (MT5Sugar).
+
 
 ---
 
@@ -14,12 +16,12 @@ Think of them as *trading robots* that handle complex scenarios like trailing st
 
 | Orchestrator           | Purpose                                    | Jump to Docs |
 |------------------------|--------------------------------------------|--------------|
-| **TrailingStopManage** | Protect profits by auto-moving stop-loss   | [Details](#orchestrator-11-trailingstopmanage) · [Full Docs](11_Trailing_stop.md) |
-| **PositionScale**      | Scale into winning/losing positions        | [Details](#orchestrator-12-positionscale) · [Full Docs](12_Position_scaler.md) |
-| **GridTrade**          | Profit from range-bound markets            | [Details](#orchestrator-13-gridtrade) · [Full Docs](13_Grid_trader.md) |
-| **RiskManage**         | Monitor and enforce account safety limits  | [Details](#orchestrator-14-riskmanage) · [Full Docs](14_Risk_manager.md) |
-| **PortfolioRebalance** | Maintain balanced multi-symbol allocation  | [Details](#orchestrator-15-portfoliorebalance) · [Full Docs](15_Portfolio_rebalancer.md) |
-| **Adaptive Preset**    | Auto-switch strategies based on conditions | [Details](#preset-16-adaptiveorchestratorpreset) · [Full Docs](16_AdaptiveOrchestratorPreset.md) |
+| **TrailingStopManager** | Protect profits by auto-moving stop-loss   | [Details](#orchestrator-11-trailingstopmanager) · [Full Docs](11_Trailing_stop.md) |
+| **PositionScaler**      | Scale into winning/losing positions        | [Details](#orchestrator-12-positionscaler) · [Full Docs](12_Position_scaler.md) |
+| **GridTrader**          | Profit from range-bound markets            | [Details](#orchestrator-13-gridtrader) · [Full Docs](13_Grid_trader.md) |
+| **RiskManager**         | Monitor and enforce account safety limits  | [Details](#orchestrator-14-riskmanager) · [Full Docs](14_Risk_manager.md) |
+| **PortfolioRebalancer** | Maintain balanced multi-symbol allocation  | [Details](#orchestrator-15-portfoliorebalancer) · [Full Docs](15_Portfolio_rebalancer.md) |
+| **Adaptive Preset**    | Auto-switch strategies based on conditions | [Details](#preset-16-adaptive-orchestrator-preset) · [Full Docs](16_AdaptiveOrchestratorPreset.md) |
 
 
 ---
@@ -31,15 +33,15 @@ MT5 Account (Low-level gRPC)
 |
 MT5 Service (Go wrappers)
 |
-MT5 Suga (High-level convenience)
+MT5 Sugar (High-level convenience)
 |
 ORCHESTRATORS (Automated strategies)
 |
-+-- TrailingStopManage (Profit protection)
-+-- PositionScale (Position sizing)
-+-- GridTrade (Range-bound trading)
-+-- RiskManage (Account protection)
-+-- PortfolioRebalance (Multi-symbol management)
++-- TrailingStopManager (Profit protection)
++-- PositionScaler (Position sizing)
++-- GridTrader (Range-bound trading)
++-- RiskManager (Account protection)
++-- PortfolioRebalancer (Multi-symbol management)
 |
 PRESETS (Multi-strategy systems)
 |
@@ -52,16 +54,16 @@ PRESETS (Multi-strategy systems)
 
 | Orchestrator           | Purpose                 | Best For         | Complexity | Risk Level            |
 | ---------------------- | ----------------------- | ---------------- | ---------- | --------------------- |
-| **TrailingStopManage** | Protect profits         | Trending markets | Low        | Low                   |
-| **PositionScale**      | Add to winners/losers   | Active trading   | Medium     | Medium–High           |
-| **GridTrade**          | Range-bound profits     | Sideways markets | Medium     | Medium                |
-| **RiskManage**         | Account protection      | All conditions   | Low        | Very Low (protective) |
-| **PortfolioRebalance** | Multi-symbol balance    | Diversification  | Medium     | Low–Medium            |
+| **TrailingStopManager** | Protect profits         | Trending markets | Low        | Low                   |
+| **PositionScaler**      | Add to winners/losers   | Active trading   | Medium     | Medium–High           |
+| **GridTrader**          | Range-bound profits     | Sideways markets | Medium     | Medium                |
+| **RiskManager**         | Account protection      | All conditions   | Low        | Very Low (protective) |
+| **PortfolioRebalancer** | Multi-symbol balance    | Diversification  | Medium     | Low–Medium            |
 | **Adaptive Preset**    | Auto strategy switching | All conditions   | High       | Medium                |
 
 ---
 
-## Orchestrator #11: TrailingStopManage
+## Orchestrator #11: TrailingStopManager
 
 ### Overview
 
@@ -72,18 +74,18 @@ Automatically moves stop-loss orders to protect profits as price moves favorably
 * Activates after profit threshold is reached
 * Trails stop-loss behind price (never moves unfavorably)
 * Handles multiple positions simultaneously
-* Works 24/7 without manual intervention
+* Runs in the background until `Stop()` is called
+* Point size is hard-coded to 0.00001 (5-digit symbols)
 
 ### Configuration Example
 
 ```go
-config := orchestrators.TrailingStopConfig{
-    TrailingDistance: 200, // Tail 200 points behind
-    ActivationProfit: 300, // Activate at 300 points profit
-    UpdateInterval:   2 * time.Second,
-}
+config := orchestrators.DefaultTrailingStopConfig()
+config.TrailingDistance = 200 // Trail 200 points behind
+config.ActivationProfit = 300 // Activate at 300 points profit
+config.UpdateInterval = 2 * time.Second
 
-manager := orchestrators.NewTrailingStopManage(suga, config)
+manager := orchestrators.NewTrailingStopManager(sugar, config)
 manager.Start()
 ```
 
@@ -113,7 +115,7 @@ manager.Start()
 
 ---
 
-## Orchestrator #12: PositionScale
+## Orchestrator #12: PositionScaler
 
 ### Overview
 
@@ -128,21 +130,20 @@ Adds to winning or losing positions based on the configured mode (Pyramiding, Av
   3. **Scale Out** — gradually exit positions
 * Configurable trigger distances
 * Maximum scale limits
-* Automatic lot size calculation
+* Fixed scale lot size, optionally reduced per scale (`ReducePerScale`)
+* Works on positions that are already open (it never opens the base position)
 
 ### Configuration Example
 
 ```go
-config := orchestrators.PositionScaleConfig{
-    Mode:            Pyramiding, // Add to winners
-    Symbol:          "EURUSD",
-    TriggerDistance: 200,        // Add every 200 points profit
-    MaxScales:       3,          // Max 3 additions
-    ScaleLotSize:    0.01,
-}
+config := orchestrators.DefaultPositionScalerConfig("EURUSD") // Symbols: []string{"EURUSD"}
+config.Mode = orchestrators.Pyramiding // Add to winners
+config.TriggerDistance = 200           // Add every 200 points
+config.MaxScales = 3                   // Max 3 additions
+config.ScaleLotSize = 0.01
 
-scale := orchestrators.NewPositionScale(suga, config)
-scale.Start()
+scaler := orchestrators.NewPositionScaler(sugar, config)
+scaler.Start()
 ```
 
 ### When to Use
@@ -161,7 +162,7 @@ scale.Start()
 ### Quick Stats
 
 * **Input**: Open position + price movement
-* **Action**: Opens additional positions
+* **Action**: Opens additional positions (ScaleOut mode: partially closes)
 * **Output**: Scaled exposure
 * **Cycle Time**: 5 seconds (configurable)
 
@@ -169,7 +170,7 @@ scale.Start()
 
 ---
 
-## Orchestrator #13: GridTrade
+## Orchestrator #13: GridTrader
 
 ### Overview
 
@@ -178,24 +179,23 @@ scale.Start()
 ### Key Features
 
 * Configurable grid size and spacing
-* Automatic order placement
+* Automatic BUY LIMIT / SELL LIMIT placement (with TP/SL only when `TakeProfit > 0` or `StopLoss > 0`)
 * Works best in sideways markets
-* Optional grid rebuilding after fills
+* Grid is rebuilt when price drifts more than 2 grid steps from the center (`RebuildOnFill` is not read by the code)
 
 ### Configuration Example
 
 ```go
-config := orchestrators.GridTradeConfig{
-    Symbol:        "EURUSD",
-    GridSize:      5,   // 5 grid levels
-    GridStep:      100, // 100 points spacing
-    LotSize:       0.01,
-    MaxPositions:  10,
-    CheckInterval: 5 * time.Second,
-}
+config := orchestrators.DefaultGridTraderConfig("EURUSD")
+config.GridSize = 5     // 5 grid levels each side
+config.GridStep = 100   // 100 points spacing
+config.LotSize = 0.01
+config.MaxPositions = 10
+config.TakeProfit = 100 // without TakeProfit/StopLoss the orders get no TP/SL
+config.CheckInterval = 5 * time.Second
 
-gridTrade := orchestrators.NewGridTrade(suga, config)
-gridTrade.Start()
+gridTrader := orchestrators.NewGridTrader(sugar, config)
+gridTrader.Start()
 ```
 
 ### When to Use
@@ -223,11 +223,11 @@ gridTrade.Start()
 
 ---
 
-## Orchestrator #14: RiskManage
+## Orchestrator #14: RiskManager
 
 ### Overview
 
-Monitors account-level risk metrics 24/7 and automatically intervenes when danger limits are exceeded.
+Monitors account-level risk metrics while running and automatically intervenes when danger limits are exceeded.
 
 ### Key Features
 
@@ -238,26 +238,27 @@ Monitors account-level risk metrics 24/7 and automatically intervenes when dange
   3. Daily profit targets
   4. Margin level monitoring
   5. Position count limits
-* Emergency close of all positions
-* Trade blocking when limits are hit
+* Emergency close of all positions (`CloseAllPositions`)
+* Trading-blocked flag when daily limits are hit (`IsTradingBlocked()` — your code must check it; orders are not intercepted)
 * Daily automatic reset
 
 
 ### Configuration Example
 
 ```go
-config := orchestrators.RiskManageConfig{
-    MaxDrawdownPercent:  10.0,  // 10% max drawdown
-    MaxDrawdownAbsolute: 1000.0, // $1000 max loss
-    DailyLossLimit:      500.0,  // $500 daily limit
-    DailyProfitTarget:   1000.0, // $1000 daily goal
-    MinMarginLevel:      150.0,  // 150% minimum margin
-    EnableAutoClose:     true,   // Auto-close on breach
-    CheckInterval:       5 * time.Second,
-}
+// Start from the defaults: zero-valued fields are dangerous here
+// (CheckInterval 0 panics, MaxDrawdownAbsolute 0 closes everything on every check)
+config := orchestrators.DefaultRiskManagerConfig()
+config.MaxDrawdownPercent = 10.0   // 10% max drawdown
+config.MaxDrawdownAbsolute = 1000.0 // $1000 max loss
+config.DailyLossLimit = 500.0      // $500 daily limit
+config.DailyProfitTarget = 1000.0  // $1000 daily goal
+config.MinMarginLevel = 150.0      // 150% minimum margin
+config.EnableAutoClose = true      // Auto-close on breach
+config.CheckInterval = 5 * time.Second
 
-riskManage := orchestrators.NewRiskManage(suga, config)
-riskManage.Start()
+riskManager := orchestrators.NewRiskManager(sugar, config)
+riskManager.Start()
 ```
 
 ### When to Use
@@ -285,7 +286,7 @@ riskManage.Start()
 
 ---
 
-## Orchestrator #15: PortfolioRebalance
+## Orchestrator #15: PortfolioRebalancer
 
 ### Overview
 
@@ -296,25 +297,19 @@ Maintains balanced exposure across multiple trading symbols by automatically reb
 * Equal-weight or custom allocation percentages
 * Automatic rebalancing when deviation exceeds threshold
 * Multi-symbol portfolio management
-* Diversification enforcement
+* Simplified exposure: a position counts as `Volume × 100000` (no prices, no direction); it opens BUY positions for under-weight symbols and closes a whole position of over-weight ones
 
 ### Configuration Example
 
 ```go
-config := orchestrators.PortfolioRebalanceConfig{
-    Allocations: map[string]float64{
-        "EURUSD": 0.25, // 25% each
-        "GBPUSD": 0.25,
-        "USDJPY": 0.25,
-        "XAUUSD": 0.25,
-    },
-    TotalExposure:      10000.0,          // $10k portfolio
-    RebalanceThreshold: 10.0,             // Rebalance at 10% off
-    CheckInterval:      30 * time.Minute,
-}
+// Equal weights (0.25 each), MinPositionSize 0.01, MaxTradesPerCycle 10, ...
+config := orchestrators.DefaultPortfolioRebalancerConfig([]string{"EURUSD", "GBPUSD", "USDJPY", "XAUUSD"})
+config.TotalExposure = 10000.0     // in Volume × 100000 units (0.025 lots per symbol)
+config.RebalanceThreshold = 10.0   // Rebalance at 10% off
+config.CheckInterval = 30 * time.Minute
 
-rebalance := orchestrators.NewPortfolioRebalance(suga, config)
-rebalance.Start()
+rebalancer := orchestrators.NewPortfolioRebalancer(sugar, config)
+rebalancer.Start()
 ```
 
 ### When to Use
@@ -337,7 +332,7 @@ rebalance.Start()
 * **Input**: Multiple symbol positions
 * **Action**: Opens/closes positions to restore balance
 * **Output**: Balanced portfolio allocation
-* **Cycle Time**: 30 minutes (configurable)
+* **Cycle Time**: 30 minutes in main.go (default 1 hour, configurable)
 
 [Full Documentation](15_Portfolio_rebalancer.md)
 
@@ -353,20 +348,20 @@ Intelligent multi-strategy system that analyzes market conditions every 5 minute
 
 * **5 Market Modes**:
 
-  1. **Grid Mode** — low volatility → GridTrade
-  2. **Managed Mode** — medium volatility → TrailingStop + PositionScale
-  3. **Protection Mode** — high volatility → RiskManage
-  4. **Portfolio Mode** — multi-symbol → PortfolioRebalance
-  5. **Trending Mode** — strong trend → PositionScale (pyramiding)
+  1. **Grid Mode** — low volatility → GridTrader
+  2. **Managed Mode** — medium volatility → TrailingStop + PositionScaler
+  3. **Protection Mode** — high volatility → RiskManager
+  4. **Portfolio Mode** — multi-symbol (only with `EnablePortfolioMode = true`) → PortfolioRebalancer
+  5. **Trending Mode** — strong trend → PositionScaler (pyramiding)
 * Automatic mode switching every cycle
-* Built-in safety limits
-* Continuous operation with daily limits
+* Safety limits (total loss, loss/profit since start) checked after each cycle
+* Volatility and trend are simplified placeholders (spread-based)
 
 
 ### Configuration Example
 
 ```go
-preset := presets.NewAdaptiveOrchestratorPreset(suga)
+preset := presets.NewAdaptiveOrchestratorPreset(sugar)
 
 // Customize
 preset.Symbol = "EURUSD"
@@ -413,12 +408,12 @@ totalProfit, _ := preset.Execute()
 
 | Market Condition         | Best Orchestrator                         | Why                             |
 | ------------------------ | ----------------------------------------- | ------------------------------- |
-| **Strong Uptrend**       | TrailingStop + PositionScale (Pyramiding) | Protect profits, add to winners |
+| **Strong Uptrend**       | TrailingStop + PositionScaler (Pyramiding) | Protect profits, add to winners |
 | **Strong Downtrend**     | TrailingStop (short positions)            | Protect short profits           |
-| **Sideways / Ranging**   | GridTrade                                 | Profit from oscillations        |
-| **Low Volatility**       | GridTrade                                 | Small frequent profits          |
-| **High Volatility**      | RiskManage                                | Protection mode                 |
-| **Multi-Symbol Active**  | PortfolioRebalance                        | Balance allocation              |
+| **Sideways / Ranging**   | GridTrader                                 | Profit from oscillations        |
+| **Low Volatility**       | GridTrader                                 | Small frequent profits          |
+| **High Volatility**      | RiskManager                                | Protection mode                 |
+| **Multi-Symbol Active**  | PortfolioRebalancer                        | Balance allocation              |
 | **Uncertain / Changing** | Adaptive Preset                           | Auto-adapt to conditions        |
 
 ---
@@ -428,10 +423,10 @@ totalProfit, _ := preset.Execute()
 | Trading Style        | Recommended Orchestrators               |
 | -------------------- | --------------------------------------- |
 | **Scalping**         | TrailingStop (tight parameters)         |
-| **Day Trading**      | TrailingStop + RiskManage               |
-| **Swing Trading**    | PositionScale (pyramiding) + RiskManage |
-| **Position Trading** | PortfolioRebalance + RiskManage         |
-| **Grid Trading**     | GridTrade + RiskManage                  |
+| **Day Trading**      | TrailingStop + RiskManager               |
+| **Swing Trading**    | PositionScaler (pyramiding) + RiskManager |
+| **Position Trading** | PortfolioRebalancer + RiskManager         |
+| **Grid Trading**     | GridTrader + RiskManager                  |
 | **Automated 24/7**   | Adaptive Preset                         |
 
 ---
@@ -440,11 +435,11 @@ totalProfit, _ := preset.Execute()
 
 | Risk Level          | Orchestrator Combination                    |
 | ------------------- | ------------------------------------------- |
-| **Conservative**    | RiskManage only (5% drawdown limit)         |
-| **Moderate**        | TrailingStop + RiskManage                   |
-| **Balanced**        | PortfolioRebalance + RiskManage             |
-| **Aggressive**      | PositionScale + TrailingStop + RiskManage   |
-| **Very Aggressive** | GridTrade + PositionScale (NOT RECOMMENDED) |
+| **Conservative**    | RiskManager only (5% drawdown limit)         |
+| **Moderate**        | TrailingStop + RiskManager                   |
+| **Balanced**        | PortfolioRebalancer + RiskManager             |
+| **Aggressive**      | PositionScaler + TrailingStop + RiskManager   |
+| **Very Aggressive** | GridTrader + PositionScaler (NOT RECOMMENDED) |
 
 ---
 
@@ -452,20 +447,20 @@ totalProfit, _ := preset.Execute()
 
 ### Combination 1: Safe Trend Trading
 
-**Orchestrators**: TrailingStop + RiskManage
+**Orchestrators**: TrailingStop + RiskManager
 
 **Purpose**: Follow trends with profit protection and account safety
 
 ```go
 // Trailing stop for profit protection
 tsConfig := orchestrators.DefaultTrailingStopConfig()
-trailingManage := orchestrators.NewTrailingStopManage(suga, tsConfig)
-trailingManage.Start()
+trailingManager := orchestrators.NewTrailingStopManager(sugar, tsConfig)
+trailingManager.Start()
 
 // Risk management for account protection
-riskConfig := orchestrators.DefaultRiskManageConfig()
-riskManage := orchestrators.NewRiskManage(suga, riskConfig)
-riskManage.Start()
+riskConfig := orchestrators.DefaultRiskManagerConfig()
+riskManager := orchestrators.NewRiskManager(sugar, riskConfig)
+riskManager.Start()
 ```
 
 
@@ -475,24 +470,26 @@ riskManage.Start()
 
 ### Combination 2: Aggressive Scaling
 
-**Orchestrators**: PositionScale + TrailingStop + RiskManage
+**Orchestrators**: PositionScaler + TrailingStop + RiskManager
 
 **Purpose**: Scale into trends, protect profits, limit risk
 
 ```go
 // Scale for pyramiding
-scaleConfig := orchestrators.DefaultPositionScaleConfig("EURUSD")
+scaleConfig := orchestrators.DefaultPositionScalerConfig("EURUSD")
 scaleConfig.Mode = orchestrators.Pyramiding
-scale := orchestrators.NewPositionScale(suga, scaleConfig)
-scale.Start()
+scaler := orchestrators.NewPositionScaler(sugar, scaleConfig)
+scaler.Start()
 
 // Trailing stop for profit protection
-tsManage := orchestrators.NewTrailingStopManage(suga, tsConfig)
-tsManage.Start()
+tsConfig := orchestrators.DefaultTrailingStopConfig()
+tsManager := orchestrators.NewTrailingStopManager(sugar, tsConfig)
+tsManager.Start()
 
 // Risk management for safety
-riskManage := orchestrators.NewRiskManage(suga, riskConfig)
-riskManage.Start()
+riskConfig := orchestrators.DefaultRiskManagerConfig()
+riskManager := orchestrators.NewRiskManager(sugar, riskConfig)
+riskManager.Start()
 ```
 
 **Best For**: Experienced traders, strong trends, large accounts
@@ -501,28 +498,21 @@ riskManage.Start()
 
 ### Combination 3: Portfolio Diversification
 
-**Orchestrators**: PortfolioRebalance + RiskManage
+**Orchestrators**: PortfolioRebalancer + RiskManager
 
 **Purpose**: Maintain balanced multi-symbol portfolio with protection
 
 ```go
-// Portfolio rebalance
-portfolioConfig := orchestrators.PortfolioRebalanceConfig{
-    Allocations: map[string]float64{
-        "EURUSD": 0.25,
-        "GBPUSD": 0.25,
-        "USDJPY": 0.25,
-        "XAUUSD": 0.25,
-    },
-    TotalExposure: 10000.0,
-}
+// Portfolio rebalance (defaults: equal weights, TotalExposure 10000, CheckInterval 1h)
+portfolioConfig := orchestrators.DefaultPortfolioRebalancerConfig([]string{"EURUSD", "GBPUSD", "USDJPY", "XAUUSD"})
 
-rebalance := orchestrators.NewPortfolioRebalance(suga, portfolioConfig)
-rebalance.Start()
+rebalancer := orchestrators.NewPortfolioRebalancer(sugar, portfolioConfig)
+rebalancer.Start()
 
 // Risk management for overall protection
-riskManage := orchestrators.NewRiskManage(suga, riskConfig)
-riskManage.Start()
+riskConfig := orchestrators.DefaultRiskManagerConfig()
+riskManager := orchestrators.NewRiskManager(sugar, riskConfig)
+riskManager.Start()
 ```
 
 **Best For**: Portfolio managers, diversification seekers, medium–large accounts
@@ -531,29 +521,24 @@ riskManage.Start()
 
 ### Combination 4: Range Trading
 
-**Orchestrators**: GridTrade + RiskManage
+**Orchestrators**: GridTrader + RiskManager
 
 **Purpose**: Profit from sideways markets with risk control
 
 ```go
-// Grid trade
-gridConfig := orchestrators.GridTradeConfig{
-    Symbol:   "EURUSD",
-    GridSize: 5,
-    GridStep: 100,
-}
+// Grid trade (defaults: 5 levels, 100 points, 0.01 lots, MaxPositions 10, CheckInterval 5s)
+gridConfig := orchestrators.DefaultGridTraderConfig("EURUSD")
 
-gridTrade := orchestrators.NewGridTrade(suga, gridConfig)
-gridTrade.Start()
+gridTrader := orchestrators.NewGridTrader(sugar, gridConfig)
+gridTrader.Start()
 
 // Risk management (important for grid!)
-riskConfig := orchestrators.RiskManageConfig{
-    MaxDrawdownPercent: 15.0, // Wider for grid
-    EnableAutoClose:    true,
-}
+riskConfig := orchestrators.DefaultRiskManagerConfig()
+riskConfig.MaxDrawdownPercent = 15.0 // Wider for grid
+riskConfig.EnableAutoClose = true
 
-riskManage := orchestrators.NewRiskManage(suga, riskConfig)
-riskManage.Start()
+riskManager := orchestrators.NewRiskManager(sugar, riskConfig)
+riskManager.Start()
 ```
 
 **Best For**: Range-bound markets, low volatility, experienced traders
@@ -571,17 +556,17 @@ cd examples/demos
 go run main.go 11  # TrailingStop
 go run main.go trailing
 
-go run main.go 12  # PositionScale
-go run main.go scale
+go run main.go 12  # PositionScaler
+go run main.go scaler
 
-go run main.go 13  # GridTrade
+go run main.go 13  # GridTrader
 go run main.go grid
 
-go run main.go 14  # RiskManage
+go run main.go 14  # RiskManager
 go run main.go risk
 
-go run main.go 15  # PortfolioRebalance
-go run main.go rebalance
+go run main.go 15  # PortfolioRebalancer
+go run main.go rebalancer
 
 # Adaptive preset
 go run main.go 16       # Adaptive Preset
@@ -595,11 +580,18 @@ go run main.go preset
 
 ```go
 // Initialize connection
-suga := mt5.NewMT5Suga(account)
+sugar, err := mt5.NewMT5Sugar(12345678, "your_password", "mt5.mrpc.pro:443")
+if err != nil {
+    log.Fatal(err)
+}
+if err := sugar.QuickConnect("YourBroker-MT5 Demo"); err != nil {
+    log.Fatal(err)
+}
+defer sugar.Disconnect()
 
 // Create orchestrator with config
 config := orchestrators.DefaultTrailingStopConfig()
-orchestrator := orchestrators.NewTrailingStopManage(suga, config)
+orchestrator := orchestrators.NewTrailingStopManager(sugar, config)
 
 // Start (non-blocking)
 if err := orchestrator.Start(); err != nil {
@@ -623,9 +615,9 @@ orchestrator.Stop()
 
 ### DO
 
-**Always Use RiskManage**
+**Always Use RiskManager**
 
-* Combine **any** orchestrator with RiskManage
+* Combine **any** orchestrator with RiskManager
 * Set conservative limits initially
 * Monitor risk events regularly
 
@@ -649,9 +641,9 @@ orchestrator.Stop()
 
 **Combine Intelligently**
 
-* TrailingStop + RiskManage = safe
-* GridTrade + PositionScale = dangerous!
-* Portfolio + RiskManage = smart diversification
+* TrailingStop + RiskManager = safe
+* GridTrader + PositionScaler = dangerous!
+* Portfolio + RiskManager = smart diversification
 
 ---
 
@@ -659,13 +651,13 @@ orchestrator.Stop()
 
 **Never Trade Without Risk Management**
 
-* Even on demo, practice with RiskManage
+* Even on demo, practice with RiskManager
 * Learn proper risk control habits
 * Safety should be automatic
 
 **Don't Run Conflicting Orchestrators**
 
-* GridTrade + Trending Mode scaling = conflict
+* GridTrader + Trending Mode scaling = conflict
 * Test combinations on demo first
 * Understand how they interact
 
@@ -695,10 +687,10 @@ orchestrator.Stop()
 
 **Possible Causes**:
 
-* Invalid configuration (check error message)
-* Symbol not tradable
-* Insufficient margin
-* Already running
+* Already running (`"... already running"`)
+* GridTrader: no price for the symbol (`failed to initialize symbol: ...`)
+* RiskManager: balance cannot be read (`failed to initialize: ...`)
+* PortfolioRebalancer: allocations do not sum to 100% (`invalid configuration: ...`)
 
 **Solution**:
 
@@ -709,24 +701,22 @@ if err := orchestrator.Start(); err != nil {
 }
 ```
 
-```
-
 ---
 
 ### Problem: Orchestrator Stops Unexpectedly
 
 **Possible Causes**:
 
-* Safety limit reached (check logs)
-* Context cancelled
-* Fatal error encountered
+* `Stop()` was called — the runners in `main.go` stop each orchestrator after a fixed time (3, 5, 10, 15 or 60 minutes)
+* Errors do **not** stop an orchestrator: they are counted in `ErrorCount` / `LastError` and the loop continues
+* A zero `CheckInterval` / `UpdateInterval` makes the monitoring goroutine panic (`time.NewTicker`); start from the `Default...Config` functions
 
 **Solution**:
 
 ```go
 status := orchestrator.GetStatus()
 fmt.Printf("Status: %+v\n", status)
-// Review error count and last operation
+// Review ErrorCount / LastError, and GetMetrics().LastOperation
 ```
 
 ---
@@ -783,18 +773,22 @@ fmt.Printf("Status: %+v\n", status)
 ### Checking Orchestrator Status
 
 ```go
-// Get status
+// Get status and metrics
 status := orchestrator.GetStatus()
+metrics := orchestrator.GetMetrics()
 
-// Display metrics
+// Display them
 fmt.Printf("Name: %s\n", status.Name)
 fmt.Printf("Running: %v\n", status.IsRunning)
 fmt.Printf("SuccessCount: %d\n", status.SuccessCount)
 fmt.Printf("ErrorCount: %d\n", status.ErrorCount)
 fmt.Printf("TotalOperations: %d\n", status.SuccessCount+status.ErrorCount)
-fmt.Printf("LastOperation: %s\n", status.LastOperation)
-fmt.Printf("Uptime: %v\n", time.Since(status.StartTime))
+fmt.Printf("LastError: %s\n", status.LastError)
+fmt.Printf("LastOperation: %s\n", metrics.LastOperation)
+fmt.Printf("Uptime: %s\n", orchestrators.FormatDuration(status.Uptime))
 ```
+
+`OrchestratorStatus` fields: `Name, IsRunning, StartTime, LastUpdate, ErrorCount, SuccessCount, LastError, Uptime`. `OrchestratorMetrics` holds trade/profit counters (`TotalTrades`, `NetProfit`, `CurrentPositions`, `WinRate`, ...) and `LastOperation`. Note: the RiskManager counts every risk event as an error.
 
 ### Metrics to Track
 
@@ -813,12 +807,12 @@ fmt.Printf("Uptime: %v\n", time.Since(status.StartTime))
 
 To build your own orchestrator:
 
-1. **Extend BaseOrchestrator**:
+1. **Extend BaseOrchestrator** (embedding `*orchestrators.BaseOrchestrator`, created with `orchestrators.NewBaseOrchestrator(name)`, provides `IsRunning`, `GetStatus`, `GetMetrics`, `MarkStarted/MarkStopped`, `SetContext/GetContext/CancelContext`, `IncrementSuccess/IncrementError`, `UpdateStatus/UpdateMetrics`):
 
 ```go
 type MyOrchestrator struct {
     *orchestrators.BaseOrchestrator
-    suga   *mt5.MT5Suga
+    sugar  *mt5.MT5Sugar
     config MyConfig
 }
 ```
@@ -852,18 +846,27 @@ func (m *MyOrchestrator) executeStrategy() {
 
 ### Market Analysis Integration
 
-Enhance orchestrators with technical analysis:
+Enhance orchestrators with your own analysis. GoMT5 (`MT5Account` / `MT5Service` / `MT5Sugar`) has no bar-history method, so indicators have to be computed from prices you collect (e.g. `GetPriceInfo` samples or `GetService().StreamTicks`) or from an external source:
 
 ```go
-// Get bars for analysis
-bars, _ := suga.GetBars("EURUSD", pb.Timeframe_M15, 100)
-
-// Calculate indicators
-atr := calculateATR(bars, 14)
-ma20 := calculateMA(bars, 20)
+// Sample the Bid for one minute and measure its range
+high, low := 0.0, 0.0
+for i := 0; i < 60; i++ {
+    if info, err := sugar.GetPriceInfo("EURUSD"); err == nil {
+        if high == 0 || info.Bid > high {
+            high = info.Bid
+        }
+        if low == 0 || info.Bid < low {
+            low = info.Bid
+        }
+    }
+    time.Sleep(time.Second)
+}
+rangePoints := (high - low) / 0.00001 // 5-digit symbol
 
 // Adjust orchestrator parameters based on analysis
-if atr > 50 {
+config := orchestrators.DefaultTrailingStopConfig()
+if rangePoints > 50 {
     config.TrailingDistance = 300 // Wider trailing in volatile markets
 }
 ```
@@ -880,7 +883,7 @@ signal := fetchTradingSignal()
 
 if signal.Strength > 0.8 {
     // Start aggressive orchestrator
-    scale.Start()
+    scaler.Start()
 } else {
     // Conservative approach
     trailingStop.Start()
@@ -895,18 +898,18 @@ if signal.Strength > 0.8 {
 
 | #  | Name               | Purpose            | Complexity |
 | -- | ------------------ | ------------------ | ---------- |
-| 11 | TrailingStopManage | Profit protection  | Low        |
-| 12 | PositionScale      | Position sizing    | Medium     |
-| 13 | GridTrade          | Range trading      | Medium     |
-| 14 | RiskManage         | Account protection | Low        |
-| 15 | PortfolioRebalance | Portfolio balance  | Medium     |
+| 11 | TrailingStopManager | Profit protection  | Low        |
+| 12 | PositionScaler      | Position sizing    | Medium     |
+| 13 | GridTrader          | Range trading      | Medium     |
+| 14 | RiskManager         | Account protection | Low        |
+| 15 | PortfolioRebalancer | Portfolio balance  | Medium     |
 | 16 | Adaptive Preset    | Multi-strategy     | High       |
 
 ---
 
 ### Key Takeaways
 
-**Always Use RiskManage**
+**Always Use RiskManager**
 
 * Combine with any orchestrator
 * Essential for automated trading
@@ -914,7 +917,7 @@ if signal.Strength > 0.8 {
 
 **Start Simple**
 
-* Begin with TrailingStop + RiskManage
+* Begin with TrailingStop + RiskManager
 * Master one orchestrator before combining
 * Test thoroughly on demo
 
@@ -943,7 +946,7 @@ if signal.Strength > 0.8 {
 
 1. **Read Individual Documentation** — Review detailed docs for orchestrators you want to use
 2. **Run on Demo** — Test each orchestrator on a demo account for 1+ week
-3. **Start with RiskManage** — Always combine with risk management
+3. **Start with RiskManager** — Always combine with risk management
 4. **Monitor Performance** — Track metrics and adjust parameters
 5. **Graduate to Combinations** — Once comfortable, try multi-orchestrator setups
 6. **Consider Adaptive Preset** — For hands-off adaptive trading
@@ -952,11 +955,11 @@ if signal.Strength > 0.8 {
 
 ## Complete Documentation Links
 
-* [TrailingStopManage — Full Docs](11_Trailing_stop.md)
-* [PositionScale — Full Docs](12_Position_scaler.md)
-* [GridTrade — Full Docs](13_Grid_trader.md)
-* [RiskManage — Full Docs](14_Risk_manager.md)
-* [PortfolioRebalance — Full Docs](15_Portfolio_rebalancer.md)
+* [TrailingStopManager — Full Docs](11_Trailing_stop.md)
+* [PositionScaler — Full Docs](12_Position_scaler.md)
+* [GridTrader — Full Docs](13_Grid_trader.md)
+* [RiskManager — Full Docs](14_Risk_manager.md)
+* [PortfolioRebalancer — Full Docs](15_Portfolio_rebalancer.md)
 * [Adaptive Orchestrator Preset — Full Docs](16_AdaptiveOrchestratorPreset.md)
 
 

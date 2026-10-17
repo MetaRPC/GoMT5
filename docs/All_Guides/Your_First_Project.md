@@ -61,7 +61,7 @@ func main() {
 	}
 
 	// The API key is read from the MRPC_API_KEY environment variable; ConnectEx sets the terminal id.
-	account, err := mt5.NewMT5Account(login, password, grpcServer, uuid.Nil)
+	account, err := mt5.NewMT5Account(login, password, "mt5.mrpc.pro:443", uuid.Nil)
 	if err != nil {
 		log.Fatal(err)
 	}

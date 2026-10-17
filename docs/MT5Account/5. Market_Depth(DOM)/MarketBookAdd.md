@@ -56,7 +56,7 @@ func (a *MT5Account) MarketBookAdd(
 
 | Field     | Type   | Description                                              |
 | --------- | ------ | -------------------------------------------------------- |
-| `Success` | `bool` | `true` if subscription successful, `false` otherwise     |
+| `OpenedSuccessfully` | `bool` | `true` if subscription successful, `false` otherwise |
 
 ---
 
@@ -106,6 +106,7 @@ For a detailed line-by-line explanation with examples, see:
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -115,13 +116,17 @@ import (
 )
 
 func main() {
-    account := mt5.NewMT5Account("user", "password", "server:443")
-
-    err := account.Connect()
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
     if err != nil {
         panic(err)
     }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
@@ -134,7 +139,7 @@ func main() {
         panic(err)
     }
 
-    if result.Success {
+    if result.OpenedSuccessfully {
         fmt.Println("Successfully subscribed to EURUSD market depth")
     } else {
         fmt.Println("Failed to subscribe to market depth")
@@ -158,7 +163,7 @@ func SubscribeAndGetMarketBook(account *mt5.MT5Account, symbol string) {
         return
     }
 
-    if !subResult.Success {
+    if !subResult.OpenedSuccessfully {
         fmt.Println("Subscription failed")
         return
     }
@@ -174,14 +179,14 @@ func SubscribeAndGetMarketBook(account *mt5.MT5Account, symbol string) {
         return
     }
 
-    fmt.Printf("Order book has %d levels\n", len(bookData.Book))
-    for i, entry := range bookData.Book {
+    fmt.Printf("Order book has %d levels\n", len(bookData.MqlBookInfos))
+    for i, entry := range bookData.MqlBookInfos {
         bookType := "SELL"
         if entry.Type == pb.BookType_BOOK_TYPE_BUY {
             bookType = "BUY"
         }
         fmt.Printf("  Level %d: %s @ %.5f (Volume: %.2f)\n",
-            i+1, bookType, entry.Price, entry.VolumeDouble)
+            i+1, bookType, entry.Price, entry.VolumeReal)
     }
 
     // Clean up
@@ -209,7 +214,7 @@ func SubscribeToMultipleSymbols(account *mt5.MT5Account, symbols []string) {
             continue
         }
 
-        if result.Success {
+        if result.OpenedSuccessfully {
             fmt.Printf("%s: Subscribed\n", symbol)
             successCount++
         } else {
@@ -243,7 +248,7 @@ func SafeMarketBookSubscribe(account *mt5.MT5Account, symbol string) error {
         return fmt.Errorf("subscription failed: %w", err)
     }
 
-    if !result.Success {
+    if !result.OpenedSuccessfully {
         return fmt.Errorf("broker rejected subscription for %s (may not support Level II data)", symbol)
     }
 
@@ -267,7 +272,7 @@ func WithMarketBookSubscription(account *mt5.MT5Account, symbol string, fn func(
         return fmt.Errorf("subscription failed: %w", err)
     }
 
-    if !result.Success {
+    if !result.OpenedSuccessfully {
         return fmt.Errorf("subscription rejected for %s", symbol)
     }
 
@@ -312,7 +317,7 @@ func CheckMarketBookSupport(account *mt5.MT5Account, symbol string) bool {
         return false
     }
 
-    if !result.Success {
+    if !result.OpenedSuccessfully {
         fmt.Printf("%s: Level II data not supported by broker\n", symbol)
         return false
     }
@@ -344,7 +349,7 @@ func MonitorMarketDepth(account *mt5.MT5Account, symbol string, duration time.Du
         Symbol: symbol,
     })
 
-    if !result.Success {
+    if !result.OpenedSuccessfully {
         fmt.Println("Subscription failed")
         return
     }
@@ -372,11 +377,21 @@ func MonitorMarketDepth(account *mt5.MT5Account, symbol string, duration time.Du
             })
             cancel()
 
-            if err == nil && len(bookData.Book) > 0 {
+            if err == nil && len(bookData.MqlBookInfos) > 0 {
+                // Best bid = highest BUY level, best ask = lowest SELL level
+                bestBid, bestAsk := 0.0, 0.0
+                for _, level := range bookData.MqlBookInfos {
+                    if level.Type == pb.BookType_BOOK_TYPE_BUY && level.Price > bestBid {
+                        bestBid = level.Price
+                    }
+                    if level.Type == pb.BookType_BOOK_TYPE_SELL && (bestAsk == 0 || level.Price < bestAsk) {
+                        bestAsk = level.Price
+                    }
+                }
                 fmt.Printf("[%s] Best bid: %.5f, Best ask: %.5f\n",
                     time.Now().Format("15:04:05"),
-                    bookData.Book[0].Price,
-                    bookData.Book[len(bookData.Book)-1].Price)
+                    bestBid,
+                    bestAsk)
             }
 
         case <-timeout:

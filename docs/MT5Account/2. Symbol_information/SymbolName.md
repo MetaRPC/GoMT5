@@ -48,7 +48,7 @@ type MT5Account struct {
 }
 
 // SymbolName returns the name of a symbol by its position in the list.
-// Use Pos as zero-based index and Selected to choose between Market Watch or all symbols.
+// Use Index as zero-based index and Selected to choose between Market Watch or all symbols.
 func (a *MT5Account) SymbolName(
     ctx context.Context,
     req *pb.SymbolNameRequest,
@@ -59,8 +59,8 @@ func (a *MT5Account) SymbolName(
 
 ```protobuf
 SymbolNameRequest {
-  int64 Pos = 1;       // Zero-based position index
-  bool Selected = 2;   // true = Market Watch only, false = all symbols
+  int32 index = 1;     // Zero-based position index
+  bool selected = 2;   // true = Market Watch only, false = all symbols
 }
 ```
 
@@ -82,13 +82,13 @@ SymbolNameReply {
 | Parameter | Type                     | Description                                   |
 | --------- | ------------------------ | --------------------------------------------- |
 | `ctx`     | `context.Context`        | Context for deadline/timeout and cancellation |
-| `req`     | `*pb.SymbolNameRequest`  | Request with Pos and Selected flag            |
+| `req`     | `*pb.SymbolNameRequest`  | Request with Index and Selected flag          |
 
 **Request fields:**
 
 | Field      | Type    | Description                                                  |
 | ---------- | ------- | ------------------------------------------------------------ |
-| `Pos`      | `int64` | Zero-based position index (0 to SymbolsTotal-1)              |
+| `Index`    | `int32` | Zero-based position index (0 to SymbolsTotal-1)              |
 | `Selected` | `bool`  | `true` = Market Watch symbols only, `false` = all symbols    |
 
 ---
@@ -120,6 +120,7 @@ SymbolNameReply {
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -129,15 +130,24 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
 
     // Get first symbol from Market Watch
     data, err := account.SymbolName(ctx, &pb.SymbolNameRequest{
-        Pos:      0,
+        Index:    0,
         Selected: true,
     })
     if err != nil {
@@ -156,7 +166,7 @@ func GetMarketWatchSymbols(account *mt5.MT5Account) ([]string, error) {
 
     // Get total count first
     totalData, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{
-        Selected: true,
+        Mode: true,
     })
     if err != nil {
         return nil, err
@@ -166,9 +176,9 @@ func GetMarketWatchSymbols(account *mt5.MT5Account) ([]string, error) {
     symbols := make([]string, 0, totalData.Total)
 
     // Iterate through all symbols
-    for i := int64(0); i < totalData.Total; i++ {
+    for i := int32(0); i < totalData.Total; i++ {
         nameData, err := account.SymbolName(ctx, &pb.SymbolNameRequest{
-            Pos:      i,
+            Index:    i,
             Selected: true,
         })
         if err != nil {
@@ -189,7 +199,7 @@ func GetAllSymbols(account *mt5.MT5Account) ([]string, error) {
 
     // Get total count of all symbols
     totalData, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{
-        Selected: false,
+        Mode: false,
     })
     if err != nil {
         return nil, err
@@ -197,9 +207,9 @@ func GetAllSymbols(account *mt5.MT5Account) ([]string, error) {
 
     symbols := make([]string, 0, totalData.Total)
 
-    for i := int64(0); i < totalData.Total; i++ {
+    for i := int32(0); i < totalData.Total; i++ {
         nameData, err := account.SymbolName(ctx, &pb.SymbolNameRequest{
-            Pos:      i,
+            Index:    i,
             Selected: false,
         })
         if err != nil {
@@ -219,7 +229,7 @@ func GetSymbolsByPrefix(account *mt5.MT5Account, prefix string) ([]string, error
     ctx := context.Background()
 
     totalData, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{
-        Selected: false,
+        Mode: false,
     })
     if err != nil {
         return nil, err
@@ -227,9 +237,9 @@ func GetSymbolsByPrefix(account *mt5.MT5Account, prefix string) ([]string, error
 
     symbols := []string{}
 
-    for i := int64(0); i < totalData.Total; i++ {
+    for i := int32(0); i < totalData.Total; i++ {
         nameData, err := account.SymbolName(ctx, &pb.SymbolNameRequest{
-            Pos:      i,
+            Index:    i,
             Selected: false,
         })
         if err != nil {
@@ -252,13 +262,13 @@ func GetSymbolsByPrefix(account *mt5.MT5Account, prefix string) ([]string, error
 ### 5) Get symbol at specific position with validation
 
 ```go
-func GetSymbolAtPosition(account *mt5.MT5Account, position int64, marketWatchOnly bool) (string, error) {
+func GetSymbolAtPosition(account *mt5.MT5Account, position int32, marketWatchOnly bool) (string, error) {
     ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
     defer cancel()
 
     // Validate position bounds
     totalData, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{
-        Selected: marketWatchOnly,
+        Mode: marketWatchOnly,
     })
     if err != nil {
         return "", fmt.Errorf("failed to get total: %w", err)
@@ -270,7 +280,7 @@ func GetSymbolAtPosition(account *mt5.MT5Account, position int64, marketWatchOnl
 
     // Get symbol name
     nameData, err := account.SymbolName(ctx, &pb.SymbolNameRequest{
-        Pos:      position,
+        Index:    position,
         Selected: marketWatchOnly,
     })
     if err != nil {
@@ -292,7 +302,7 @@ func IterateAllSymbols(account *mt5.MT5Account) []string {
     ctx := context.Background()
 
     // Get count first
-    total, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{Selected: false})
+    total, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{Mode: false})
     if err != nil {
         return nil
     }
@@ -301,9 +311,9 @@ func IterateAllSymbols(account *mt5.MT5Account) []string {
     symbols := make([]string, 0, total.Total)
 
     // Fast iteration
-    for i := int64(0); i < total.Total; i++ {
+    for i := int32(0); i < total.Total; i++ {
         name, err := account.SymbolName(ctx, &pb.SymbolNameRequest{
-            Pos:      i,
+            Index:    i,
             Selected: false,
         })
         if err == nil {
@@ -321,7 +331,7 @@ func IterateAllSymbols(account *mt5.MT5Account) []string {
 func GetSymbolsParallel(account *mt5.MT5Account) []string {
     ctx := context.Background()
 
-    total, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{Selected: true})
+    total, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{Mode: true})
     if err != nil {
         return nil
     }
@@ -329,12 +339,12 @@ func GetSymbolsParallel(account *mt5.MT5Account) []string {
     symbols := make([]string, total.Total)
     var wg sync.WaitGroup
 
-    for i := int64(0); i < total.Total; i++ {
+    for i := int32(0); i < total.Total; i++ {
         wg.Add(1)
-        go func(pos int64) {
+        go func(pos int32) {
             defer wg.Done()
             name, err := account.SymbolName(ctx, &pb.SymbolNameRequest{
-                Pos:      pos,
+                Index:    pos,
                 Selected: true,
             })
             if err == nil {

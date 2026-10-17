@@ -123,8 +123,11 @@ The stream closes when:
 
 ```protobuf
 message OnPositionsAndPendingOrdersTicketsData {
-  repeated uint64 PendingOrderTickets = 1;
-  repeated uint64 PositionTickets = 2;
+  repeated uint64 position_tickets = 1;
+  repeated uint64 pending_order_tickets = 2;
+  google.protobuf.Timestamp server_time = 3;      // broker server time
+  google.protobuf.Timestamp server_time_utc = 5;  // server_time in UTC
+  string terminal_instance_guid_id = 4;
 }
 ```
 

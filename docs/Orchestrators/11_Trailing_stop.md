@@ -49,8 +49,10 @@ GetOpenPositions  GetPriceInfo  ModifyPositionSL
 | `ActivationProfit` | float64 | `300` | Profit in points needed to activate trailing |
 | `UpdateInterval` | time.Duration | `2s` | How often to check and update positions |
 | `Symbols` | []string | `[]` | Symbols to manage (empty = all symbols) |
-| `MinDistance` | float64 | `100` | Minimum distance from current price (safety) |
+| `MinDistance` | float64 | `100` | Declared "minimum distance from current price", but **not read by the current code** (no check uses it) |
 | `StepSize` | float64 | `50` | Minimum step size for SL adjustments (avoid excessive mods) |
+
+> **Point size:** all distances are in points, and the manager does not query the symbol's point size: `getSymbolPoint()` caches a hard-coded `0.00001` (5-digit symbol) for every symbol. The distances are therefore only correct for 5-digit symbols such as EURUSD.
 
 ### Configuration Example
 
@@ -84,7 +86,7 @@ go run main.go 11
 go run main.go trailing
 ```
 
-Both commands will launch the **TrailingStopManager** orchestrator with the configuration specified in `main.go -> RunOrchestrator_TrailingStop()`.
+Both commands will launch the **TrailingStopManager** orchestrator with the configuration specified in `main.go -> RunOrchestrator_TrailingStop()`. The runner connects with `mt5.NewMT5Sugar(...)` + `QuickConnect(...)`, runs the manager for 3 minutes (180 s) with a live progress line, then calls `Stop()` and prints the final metrics.
 
 ---
 
@@ -108,19 +110,21 @@ MONITORING LOOP (every UpdateInterval):
     | Get current price (Bid for BUY, Ask for SELL)
     | Calculate profit in points
     |
-    | Is profit >= ActivationProfit?
-      -> NO                       -> YES
-      Skip (not active)           Activate trailing
+    | Trailing not active yet and profit >= ActivationProfit?
+      -> YES: activate trailing (stays active for this position)
+    | Trailing active?
+      -> NO                       -> YES (same check, no extra cycle)
+      Skip (not active)           Calculate new SL:
+                                     | BUY:  newSL = currentPrice - TrailingDistance*point
+                                     | SELL: newSL = currentPrice + TrailingDistance*point
                                      |
-                                  Calculate new SL:
-                                     | BUY:  newSL = currentPrice - TrailingDistance
-                                     | SELL: newSL = currentPrice + TrailingDistance
-                                     |
-                                  Is new SL better than current SL?
+                                  Is new SL better than current SL (or current SL = 0)?
                                      | BUY:  newSL > currentSL?
                                      | SELL: newSL < currentSL?
                                      |
-                                  YES -> Modify position SL
+                                  YES -> Move >= StepSize*point (or current SL = 0)?
+                                           YES -> ModifyPositionSL
+                                           NO  -> Skip
                                   NO  -> Skip (don't move SL unfavorably)
   |
 Clean up trackers for closed positions
@@ -159,8 +163,8 @@ func NewTrailingStopManager(sugar *mt5.MT5Sugar, config TrailingStopConfig) *Tra
 
 - Creates new manager instance with provided configuration
 - Initializes empty tracker maps for positions and symbol parameters
-- Each position gets a dedicated tracker storing its state
-- Symbol parameters (digits, point value) are cached for efficiency
+- Each position gets a dedicated tracker storing its state (its first-seen SL is taken from `pos.StopLoss`)
+- The symbol maps are a cache filled by `getSymbolPoint()`, which stores a hard-coded point of `0.00001` (5 digits) for every symbol - it does not query the symbol
 
 #### 2. Starting the Manager
 
@@ -243,19 +247,21 @@ SL:           0 (no stop loss yet)
 Profit:       0 points
 Status:       Waiting for activation (need +300pts)
 
-TIME 1: Price Rises to 1.10300
+TIME 1: Price Rises to 1.10300 (Activation + First SL Update)
 
 Price:        1.10300
-SL:           0 -> unchanged
 Profit:       +300 points
 Status:       TRAILING ACTIVATED!
-              Next update will set SL
+Calculation:  newSL = 1.10300 - 0.00200 = 1.10100  (same check)
+SL:           0 -> 1.10100  UPDATED
+Locked:       +100 points guaranteed
 
-TIME 2: Price at 1.10400 (First SL Update)
+TIME 2: Price at 1.10400
 
 Price:        1.10400
 Calculation:  newSL = 1.10400 - 0.00200 = 1.10200
-SL:           0 -> 1.10200  UPDATED
+Step check:   1.10200 - 1.10100 = 100 points >= StepSize 50
+SL:           1.10100 -> 1.10200  UPDATED
 Profit:       +400 points
 Locked:       +200 points guaranteed
 
@@ -271,7 +277,7 @@ TIME 4: Price Drops to 1.10450
 
 Price:        1.10450
 Calculation:  newSL = 1.10450 - 0.00200 = 1.10250
-Check:        1.10250 < 1.10300? NO
+Check:        1.10250 > 1.10300? NO
 SL:           1.10300 -> unchanged (SL only moves UP for BUY)
 Profit:       +450 points (floating)
 Locked:       +300 points guaranteed
@@ -281,7 +287,7 @@ TIME 5: Price Reverses to 1.10300
 Price:        1.10300
 Event:        STOP LOSS TRIGGERED @ 1.10300
 Position:     CLOSED
-Final Profit: +300 points = $30 (for 0.01 lots)
+Final Profit: +300 points = $3 (for 0.01 lots EURUSD)
 Result:       Profit protected from reversal!
 
 WITHOUT TRAILING STOP:
@@ -295,7 +301,7 @@ WITH TRAILING STOP:
 Price reached 1.10500 (+500pts)
 Trailing activated, SL moved to 1.10300
 Price reversed, stopped out at 1.10300
-Final result: +300pts = $30 profit LOCKED IN
+Final result: +300pts = $3 profit LOCKED IN (0.01 lots)
 ```
 
 ---
@@ -320,7 +326,7 @@ func (s *MT5Sugar) GetOpenPositions() ([]*pb.PositionInfo, error)
 ### 2. GetPriceInfo
 
 ```go
-func (s *MT5Sugar) GetPriceInfo(symbol string) (*mt5.PriceInfo, error)
+func (s *MT5Sugar) GetPriceInfo(symbol string) (*PriceInfo, error)
 ```
 
 **Purpose**: Gets current Bid/Ask prices for a symbol.
@@ -331,25 +337,25 @@ func (s *MT5Sugar) GetPriceInfo(symbol string) (*mt5.PriceInfo, error)
 - SELL positions use Ask price (exit price)
 - Used to calculate profit in points and new trailing SL
 
-**Returns**: PriceInfo with Bid, Ask, and other quote data
+**Returns**: `mt5.PriceInfo{Symbol, Bid, Ask, SpreadPips, Time}` (3 s timeout)
 
 ### 3. ModifyPositionSL
 
 ```go
-func (s *MT5Sugar) ModifyPositionSL(ticket uint64, newSL float64) error
+func (s *MT5Sugar) ModifyPositionSL(ticket uint64, sl float64) error
 ```
 
-**Purpose**: Modifies only the stop loss for an existing position (keeps TP unchanged).
+**Purpose**: Modifies only the stop loss for an existing position: it sends an `OrderModifyRequest` with only `Ticket` and `StopLoss` set (`TakeProfit` is not sent). 10 s timeout; error unless the return code is 10009.
 
 **Usage in TrailingStopManager**:
 - Called when new calculated SL is more favorable than current
 - Updates stop loss on MT5 server
-- Preserves existing take profit settings
+- Does not send a take profit value
 - Core method for implementing trailing logic
 
 **Parameters**:
 - `ticket`: Position ticket number
-- `newSL`: New stop loss price
+- `sl`: New stop loss price (sent as given, not rounded)
 
 ---
 
@@ -379,7 +385,7 @@ func (s *MT5Sugar) ModifyPositionSL(ticket uint64, newSL float64) error
 1. **Premature Exits**:
    - Too tight TrailingDistance -> stopped out on normal volatility
    - **Solution**: Match TrailingDistance to symbol's ATR
-   - Example: EURUSD 200pts, XAUUSD 500pts
+   - Example: EURUSD 200pts (note: the point size is hard-coded to 0.00001, so non-5-digit symbols such as XAUUSD need a code change first)
 
 2. **Late Activation**:
    - Too high ActivationProfit -> miss protection on smaller winners
@@ -405,7 +411,7 @@ func (s *MT5Sugar) ModifyPositionSL(ticket uint64, newSL float64) error
 ```go
 TrailingDistance: 200,   // Wide buffer to avoid premature exits
 ActivationProfit: 300,   // Wait for solid profit before activating
-UpdateInterval:   2s
+UpdateInterval:   2 * time.Second,
 ```
 
 ### Aggressive (Tighter Trailing)
@@ -413,7 +419,7 @@ UpdateInterval:   2s
 ```go
 TrailingDistance: 100,   // Closer trailing = higher risk/reward
 ActivationProfit: 150,   // Activate sooner
-UpdateInterval:   1s     // More frequent checks
+UpdateInterval:   1 * time.Second,        // More frequent checks
 ```
 
 ### Scalping (Very Tight)
@@ -421,7 +427,7 @@ UpdateInterval:   1s     // More frequent checks
 ```go
 TrailingDistance: 50,    // Very tight trailing for quick exits
 ActivationProfit: 100,   // Activate on small profits
-UpdateInterval:   500ms  // Near real-time monitoring
+UpdateInterval:   500 * time.Millisecond, // Near real-time monitoring
 ```
 
 ---

@@ -110,7 +110,9 @@ fmt.Printf("Equity:          $%.2f\n", equity)
 fmt.Printf("Margin Used:     $%.2f\n", margin)
 fmt.Printf("Margin Level:    %.2f%%\n", marginLevel)
 
-if marginLevel < 200 {
+if margin == 0 {
+    fmt.Println("✅ No margin used (margin level is reported as 0)")
+} else if marginLevel < 200 {
     fmt.Println("⚠️  WARNING: Low margin level!")
 } else {
     fmt.Println("✅ Margin level healthy")

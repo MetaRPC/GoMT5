@@ -1,13 +1,13 @@
 # 🏓 Ping MT5 Server (`Ping`)
 
-> **Sugar method:** Sends a ping to MT5 server to verify connection health and measure response time.
+> **Sugar method:** Asks the server for the terminal's health check (`CheckConnect`) and reports why the connection is not healthy.
 
 **API Information:**
 
 * **Method:** `sugar.Ping()`
 * **Package:** `mt5` (MT5Sugar)
-* **Underlying calls:** `account.Ping()`
-* **Timeout:** 5 seconds
+* **Underlying calls:** `account.CheckConnect()` - checks `HealthCheck.IsAlive` in the reply
+* **Timeout:** 3 seconds
 
 ---
 
@@ -56,8 +56,8 @@ Use it for detailed connection testing:
 ## 🧩 Notes & Tips
 
 * **Returns error** - `nil` = success, error = problem
-* **5-second timeout** - Fails if no response
-* **Lighter than IsConnected** - Just pings, no extra checks
+* **3-second timeout** - Fails if no response
+* **Same call as IsConnected** - Both send one `CheckConnect`; `Ping` returns the reason as an error instead of `false`
 * **Use for diagnostics** - Better than IsConnected for troubleshooting
 * **Measure latency** - Time the call to measure round-trip
 * **Network issues** - Detects network problems quickly
@@ -68,17 +68,27 @@ Use it for detailed connection testing:
 
 ```go
 func (s *MT5Sugar) Ping() error {
-    ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
+    ctx, cancel := context.WithTimeout(s.ctx, 3*time.Second)
     defer cancel()
 
-    return s.account.Ping(ctx)
+    data, err := s.GetAccount().CheckConnect(ctx, &pb.CheckConnectRequest{})
+    if err != nil {
+        return fmt.Errorf("ping failed: %w", err)
+    }
+
+    if data.HealthCheck == nil || !data.HealthCheck.IsAlive {
+        return fmt.Errorf("not connected to MT5 terminal")
+    }
+
+    return nil
 }
 ```
 
 **What it does:**
 
-* ✅ **Simple ping** - Sends ping, waits for pong
-* ✅ **5-second timeout** - Doesn't hang forever
+* ✅ **Health check** - One `CheckConnect` round trip
+* ✅ **3-second timeout** - Doesn't hang forever
+* ✅ **Two error kinds** - `"ping failed: ..."` (the call failed or timed out) or `"not connected to MT5 terminal"` (the server answered, terminal not alive)
 * ✅ **Clean error** - nil = OK, error = problem
 
 ---
@@ -87,10 +97,13 @@ func (s *MT5Sugar) Ping() error {
 
 **WITHOUT sugar:**
 ```go
-ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 defer cancel()
 
-err := account.Ping(ctx)
+data, err := account.CheckConnect(ctx, &pb.CheckConnectRequest{})
+if err == nil && (data.HealthCheck == nil || !data.HealthCheck.IsAlive) {
+    err = fmt.Errorf("not connected to MT5 terminal")
+}
 ```
 
 **WITH sugar:**
@@ -492,7 +505,7 @@ DiagnoseConnection(sugar)
 
 ```go
 // 1. Check with IsConnected
-connected, _ := sugar.IsConnected()
+connected := sugar.IsConnected()
 
 // 2. If issues, use Ping for details
 if !connected {
@@ -522,12 +535,12 @@ if sugar.Ping() == nil {
 ### 2) Not handling timeout
 
 ```go
-// ❌ WRONG - might hang for 5 seconds
-sugar.Ping() // Blocked for up to 5 seconds!
+// ❌ WRONG - might block for 3 seconds
+sugar.Ping() // Blocked for up to 3 seconds!
 
 // ✅ CORRECT - be aware of timeout
 fmt.Println("Pinging...")
-err := sugar.Ping() // Max 5 seconds
+err := sugar.Ping() // Max 3 seconds
 if err != nil {
     fmt.Println("Ping failed or timed out")
 }

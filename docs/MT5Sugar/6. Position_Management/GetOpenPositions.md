@@ -5,16 +5,24 @@
 **API Information:**
 
 * **Method:** `sugar.GetOpenPositions()`
-* **Timeout:** 3 seconds
-* **Returns:** Slice of `*PositionInfo` structures
+* **Timeout:** 5 seconds
+* **Returns:** Slice of `*pb.PositionInfo` structures, sorted by open time (oldest first)
 
 ---
 
 ## 📋 Method Signature
 
 ```go
-func (s *MT5Sugar) GetOpenPositions() ([]*PositionInfo, error)
+func (s *MT5Sugar) GetOpenPositions() ([]*pb.PositionInfo, error)
 ```
+
+It calls `MT5Service.GetOpenedOrders(ctx, pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC)`
+and returns only its `PositionInfos` - pending orders (`OpenedOrders`) are not included.
+For pending orders use `sugar.GetService().GetOpenedOrders(ctx, sortType)` and read `.OpenedOrders`.
+
+Useful `pb.PositionInfo` fields: `Ticket`, `Symbol`, `Type` (`pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY` /
+`..._SELL`), `Volume`, `PriceOpen`, `PriceCurrent`, `StopLoss`, `TakeProfit`, `Profit`, `Swap`, `PositionCommission`,
+`MagicNumber`, `Comment`, `OpenTime` (`*timestamppb.Timestamp`, broker server time) and `OpenTimeUtc` (the same moment in UTC).
 
 ---
 
@@ -26,8 +34,8 @@ func (s *MT5Sugar) GetOpenPositions() ([]*PositionInfo, error)
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `[]*PositionInfo` | slice | All open positions |
-| `error` | `error` | Error if retrieval failed |
+| `[]*pb.PositionInfo` | slice | All open positions |
+| `error` | `error` | `"GetOpenPositions failed: ..."` if retrieval failed |
 
 ---
 
@@ -35,7 +43,7 @@ func (s *MT5Sugar) GetOpenPositions() ([]*PositionInfo, error)
 
 * **What it is:** Get complete list of all open positions.
 * **Why you need it:** Dashboard, P/L tracking, risk monitoring, batch operations.
-* **Sanity check:** Returns empty slice if no positions. Never returns nil.
+* **Sanity check:** With no positions the slice is empty and may be `nil` - check `len(positions)`, not `positions == nil`. On error the slice is `nil`.
 
 ---
 
@@ -70,6 +78,7 @@ if len(positions) == 0 {
 fmt.Printf("Open positions: %d\n\n", len(positions))
 
 for _, pos := range positions {
+    // pos.Type prints as BMT5_POSITION_TYPE_BUY / BMT5_POSITION_TYPE_SELL
     fmt.Printf("#%d: %s %s %.2f lots - $%.2f\n",
         pos.Ticket, pos.Symbol, pos.Type, pos.Volume, pos.Profit)
 }
@@ -93,7 +102,7 @@ totalSwap := 0.0
 
 for _, pos := range positions {
     totalProfit += pos.Profit
-    totalCommission += pos.Commission
+    totalCommission += pos.PositionCommission
     totalSwap += pos.Swap
 }
 
@@ -118,7 +127,7 @@ fmt.Printf("Net P/L:     $%.2f\n", netProfit)
 positions, _ := sugar.GetOpenPositions()
 
 // Group positions by symbol
-symbolMap := make(map[string][]*PositionInfo)
+symbolMap := make(map[string][]*pb.PositionInfo)
 
 for _, pos := range positions {
     symbolMap[pos.Symbol] = append(symbolMap[pos.Symbol], pos)
@@ -154,7 +163,7 @@ buyProfit := 0.0
 sellProfit := 0.0
 
 for _, pos := range positions {
-    if pos.Type == "BUY" {
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
         buyCount++
         buyProfit += pos.Profit
     } else {
@@ -180,7 +189,7 @@ if len(positions) == 0 {
     return
 }
 
-var largestWin, largestLoss *PositionInfo
+var largestWin, largestLoss *pb.PositionInfo
 
 for _, pos := range positions {
     if pos.Profit > 0 {
@@ -212,7 +221,7 @@ if largestLoss != nil {
 ```go
 positions, _ := sugar.GetOpenPositions()
 
-unprotected := []*PositionInfo{}
+unprotected := []*pb.PositionInfo{}
 
 for _, pos := range positions {
     if pos.StopLoss == 0 || pos.TakeProfit == 0 {
@@ -296,7 +305,7 @@ for _, pos := range positions {
     if pos.StopLoss > 0 {
         // Calculate potential loss if SL hit
         var riskPips float64
-        if pos.Type == "BUY" {
+        if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
             riskPips = (pos.PriceOpen - pos.StopLoss) / 0.00001
         } else {
             riskPips = (pos.StopLoss - pos.PriceOpen) / 0.00001
@@ -369,7 +378,8 @@ func AnalyzePositions(sugar *mt5.MT5Sugar) {
     totalProfit := 0.0
     winningCount := 0
     losingCount := 0
-    oldestTime := positions[0].TimeOpen
+    // positions are sorted by open time, so positions[0] is the oldest
+    oldestTime := positions[0].OpenTimeUtc.AsTime()
 
     for _, pos := range positions {
         totalVolume += pos.Volume
@@ -379,10 +389,6 @@ func AnalyzePositions(sugar *mt5.MT5Sugar) {
             winningCount++
         } else if pos.Profit < 0 {
             losingCount++
-        }
-
-        if pos.TimeOpen.Before(oldestTime) {
-            oldestTime = pos.TimeOpen
         }
     }
 
@@ -434,7 +440,9 @@ AnalyzePositions(sugar)
 **🍬 Batch operations:**
 
 * `CloseAllPositions()` - Close all positions
-* `GetProfit()` - Total P/L (faster than summing manually)
+* `GetTotalProfit()` - Sum of `Profit` over all open positions
+* `GetProfit()` - Account floating profit (`ACCOUNT_PROFIT`)
+* `CountOpenPositions()` - Number of open positions without fetching them
 
 ---
 
@@ -454,22 +462,21 @@ if len(positions) > 0 {
 }
 ```
 
-### 2) Modifying while iterating
+### 2) Treating the slice as live data
 
 ```go
-// ❌ WRONG - modifying positions during iteration
+// ❌ WRONG - the slice is a snapshot; it does not change when positions close
 for _, pos := range positions {
-    sugar.ClosePosition(pos.Ticket) // Slice changes during loop!
+    sugar.ClosePosition(pos.Ticket)
 }
+fmt.Printf("%d positions left\n", len(positions)) // still the old count!
 
-// ✅ CORRECT - collect tickets first
-tickets := []uint64{}
+// ✅ CORRECT - fetch again to see the current state
 for _, pos := range positions {
-    tickets = append(tickets, pos.Ticket)
+    sugar.ClosePosition(pos.Ticket)
 }
-for _, ticket := range tickets {
-    sugar.ClosePosition(ticket)
-}
+remaining, _ := sugar.GetOpenPositions()
+fmt.Printf("%d positions left\n", len(remaining))
 ```
 
 ### 3) Not handling errors
@@ -492,13 +499,13 @@ if err != nil {
 
 1. **Cache results** - Don't call repeatedly in tight loops
 
-2. **Filter efficiently** - Use GetPositionsBySymbol() for specific symbols
+2. **Filter conveniently** - GetPositionsBySymbol() filters the same list client-side for one symbol
 
 3. **Check length** - Always verify slice isn't empty
 
 4. **Real-time updates** - Refresh every 2-5 seconds for dashboards
 
-5. **Batch operations** - Collect tickets before modifying/closing
+5. **Batch operations** - Re-fetch after closing/modifying; the returned slice is a snapshot
 
 ---
 

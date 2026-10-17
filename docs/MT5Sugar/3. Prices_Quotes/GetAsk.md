@@ -7,6 +7,7 @@
 * **Method:** `sugar.GetAsk(symbol)`
 * **Timeout:** 3 seconds
 * **Returns:** ASK price as `float64`
+* **Underlying call:** `service.GetSymbolTick(ctx, symbol)` (`SymbolInfoTick`), returns `tick.Ask`
 
 ---
 
@@ -35,7 +36,7 @@ func (s *MT5Sugar) GetAsk(symbol string) (float64, error)
 
 * **What it is:** Current ASK price - the price you pay when **BUYING**.
 * **Why you need it:** Know exact entry price for BUY orders, calculate SL/TP levels.
-* **Sanity check:** ASK > BID (always higher than bid price).
+* **Sanity check:** ASK ≥ BID (equal only on a zero spread).
 
 ---
 
@@ -96,15 +97,16 @@ ask, _ := sugar.GetAsk(symbol)
 info, _ := sugar.GetSymbolInfo(symbol)
 
 // Calculate SL/TP (BUY: SL below, TP above)
-sl := ask - (50 * info.Point)  // 50 pips below entry
-tp := ask + (100 * info.Point) // 100 pips above entry
+sl := ask - (50 * info.Point)  // 50 points below entry
+tp := ask + (100 * info.Point) // 100 points above entry
 
 fmt.Printf("Entry (ASK):    %.5f\n", ask)
-fmt.Printf("Stop Loss:      %.5f (-50 pips)\n", sl)
-fmt.Printf("Take Profit:    %.5f (+100 pips)\n", tp)
+fmt.Printf("Stop Loss:      %.5f (-50 points)\n", sl)
+fmt.Printf("Take Profit:    %.5f (+100 points)\n", tp)
 
-// Better: use CalculateSLTP helper
+// Same result with the CalculateSLTP helper (its distances are points too)
 sl2, tp2, _ := sugar.CalculateSLTP(symbol, "BUY", ask, 50, 100)
+fmt.Printf("CalculateSLTP:  SL %.5f, TP %.5f\n", sl2, tp2)
 ```
 
 ---
@@ -119,18 +121,18 @@ ask, _ := sugar.GetAsk(symbol)
 info, _ := sugar.GetSymbolInfo(symbol)
 
 spreadInPrice := ask - bid
-spreadInPips := spreadInPrice / info.Point
+spreadInPoints := spreadInPrice / info.Point
 
 fmt.Printf("Symbol: %s\n", symbol)
 fmt.Printf("BID:    %.5f\n", bid)
 fmt.Printf("ASK:    %.5f\n", ask)
-fmt.Printf("Spread: %.5f (%.0f pips)\n", spreadInPrice, spreadInPips)
+fmt.Printf("Spread: %.5f (%.0f points)\n", spreadInPrice, spreadInPoints)
 
 // Output:
 // Symbol: EURUSD
 // BID:    1.08450
 // ASK:    1.08460
-// Spread: 0.00010 (10 pips)
+// Spread: 0.00010 (10 points)
 ```
 
 ---
@@ -215,19 +217,19 @@ fmt.Printf("Position Value: $%.2f\n", positionValue)
 
 ```go
 symbol := "EURUSD"
-maxAcceptableSpreadPips := 15.0
+maxAcceptableSpreadPoints := 15.0
 
 bid, _ := sugar.GetBid(symbol)
 ask, _ := sugar.GetAsk(symbol)
 info, _ := sugar.GetSymbolInfo(symbol)
 
-spreadPips := (ask - bid) / info.Point
+spreadPoints := (ask - bid) / info.Point
 
-fmt.Printf("%s Spread: %.0f pips\n", symbol, spreadPips)
+fmt.Printf("%s Spread: %.0f points\n", symbol, spreadPoints)
 
-if spreadPips > maxAcceptableSpreadPips {
-    fmt.Printf("❌ Spread too high (%.0f > %.0f pips)\n",
-        spreadPips, maxAcceptableSpreadPips)
+if spreadPoints > maxAcceptableSpreadPoints {
+    fmt.Printf("❌ Spread too high (%.0f > %.0f points)\n",
+        spreadPoints, maxAcceptableSpreadPoints)
     fmt.Println("   Not trading right now")
 } else {
     fmt.Println("✅ Spread acceptable - safe to trade")
@@ -296,10 +298,10 @@ for range ticker.C {
         ask, _ := sugar.GetAsk(symbol)
         info, _ := sugar.GetSymbolInfo(symbol)
 
-        spreadPips := (ask - bid) / info.Point
+        spreadPoints := (ask - bid) / info.Point
 
-        fmt.Printf("%-10s  %-12.5f  %-12.5f  %.0f pips\n",
-            symbol, bid, ask, spreadPips)
+        fmt.Printf("%-10s  %-12.5f  %-12.5f  %.0f points\n",
+            symbol, bid, ask, spreadPoints)
     }
 }
 ```
@@ -349,8 +351,8 @@ fmt.Printf("Entry cost includes %.5f spread\n", spread)
 ## 💎 Pro Tips
 
 1. **ASK = BUY price** - Remember: ASK is always for buying
-2. **Use GetPriceInfo()** - Get BID + ASK + spread in one call
-3. **ASK > BID** - ASK is always higher (you pay the spread)
+2. **Use GetPriceInfo()** - Get BID + ASK + spread (in points) from one method
+3. **ASK ≥ BID** - ASK is higher by the spread (you pay the spread)
 4. **Check spread first** - High spread = bad time to trade
 5. **Price volatility** - ASK changes constantly during market hours
 

@@ -7,6 +7,7 @@
 * **Method:** `sugar.ClosePosition(ticket)`
 * **Timeout:** 10 seconds
 * **Returns:** Error if close failed
+* **Request:** `pb.OrderCloseRequest{Ticket: ticket}` sent via `MT5Service.CloseOrder` (MT5 `OrderClose`)
 
 ---
 
@@ -26,7 +27,7 @@ func (s *MT5Sugar) ClosePosition(ticket uint64) error
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `error` | `error` | `nil` if successful, error if failed |
+| `error` | `error` | `nil` when the server returns code 10009 (done); `"ClosePosition failed: ..."` if the call fails; `"close rejected, code: N"` for any other return code |
 
 ---
 
@@ -34,7 +35,7 @@ func (s *MT5Sugar) ClosePosition(ticket uint64) error
 
 * **What it is:** Closes entire position immediately at current market price.
 * **Why you need it:** Exit trades manually, cut losses, take profits.
-* **Sanity check:** Position must exist and be open. Returns error if position not found.
+* **Sanity check:** Position must exist and be open. The method does not look the ticket up first - an unknown ticket is reported by the server as a call error or a non-10009 return code.
 
 ---
 
@@ -230,22 +231,23 @@ if len(positions) == 0 {
     return
 }
 
-// Find oldest position
-var oldest *PositionInfo
+// Find oldest position (GetOpenPositions already sorts by open time, oldest first)
+var oldest *pb.PositionInfo
 for _, pos := range positions {
-    if oldest == nil || pos.TimeOpen.Before(oldest.TimeOpen) {
+    if oldest == nil || pos.OpenTimeUtc.AsTime().Before(oldest.OpenTimeUtc.AsTime()) {
         oldest = pos
     }
 }
 
-fmt.Printf("Closing oldest position #%d (opened: %s)\n",
-    oldest.Ticket, oldest.TimeOpen.Format("2006-01-02 15:04:05"))
+// OpenTime is broker server time, OpenTimeUtc the same moment in UTC
+fmt.Printf("Closing oldest position #%d (opened: %s broker time)\n",
+    oldest.Ticket, oldest.OpenTime.AsTime().Format("2006-01-02 15:04:05"))
 
 err := sugar.ClosePosition(oldest.Ticket)
 if err != nil {
     fmt.Printf("Close failed: %v\n", err)
 } else {
-    fmt.Printf("✅ Closed - held for %v\n", time.Since(oldest.TimeOpen).Round(time.Minute))
+    fmt.Printf("✅ Closed - held for %v\n", time.Since(oldest.OpenTimeUtc.AsTime()).Round(time.Minute))
 }
 ```
 
@@ -319,16 +321,16 @@ func ClosePositionWithAnalysis(sugar *mt5.MT5Sugar, ticket uint64) error {
 
     fmt.Printf("Position #%d:\n", ticket)
     fmt.Printf("  Symbol:    %s\n", pos.Symbol)
-    fmt.Printf("  Type:      %s\n", pos.Type)
+    fmt.Printf("  Type:      %s\n", pos.Type) // e.g. BMT5_POSITION_TYPE_BUY
     fmt.Printf("  Volume:    %.2f lots\n", pos.Volume)
     fmt.Printf("  Open:      %.5f\n", pos.PriceOpen)
     fmt.Printf("  Current:   %.5f\n", pos.PriceCurrent)
     fmt.Printf("  Profit:    $%.2f\n", pos.Profit)
-    fmt.Printf("  Duration:  %v\n", time.Since(pos.TimeOpen).Round(time.Minute))
+    fmt.Printf("  Duration:  %v\n", time.Since(pos.OpenTimeUtc.AsTime()).Round(time.Minute))
 
     // Calculate metrics
     var pips float64
-    if pos.Type == "BUY" {
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
         pips = (pos.PriceCurrent - pos.PriceOpen) / 0.00001
     } else {
         pips = (pos.PriceOpen - pos.PriceCurrent) / 0.00001
@@ -361,6 +363,7 @@ ClosePositionWithAnalysis(sugar, 12345)
 
 * `ClosePositionPartial()` - Close only part of position
 * `CloseAllPositions()` - Close all positions at once
+* `CloseAllBySymbol()` - Close all positions of one symbol
 
 **🍬 Position info:**
 
@@ -378,7 +381,7 @@ ClosePositionWithAnalysis(sugar, 12345)
 sugar.ClosePosition(12345) // Might not exist!
 
 // ✅ CORRECT - check first
-pos, err := sugar.GetPositionByTicket(12345)
+_, err := sugar.GetPositionByTicket(12345)
 if err != nil {
     fmt.Println("Position doesn't exist")
     return

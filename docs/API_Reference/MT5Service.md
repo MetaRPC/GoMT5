@@ -9,6 +9,7 @@ MT5Service is the mid-level API wrapper that bridges MT5Account (low-level gRPC)
 ### 🏗️ Constructor & Utilities
 - [NewMT5Service](#newmt5service)
 - [GetAccount](#getaccount)
+- [Disconnect](#disconnect)
 
 ### 💰 Account Information
 - [GetAccountSummary](#getaccountsummary)
@@ -72,14 +73,16 @@ Creates a new MT5Service wrapping an MT5Account instance. This is the main entry
 
 **Signature**
 ```go
-func NewMT5Service(account *MT5Account) *MT5Service
+func NewMT5Service(account *helpers.MT5Account) *MT5Service
 ```
+
+`helpers` is `github.com/MetaRPC/GoMT5/package/Helpers` (create the account with `helpers.NewMT5Account(user, password, grpcServer, uuid.New())` and connect it with `ConnectEx`). MT5Service itself is in `examples/mt5` (package `mt5`, import `github.com/MetaRPC/GoMT5/examples/mt5`) of the repository's examples module - you get it by cloning the repository.
 
 **Parameters**
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| account | *MT5Account | MT5Account instance (low-level gRPC client) |
+| account | *helpers.MT5Account | MT5Account instance (low-level gRPC client) |
 
 **Returns**
 
@@ -93,12 +96,27 @@ Returns the underlying MT5Account for direct low-level access. Use this when you
 
 **Signature**
 ```go
-func (s *MT5Service) GetAccount() *MT5Account
+func (s *MT5Service) GetAccount() *helpers.MT5Account
 ```
 
 **Returns**
 
-Returns `*MT5Account` instance used by this service.
+Returns `*helpers.MT5Account` instance used by this service.
+
+---
+
+## Disconnect
+
+Gracefully disconnects from the MT5 terminal and closes the gRPC connection (calls `MT5Account.DisconnectAndClose`). If `deleteOnDisconnect` is `true`, the terminal instance is deleted instead of stopped.
+
+**Signature**
+```go
+func (s *MT5Service) Disconnect(deleteOnDisconnect ...bool) error
+```
+
+**Returns**
+
+Returns error from the Disconnect RPC or from closing the connection; nil on a nil service.
 
 ---
 
@@ -121,7 +139,7 @@ func (s *MT5Service) GetAccountSummary(ctx context.Context) (*AccountSummary, er
 
 **Returns**
 
-Returns `*AccountSummary` struct with all account properties (Login, Balance, Equity, UserName, Leverage, TradeMode, CompanyName, Currency, ServerTime, UtcTimezoneShift, Credit) using Go native types with automatic time conversion, or error if request fails.
+Returns `*AccountSummary` struct with all account properties (Login, Balance, Equity, UserName, Leverage, TradeMode, CompanyName, Currency, ServerTime, UtcTimezoneShiftMinutes, Credit) using Go native types with automatic time conversion, or error if request fails.
 
 ---
 
@@ -323,7 +341,7 @@ func (s *MT5Service) GetSymbolTick(ctx context.Context, symbol string) (*SymbolT
 
 **Returns**
 
-Returns `*SymbolTick` struct with current tick data (Bid, Ask, Last, Volume, Time, Spread), or error if symbol not found or request fails.
+Returns `*SymbolTick` struct with current tick data (Time, Bid, Ask, Last, Volume, TimeMS, Flags, VolumeReal), or error if symbol not found or request fails.
 
 ---
 
@@ -342,7 +360,7 @@ func (s *MT5Service) GetSymbolDouble(ctx context.Context, symbol string, propert
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
 | symbol | string | Symbol name (e.g., "EURUSD") |
-| property | pb.SymbolInfoDoubleProperty | Property ID enum (BID, ASK, POINT, VOLUME_MIN, VOLUME_MAX, VOLUME_STEP, TRADE_TICK_SIZE, etc.) |
+| property | pb.SymbolInfoDoubleProperty | Property ID enum (SYMBOL_BID, SYMBOL_ASK, SYMBOL_POINT, SYMBOL_VOLUME_MIN, SYMBOL_VOLUME_MAX, SYMBOL_VOLUME_STEP, SYMBOL_TRADE_TICK_SIZE, etc.) |
 
 **Returns**
 
@@ -365,7 +383,7 @@ func (s *MT5Service) GetSymbolInteger(ctx context.Context, symbol string, proper
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
 | symbol | string | Symbol name (e.g., "EURUSD") |
-| property | pb.SymbolInfoIntegerProperty | Property ID enum (DIGITS, SPREAD, STOPS_LEVEL, FREEZE_LEVEL, TRADE_MODE, TRADE_EXECUTION_MODE, etc.) |
+| property | pb.SymbolInfoIntegerProperty | Property ID enum (SYMBOL_DIGITS, SYMBOL_SPREAD, SYMBOL_TRADE_STOPS_LEVEL, SYMBOL_TRADE_FREEZE_LEVEL, SYMBOL_TRADE_MODE, SYMBOL_TRADE_EXEMODE, etc.) |
 
 **Returns**
 
@@ -388,7 +406,7 @@ func (s *MT5Service) GetSymbolString(ctx context.Context, symbol string, propert
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
 | symbol | string | Symbol name (e.g., "EURUSD") |
-| property | pb.SymbolInfoStringProperty | Property ID enum (DESCRIPTION, CURRENCY_BASE, CURRENCY_PROFIT, CURRENCY_MARGIN, PATH, etc.) |
+| property | pb.SymbolInfoStringProperty | Property ID enum (SYMBOL_DESCRIPTION, SYMBOL_CURRENCY_BASE, SYMBOL_CURRENCY_PROFIT, SYMBOL_CURRENCY_MARGIN, SYMBOL_PATH, etc.) |
 
 **Returns**
 
@@ -768,7 +786,7 @@ func (s *MT5Service) PlaceOrder(ctx context.Context, req *pb.OrderSendRequest) (
 
 **Returns**
 
-Returns `*OrderResult` struct with execution details (Ticket, Price, Volume, ReturnedCode, Comment), or error if request fails.
+Returns `*OrderResult` struct with execution details (ReturnedCode, Deal, Order, Volume, Price, Bid, Ask, Comment, RequestID, RetCodeExternal), or error if request fails.
 
 ---
 
@@ -786,7 +804,7 @@ func (s *MT5Service) ModifyOrder(ctx context.Context, req *pb.OrderModifyRequest
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.OrderModifyRequest | Request with Ticket, Price (for pending orders), StopLoss, TakeProfit, and optional Expiration |
+| req | *pb.OrderModifyRequest | Request with Ticket, Price and StopLimit (for pending orders), StopLoss, TakeProfit, and optional ExpirationTimeType/ExpirationTime (all values except Ticket are pointers) |
 
 **Returns**
 
@@ -842,7 +860,7 @@ Returns read-only channel of `*SymbolTick` structs with tick data, and read-only
 
 ## StreamPositionProfits
 
-Streams real-time profit/loss updates for open positions. Provides P&L updates as market moves, new positions opened, positions modified, and positions closed. The channels close when streaming stops.
+Streams real-time profit/loss updates for open positions. Each update lists new positions (`NewPositions`), positions whose profit changed (`UpdatedPositions`), closed positions (`DeletedPositions`) and the account totals (`AccountInfo`). The channels close when streaming stops.
 
 **Signature**
 ```go
