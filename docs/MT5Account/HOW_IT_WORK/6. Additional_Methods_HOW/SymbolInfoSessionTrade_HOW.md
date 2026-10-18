@@ -20,14 +20,14 @@ if err != nil {
     helpers.PrintShortError(err, "SymbolInfoSessionTrade failed")
 } else {
     fmt.Printf("  Monday trade session #0:\n")
-    if tradeSessionData.From != nil {
-        fromTime := tradeSessionData.From.AsTime()
-        fromSeconds := fromTime.Hour()*3600 + fromTime.Minute()*60 + fromTime.Second()
+    // From and To are *timestamppb.Timestamp holding a time of day (broker server time); their date is not meaningful.
+    // Count the seconds from the start of From's day: a session that runs to midnight ends at 24:00 = 86400
+    // (To is then the next day's 00:00, which Hour()/Minute() alone would show as 0).
+    if tradeSessionData.From != nil && tradeSessionData.To != nil {
+        dayStart := tradeSessionData.From.AsTime().Truncate(24 * time.Hour)
+        fromSeconds := int64(tradeSessionData.From.AsTime().Sub(dayStart).Seconds())
+        toSeconds := int64(tradeSessionData.To.AsTime().Sub(dayStart).Seconds())
         fmt.Printf("    From (seconds from day start): %d\n", fromSeconds)
-    }
-    if tradeSessionData.To != nil {
-        toTime := tradeSessionData.To.AsTime()
-        toSeconds := toTime.Hour()*3600 + toTime.Minute()*60 + toTime.Second()
         fmt.Printf("    To (seconds from day start):   %d\n", toSeconds)
     }
 }
@@ -61,26 +61,19 @@ A request is sent to the MetaTrader server via gRPC. The response returns a stru
 ---
 
 ```go
-if tradeSessionData.From != nil {
-    fromTime := tradeSessionData.From.AsTime()
-    fromSeconds := fromTime.Hour()*3600 + fromTime.Minute()*60 + fromTime.Second()
+if tradeSessionData.From != nil && tradeSessionData.To != nil {
+    dayStart := tradeSessionData.From.AsTime().Truncate(24 * time.Hour)
+    fromSeconds := int64(tradeSessionData.From.AsTime().Sub(dayStart).Seconds())
+    toSeconds := int64(tradeSessionData.To.AsTime().Sub(dayStart).Seconds())
     fmt.Printf("    From (seconds from day start): %d\n", fromSeconds)
-}
-```
-
-Converts `From` to `time.Time` format and calculates the number of seconds from the start of the day.
-
----
-
-```go
-if tradeSessionData.To != nil {
-    toTime := tradeSessionData.To.AsTime()
-    toSeconds := toTime.Hour()*3600 + toTime.Minute()*60 + toTime.Second()
     fmt.Printf("    To (seconds from day start):   %d\n", toSeconds)
 }
 ```
 
-Same for the session end.
+`From` and `To` carry a time of day in the broker server's time zone (seconds from 00:00); their date part has no
+meaning. Both are converted to `time.Time` and counted from the start of `From`'s day. A session that runs to
+midnight ends at **24:00**: `To` is then the next day's 00:00, so it gives 86400. Taking only
+`Hour()`/`Minute()`/`Second()` of `To` would print 0 for that end.
 
 ---
 
@@ -122,32 +115,17 @@ message SymbolInfoSessionTradeData {
 ```
 Monday trade session #0:
     From (seconds from day start): 0
-    To (seconds from day start):   86399
+    To (seconds from day start):   86400
 ```
 
-📘 This means trading is available all day — from 00:00:00 to 23:59:59.
+📘 This means trading is available all day — from 00:00 to 24:00 (EURUSD on MetaQuotes-Demo).
 
 ---
 
-### ℹ️ Why Values Can Be Zero
+### ℹ️ When There Is No Session
 
-If you see the output:
-
-```
-From (seconds from day start): 0
-To (seconds from day start):   0
-```
-
-this is **normal behavior**, not a code error.
-
-Reasons:
-
-1. **24/5 trading** — the broker doesn't set separate intervals.
-2. **Broker hasn't filled in the schedule** — often found on demo servers.
-3. **Gateway doesn't transmit these fields** — API returns empty Timestamp.
-4. **Day or index contains no data** — there's no session on that day with that index.
-
-✅ In such cases, `0` is interpreted as "all day open for trading".
+A day (or a `SessionIndex`) without a session does not answer with zeros: the call returns an error,
+`ERR_MARKET_SESSION_INDEX`. To read every session of a day, ask for `SessionIndex` 0, 1, 2, … until that error.
 
 ---
 
@@ -165,4 +143,4 @@ The `SymbolInfoSessionTrade()` method is used:
 ### 💬 In Simple Terms
 
 > `SymbolInfoSessionTrade()` shows **what hours and days trading is allowed** for a symbol.
-> If it returns zeros — it means trading is available all day or the broker hasn't specified a schedule.
+> `From` 0 and `To` 86400 mean trading all day; a day without a session answers with `ERR_MARKET_SESSION_INDEX`.

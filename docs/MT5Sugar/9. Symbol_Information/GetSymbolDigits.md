@@ -394,6 +394,7 @@ func (spm *SymbolPrecisionManager) CalculatePipValue(
     pipSize := pointSize * 10
 
     // Pip value = pip size × contract size × volume
+    // (in the QUOTE currency - USD for EURUSD - not necessarily the account currency)
     pipValue := pipSize * info.ContractSize * volume
 
     return pipValue, nil

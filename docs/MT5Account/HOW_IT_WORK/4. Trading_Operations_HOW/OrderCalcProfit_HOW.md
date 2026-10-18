@@ -29,8 +29,27 @@ if !helpers.PrintShortError(err, "OrderCalcProfit failed") {
     fmt.Printf("  Potential Profit/Loss:         %.2f (spread loss)\n", profitData.Profit)
 }
 
-// Calculate profit if price rises by 10 pips
-pipSize := 0.0001 // for EURUSD 1 pip = 0.0001
+// Calculate profit if price rises by 10 pips.
+// A pip is 10 points on 5- and 3-digit symbols (EURUSD: point 0.00001, pip 0.0001; USDJPY: pip 0.01),
+// otherwise 1 point: read the symbol's point and digits instead of assuming EURUSD.
+pointData, err := account.SymbolInfoDouble(ctx, &pb.SymbolInfoDoubleRequest{
+    Symbol: cfg.TestSymbol,
+    Type:   pb.SymbolInfoDoubleProperty_SYMBOL_POINT,
+})
+if err != nil {
+    return fmt.Errorf("SymbolInfoDouble(POINT) failed: %w", err)
+}
+digitsData, err := account.SymbolInfoInteger(ctx, &pb.SymbolInfoIntegerRequest{
+    Symbol: cfg.TestSymbol,
+    Type:   pb.SymbolInfoIntegerProperty_SYMBOL_DIGITS,
+})
+if err != nil {
+    return fmt.Errorf("SymbolInfoInteger(DIGITS) failed: %w", err)
+}
+pipSize := pointData.Value
+if digitsData.Value == 3 || digitsData.Value == 5 {
+    pipSize *= 10
+}
 targetPrice := tickData.Ask + (10 * pipSize)
 
 profitTargetReq := &pb.OrderCalcProfitRequest{
@@ -69,10 +88,16 @@ The method returns a negative profit value (`Profit < 0`).
 Define the pip size and target price:
 
 ```go
-pipSize := 0.0001
+pipSize := pointData.Value // SYMBOL_POINT
+if digitsData.Value == 3 || digitsData.Value == 5 { // SYMBOL_DIGITS
+    pipSize *= 10
+}
 targetPrice := tickData.Ask + (10 * pipSize)
 ```
 
+A pip is not a fixed number: on 5- and 3-digit quotes it is 10 points (EURUSD 1.12345: point 0.00001, pip 0.0001;
+USDJPY 151.234: pip 0.01), otherwise one point. The demo therefore reads the symbol's `SYMBOL_POINT` and
+`SYMBOL_DIGITS` instead of hard-coding the EURUSD value, so `cfg.TestSymbol` can be any symbol.
 If the price rises by 10 pips (0.0010 for EURUSD), the result will be positive.
 The method calculates how much profit this movement will generate for the specified volume.
 

@@ -5,7 +5,7 @@
 **API Information:**
 
 * **Method:** `sugar.ClosePositionPartial(ticket, volume)`
-* **Timeout:** 10 seconds
+* **Timeout:** 30 seconds
 * **Returns:** Error if close failed
 * **Request:** `pb.OrderCloseRequest{Ticket: ticket, Volume: volume}` sent via `MT5Service.CloseOrder` (MT5 `OrderClose`)
 
@@ -28,7 +28,7 @@ func (s *MT5Sugar) ClosePositionPartial(ticket uint64, volume float64) error
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `error` | `error` | `nil` when the server returns code 10009 (done); `"ClosePositionPartial failed: ..."` if the call fails; `"partial close rejected, code: N"` for any other return code |
+| `error` | `error` | `nil` when the server returns code 10009 (done); `"ClosePositionPartial failed: ..."` if the call fails; `"partial close rejected, code: N (meaning)"` for any other return code (the meaning comes from `helpers.GetRetCodeMessage`) |
 
 ---
 
@@ -275,11 +275,11 @@ for range ticker.C {
         return
     }
 
-    var currentPips float64
+    var currentPips float64 // (EURUSD: 1 pip = 0.0001 = 10 points)
     if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
-        currentPips = (pos.PriceCurrent - pos.PriceOpen) / 0.00001
+        currentPips = (pos.PriceCurrent - pos.PriceOpen) / 0.0001
     } else {
-        currentPips = (pos.PriceOpen - pos.PriceCurrent) / 0.00001
+        currentPips = (pos.PriceOpen - pos.PriceCurrent) / 0.0001
     }
 
     fmt.Printf("Current: %.1f pips\n", currentPips)

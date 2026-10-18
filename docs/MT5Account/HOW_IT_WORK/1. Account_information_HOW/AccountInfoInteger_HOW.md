@@ -21,7 +21,7 @@ leverageData, err := account.AccountInfoInteger(ctx, leverageReq)
 if err != nil {
     helpers.PrintShortError(err, "AccountInfoInteger(LEVERAGE) failed")
 } else {
-    fmt.Printf("  Leverage: %d\n", leverageData.GetRequestedValue())
+    fmt.Printf("  Leverage:                 1:%d\n", leverageData.GetRequestedValue())
 }
 ```
 
@@ -64,12 +64,12 @@ Executes a gRPC call to the MetaTrader server.
 if err != nil {
     helpers.PrintShortError(err, "AccountInfoInteger(LEVERAGE) failed")
 } else {
-    fmt.Printf("  Leverage: %d\n", leverageData.GetRequestedValue())
+    fmt.Printf("  Leverage:                 1:%d\n", leverageData.GetRequestedValue())
 }
 ```
 
 Checks for errors. If successful, extracts the result via `.GetRequestedValue()` and prints it to the console.
-The value is returned as an **integer** (`int32`).
+The value is returned as an **integer** (`int64`); leverage 100 is printed as `1:100`.
 
 ---
 

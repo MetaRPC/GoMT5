@@ -105,7 +105,7 @@ fmt.Printf("Stop Loss:      %.5f (+50 points)\n", sl)
 fmt.Printf("Take Profit:    %.5f (-100 points)\n", tp)
 
 // Same result with the CalculateSLTP helper (its distances are points too;
-// any direction other than "BUY" is treated as SELL)
+// direction must be exactly "BUY" or "SELL", anything else is an error)
 sl2, tp2, _ := sugar.CalculateSLTP(symbol, "SELL", bid, 50, 100)
 fmt.Printf("CalculateSLTP:  SL %.5f, TP %.5f\n", sl2, tp2)
 ```

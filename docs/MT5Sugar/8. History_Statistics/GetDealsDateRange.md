@@ -6,7 +6,7 @@
 
 * **Method:** `sugar.GetDealsDateRange(from, to)`
 * **Timeout:** 30 seconds
-* **Returns:** Slice of position history info, sorted by open time (oldest first)
+* **Returns:** Slice of position history info (one entry per closed position), sorted by open time (oldest first)
 
 ---
 
@@ -16,14 +16,23 @@
 func (s *MT5Sugar) GetDealsDateRange(from, to time.Time) ([]*pb.PositionHistoryInfo, error)
 ```
 
-How it works: `MT5Service.GetPositionsHistory(ctx, pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_ASC, &from, &to, nil, nil)`.
-`from`/`to` are sent as `PositionOpenTimeFrom` / `PositionOpenTimeTo`, so the range filters by the position's **open** time
-(a position opened before `from` and closed inside the range is not included). No paging parameters are sent and the
-arguments are not validated.
+How it works:
 
-**Time zone note:** `from`/`to` are converted to absolute instants (`timestamppb.New`) and put in the request fields the
-server reads as broker server time. So the clock reading of your `time.Time` in **UTC** is what the broker sees: to ask for
-broker-time 2024-01-15 00:00, pass `time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)`.
+```go
+func (s *MT5Sugar) GetDealsDateRange(from, to time.Time) ([]*pb.PositionHistoryInfo, error) {
+    return s.positionsOpenedBetween(from, to, 30*time.Second)
+}
+```
+
+`positionsOpenedBetween` reads `PositionsHistory` (sorted by open time) with **cursor paging** - page size
+1000, `PageToken` = the previous `NextPageToken` - until the last page, so long ranges are complete. The range filters by the position's **open** time
+(a position opened before `from` and closed inside the range is not included). Still-open positions are not in the list.
+The timeout covers all pages together. The arguments are not validated.
+
+**Time zone note:** `from`/`to` are **real moments**: they are sent in the request's UTC
+fields (`PositionOpenTimeFromUtc` / `PositionOpenTimeToUtc`), so the result does not depend on the broker's time zone.
+Build them in whatever zone you think in: `time.Now().AddDate(0, 0, -7)`, `time.Date(..., time.Local)`,
+`time.Date(..., time.UTC)`, or `time.Date(..., brokerZone)` for the broker's calendar day.
 
 ---
 
@@ -37,7 +46,7 @@ broker-time 2024-01-15 00:00, pass `time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
 | Output | Type | Description |
 |--------|------|-------------|
 | `[]*pb.PositionHistoryInfo` | slice | Closed positions opened in range |
-| `error` | `error` | `"GetPositionsHistory failed: ..."` if retrieval failed |
+| `error` | `error` | `"PositionsHistory failed: ..."` if a page query failed (or the timeout expired) |
 
 ---
 
@@ -542,14 +551,15 @@ deals, _ := sugar.GetDealsDateRange(from, to)
 ### 2) Not handling timezone
 
 ```go
-// ❌ WRONG - local times are converted to UTC instants first;
-// the broker reads the UTC clock reading as its own server time
-from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.Local)
-to := time.Date(2024, 1, 31, 23, 59, 59, 0, time.Local) // shifted by your UTC offset!
+// ❌ WRONG - writing the broker's calendar day in time.UTC
+// (from/to are real moments: this is the UTC day, not the broker's day)
+from := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+to := time.Date(2024, 1, 15, 23, 59, 59, 0, time.UTC)
 
-// ✅ CORRECT - build broker-time boundaries in time.UTC
-from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-to := time.Date(2024, 1, 31, 23, 59, 59, 0, time.UTC)
+// ✅ CORRECT - build the boundaries in the zone whose calendar you mean
+broker := time.FixedZone("broker", 2*60*60) // e.g. a broker at UTC+2
+from := time.Date(2024, 1, 15, 0, 0, 0, 0, broker)
+to := time.Date(2024, 1, 15, 23, 59, 59, 0, broker)
 ```
 
 ### 2b) Expecting positions opened before `from`
@@ -578,13 +588,15 @@ to := time.Date(2024, 1, 31, 23, 59, 59, 0, time.UTC)
 
 1. **Both inclusive** - Both `from` and `to` are inclusive
 
-2. **Timezone aware** - The broker reads the UTC clock reading of `from`/`to` as broker time; build them in `time.UTC`
+2. **Timezone aware** - `from`/`to` are real moments sent as UTC; the broker's time zone does not shift them
 
 3. **Flexible** - Most flexible history method for custom periods
 
 4. **Performance** - 30-second timeout for large ranges
 
 5. **Empty OK** - Returns empty slice if no trades (not error)
+
+6. **Profit field only** - `Profit` does not include commission, swap or fee
 
 ---
 

@@ -7,7 +7,7 @@
 * **Method:** `sugar.CalculateSLTP(symbol, direction, entryPrice, stopLossPips, takeProfitPips)`
 * **Package:** `mt5` (MT5Sugar)
 * **Underlying calls:** `GetSymbolInfo()`, `GetAsk()`, `GetBid()`
-* **Timeout:** no own timeout - `GetSymbolInfo()` uses 5 seconds, `GetAsk()`/`GetBid()` 3 seconds
+* **Timeout:** no own timeout - `GetSymbolInfo()` uses 10 seconds, `GetAsk()`/`GetBid()` 3 seconds
 * **Returns:** SL price, TP price
 
 ---
@@ -31,10 +31,10 @@ func (s *MT5Sugar) CalculateSLTP(
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `symbol` | `string` | Trading symbol (e.g., "EURUSD", "GBPUSD") |
-| `direction` | `string` | `"BUY"` or `"SELL"` - exact, case-sensitive: any value other than `"BUY"` is treated as SELL |
-| `entryPrice` | `float64` | Entry price (use `0` for current market price: Ask for BUY, Bid otherwise) |
-| `stopLossPips` | `float64` | Stop Loss distance in **points** (e.g., 500 = 50 pips on 5-digit EURUSD) |
-| `takeProfitPips` | `float64` | Take Profit distance in **points** (e.g., 1000) |
+| `direction` | `string` | Exactly `"BUY"` or `"SELL"` (case-sensitive) - anything else returns an error |
+| `entryPrice` | `float64` | Entry price (use `0` for current market price: Ask for BUY, Bid for SELL) |
+| `stopLossPips` | `float64` | Stop Loss distance in **POINTS** despite the name (1 point = `SYMBOL_POINT`; 500 = 50 pips on 5-digit EURUSD) |
+| `takeProfitPips` | `float64` | Take Profit distance in **POINTS** despite the name (e.g., 1000 = 100 pips on 5-digit EURUSD) |
 
 ---
 
@@ -44,17 +44,17 @@ func (s *MT5Sugar) CalculateSLTP(
 |--------|------|-------------|
 | `sl` | `float64` | Stop Loss price |
 | `tp` | `float64` | Take Profit price |
-| `error` | `error` | Error if the symbol info or price query fails (sl and tp are 0 then) |
+| `error` | `error` | `direction must be "BUY" or "SELL", got "..."`, or an error if the symbol info or price query fails (sl and tp are 0 then) |
 
-The prices are NOT rounded to the symbol's `Digits` - round them yourself if you need normalized prices.
+The prices are rounded to the symbol's `Digits` (1.0800000000000001 → 1.08).
 
 ---
 
 ## 💬 Just the Essentials
 
-* **What it is:** Converts point distances into actual SL/TP prices (`distance × Point`).
+* **What it is:** Converts point distances into actual SL/TP prices (`distance × Point`, rounded to `Digits`).
 * **Why you need it:** You think in distances ("500 point stop" = 50 pips on 5-digit EURUSD), but MT5 needs exact prices.
-* **Sanity check:** Handles BUY vs SELL direction automatically - BUY SL below entry, SELL SL above entry. Only the exact string `"BUY"` means BUY; everything else is treated as SELL.
+* **Sanity check:** Handles BUY vs SELL direction automatically - BUY SL below entry, SELL SL above entry. Only the exact strings `"BUY"` and `"SELL"` are accepted; `"buy"` or `"Sell"` returns an error.
 
 ---
 
@@ -73,19 +73,63 @@ The prices are NOT rounded to the symbol's `Digits` - round them yourself if you
 ## 🔢 How It Works
 
 ```
-BUY direction:
+BUY direction (EURUSD, 5 digits, point 0.00001):
 - Entry:  1.08500
-- SL:     Entry - (500 points × point size) = 1.08000 (below entry)
-- TP:     Entry + (1000 points × point size) = 1.09000 (above entry)
+- SL:     Entry - (500 points × 0.00001 = 0.00500)  = 1.08000 (below entry)
+- TP:     Entry + (1000 points × 0.00001 = 0.01000) = 1.09500 (above entry)
 
 SELL direction:
 - Entry:  1.08500
-- SL:     Entry + (500 points × point size) = 1.09000 (above entry)
-- TP:     Entry - (1000 points × point size) = 1.08000 (below entry)
+- SL:     Entry + (500 points × 0.00001 = 0.00500)  = 1.09000 (above entry)
+- TP:     Entry - (1000 points × 0.00001 = 0.01000) = 1.07500 (below entry)
 
-Point size = symbol.Point (e.g., 0.00001 for EURUSD with 5 digits)
-Entry = entryPrice, or (if 0) current Ask for "BUY" / current Bid otherwise
-No rounding of the resulting prices
+Point size = symbol.Point (e.g., 0.00001 for EURUSD with 5 digits, 0.001 for USDJPY with 3 digits)
+Entry = entryPrice, or (if 0) current Ask for "BUY" / current Bid for "SELL"
+Results rounded to the symbol's Digits
+```
+
+**Under the hood** (from `MT5Sugar.go`):
+
+```go
+func (s *MT5Sugar) CalculateSLTP(symbol, direction string, entryPrice, stopLossPips, takeProfitPips float64) (float64, float64, error) {
+    if direction != "BUY" && direction != "SELL" {
+        return 0, 0, fmt.Errorf("direction must be \"BUY\" or \"SELL\", got %q", direction)
+    }
+
+    // Get symbol info for point size
+    info, err := s.GetSymbolInfo(symbol)
+    if err != nil {
+        return 0, 0, err
+    }
+
+    // If entry price is 0, use current market price
+    if entryPrice == 0 {
+        if direction == "BUY" {
+            entryPrice, err = s.GetAsk(symbol)
+        } else {
+            entryPrice, err = s.GetBid(symbol)
+        }
+        if err != nil {
+            return 0, 0, err
+        }
+    }
+
+    var sl, tp float64
+
+    if direction == "BUY" {
+        // BUY: SL below entry, TP above entry
+        sl = entryPrice - (stopLossPips * info.Point)
+        tp = entryPrice + (takeProfitPips * info.Point)
+    } else {
+        // SELL: SL above entry, TP below entry
+        sl = entryPrice + (stopLossPips * info.Point)
+        tp = entryPrice - (takeProfitPips * info.Point)
+    }
+
+    // Round to the symbol's digits (1.0800000000000001 -> 1.08)
+    scale := math.Pow(10, float64(info.Digits))
+    return math.Round(sl*scale) / scale, math.Round(tp*scale) / scale, nil
+}
 ```
 
 ---
@@ -111,10 +155,10 @@ fmt.Printf("Direction:   %s\n", direction)
 fmt.Printf("Stop Loss:   %.5f (-%0.f points)\n", sl, stopLoss)
 fmt.Printf("Take Profit: %.5f (+%.0f points)\n", tp, takeProfit)
 
-// Output example:
+// Output example (Ask = 1.08500):
 // Direction:   BUY
 // Stop Loss:   1.08000 (-500 points)
-// Take Profit: 1.09000 (+1000 points)
+// Take Profit: 1.09500 (+1000 points)
 ```
 
 ---
@@ -159,7 +203,7 @@ fmt.Printf("Risk/Reward: 1:%.1f\n", takeProfit/stopLoss)
 // Planned trade:
 // Entry:       1.08500
 // Stop Loss:   1.08000 (distance: 500 points)
-// Take Profit: 1.09000 (distance: 1000 points)
+// Take Profit: 1.09500 (distance: 1000 points)
 // Risk/Reward: 1:2.0
 ```
 
@@ -523,7 +567,7 @@ func (h *SLTPHelper) ShowCalculation(
         entry, _ = h.sugar.GetBid(symbol)
     }
 
-    // Calculate monetary risk (1 lot, in the symbol's quote currency)
+    // Calculate monetary risk (1 lot, in the symbol's QUOTE currency - USD for EURUSD)
     pointValue, _ := h.calculatePointValue(symbol)
     riskAmount := slPips * pointValue
     rewardAmount := tpPips * pointValue
@@ -660,6 +704,8 @@ sl, tp, _ := sugar.CalculateSLTP("EURUSD", "BUY", limitPrice, 500, 1000)
 // ❌ WRONG - ignoring errors
 sl, tp, _ := sugar.CalculateSLTP("INVALID", "BUY", 0, 500, 1000)
 // sl and tp will be 0!
+sl, tp, _ = sugar.CalculateSLTP("EURUSD", "buy", 0, 500, 1000)
+// also 0: direction must be exactly "BUY" or "SELL"
 
 // ✅ CORRECT - check errors
 sl, tp, err := sugar.CalculateSLTP("EURUSD", "BUY", 0, 500, 1000)
@@ -677,7 +723,7 @@ if err != nil {
 
 2. **Direction matters** - BUY: SL below, TP above / SELL: opposite
 
-3. **Points not pips** - Parameter is in points (for 5-digit: 50 points = 5 pips)
+3. **Points not pips** - Parameter is in points despite the `...Pips` name (for 5-digit: 50 points = 5 pips; pass 500 for a 50-pip stop)
 
 4. **R:R ratios** - TP distance / SL distance = Risk/Reward ratio
 
@@ -687,22 +733,26 @@ if err != nil {
 
 7. **Works for any symbol** - Handles different point sizes automatically
 
-8. **No rounding** - The returned prices are not normalized to `Digits`; MT5Sugar sends prices exactly as given
+8. **Rounded** - The returned prices are rounded to the symbol's `Digits`
+
+9. **Exact direction** - Only `"BUY"` and `"SELL"`; any other string is an error (it used to be treated as SELL)
 
 ---
 
 ## 📊 BUY vs SELL
 
 ```
+EURUSD, SL = 500 points, TP = 1000 points
+
 BUY positions:
 Entry:  1.08500
 SL:     1.08000  (below entry ⬇️)
-TP:     1.09000  (above entry ⬆️)
+TP:     1.09500  (above entry ⬆️)
 
 SELL positions:
 Entry:  1.08500
 SL:     1.09000  (above entry ⬆️)
-TP:     1.08000  (below entry ⬇️)
+TP:     1.07500  (below entry ⬇️)
 
 Remember:
 - SL protects against adverse moves

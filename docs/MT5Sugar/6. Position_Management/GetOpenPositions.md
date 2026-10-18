@@ -5,7 +5,7 @@
 **API Information:**
 
 * **Method:** `sugar.GetOpenPositions()`
-* **Timeout:** 5 seconds
+* **Timeout:** 10 seconds
 * **Returns:** Slice of `*pb.PositionInfo` structures, sorted by open time (oldest first)
 
 ---
@@ -304,16 +304,16 @@ totalRisk := 0.0
 for _, pos := range positions {
     if pos.StopLoss > 0 {
         // Calculate potential loss if SL hit
-        var riskPips float64
+        var riskPoints float64 // 5-digit symbol: 1 point = 0.00001
         if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
-            riskPips = (pos.PriceOpen - pos.StopLoss) / 0.00001
+            riskPoints = (pos.PriceOpen - pos.StopLoss) / 0.00001
         } else {
-            riskPips = (pos.StopLoss - pos.PriceOpen) / 0.00001
+            riskPoints = (pos.StopLoss - pos.PriceOpen) / 0.00001
         }
 
         // Estimate risk in dollars (simplified)
         info, _ := sugar.GetSymbolInfo(pos.Symbol)
-        riskPerLot := riskPips * info.Point * info.ContractSize
+        riskPerLot := riskPoints * info.Point * info.ContractSize
         positionRisk := riskPerLot * pos.Volume
 
         totalRisk += positionRisk

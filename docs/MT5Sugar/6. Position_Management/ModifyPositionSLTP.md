@@ -5,7 +5,7 @@
 **API Information:**
 
 * **Method:** `sugar.ModifyPositionSLTP(ticket, sl, tp)`
-* **Timeout:** 10 seconds
+* **Timeout:** 30 seconds
 * **Returns:** Error if modification failed
 * **Request:** `pb.OrderModifyRequest{Ticket: ticket, StopLoss: &sl, TakeProfit: &tp}` sent via `MT5Service.ModifyOrder`
 
@@ -184,7 +184,7 @@ if pos.StopLoss == 0 && pos.TakeProfit == 0 {
     fmt.Printf("⚠️  Position #%d has no protection!\n", ticket)
     fmt.Println("Adding SL/TP...")
 
-    // CalculateSLTP takes a direction string: "BUY", anything else is treated as SELL
+    // CalculateSLTP takes a direction string: exactly "BUY" or "SELL" (anything else is an error)
     direction := "SELL"
     if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
         direction = "BUY"
@@ -324,15 +324,15 @@ for range ticker.C {
         return
     }
 
-    var profitPips float64
+    var profitPoints float64
     if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
-        profitPips = (pos.PriceCurrent - pos.PriceOpen) / info.Point
+        profitPoints = (pos.PriceCurrent - pos.PriceOpen) / info.Point
     } else {
-        profitPips = (pos.PriceOpen - pos.PriceCurrent) / info.Point
+        profitPoints = (pos.PriceOpen - pos.PriceCurrent) / info.Point
     }
 
     // Move SL in 20 point steps
-    steps := math.Floor(profitPips / stepSize)
+    steps := math.Floor(profitPoints / stepSize)
 
     if steps > lastSLUpdate && steps > 0 {
         var newSL float64
@@ -349,8 +349,8 @@ for range ticker.C {
         }
     }
 
-    fmt.Printf("Profit: %.1f pips, Steps: %.0f, SL: %.5f\n",
-        profitPips, steps, pos.StopLoss)
+    fmt.Printf("Profit: %.1f points, Steps: %.0f, SL: %.5f\n",
+        profitPoints, steps, pos.StopLoss)
 }
 ```
 

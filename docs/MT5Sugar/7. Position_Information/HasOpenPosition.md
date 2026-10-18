@@ -5,7 +5,7 @@
 **API Information:**
 
 * **Method:** `sugar.HasOpenPosition(symbol)`
-* **Timeout:** 5 seconds (it calls `GetPositionsBySymbol()`, which calls `GetOpenPositions()`)
+* **Timeout:** 10 seconds (it calls `GetPositionsBySymbol()`, which calls `GetOpenPositions()`)
 * **Returns:** Boolean (true if at least one position is open on that symbol)
 
 ---
@@ -203,8 +203,11 @@ for range ticker.C {
 
     if currentHour >= 17 { // Close at 5 PM
         fmt.Printf("🕔 17:00 - Closing all %s positions\n", symbol)
-        closed, _ := sugar.CloseAllBySymbol(symbol)
+        closed, err := sugar.CloseAllBySymbol(symbol)
         fmt.Printf("Closed %d positions\n", closed)
+        if err != nil { // names every position that was not closed
+            fmt.Printf("⚠️  %v\n", err)
+        }
         return
     }
 

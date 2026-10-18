@@ -35,7 +35,32 @@ func (s *MT5Sugar) IsSymbolAvailable(symbol string) (bool, error)
 
 * **What it is:** Check if a symbol exists (`SymbolExist`) and is synchronized (`IsSymbolSynchronized`).
 * **Why you need it:** Validation before trading, symbol verification, error prevention.
-* **Sanity check:** Returns `false` for non-existent or not-synchronized symbols (not an error). It does NOT check the symbol's trade mode or trading permissions - a `true` result does not guarantee that an order will be accepted.
+* **Sanity check:** Returns `false` for non-existent or not-synchronized symbols (not an error). It does NOT check the symbol's trade mode (`SYMBOL_TRADE_MODE`), trading sessions or trading permissions - a `true` result does not guarantee that an order will be accepted.
+* **Right after connecting:** a symbol that is still synchronizing returns `false` for a while (seen on a test server) - retry after a short wait before you conclude it is unavailable.
+
+```go
+func (s *MT5Sugar) IsSymbolAvailable(symbol string) (bool, error) {
+    ctx, cancel := context.WithTimeout(s.ctx, 3*time.Second)
+    defer cancel()
+
+    exists, _, err := s.service.SymbolExist(ctx, symbol)
+    if err != nil {
+        return false, err
+    }
+
+    if !exists {
+        return false, nil
+    }
+
+    // Check if symbol is synchronized (has data)
+    synced, err := s.service.IsSymbolSynchronized(ctx, symbol)
+    if err != nil {
+        return false, err
+    }
+
+    return synced, nil
+}
+```
 
 ---
 
@@ -522,7 +547,7 @@ available, _ := sugar.IsSymbolAvailable("EURUSD")
 
 1. **Fast check** - Two light queries (SymbolExist + IsSymbolSynchronized), 3-second timeout
 
-2. **Cache results** - Symbol availability rarely changes, can cache
+2. **Cache results** - Symbol availability rarely changes once synchronized, can cache (but not a `false` seen right after connecting)
 
 3. **Validate early** - Check before expensive operations
 
@@ -538,7 +563,7 @@ available, _ := sugar.IsSymbolAvailable("EURUSD")
 Symbol states:
 ✅ Available (true)   - SymbolExist == true AND IsSymbolSynchronized == true
 ❌ Unavailable (false) - Symbol doesn't exist OR
-                       - Symbol exists but is not synchronized
+                       - Symbol exists but is not synchronized (yet - e.g. right after connecting)
 
 NOT checked by this method:
 - Symbol trade mode (trading disabled / close-only)

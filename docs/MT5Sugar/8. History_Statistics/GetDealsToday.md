@@ -1,12 +1,12 @@
 # 📅💼 Get Deals Today (`GetDealsToday`)
 
-> **Sugar method:** Returns closed positions ("deals") that were **opened** today (00:00 to now).
+> **Sugar method:** Returns closed positions ("deals") that were **opened** today (local midnight to now).
 
 **API Information:**
 
 * **Method:** `sugar.GetDealsToday()`
-* **Timeout:** 5 seconds
-* **Returns:** Slice of position history info, sorted by open time (oldest first)
+* **Timeout:** 15 seconds
+* **Returns:** Slice of position history info (one entry per closed position), sorted by open time (oldest first)
 
 ---
 
@@ -16,14 +16,52 @@
 func (s *MT5Sugar) GetDealsToday() ([]*pb.PositionHistoryInfo, error)
 ```
 
-How it works: `now := time.Now()`, `startOfDay` = today 00:00 on your machine's clock, then
-`MT5Service.GetPositionsHistory(ctx, pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_ASC, &startOfDay, &now, nil, nil)`.
-The range is sent as `PositionOpenTimeFrom` / `PositionOpenTimeTo`, so it filters by the position's **open** time:
-a position opened yesterday and closed today is not included. No paging parameters are sent.
+How it works:
 
-**Time zone note:** the boundaries come from your local clock and are sent as absolute instants in the request fields that
-the server reads as broker server time. If your machine, UTC and the broker server use different time zones, the window is
-shifted accordingly - use `GetDealsDateRange()` when you need exact boundaries.
+```go
+func (s *MT5Sugar) GetDealsToday() ([]*pb.PositionHistoryInfo, error) {
+    now := time.Now()
+    return s.positionsOpenedBetween(startOfLocalDay(now), now, 15*time.Second)
+}
+
+// positionsOpenedBetween returns ALL closed positions whose open time lies in [from, to] (real moments).
+// It reads the history with cursor paging (page_size 1000, next_page_token) until the last page, so a long
+// range is never cut to the first page. The timeout covers all pages together.
+func (s *MT5Sugar) positionsOpenedBetween(from, to time.Time, timeout time.Duration) ([]*pb.PositionHistoryInfo, error) {
+    ctx, cancel := context.WithTimeout(s.ctx, timeout)
+    defer cancel()
+
+    var all []*pb.PositionHistoryInfo
+    token := ""
+    for {
+        // A Go time.Time is a moment: the window goes in the *Utc fields (see MT5Service.GetPositionsHistory)
+        data, err := s.GetAccount().PositionsHistory(ctx, &pb.PositionsHistoryRequest{
+            SortType:                pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_ASC,
+            PositionOpenTimeFromUtc: timestamppb.New(from),
+            PositionOpenTimeToUtc:   timestamppb.New(to),
+            PageToken:               token,
+            PageSize:                1000,
+        })
+        if err != nil {
+            return nil, fmt.Errorf("PositionsHistory failed: %w", err)
+        }
+        all = append(all, data.HistoryPositions...)
+        token = data.NextPageToken
+        if token == "" || len(data.HistoryPositions) == 0 {
+            return all, nil
+        }
+    }
+}
+```
+
+"Deals" are **closed positions** from PositionsHistory (one entry per position, not per MT5 deal). The range filters by
+the position's **open** time: a position opened yesterday and closed today is not included. Still-open positions are not
+in the list. All pages are read (cursor paging, 1000 per page); the timeout covers all pages together.
+
+**Time zone note:** "today" is the calendar day of the computer running the program (`time.Local`): local midnight to now.
+The window is sent in the request's UTC fields (`PositionOpenTimeFromUtc` /
+`PositionOpenTimeToUtc`), so the broker's time zone does not shift it. If you want the broker's trading day instead, run
+the program with `TZ` set to the broker's time zone or pass explicit boundaries to `GetDealsDateRange()`.
 
 ---
 
@@ -36,7 +74,7 @@ shifted accordingly - use `GetDealsDateRange()` when you need exact boundaries.
 | Output | Type | Description |
 |--------|------|-------------|
 | `[]*pb.PositionHistoryInfo` | slice | Closed positions opened today |
-| `error` | `error` | `"GetPositionsHistory failed: ..."` if retrieval failed |
+| `error` | `error` | `"PositionsHistory failed: ..."` if a page query failed (or the timeout expired) |
 
 ---
 
@@ -527,13 +565,14 @@ if len(deals) > 0 {
 
 ```go
 // ❌ WRONG - assuming "today" is the broker's trading day
-// The window is computed from YOUR machine's clock (time.Now())
+// The window is the calendar day of YOUR computer (time.Local)
 deals, _ := sugar.GetDealsToday()
 
-// ✅ CORRECT - pass explicit boundaries when the day must match the broker's day
-// (the server reads the request times as broker server time)
-from := time.Date(2026, 10, 16, 0, 0, 0, 0, time.UTC)  // broker 00:00
-to := time.Date(2026, 10, 16, 23, 59, 59, 0, time.UTC) // broker 23:59:59
+// ✅ CORRECT - pass explicit boundaries in the broker's time zone when the day must match the broker's day
+// (the times are real moments: they are sent as UTC, so any time zone works)
+broker := time.FixedZone("broker", 3*60*60) // e.g. a broker at UTC+3
+from := time.Date(2026, 10, 16, 0, 0, 0, 0, broker)
+to := from.AddDate(0, 0, 1).Add(-time.Nanosecond)
 deals, _ := sugar.GetDealsDateRange(from, to)
 ```
 
@@ -568,11 +607,13 @@ closedDeals, _ := sugar.GetDealsToday()      // Closed today
 
 2. **Closed only** - Only includes closed positions, not currently open
 
-3. **Local clock** - "Today" is 00:00 to now on your machine's clock, matched against the position's open time
+3. **Local calendar** - "Today" is local midnight to now on the computer running the program, matched against the position's open time (sent to the server as UTC)
 
-4. **Performance** - Uses 5-second timeout
+4. **Performance** - Uses 15-second timeout
 
-5. **Auto-range** - Automatically calculates today's range (00:00 to now)
+5. **Auto-range** - Automatically calculates today's range (local 00:00 to now)
+
+6. **Profit field only** - `Profit` does not include commission, swap or fee; add `Commission`, `Swap` and `Fee` yourself for the net result
 
 ---
 
@@ -589,7 +630,7 @@ OpenPrice      - Entry price
 ClosePrice     - Exit price
 StopLoss       - Stop Loss
 TakeProfit     - Take Profit
-Profit         - Realized profit/loss
+Profit         - Realized profit/loss (without commission, swap and fee)
 Commission     - Trading commission
 Fee            - Fees
 Swap           - Swap charges

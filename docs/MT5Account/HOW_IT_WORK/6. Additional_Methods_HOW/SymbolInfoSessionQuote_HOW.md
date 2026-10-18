@@ -20,14 +20,14 @@ if err != nil {
     helpers.PrintShortError(err, "SymbolInfoSessionQuote failed")
 } else {
     fmt.Printf("  Monday quote session #0:\n")
-    if quoteSessionData.From != nil {
-        fromTime := quoteSessionData.From.AsTime()
-        fromSeconds := fromTime.Hour()*3600 + fromTime.Minute()*60 + fromTime.Second()
+    // From and To are *timestamppb.Timestamp holding a time of day (broker server time); their date is not meaningful.
+    // Count the seconds from the start of From's day: a session that runs to midnight ends at 24:00 = 86400
+    // (To is then the next day's 00:00, which Hour()/Minute() alone would show as 0).
+    if quoteSessionData.From != nil && quoteSessionData.To != nil {
+        dayStart := quoteSessionData.From.AsTime().Truncate(24 * time.Hour)
+        fromSeconds := int64(quoteSessionData.From.AsTime().Sub(dayStart).Seconds())
+        toSeconds := int64(quoteSessionData.To.AsTime().Sub(dayStart).Seconds())
         fmt.Printf("    From (seconds from day start): %d\n", fromSeconds)
-    }
-    if quoteSessionData.To != nil {
-        toTime := quoteSessionData.To.AsTime()
-        toSeconds := toTime.Hour()*3600 + toTime.Minute()*60 + toTime.Second()
         fmt.Printf("    To (seconds from day start):   %d\n", toSeconds)
     }
 }
@@ -62,26 +62,20 @@ A call is made to the MetaTrader server via gRPC. The response contains a struct
 ---
 
 ```go
-if quoteSessionData.From != nil {
-    fromTime := quoteSessionData.From.AsTime()
-    fromSeconds := fromTime.Hour()*3600 + fromTime.Minute()*60 + fromTime.Second()
+if quoteSessionData.From != nil && quoteSessionData.To != nil {
+    dayStart := quoteSessionData.From.AsTime().Truncate(24 * time.Hour)
+    fromSeconds := int64(quoteSessionData.From.AsTime().Sub(dayStart).Seconds())
+    toSeconds := int64(quoteSessionData.To.AsTime().Sub(dayStart).Seconds())
     fmt.Printf("    From (seconds from day start): %d\n", fromSeconds)
-}
-```
-
-If the `From` field is filled, it's converted to `time.Time`, then translated to seconds from the start of the day.
-
----
-
-```go
-if quoteSessionData.To != nil {
-    toTime := quoteSessionData.To.AsTime()
-    toSeconds := toTime.Hour()*3600 + toTime.Minute()*60 + toTime.Second()
     fmt.Printf("    To (seconds from day start):   %d\n", toSeconds)
 }
 ```
 
-Similarly, the session end time is calculated.
+`From` and `To` carry a time of day in the broker server's time zone (seconds from 00:00); their date part has no
+meaning. Both are converted to `time.Time` and counted from the start of `From`'s day. A session that runs to
+midnight ends at **24:00**: `To` is then the next day's 00:00 (MetaQuotes-Demo EURUSD: `From` = 1970-01-01 00:00,
+`To` = 1970-01-02 00:00), so `To` gives 86400. Taking only `Hour()`/`Minute()`/`Second()` of `To` would print 0 for
+that end.
 
 ---
 
@@ -101,32 +95,18 @@ message SymbolInfoSessionQuoteData {
 ```
 Monday quote session #0:
     From (seconds from day start): 0
-    To (seconds from day start):   86399
+    To (seconds from day start):   86400
 ```
 
-📘 This means quotes are available all day — from 00:00:00 to 23:59:59.
+📘 This means quotes are available all day — from 00:00 to 24:00 (EURUSD on MetaQuotes-Demo).
 
 ---
 
-### ℹ️ Why Values Can Be Zero
+### ℹ️ When There Is No Session
 
-If the terminal displays:
-
-```
-From (seconds from day start): 0
-To (seconds from day start):   0
-```
-
-this is **not a code error**, but one of the standard MetaTrader API behaviors.
-
-Reasons:
-
-1. **Instrument trades 24/5 non-stop** — the server doesn't set separate intervals.
-2. **Broker hasn't configured sessions** — demo servers often return zeros.
-3. **Gateway doesn't support these fields** — API returns empty `Timestamp`.
-4. **Invalid `SessionIndex` or `DayOfWeek`** — there may be no sessions on that day.
-
-✅ In these cases, `0` is interpreted as "active all day".
+A day (or a `SessionIndex`) without a session does not answer with zeros: the call returns an error,
+`ERR_MARKET_SESSION_INDEX` (EURUSD on MetaQuotes-Demo: `SUNDAY` #0 or `MONDAY` #1). To read every session of a day,
+ask for `SessionIndex` 0, 1, 2, … until that error.
 
 ---
 
@@ -144,4 +124,4 @@ The `SymbolInfoSessionQuote()` method is used:
 ### 💬 In Simple Terms
 
 > `SymbolInfoSessionQuote()` shows **what hours the symbol receives quotes**.
-> Even if it returns 0, it means quotes are available all day (24/5).
+> `From` 0 and `To` 86400 mean quotes all day; a day without a session answers with `ERR_MARKET_SESSION_INDEX`.

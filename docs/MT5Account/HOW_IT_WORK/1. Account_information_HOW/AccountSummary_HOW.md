@@ -15,7 +15,9 @@ fmt.Println("\n3.1. AccountSummary() - Get all account data in one call")
 	defer summaryCancel()
 
 	summaryData, err := account.AccountSummary(summaryCtx, summaryReq)
-	helpers.Fatal(err, "AccountSummary failed")
+	if err != nil {
+		return fmt.Errorf("AccountSummary failed: %w", err)
+	}
 
 	fmt.Println("\nAccount Summary (direct protobuf field access):")
 	fmt.Println("─────────────────────────────────────────────────")
@@ -29,10 +31,13 @@ fmt.Println("\n3.1. AccountSummary() - Get all account data in one call")
 	fmt.Printf("  Leverage:            1:%d\n", summaryData.AccountLeverage)
 	fmt.Printf("  Trade Mode:          %v\n", summaryData.AccountTradeMode)
 
-	// ServerTime is a protobuf Timestamp - need to convert
+	// ServerTime is a protobuf Timestamp in the broker server's time zone; ServerTimeUtc is the same moment in UTC
 	if summaryData.ServerTime != nil {
 		serverTime := summaryData.ServerTime.AsTime()
-		fmt.Printf("  Server Time:         %s\n", serverTime.Format("2006-01-02 15:04:05"))
+		fmt.Printf("  Server Time:         %s (broker server time)\n", serverTime.Format("2006-01-02 15:04:05"))
+	}
+	if summaryData.ServerTimeUtc != nil {
+		fmt.Printf("  Server Time (UTC):   %s\n", summaryData.ServerTimeUtc.AsTime().Format("2006-01-02 15:04:05"))
 	}
 
 // UTC Timezone Shift: server time offset from UTC in minutes
@@ -103,10 +108,14 @@ Calls the `AccountSummary()` method on the `account` object.
 ---
 
 ```go
-helpers.Fatal(err, "AccountSummary failed")
+if err != nil {
+	return fmt.Errorf("AccountSummary failed: %w", err)
+}
 ```
 
-Checks if an error occurred. If `err != nil`, then `helpers.Fatal()` will print a message and terminate the program.
+Checks if an error occurred. If `err != nil`, the demo function returns the error. It does not exit on the spot
+(`helpers.Fatal()` would call `os.Exit`, which skips the deferred `account.DisconnectAndClose()` and leaves the
+terminal connected): returning lets the deferred cleanup disconnect the terminal first.
 
 ---
 
@@ -177,10 +186,13 @@ Prints the trading mode (for example, real or demo account). `%v` — universal 
 > Therefore, to output date and time in the desired format, you always specify exactly this template with actual numbers.
 
 ```go
-// ServerTime is a protobuf Timestamp - need to convert
+// ServerTime is a protobuf Timestamp in the broker server's time zone; ServerTimeUtc is the same moment in UTC
 if summaryData.ServerTime != nil {
     serverTime := summaryData.ServerTime.AsTime()
-    fmt.Printf("  Server Time:         %s\n", serverTime.Format("2006-01-02 15:04:05"))
+    fmt.Printf("  Server Time:         %s (broker server time)\n", serverTime.Format("2006-01-02 15:04:05"))
+}
+if summaryData.ServerTimeUtc != nil {
+    fmt.Printf("  Server Time (UTC):   %s\n", summaryData.ServerTimeUtc.AsTime().Format("2006-01-02 15:04:05"))
 }
 
 // UTC Timezone Shift: server time offset from UTC in minutes
@@ -194,8 +206,10 @@ fmt.Printf("  UTC Timezone Shift:  %d minutes (UTC%+.1f)\n",
 
 1. Checks that the time from the server (`ServerTime`) is present.
 2. Converts protobuf time to the `time.Time` type via the `.AsTime()` method.
-3. Formats the date and time in a human-readable form: `YYYY-MM-DD HH:MM:SS`.
-4. Prints the server time offset from UTC both in minutes and hours (for example, `120 minutes (UTC+2.0)`).
+3. Formats the date and time in a human-readable form: `YYYY-MM-DD HH:MM:SS`. `ServerTime` shows the broker server's
+   clock (its time zone); `ServerTimeUtc` is the same moment in UTC.
+4. Prints the server time offset from UTC both in minutes and hours (for example, `120 minutes (UTC+2.0)`;
+   positive = the server is ahead of UTC).
 
 **Why this is important:**
 

@@ -48,11 +48,16 @@ func CreateAndConnectAccount() (*mt5.MT5Account, *config.MT5Config, error) {
 	// Connection
 	err = ConnectByServerName(account, cfg.MtCluster, cfg.TestSymbol, 120)
 	if err != nil {
-		account.Close()
+		// The server may have started the terminal although the connect failed: stop it too.
+		_ = account.DisconnectAndClose(true)
 		return nil, nil, fmt.Errorf("connection failed: %w", err)
 	}
 
 	fmt.Printf("\033[32m  ✓ Connected successfully!\033[0m\n\n")
+
+	// helpers.Fatal (os.Exit) and Ctrl+C skip the caller's deferred DisconnectAccount: disconnect there too.
+	// A later DisconnectAccount makes this a no-op (DisconnectAndClose does nothing once closed).
+	OnFatal(func() { _ = account.DisconnectAndClose(true) })
 
 	return account, cfg, nil
 }
@@ -69,16 +74,20 @@ func DisconnectAccount(account *mt5.MT5Account) {
 	}
 }
 
-// ConnectByServerName connects to MT5 using the server name
+// ConnectByServerName connects to MT5 using the server (cluster) name.
+// timeoutSeconds is how long the server waits for the terminal to start and log in (ConnectExRequest.TimeoutSeconds);
+// the call itself gets 30 seconds more. baseSymbol is not sent: ConnectExRequest has no base chart symbol field.
 func ConnectByServerName(account *mt5.MT5Account, serverName, baseSymbol string, timeoutSeconds int) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds+30)*time.Second)
 	defer cancel()
 
 	_ = baseSymbol
+	wait := uint32(timeoutSeconds)
 	req := &pb.ConnectExRequest{
-		User:          account.User,
-		Password:      account.Password,
-		MtClusterName: serverName,
+		User:           account.User,
+		Password:       account.Password,
+		MtClusterName:  serverName,
+		TimeoutSeconds: &wait,
 	}
 
 	// ConnectEx

@@ -355,6 +355,7 @@ func StartTradingBot(login uint64, password, server, cluster string) error {
     if err != nil {
         return fmt.Errorf("failed to create Sugar: %w", err)
     }
+    defer sugar.Disconnect() // stops the terminal on every path, also after a failed connect
 
     // Connect
     fmt.Println("🔌 Connecting to MT5...")

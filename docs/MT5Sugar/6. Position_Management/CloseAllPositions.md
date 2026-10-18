@@ -5,8 +5,9 @@
 **API Information:**
 
 * **Method:** `sugar.CloseAllPositions()`
-* **Timeout:** 30 seconds for the whole operation (listing + every close)
-* **Returns:** Number of positions closed, and an error only if the position list could not be read
+* **Timeout:** 10 seconds to list the positions, then 30 seconds for each close (every close has its own timeout)
+* **Returns:** Number of positions closed, and an error when the list could not be read or when at least one close
+  failed (the error names every failed ticket; the count is still valid)
 
 ---
 
@@ -18,7 +19,51 @@ func (s *MT5Sugar) CloseAllPositions() (int, error)
 
 How it works: it reads the open positions (`GetOpenedOrders(...).PositionInfos` - pending orders are **not** touched),
 sends `pb.OrderCloseRequest{Ticket: pos.Ticket}` for each one and counts the closes that returned code 10009.
-A close that fails or is rejected is skipped silently - it is neither reported nor retried.
+A close that fails or is rejected does not stop the loop (it is not retried), but it is **collected and reported**:
+the returned error reads `"N of M position(s) not closed: position #T: <error>"` / `"position #T: close rejected,
+code: C (<meaning>)"`, one entry per failed ticket.
+
+```go
+func (s *MT5Sugar) CloseAllPositions() (int, error) {
+    return s.closePositions(func(*pb.PositionInfo) bool { return true })
+}
+
+// closePositions closes every open position the filter selects; failures are collected, not hidden.
+func (s *MT5Sugar) closePositions(selected func(*pb.PositionInfo) bool) (int, error) {
+    listCtx, cancelList := context.WithTimeout(s.ctx, 10*time.Second)
+    data, err := s.service.GetOpenedOrders(listCtx, pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC)
+    cancelList()
+    if err != nil {
+        return 0, fmt.Errorf("failed to get positions: %w", err)
+    }
+
+    closed := 0
+    var failures []error
+    for _, pos := range data.PositionInfos {
+        if !selected(pos) {
+            continue
+        }
+        ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
+        retCode, err := s.service.CloseOrder(ctx, &pb.OrderCloseRequest{Ticket: pos.Ticket})
+        cancel()
+        switch {
+        case err != nil:
+            failures = append(failures, fmt.Errorf("position #%d: %w", pos.Ticket, err))
+        case retCode != 10009:
+            failures = append(failures, fmt.Errorf("position #%d: close rejected, code: %d (%s)", pos.Ticket, retCode, helpers.GetRetCodeMessage(retCode)))
+        default:
+            closed++
+        }
+    }
+
+    if len(failures) > 0 {
+        return closed, fmt.Errorf("%d of %d position(s) not closed: %w", len(failures), len(failures)+closed, errors.Join(failures...))
+    }
+    return closed, nil
+}
+```
+
+`CloseAllBySymbol(symbol)` uses the same `closePositions` with the filter `pos.Symbol == symbol`.
 
 ---
 
@@ -31,7 +76,7 @@ A close that fails or is rejected is skipped silently - it is neither reported n
 | Output | Type | Description |
 |--------|------|-------------|
 | `int` | `int` | Number of positions successfully closed (return code 10009) |
-| `error` | `error` | `"failed to get positions: ..."` if the listing fails; otherwise `nil`, even when some closes failed |
+| `error` | `error` | `"failed to get positions: ..."` if the listing fails (count 0); `"N of M position(s) not closed: ..."` naming every failed ticket when some closes failed (count still valid); `nil` when every selected position was closed |
 
 ---
 
@@ -39,7 +84,7 @@ A close that fails or is rejected is skipped silently - it is neither reported n
 
 * **What it is:** Emergency "close everything" button - closes all open positions.
 * **Why you need it:** Emergency exit, end of trading day, major news event.
-* **Sanity check:** Closes ALL positions - no undo! Use with caution. Compare the returned count with the number of positions you expected; `err == nil` does not mean every position was closed.
+* **Sanity check:** Closes ALL positions - no undo! Use with caution. `err == nil` means every position in the list was closed; with an error, `closed` still tells how many were.
 
 ---
 
@@ -78,7 +123,8 @@ fmt.Println("⚠️  EMERGENCY: Closing all positions!")
 
 closed, err := sugar.CloseAllPositions()
 if err != nil {
-    fmt.Printf("❌ Failed to list positions: %v\n", err)
+    // listing failed, or some closes failed (the error names each ticket)
+    fmt.Printf("❌ Closed %d, but: %v\n", closed, err)
     return
 }
 
@@ -113,7 +159,7 @@ time.Sleep(3 * time.Second)
 
 closed, err := sugar.CloseAllPositions()
 if err != nil {
-    fmt.Printf("Failed: %v\n", err)
+    fmt.Printf("⚠️  Closed %d of %d positions: %v\n", closed, len(positions), err)
 } else {
     fmt.Printf("✅ Closed %d of %d positions (P/L before closing: $%.2f)\n",
         closed, len(positions), totalProfit)
@@ -161,12 +207,8 @@ func EndOfDayClose(sugar *mt5.MT5Sugar) {
     fmt.Println("\nClosing all positions...")
     closed, err := sugar.CloseAllPositions()
     if err != nil {
-        fmt.Printf("❌ Error: %v\n", err)
-        return
-    }
-
-    if closed < len(positions) {
-        fmt.Printf("⚠️  Only %d of %d positions closed\n", closed, len(positions))
+        // names every position that was not closed
+        fmt.Printf("⚠️  Only %d of %d positions closed: %v\n", closed, len(positions), err)
         return
     }
     fmt.Println("✅ All positions closed - have a nice weekend!")
@@ -198,7 +240,7 @@ for range ticker.C {
 
         closed, err := sugar.CloseAllPositions()
         if err != nil {
-            fmt.Printf("❌ Failed to close: %v\n", err)
+            fmt.Printf("❌ %d closed, some not: %v\n", closed, err)
         } else {
             fmt.Printf("✅ %d positions closed - loss limited\n", closed)
         }
@@ -225,11 +267,11 @@ if len(positions) > 0 {
 
     closed, err := sugar.CloseAllPositions()
     if err != nil {
-        fmt.Printf("❌ Failed: %v\n", err)
+        fmt.Printf("❌ %d of %d closed: %v\n", closed, len(positions), err)
         return
     }
 
-    fmt.Printf("✅ %d of %d positions closed - ready for news event\n", closed, len(positions))
+    fmt.Printf("✅ All %d positions closed - ready for news event\n", closed)
 } else {
     fmt.Println("No positions to close")
 }
@@ -277,11 +319,11 @@ for _, pos := range positions {
 // Close all
 closed, err := sugar.CloseAllPositions()
 if err != nil {
+    // the error names the tickets that were not closed; closed is still valid
     fmt.Printf("Error: %v\n", err)
-    return
 }
 
-// Show what was requested (closed may be less than len(closedPositions))
+// Show what was requested (closed is less than len(closedPositions) when err != nil)
 fmt.Printf("\n✅ Closed %d of %d positions:\n", closed, len(closedPositions))
 fmt.Println("─────────────────────────────────────────")
 
@@ -314,7 +356,7 @@ fmt.Printf("Attempting to close %d positions...\n", totalPositions)
 closed, err := sugar.CloseAllPositions()
 fmt.Printf("CloseAllPositions reported %d closed\n", closed)
 
-// Verify all closed (failed closes are skipped silently)
+// Verify all closed (err, printed below, names every failed close)
 time.Sleep(2 * time.Second)
 remainingPositions, _ := sugar.GetOpenPositions()
 
@@ -354,7 +396,7 @@ func ScheduledCloseAll(sugar *mt5.MT5Sugar, closeTime string) {
             if len(positions) > 0 {
                 closed, err := sugar.CloseAllPositions()
                 if err != nil {
-                    fmt.Printf("Failed: %v\n", err)
+                    fmt.Printf("%d of %d closed: %v\n", closed, len(positions), err)
                 } else {
                     fmt.Printf("✅ Closed %d of %d positions\n", closed, len(positions))
                 }
@@ -396,7 +438,7 @@ for range ticker.C {
 
         closed, err := sugar.CloseAllPositions()
         if err != nil {
-            fmt.Printf("❌ EMERGENCY CLOSE FAILED: %v\n", err)
+            fmt.Printf("❌ EMERGENCY CLOSE INCOMPLETE (%d closed): %v\n", closed, err)
         } else {
             fmt.Printf("✅ %d of %d positions closed\n", closed, len(positions))
         }
@@ -428,7 +470,7 @@ func CloseAllPositionsWithRetry(sugar *mt5.MT5Sugar, maxRetries int) error {
         fmt.Printf("Attempt %d/%d...\n", attempt, maxRetries)
 
         if _, err := sugar.CloseAllPositions(); err != nil {
-            fmt.Printf("  Could not list positions: %v\n", err)
+            fmt.Printf("  Not all closed: %v\n", err)
         }
 
         // Check how many closed
@@ -491,13 +533,16 @@ fmt.Printf("About to close %d positions\n", len(positions))
 ### 2) No verification after close
 
 ```go
-// ❌ WRONG - assuming success (err is nil even when some closes failed)
+// ❌ WRONG - assuming success (ignores the error that names failed closes)
 sugar.CloseAllPositions()
 fmt.Println("Done!")
 
-// ✅ CORRECT - verify
-closed, _ := sugar.CloseAllPositions()
+// ✅ CORRECT - check the error, then verify
+closed, err := sugar.CloseAllPositions()
 fmt.Printf("Closed %d positions\n", closed)
+if err != nil {
+    fmt.Printf("⚠️  %v\n", err)
+}
 time.Sleep(2 * time.Second)
 remaining, _ := sugar.GetOpenPositions()
 if len(remaining) > 0 {

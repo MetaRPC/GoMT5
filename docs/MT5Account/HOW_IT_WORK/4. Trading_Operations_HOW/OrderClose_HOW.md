@@ -32,8 +32,6 @@ if !helpers.PrintShortError(err, "OrderClose failed") {
             mt5.GetRetCodeMessage(closeData.ReturnedCode),
             closeData.ReturnedCode)
     }
-} else {
-    fmt.Printf("    ✗ Order execution FAILED - check return code and comment\n")
 }
 ```
 

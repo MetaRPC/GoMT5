@@ -5,7 +5,7 @@
 **API Information:**
 
 * **Method:** `sugar.GetDailyStats()`
-* **Timeout:** 5 seconds (the `GetDealsToday()` call)
+* **Timeout:** 15 seconds (the `GetDealsToday()` call)
 * **Returns:** DailyStats structure with complete statistics
 
 ---
@@ -16,8 +16,50 @@
 func (s *MT5Sugar) GetDailyStats() (*DailyStats, error)
 ```
 
-Implementation: calls `GetDealsToday()` (closed positions **opened** today, 00:00 to now on your machine's clock) and
-computes the statistics from each position's `Profit` (swap, commission and fee are not included).
+Implementation:
+
+```go
+func (s *MT5Sugar) GetDailyStats() (*DailyStats, error) {
+    deals, err := s.GetDealsToday()
+    if err != nil {
+        return nil, err
+    }
+
+    stats := &DailyStats{
+        TotalDeals: len(deals),
+    }
+
+    if len(deals) == 0 {
+        return stats, nil
+    }
+
+    for _, deal := range deals {
+        stats.TotalProfit += deal.Profit
+
+        if deal.Profit > 0 {
+            stats.WinningDeals++
+            if deal.Profit > stats.BestDeal {
+                stats.BestDeal = deal.Profit
+            }
+        } else if deal.Profit < 0 {
+            stats.LosingDeals++
+            if deal.Profit < stats.WorstDeal {
+                stats.WorstDeal = deal.Profit
+            }
+        }
+    }
+
+    if stats.TotalDeals > 0 {
+        stats.WinRate = float64(stats.WinningDeals) / float64(stats.TotalDeals) * 100.0
+    }
+
+    return stats, nil
+}
+```
+
+`GetDealsToday()` returns the closed positions **opened** today (local midnight to now on the computer running the
+program, sent to the server as UTC; a position opened yesterday and closed today is not counted). The statistics use each
+position's `Profit` (swap, commission and fee are not included).
 `DailyStats` is declared in package `mt5` - outside that package write `*mt5.DailyStats`.
 
 ---
@@ -39,11 +81,11 @@ computes the statistics from each position's `Profit` (swap, commission and fee 
 
 ```go
 type DailyStats struct {
-    TotalDeals   int     // Number of closed positions returned by GetDealsToday()
+    TotalDeals   int     // Number of today's closed positions (opened since local midnight, as GetDealsToday() returns them)
     WinningDeals int     // Positions with Profit > 0
     LosingDeals  int     // Positions with Profit < 0 (Profit == 0 counts as neither)
     WinRate      float64 // WinningDeals / TotalDeals * 100 (0-100)
-    TotalProfit  float64 // Sum of Profit
+    TotalProfit  float64 // Sum of Profit (commission, swap and fee not included)
     BestDeal     float64 // Largest positive Profit (0 if no winning deal)
     WorstDeal    float64 // Most negative Profit (0 if no losing deal)
 }
@@ -234,18 +276,24 @@ if stats.TotalDeals == 0 {
     return
 }
 
-// Calculate average win/loss
+// DailyStats has no sums of wins/losses - take them from the same positions
+deals, _ := sugar.GetDealsToday()
+totalWins, totalLosses := 0.0, 0.0
+for _, deal := range deals {
+    if deal.Profit > 0 {
+        totalWins += deal.Profit
+    } else if deal.Profit < 0 {
+        totalLosses += deal.Profit
+    }
+}
+
 avgWin := 0.0
 if stats.WinningDeals > 0 {
-    // Estimate avg win
-    totalWins := stats.TotalProfit - (stats.WorstDeal * float64(stats.LosingDeals))
     avgWin = totalWins / float64(stats.WinningDeals)
 }
 
 avgLoss := 0.0
 if stats.LosingDeals > 0 {
-    // Estimate avg loss
-    totalLosses := stats.WorstDeal * float64(stats.LosingDeals)
     avgLoss = totalLosses / float64(stats.LosingDeals)
 }
 
@@ -650,7 +698,7 @@ if stats.BestDeal > 0 && stats.WorstDeal < 0 {
 
 3. **Empty OK** - Returns zero-valued stats if no trades (not error)
 
-4. **Today only** - Closed positions opened from 00:00 (your machine's clock) to now
+4. **Today only** - Closed positions opened from local 00:00 (calendar of the computer running the program) to now; 15-second timeout
 
 5. **Convenient** - Same single `GetDealsToday()` call you would make yourself, aggregated for you
 
@@ -662,7 +710,7 @@ if stats.BestDeal > 0 && stats.WorstDeal < 0 {
 Total relationships:
 - TotalDeals = WinningDeals + LosingDeals + (deals with Profit == 0, not counted separately)
 - WinRate = (WinningDeals / TotalDeals) * 100
-- TotalProfit = Sum of all deal profits
+- TotalProfit = Sum of all deal Profit fields (no commission/swap/fee)
 
 Quality checks:
 - If WinRate > 50% but TotalProfit < 0: Wins too small

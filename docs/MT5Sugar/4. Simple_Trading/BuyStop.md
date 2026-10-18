@@ -5,7 +5,7 @@
 **API Information:**
 
 * **Method:** `sugar.BuyStop(symbol, volume, price)`
-* **Timeout:** 10 seconds
+* **Timeout:** 30 seconds
 * **Returns:** Pending order ticket number (`result.Order`)
 * **Request:** `service.PlaceOrder(ctx, &pb.OrderSendRequest{Symbol, Operation: pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_BUY_STOP, Volume, Price: &price})` -
   no SL/TP, expiration, comment or magic number; price and volume are sent exactly as given (no rounding, no check
@@ -205,7 +205,7 @@ tp := breakoutPrice + (tpDistance * info.Point)
 
 // BuyStop sends no SL/TP and Sugar has no BuyStopWithSLTP - place the
 // BUY STOP with SL/TP in one request through the Service layer
-ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second) // trade requests: 30 s like Sugar
 defer cancel()
 
 result, err := sugar.GetService().PlaceOrder(ctx, &pb.OrderSendRequest{
@@ -307,7 +307,7 @@ for i := 0; i < 10; i++ {
             resistanceLevel, newStopLevel)
 
         // Sugar has no ModifyOrder - change the pending order price through the Service
-        ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+        ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second) // trade requests: 30 s like Sugar
         result, err := sugar.GetService().ModifyOrder(ctx, &pb.OrderModifyRequest{
             Ticket: ticket,
             Price:  &newStopLevel,

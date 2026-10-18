@@ -1,12 +1,12 @@
 # 📅📋 Get Deals Yesterday (`GetDealsYesterday`)
 
-> **Sugar method:** Returns closed positions ("deals") that were **opened** yesterday (full day 00:00 to 23:59:59).
+> **Sugar method:** Returns closed positions ("deals") that were **opened** yesterday (the whole previous local calendar day, 00:00:00 to 23:59:59.999999999).
 
 **API Information:**
 
 * **Method:** `sugar.GetDealsYesterday()`
-* **Timeout:** 5 seconds
-* **Returns:** Slice of position history info, sorted by open time (oldest first)
+* **Timeout:** 15 seconds
+* **Returns:** Slice of position history info (one entry per closed position), sorted by open time (oldest first)
 
 ---
 
@@ -16,15 +16,25 @@
 func (s *MT5Sugar) GetDealsYesterday() ([]*pb.PositionHistoryInfo, error)
 ```
 
-How it works: yesterday 00:00:00 and 23:59:59 on your machine's clock (`time.Now().AddDate(0, 0, -1)`) are passed to
-`MT5Service.GetPositionsHistory(ctx, pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_ASC, &start, &end, nil, nil)`.
-The range is sent as `PositionOpenTimeFrom` / `PositionOpenTimeTo`, so it filters by the position's **open** time:
-a position opened the day before yesterday and closed yesterday is not included, a position opened yesterday and closed
-today is. No paging parameters are sent.
+How it works:
 
-**Time zone note:** the boundaries come from your local clock and are sent as absolute instants in the request fields that
-the server reads as broker server time. If your machine, UTC and the broker server use different time zones, the window is
-shifted accordingly - use `GetDealsDateRange()` when you need exact boundaries.
+```go
+func (s *MT5Sugar) GetDealsYesterday() ([]*pb.PositionHistoryInfo, error) {
+    startOfToday := startOfLocalDay(time.Now())
+    startOfYesterday := startOfLocalDay(startOfToday.AddDate(0, 0, -1))
+    return s.positionsOpenedBetween(startOfYesterday, startOfToday.Add(-time.Nanosecond), 15*time.Second)
+}
+```
+
+`positionsOpenedBetween` reads `PositionsHistory` (sorted by open time) with **cursor paging** - page size
+1000, `PageToken` = the previous `NextPageToken` - until the last page, so long ranges are complete. The range filters by the position's **open** time:
+a position opened the day before yesterday and closed yesterday is not included, a position opened yesterday and closed
+today is. Still-open positions are not in the list. The timeout covers all pages together.
+
+**Time zone note:** "yesterday" is the previous calendar day of the computer running the program (`time.Local`).
+The window is sent in the request's UTC fields (`PositionOpenTimeFromUtc` /
+`PositionOpenTimeToUtc`), so the broker's time zone does not shift it. If you want the broker's trading day instead, run
+the program with `TZ` set to the broker's time zone or pass explicit boundaries to `GetDealsDateRange()`.
 
 ---
 
@@ -37,13 +47,13 @@ shifted accordingly - use `GetDealsDateRange()` when you need exact boundaries.
 | Output | Type | Description |
 |--------|------|-------------|
 | `[]*pb.PositionHistoryInfo` | slice | Closed positions opened yesterday |
-| `error` | `error` | `"GetPositionsHistory failed: ..."` if retrieval failed |
+| `error` | `error` | `"PositionsHistory failed: ..."` if a page query failed (or the timeout expired) |
 
 ---
 
 ## 💬 Just the Essentials
 
-* **What it is:** Get closed trades that were opened during yesterday (local clock).
+* **What it is:** Get closed trades that were opened during yesterday (local calendar day).
 * **Why you need it:** Historical analysis, compare with today, daily reports.
 * **Sanity check:** Returns an empty (possibly `nil`) slice if there are no deals - check `len(deals)`. Auto-calculates full day range.
 
@@ -535,13 +545,14 @@ deals, _ := sugar.GetDealsDateRange(from, time.Now())
 
 ```go
 // ❌ WRONG - assuming "yesterday" is the broker's yesterday
-// The range is computed from YOUR machine's clock (time.Now())
+// The range is the previous calendar day of YOUR computer (time.Local)
 deals, _ := sugar.GetDealsYesterday()
 
-// ✅ CORRECT - pass explicit boundaries when the day must match the broker's day
-// (the server reads the request times as broker server time)
-from := time.Date(2026, 10, 15, 0, 0, 0, 0, time.UTC)  // broker 00:00
-to := time.Date(2026, 10, 15, 23, 59, 59, 0, time.UTC) // broker 23:59:59
+// ✅ CORRECT - pass explicit boundaries in the broker's time zone when the day must match the broker's day
+// (the times are real moments: they are sent as UTC, so any time zone works)
+broker := time.FixedZone("broker", 3*60*60) // e.g. a broker at UTC+3
+from := time.Date(2026, 10, 15, 0, 0, 0, 0, broker)
+to := from.AddDate(0, 0, 1).Add(-time.Nanosecond)
 deals, _ := sugar.GetDealsDateRange(from, to)
 ```
 
@@ -562,7 +573,7 @@ if len(deals) > 0 {
 
 ## 💎 Pro Tips
 
-1. **Full day** - Covers 00:00:00 to 23:59:59 of yesterday (local clock), matched against open time
+1. **Full day** - Covers 00:00:00 to 23:59:59.999999999 of yesterday (local calendar), matched against open time
 
 2. **Morning reports** - Perfect for generating morning summary reports
 
@@ -570,7 +581,9 @@ if len(deals) > 0 {
 
 4. **Empty OK** - Returns empty slice if no trading (not an error)
 
-5. **Performance** - 5-second timeout
+5. **Performance** - 15-second timeout
+
+6. **Profit field only** - `Profit` does not include commission, swap or fee
 
 ---
 
@@ -578,13 +591,12 @@ if len(deals) > 0 {
 
 ```
 Yesterday's range calculation (MT5Sugar.go):
-now = time.Now()
-yesterday = now.AddDate(0, 0, -1)
-startOfYesterday = yesterday at 00:00:00 (now.Location())
-endOfYesterday = yesterday at 23:59:59 (now.Location())
+startOfToday     = startOfLocalDay(time.Now())                      // local 00:00 today (time.Local)
+startOfYesterday = startOfLocalDay(startOfToday.AddDate(0, 0, -1))  // local 00:00 yesterday
+endOfYesterday   = startOfToday.Add(-time.Nanosecond)               // local 23:59:59.999999999 yesterday
 
 Returns closed positions whose OPEN time is in this window
-(PositionOpenTimeFrom / PositionOpenTimeTo), sorted by open time ascending
+(sent as PositionOpenTimeFromUtc / PositionOpenTimeToUtc), sorted by open time ascending
 ```
 
 ---

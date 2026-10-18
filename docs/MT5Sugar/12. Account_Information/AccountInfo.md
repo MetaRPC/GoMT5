@@ -19,7 +19,7 @@ type AccountInfo struct {
 }
 ```
 
-**Where the values come from** (`GetAccountInfo()`): `Login`, `Balance`, `Equity`, `Currency`, `Leverage` and `Company` (`CompanyName`) come from one `GetAccountSummary` call. `Margin`, `FreeMargin`, `MarginLevel` and `Profit` come from four separate queries (`GetMargin`, `GetFreeMargin`, `GetMarginLevel`, `GetProfit`) whose errors are ignored - a failed query leaves that field at `0`.
+**Where the values come from** (`GetAccountInfo()`): `Login`, `Balance`, `Equity`, `Currency`, `Leverage` and `Company` (`CompanyName`) come from one `GetAccountSummary` call. `Margin`, `FreeMargin`, `MarginLevel` and `Profit` come from four `service.GetAccountDouble` queries (`ACCOUNT_MARGIN`, `ACCOUNT_MARGIN_FREE`, `ACCOUNT_MARGIN_LEVEL`, `ACCOUNT_PROFIT`) on the same context as the summary - one 10-second deadline for the whole call. If any of them fails, `GetAccountInfo()` returns an error (`GetAccountInfo failed: margin: ...` etc.) instead of a struct - a field is never silently `0` because of a failed query.
 
 ## 📊 Field Details
 
@@ -76,7 +76,7 @@ type AccountInfo struct {
 
 ### Currency (string)
 
-- **What:** Account base currency
+- **What:** Account (deposit) currency
 - **Example:** `"USD"`, `"EUR"`, `"GBP"`
 - **Use:** Profit calculations, reporting
 

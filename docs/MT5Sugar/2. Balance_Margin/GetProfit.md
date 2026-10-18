@@ -80,8 +80,13 @@ func MonitorProfitTarget(sugar *mt5.MT5Sugar, targetProfit float64) {
 
         if profit >= targetProfit {
             fmt.Printf("🎯 Profit target reached! Closing all positions...\n")
-            sugar.CloseAllPositions()
-            fmt.Println("✅ All positions closed")
+            closed, err := sugar.CloseAllPositions()
+            if err != nil {
+                // the error names every position that was not closed; closed is still valid
+                fmt.Printf("⚠️  %d closed, some not: %v\n", closed, err)
+                return
+            }
+            fmt.Printf("✅ All %d positions closed\n", closed)
             return
         }
     }

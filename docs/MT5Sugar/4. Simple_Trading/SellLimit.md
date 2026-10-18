@@ -5,7 +5,7 @@
 **API Information:**
 
 * **Method:** `sugar.SellLimit(symbol, volume, price)`
-* **Timeout:** 10 seconds
+* **Timeout:** 30 seconds
 * **Returns:** Pending order ticket number (`result.Order`)
 * **Request:** `service.PlaceOrder(ctx, &pb.OrderSendRequest{Symbol, Operation: pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_SELL_LIMIT, Volume, Price: &price})` -
   no SL/TP, expiration, comment or magic number; price and volume are sent exactly as given (no rounding, no check
@@ -256,7 +256,7 @@ if err != nil {
     // Not filled - cancel it. Sugar has no DeleteOrder: delete the pending
     // order with the Service's CloseOrder (MT5 OrderClose deletes a pending order)
     fmt.Println("Order not filled - canceling...")
-    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second) // trade requests: 30 s like Sugar
     defer cancel()
     retCode, err := sugar.GetService().CloseOrder(ctx, &pb.OrderCloseRequest{Ticket: ticket})
     if err != nil || retCode != 10009 {

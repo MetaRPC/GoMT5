@@ -5,7 +5,7 @@
 **API Information:**
 
 * **Method:** `sugar.GetSymbolInfo(symbol)`
-* **Timeout:** 5 seconds
+* **Timeout:** 10 seconds
 * **Returns:** SymbolInfo structure with all parameters
 
 ---
@@ -27,7 +27,7 @@ func (s *MT5Sugar) GetSymbolInfo(symbol string) (*SymbolInfo, error)
 | Output | Type | Description |
 |--------|------|-------------|
 | `*SymbolInfo` | struct | Complete symbol information |
-| `error` | `error` | Error if symbol not found |
+| `error` | `error` | `"symbol <name> not found"`, `"GetSymbolInfo failed: ..."` or `"GetSymbolInfo failed: stop level: ..."` |
 
 ---
 
@@ -56,7 +56,46 @@ type SymbolInfo struct {
 * **What it is:** Get all important symbol parameters in one call.
 * **Why you need it:** Validation before trading, position sizing, SL/TP calculations.
 * **Sanity check:** More efficient than calling individual methods for each property.
-* **How it works:** One `SymbolParamsMany` query filtered by the symbol name (the first returned entry is used; no entry → error `symbol <name> not found`) plus one `SYMBOL_TRADE_STOPS_LEVEL` query. If the stop-level query fails, `StopLevel` is set to 0 instead of returning an error.
+* **How it works:** One `SymbolParamsMany` query filtered by the symbol name; the entry whose `Name` equals `symbol` **exactly** is used (the name filter may return similar names too; no exact match → error `symbol <name> not found`). Then one `SYMBOL_TRADE_STOPS_LEVEL` query; if it fails, the error is returned (`GetSymbolInfo failed: stop level: ...`) - `StopLevel` is never a silent 0. Both share one 10-second timeout.
+
+```go
+func (s *MT5Sugar) GetSymbolInfo(symbol string) (*SymbolInfo, error) {
+    ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+    defer cancel()
+
+    // Get symbol parameters using Service layer
+    symbolName := symbol
+    params, _, err := s.service.GetSymbolParamsMany(ctx, &symbolName, nil, nil, nil)
+    if err != nil {
+        return nil, fmt.Errorf("GetSymbolInfo failed: %w", err)
+    }
+
+    // Take the entry with exactly this name (the name filter may return similar names too).
+    var p *SymbolParams
+    for i := range params {
+        if params[i].Name == symbol {
+            p = &params[i]
+            break
+        }
+    }
+    if p == nil {
+        return nil, fmt.Errorf("symbol %s not found", symbol)
+    }
+
+    // Get stop level (0 = no minimum distance; a failed request is an error, not a 0)
+    stopLevel, err := s.service.GetSymbolInteger(ctx, symbol, pb.SymbolInfoIntegerProperty_SYMBOL_TRADE_STOPS_LEVEL)
+    if err != nil {
+        return nil, fmt.Errorf("GetSymbolInfo failed: stop level: %w", err)
+    }
+
+    return &SymbolInfo{
+        Name:         p.Name,
+        // ... Bid, Ask, Digits, Point, VolumeMin, VolumeMax, VolumeStep, Spread from p
+        StopLevel:    int32(stopLevel),
+        ContractSize: p.TradeContractSize,
+    }, nil
+}
+```
 
 ---
 
@@ -112,9 +151,9 @@ func ValidateSymbol(sugar *mt5.MT5Sugar, symbol string, volume float64) (bool, s
             volume, info.VolumeMax)
     }
 
-    // Check volume step
+    // Check volume step (with a tolerance: 0.1 / 0.01 = 10.000000000000002)
     steps := volume / info.VolumeStep
-    if steps != float64(int(steps)) {
+    if math.Abs(steps-math.Round(steps)) > 1e-6 {
         return false, fmt.Sprintf("volume %.2f not multiple of step %.2f",
             volume, info.VolumeStep)
     }
@@ -224,11 +263,12 @@ positionValue := volume * info.ContractSize
 fmt.Printf("Symbol:         %s\n", info.Name)
 fmt.Printf("Volume:         %.2f lots\n", volume)
 fmt.Printf("Contract size:  %.0f\n", info.ContractSize)
-fmt.Printf("Position value: $%.2f\n", positionValue)
+fmt.Printf("Position value: %.2f units of the base currency (EUR)\n", positionValue)
 
-// Pip value (for 1 lot)
+// Pip value (for 1 lot) in the QUOTE currency (USD for EURUSD; 1 pip = 10 points on 5 digits).
+// For the account currency use SYMBOL_TRADE_TICK_VALUE, as CalculatePositionSize does.
 pipValue := info.Point * 10 * info.ContractSize
-fmt.Printf("Pip value:      $%.2f per lot\n", pipValue)
+fmt.Printf("Pip value:      %.2f USD per lot\n", pipValue)
 ```
 
 ---
@@ -276,7 +316,7 @@ volume := 1.0 // 1 lot
 // Spread in price units
 spreadPrice := float64(info.Spread) * info.Point
 
-// Spread cost for position
+// Spread cost for position, in the quote currency (USD for EURUSD)
 spreadCost := spreadPrice * info.ContractSize * volume
 
 fmt.Printf("Symbol:      %s\n", info.Name)
@@ -346,11 +386,13 @@ func NewSymbolAnalyzer(sugar *mt5.MT5Sugar, symbol string) (*SymbolAnalyzer, err
 }
 
 func (sa *SymbolAnalyzer) CalculatePipValue(volume float64) float64 {
-    // For standard pairs (10 pips = 1 point movement)
+    // 5-/3-digit symbols: 1 pip = 10 points. Result is in the QUOTE currency
+    // (USD for EURUSD), not necessarily the account currency.
     return sa.Info.Point * 10 * sa.Info.ContractSize * volume
 }
 
 func (sa *SymbolAnalyzer) CalculateSpreadCost(volume float64) float64 {
+    // In the quote currency, like CalculatePipValue
     spreadPrice := float64(sa.Info.Spread) * sa.Info.Point
     return spreadPrice * sa.Info.ContractSize * volume
 }
@@ -472,7 +514,7 @@ fmt.Printf("\nPip value for 0.5 lots: $%.2f\n", pipValue)
 ### 1) Symbol name case sensitivity
 
 ```go
-// ❌ WRONG - case matters!
+// ❌ WRONG - case matters! The name must match exactly ("symbol eurusd not found")
 info, _ := sugar.GetSymbolInfo("eurusd")
 
 // ✅ CORRECT - use exact broker symbol name
@@ -523,8 +565,8 @@ spreadPips := float64(info.Spread) / 10.0 // For 5-digit
 ```
 Price calculations:
 - Spread in price = Spread points × Point size
-- Pip value = Point × 10 × ContractSize (for 5-digit)
-- SL distance = (SL pips × 10) × Point size
+- Pip value = Point × 10 × ContractSize (for 5-digit; in the quote currency)
+- SL distance = SL points × Point size = (SL pips × 10) × Point size (5-digit)
 
 Volume validation:
 - Volume must be ≥ VolumeMin

@@ -7,7 +7,7 @@
 * **Method:** `sugar.BuyMarketWithPips(symbol, volume, stopLossPips, takeProfitPips)`
 * **Package:** `mt5` (MT5Sugar)
 * **Underlying calls:** `CalculateSLTP()`, `BuyMarketWithSLTP()`
-* **Timeout:** 10 seconds for the order (`BuyMarketWithSLTP`); before that `CalculateSLTP` queries `GetSymbolInfo` (5 s) and `GetAsk` (3 s)
+* **Timeout:** 30 seconds for the order (`BuyMarketWithSLTP`); before that `CalculateSLTP` queries `GetSymbolInfo` (10 s) and `GetAsk` (3 s)
 
 ---
 
@@ -30,10 +30,10 @@ func (s *MT5Sugar) BuyMarketWithPips(
 |-----------|------|-------------|
 | `symbol` | `string` | Trading symbol (e.g., "EURUSD", "GBPUSD", "XAUUSD") |
 | `volume` | `float64` | Lot size (e.g., 0.1, 0.01, 1.0) |
-| `stopLossPips` | `float64` | Stop Loss distance in **points from entry** (e.g., 500 = 50 pips on 5-digit EURUSD) |
-| `takeProfitPips` | `float64` | Take Profit distance in **points from entry** (e.g., 1000) |
+| `stopLossPips` | `float64` | Stop Loss distance in **POINTS from entry** despite the name (e.g., 500 = 50 pips on 5-digit EURUSD) |
+| `takeProfitPips` | `float64` | Take Profit distance in **POINTS from entry** despite the name (e.g., 1000 = 100 pips on 5-digit EURUSD) |
 
-**Important:** SL/TP are distances in **points** (multiplied by the symbol's `Point`), not price and not pips! On a 5-digit symbol 10 points = 1 pip.
+**Important:** SL/TP are distances in **points** (multiplied by the symbol's `Point`: 0.00001 on 5-digit EURUSD, 0.001 on 3-digit USDJPY), not price and not pips! On 5- and 3-digit symbols 10 points = 1 pip, so pass 500 for a 50-pip stop.
 
 ---
 
@@ -42,7 +42,7 @@ func (s *MT5Sugar) BuyMarketWithPips(
 | Return | Type | Description |
 |--------|------|-------------|
 | `ticket` | `uint64` | Order ticket (`result.Order`); for a market order MT5 uses it as the position ticket (use for tracking/closing) |
-| `error` | `error` | `order rejected, code: N, comment: ...` if the return code is not 10009 (TRADE_RETCODE_DONE), or a call error |
+| `error` | `error` | The `CalculateSLTP` error (symbol/price query failed), `order rejected, code: N, comment: ...` if the return code is not 10009 (TRADE_RETCODE_DONE), or `BuyMarketWithSLTP failed: ...` |
 
 ---
 
@@ -50,7 +50,7 @@ func (s *MT5Sugar) BuyMarketWithPips(
 
 * **What it is:** Opens BUY at market with SL/TP specified as point distances instead of price.
 * **Why you need it:** Much easier than calculating SL/TP prices manually. Just specify "500 points stop, 1000 points profit" and you're done.
-* **Sanity check:** If EURUSD (5 digits) Ask is 1.08500, SL=500, TP=1000 → SL will be at 1.08000, TP at 1.09000.
+* **Sanity check:** If EURUSD (5 digits) Ask is 1.08500, SL=500, TP=1000 (points) → SL will be at 1.08000, TP at 1.09500.
 
 ---
 
@@ -75,15 +75,16 @@ Take Profit = ASK + (takeProfitPips × point)
 
 Where:
   point = symbol's minimal price change (e.g., 0.00001 for EURUSD)
+SL and TP are rounded to the symbol's digits.
 ```
 
 **Example:**
 ```
 EURUSD ASK = 1.08500
-SL = 500 points → 1.08500 - (500 × 0.00001) = 1.08000
-TP = 1000 points → 1.08500 + (1000 × 0.00001) = 1.09000
+SL = 500 points → 1.08500 - (500 × 0.00001) = 1.08500 - 0.00500 = 1.08000
+TP = 1000 points → 1.08500 + (1000 × 0.00001) = 1.08500 + 0.01000 = 1.09500
 
-BUY at 1.08500, SL at 1.08000, TP at 1.09000
+BUY at 1.08500, SL at 1.08000, TP at 1.09500
 ```
 
 ---
@@ -95,7 +96,8 @@ BUY at 1.08500, SL at 1.08000, TP at 1.09000
 * **Current market price** - Uses current ASK for entry
 * **Auto-calculation** - Handles different symbol digits automatically
 * **Do NOT pass 0 to skip SL/TP** - a 0 distance puts SL/TP exactly at the entry (Ask) price, which the broker will normally reject; use `BuyMarket()` to open without SL/TP
-* **No rounding** - SL/TP prices and volume are sent as calculated/given (not normalized to `Digits` / `VolumeStep`)
+* **Rounding** - SL/TP prices are rounded to the symbol's `Digits`; the volume is sent as given (not normalized to `VolumeStep`)
+* **Order timeout 30 s** - An order that times out on the client side may still have been executed: check `GetOpenPositions()` before retrying
 * **Market execution** - Order fills at current market price
 * **Slippage possible** - Actual entry might differ slightly; SL/TP are calculated from the Ask read before the order is sent
 
@@ -135,9 +137,10 @@ info, _ := sugar.GetSymbolInfo("EURUSD")
 // Get current ASK
 ask, _ := sugar.GetAsk("EURUSD")
 
-// Calculate SL/TP manually
-sl := ask - (500 * info.Point)  // 500 points below
-tp := ask + (1000 * info.Point) // 1000 points above
+// Calculate SL/TP manually (and round to the symbol's digits)
+scale := math.Pow(10, float64(info.Digits))
+sl := math.Round((ask-500*info.Point)*scale) / scale  // 500 points below
+tp := math.Round((ask+1000*info.Point)*scale) / scale // 1000 points above
 
 // Open position
 ticket, _ := sugar.BuyMarketWithSLTP("EURUSD", 0.1, sl, tp)
@@ -295,7 +298,7 @@ fmt.Printf("✅ Order #%d opened\n", ticket)
 // Symbol:       EURUSD
 // Entry (ASK):  1.08500
 // Stop Loss:    1.08000 (-500 points)
-// Take Profit:  1.09000 (+1000 points)
+// Take Profit:  1.09500 (+1000 points)
 // Risk/Reward:  1:2.0
 // ═══════════════════════════════════════
 // ✅ Order #44444 opened
@@ -372,8 +375,12 @@ fmt.Printf("Position #%d opened\n", ticket)
 // Monitor and trail
 time.Sleep(10 * time.Second) // Wait for price to move
 
-// Get current position
-pos, _ := sugar.GetPositionByTicket(ticket)
+// Get current position (an error if it is no longer open, e.g. SL/TP hit)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    fmt.Printf("Position not open: %v\n", err)
+    return
+}
 
 if pos.Profit > 0 {
     // Price moved in our favor - move SL to breakeven
@@ -505,11 +512,14 @@ ticket, _ := sugar.BuyMarketWithPips("EURUSD", lotSize, 500, 1000)
 ```go
 // ❌ WRONG - passing price as stop loss
 slPrice := 1.08000
-sugar.BuyMarketWithPips("EURUSD", 0.1, slPrice, 100) // WRONG!
+sugar.BuyMarketWithPips("EURUSD", 0.1, slPrice, 1000) // WRONG!
 
-// ✅ CORRECT - stop loss distance in points
+// ❌ WRONG - passing pips: 50 is read as 50 POINTS (= 5 pips)
+sugar.BuyMarketWithPips("EURUSD", 0.1, 50, 100)
+
+// ✅ CORRECT - stop loss distance in points (500 points = 50 pips on EURUSD)
 slPips := 500.0
-sugar.BuyMarketWithPips("EURUSD", 0.1, slPips, 100)
+sugar.BuyMarketWithPips("EURUSD", 0.1, slPips, 1000)
 ```
 
 ### 2) Using same distances for different symbols

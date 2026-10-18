@@ -5,7 +5,7 @@
 **API Information:**
 
 * **Method:** `sugar.GetProfitToday()`
-* **Timeout:** 5 seconds (the `GetDealsToday()` call)
+* **Timeout:** 15 seconds (the `GetDealsToday()` call)
 * **Returns:** Total profit as float64
 
 ---
@@ -16,8 +16,29 @@
 func (s *MT5Sugar) GetProfitToday() (float64, error)
 ```
 
-Implementation: calls `GetDealsToday()` and adds up `deal.Profit`. Swap, commission and fee are **not** included,
-and the set of positions is that of `GetDealsToday()`: closed positions **opened** today (00:00 to now on your machine's clock).
+Implementation:
+
+```go
+func (s *MT5Sugar) GetProfitToday() (float64, error) {
+    deals, err := s.GetDealsToday()
+    if err != nil {
+        return 0, err
+    }
+    return sumProfit(deals), nil
+}
+
+// sumProfit adds up the Profit field (without commission, swap and fee).
+func sumProfit(deals []*pb.PositionHistoryInfo) float64 {
+    var total float64
+    for _, deal := range deals {
+        total += deal.Profit
+    }
+    return total
+}
+```
+
+Swap, commission and fee are **not** included, and the set of positions is that of `GetDealsToday()`: closed positions
+**opened** today (local midnight to now on the computer running the program, sent to the server as UTC).
 
 ---
 
@@ -36,7 +57,7 @@ and the set of positions is that of `GetDealsToday()`: closed positions **opened
 
 ## 💬 Just the Essentials
 
-* **What it is:** Get today's total profit/loss from closed positions opened today (00:00 to now).
+* **What it is:** Get today's total profit/loss from closed positions opened today (local 00:00 to now).
 * **Why you need it:** Quick profit check, daily targets, performance dashboards.
 * **Sanity check:** Returns 0 if no closed positions today. Positive = profit, negative = loss.
 
@@ -471,11 +492,11 @@ if len(deals) > 0 {
 
 ```go
 // ❌ WRONG - assuming "today" is the broker's trading day
-// The range is 00:00..now on YOUR machine's clock, matched against position OPEN time
+// The range is 00:00..now of YOUR computer's calendar day (time.Local), matched against position OPEN time
 
 // ✅ CORRECT - aware of how the window is built
 profit, _ := sugar.GetProfitToday()
-fmt.Printf("Profit of positions opened today (local clock): $%.2f\n", profit)
+fmt.Printf("Profit of positions opened today (local calendar): $%.2f\n", profit)
 ```
 
 ### 4) Expecting net profit
@@ -504,16 +525,18 @@ for _, d := range deals {
 
 4. **Profit only** - Swap, commission and fee are not included
 
-5. **Local clock** - "Today" is 00:00..now on your machine's clock, matched against open time
+5. **Local calendar** - "Today" is local 00:00..now on the computer running the program, matched against open time
+
+6. **Timeout** - 15 seconds (that of `GetDealsToday()`)
 
 ---
 
 ## 📊 Profit Sign Convention
 
 ```
-Positive value: Net profit today
+Positive value: Profit today (sum of the Profit field, before commission/swap/fee)
 Zero: Breakeven (or no closed positions)
-Negative value: Net loss today
+Negative value: Loss today (sum of the Profit field, before commission/swap/fee)
 
 Example:
 +150.50 = $150.50 profit

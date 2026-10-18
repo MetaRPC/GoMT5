@@ -193,7 +193,7 @@ fmt.Println("✅ Balance check passed")
 accountInfo, _ := sugar.GetAccountInfo()
 // Now you have: Balance, Equity, Margin, FreeMargin, Profit, etc.
 // (It is still several requests: GetAccountSummary plus GetMargin/GetFreeMargin/
-// GetMarginLevel/GetProfit; errors of those four are ignored and leave the field 0.)
+// GetMarginLevel/GetProfit; an error of any of them is returned, e.g. "GetAccountInfo failed: margin: ...")
 ```
 
 ---

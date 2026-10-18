@@ -101,7 +101,9 @@ func MonitorMarginLevel(sugar *mt5.MT5Sugar) {
             fmt.Println("🟠 WARNING")
         } else {
             fmt.Println("🔴 DANGER - MARGIN CALL RISK!")
-            sugar.CloseAllPositions() // Emergency close
+            if _, err := sugar.CloseAllPositions(); err != nil { // Emergency close
+                fmt.Printf("Some positions not closed: %v\n", err)
+            }
         }
     }
 }

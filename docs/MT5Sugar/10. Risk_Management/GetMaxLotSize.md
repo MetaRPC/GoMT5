@@ -7,7 +7,7 @@
 * **Method:** `sugar.GetMaxLotSize(symbol)`
 * **Package:** `mt5` (MT5Sugar)
 * **Underlying calls:** `GetFreeMargin()`, `GetSymbolInfo()`, `service.GetSymbolTick()`, `service.CalculateMargin()`
-* **Timeout:** 5 seconds (for the tick and margin queries; `GetFreeMargin` and `GetSymbolInfo` use their own 3 s / 5 s timeouts)
+* **Timeout:** 5 seconds (for the tick and margin queries; `GetFreeMargin` and `GetSymbolInfo` use their own 3 s / 10 s timeouts)
 * **Safety buffer:** Uses 80% of free margin (20% buffer to prevent margin calls)
 
 ---
@@ -33,14 +33,14 @@ func (s *MT5Sugar) GetMaxLotSize(symbol string) (float64, error)
 | Return | Type | Description |
 |--------|------|-------------|
 | `maxLots` | `float64` | Maximum safe lot size you can trade |
-| `error` | `error` | Error if a query fails, or `failed to calculate margin for <symbol>` if the margin for 1 lot is 0 |
+| `error` | `error` | Error if a query fails, `failed to calculate margin for <symbol>` if the margin for 1 lot is 0, or `insufficient margin: 80% of the free margin X does not cover the minimum volume Y of <symbol>` |
 
 **Special cases:**
 
-- Returns `0.0` (no error) if you don't have enough margin even for minimum lot
-- Rounded DOWN to symbol's `VolumeStep`
-- Capped at `VolumeMax` (a result below `VolumeMin` returns `0.0`, it is not raised to `VolumeMin`)
-- Margin per lot is calculated for a **BUY** at the current **Ask**
+- Returns an **error** (`insufficient margin: ...`) if you don't have enough margin even for the minimum lot - never `(0, nil)`
+- Rounded DOWN to symbol's `VolumeStep` (same `floorToStep` as `CalculatePositionSize`, with a small float tolerance: 0.3 / 0.01 gives 0.30, not 0.29)
+- Capped at `VolumeMax` (a result below `VolumeMin` is the error above, it is not raised to `VolumeMin`)
+- Margin per lot is calculated for a **BUY** at the current **Ask** - the method has no direction, a SELL's margin may differ slightly
 
 ---
 
@@ -72,7 +72,7 @@ Step 2: Calculate margin required for 1 lot of the symbol (OrderCalcMargin, BUY 
 Step 3: Apply safety buffer (80% of free margin)
 Step 4: Calculate: maxLots = (freeMargin × 0.8) / marginPerLot
 Step 5: Round down to VolumeStep
-Step 6: Below VolumeMin → return 0; above VolumeMax → return VolumeMax
+Step 6: Below VolumeMin → error "insufficient margin: ..."; above VolumeMax → return VolumeMax
 
 Example:
 - Free margin: $5,000
@@ -90,15 +90,12 @@ Example:
 ```go
 maxLots, err := sugar.GetMaxLotSize("EURUSD")
 if err != nil {
-    fmt.Printf("Error: %v\n", err)
+    // also "insufficient margin: ..." when not even the minimum lot is covered
+    fmt.Printf("❌ %v\n", err)
     return
 }
 
-if maxLots == 0 {
-    fmt.Println("❌ Insufficient margin - cannot open any position")
-} else {
-    fmt.Printf("✅ Maximum lot size: %.2f lots\n", maxLots)
-}
+fmt.Printf("✅ Maximum lot size: %.2f lots\n", maxLots)
 ```
 
 ---
@@ -584,17 +581,17 @@ safeLots := float64(int(maxLots*0.5/info.VolumeStep)) * info.VolumeStep // 50% o
 sugar.BuyMarket("EURUSD", safeLots)
 ```
 
-### 2) Ignoring zero result
+### 2) Ignoring the error
 
 ```go
-// ❌ WRONG - not checking for zero
+// ❌ WRONG - ignoring the error (insufficient margin returns 0 AND an error)
 maxLots, _ := sugar.GetMaxLotSize("EURUSD")
 sugar.BuyMarket("EURUSD", maxLots) // Will fail if maxLots = 0!
 
-// ✅ CORRECT - check for zero
-maxLots, _ := sugar.GetMaxLotSize("EURUSD")
-if maxLots == 0 {
-    fmt.Println("Insufficient margin")
+// ✅ CORRECT - check the error
+maxLots, err := sugar.GetMaxLotSize("EURUSD")
+if err != nil {
+    fmt.Println("Cannot size the position:", err) // e.g. "insufficient margin: ..."
     return
 }
 ```
@@ -659,7 +656,7 @@ fmt.Println("Max lots includes 20% safety buffer")
 
 6. **Monitor regularly** - Capacity changes as positions are opened/closed
 
-7. **Zero is valid** - Returns 0.0 (not error) if insufficient margin
+7. **Insufficient margin is an error** - When not even the minimum lot is covered, it returns `0` with an `insufficient margin: ...` error (not `0, nil`)
 
 ---
 

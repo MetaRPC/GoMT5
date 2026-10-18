@@ -13,7 +13,8 @@
 ```go
 tradeReq := &pb.OnTradeRequest{}
 
-tradeChan, tradeErrChan := account.OnTrade(ctx, tradeReq)
+tradeCtx, tradeCancel := context.WithCancel(ctx)
+tradeChan, tradeErrChan := account.OnTrade(tradeCtx, tradeReq)
 
 fmt.Printf("Streaming trade events (max %d events or %d seconds)...\n", MAX_EVENTS, MAX_SECONDS)
 fmt.Println("  NOTE: This stream sends events only when trades occur")
@@ -57,6 +58,7 @@ for {
         break streamTrade
     }
 }
+tradeCancel() // closes this stream on the server
 ```
 
 ---
@@ -76,8 +78,11 @@ Create an empty request, as the `OnTrade()` stream doesn't require symbols — i
 ### 2️. Start the Stream
 
 ```go
-tradeChan, tradeErrChan := account.OnTrade(ctx, tradeReq)
+tradeCtx, tradeCancel := context.WithCancel(ctx)
+tradeChan, tradeErrChan := account.OnTrade(tradeCtx, tradeReq)
 ```
+
+The stream gets its own context, derived from `ctx`: `tradeCancel()` after the loop closes this stream on the server at once. Without it the stream would stay open, unread, until `ctx` itself ends — and every later stream of the demo would pile up next to it.
 
 The method returns two channels:
 

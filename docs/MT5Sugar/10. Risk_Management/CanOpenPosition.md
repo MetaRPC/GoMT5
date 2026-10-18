@@ -7,7 +7,7 @@
 * **Method:** `sugar.CanOpenPosition(symbol, volume)`
 * **Package:** `mt5` (MT5Sugar)
 * **Underlying calls:** `IsSymbolAvailable()`, `GetSymbolInfo()`, `service.GetSymbolTick()`, `service.CalculateMargin()`, `GetFreeMargin()`
-* **Timeout:** 5 seconds (for the tick and margin queries; `IsSymbolAvailable`, `GetSymbolInfo` and `GetFreeMargin` use their own 3 s / 5 s / 3 s timeouts)
+* **Timeout:** 5 seconds (for the tick and margin queries; `IsSymbolAvailable`, `GetSymbolInfo` and `GetFreeMargin` use their own 3 s / 10 s / 3 s timeouts)
 * **Returns:** Three values (bool, string, error)
 
 ---
@@ -65,7 +65,7 @@ func (s *MT5Sugar) CanOpenPosition(symbol string, volume float64) (bool, string,
 
 This method validates:
 
-1. ✅ **Symbol availability** - Does the symbol exist and is it synchronized? (`IsSymbolAvailable`; trade mode is not checked)
+1. ✅ **Symbol availability** - Does the symbol exist and is it synchronized? (`IsSymbolAvailable`; trade mode is not checked. Right after connecting a symbol that is still synchronizing gives `symbol X is not available` - retry after a short wait)
 
 2. ✅ **Volume minimum** - Is volume >= VolumeMin?
 
@@ -73,7 +73,7 @@ This method validates:
 
 4. ✅ **Volume step** - Is volume a multiple of VolumeStep? (tolerance 0.0001)
 
-5. ✅ **Free margin** - Is the required margin <= free margin? The margin is calculated with `OrderCalcMargin` for a **BUY** at the current **Ask**, whatever direction you intend to trade (no safety buffer).
+5. ✅ **Free margin** - Is the required margin <= free margin? The margin is calculated with `OrderCalcMargin` for a **BUY** at the current **Ask**, whatever direction you intend to trade - the method has no direction parameter, so a SELL's margin may differ slightly (no safety buffer).
 
 **If ANY check fails → returns (false, reason, nil)**
 
@@ -306,7 +306,7 @@ func ShowPreTradeChecklist(
 
     // Check volume step
     steps := volume / info.VolumeStep
-    if steps == float64(int(steps)) {
+    if math.Abs(steps-math.Round(steps)) < 1e-6 { // tolerance: 0.1 / 0.01 = 10.000000000000002
         fmt.Printf("✅ Volume is multiple of step (%.2f)\n", info.VolumeStep)
     } else {
         fmt.Printf("❌ Volume not multiple of step (%.2f)\n", info.VolumeStep)

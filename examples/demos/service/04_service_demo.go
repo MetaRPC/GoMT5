@@ -7,7 +7,7 @@
    This is the RECOMMENDED layer for most trading applications.
 
 
- 📚 WHAT THIS DEMO COVERS (30 Methods in 9 Steps):
+ 📚 WHAT THIS DEMO COVERS (32 Methods in 9 Steps):
 
    STEP 1: CREATE MT5SERVICE & CONNECT
       • NewMT5Service() - Create service wrapper
@@ -49,9 +49,9 @@
 
    STEP 7: TRADING OPERATIONS (4 methods)
       • CheckOrder() - Pre-validate order before sending
-      • PlaceOrder() - Send order to broker (structure demo)
-      • ModifyOrder() - Modify order SL/TP (structure demo)
-      • CloseOrder() - Close position (structure demo)
+      • PlaceOrder() - Send a REAL market order (minimal volume, demo account!)
+      • ModifyOrder() - Add SL/TP to that position
+      • CloseOrder() - Close that position
 
    STEP 8: MARKET DEPTH (3 methods)
       • SubscribeMarketDepth() - Subscribe to DOM updates
@@ -62,7 +62,7 @@
       • StreamTicks() - Real-time tick stream
 
    FINAL: DISCONNECT
-      • Disconnect() - Close connection
+      • Disconnect() - Stop the terminal and close the connection
 
  ⚡ API LEVELS COMPARISON:
 
@@ -78,7 +78,7 @@
       • Returns: *AccountSummary (clean struct)
       • Auto-converted times: summary.ServerTime (*time.Time)
 
-   HIGH-LEVEL (MT5Sugar) - Coming Soon:
+   HIGH-LEVEL (MT5Sugar) - demos 6-10:
       • Business logic and ready patterns
       • One-liner operations with smart defaults
 
@@ -149,6 +149,8 @@ func RunService04() error {
 	}
 	account.ApiKey = cfg.ApiKey
 	fmt.Printf("✓ MT5Account created (UUID: %s)\n", account.Id)
+	// Runs however the demo ends (every error below is returned): the terminal is disconnected (stopped) and the
+	// gRPC connection closed. After the explicit Disconnect at the end it has nothing left to do.
 	defer account.DisconnectAndClose()
 
 	// Create MT5Service wrapper
@@ -164,7 +166,8 @@ func RunService04() error {
 		MtClusterName: cfg.MtCluster,
 	}
 
-	// Use context timeout for ConnectEx (replaces old TerminalReadinessWaitingTimeoutSeconds)
+	// The server waits up to ConnectExRequest.TimeoutSeconds (default 120 s) for the terminal to log in;
+	// the call's own deadline must be longer than that.
 	connectCtx, connectCancel := context.WithTimeout(ctx, 180*time.Second)
 	defer connectCancel()
 
@@ -173,8 +176,7 @@ func RunService04() error {
 		return fmt.Errorf("ConnectEx failed: %w", err)
 	}
 
-	account.TerminalInstanceGuid = connectData.TerminalInstanceGuid
-	account.Id = helpers_mt5.ParseGuidSafe(connectData.TerminalInstanceGuid)
+	// ConnectEx has stored the terminal GUID in the account (account.TerminalInstanceGuid / account.Id)
 	fmt.Printf("✓ Connected (Terminal GUID: %s)\n", connectData.TerminalInstanceGuid)
 
 	// #endregion
@@ -209,7 +211,7 @@ func RunService04() error {
 	fmt.Printf("  Leverage:      1:%d\n", summary.Leverage)
 	fmt.Printf("  Company:       %s\n", summary.CompanyName)
 	if summary.ServerTime != nil {
-		fmt.Printf("  Server Time:   %s (UTC%+.1f)\n",
+		fmt.Printf("  Server Time:   %s (broker server time, UTC%+.1f)\n",
 			summary.ServerTime.Format("2006-01-02 15:04:05"),
 			float64(summary.UtcTimezoneShiftMinutes)/60.0)
 	}
@@ -295,14 +297,22 @@ func RunService04() error {
 		return fmt.Errorf("GetSymbolTick failed: %w", err)
 	}
 
+	// Point = the symbol's smallest price step (EURUSD 0.00001): a spread in points is the price difference / point
+	point, err := service.GetSymbolDouble(ctx, cfg.TestSymbol, pb.SymbolInfoDoubleProperty_SYMBOL_POINT)
+	if err != nil {
+		return fmt.Errorf("GetSymbolDouble(POINT) failed: %w", err)
+	}
+
 	spread := tick.Ask - tick.Bid
 	fmt.Printf("  Symbol:        %s\n", cfg.TestSymbol)
 	fmt.Printf("  Bid:           %.5f\n", tick.Bid)
 	fmt.Printf("  Ask:           %.5f\n", tick.Ask)
-	fmt.Printf("  Spread:        %.5f (%.1f points)\n", spread, spread*10000)
+	fmt.Printf("  Spread:        %.5f (%.0f points)\n", spread, spread/point)
 	fmt.Printf("  Last:          %.5f\n", tick.Last)
 	fmt.Printf("  Volume:        %d\n", tick.Volume)
-	fmt.Printf("  Time:          %s\n", tick.Time.Format("2006-01-02 15:04:05"))
+	// GetSymbolTick's Time counts in the broker server's time zone: format it as UTC to show the broker's clock
+	// (Format on the value as is would convert it to this machine's zone)
+	fmt.Printf("  Time:          %s (broker server time)\n", tick.Time.UTC().Format("2006-01-02 15:04:05"))
 
 	// ══════════════════════════════════════════════════════════════
 	// 3.2. GET SYMBOL PARAMS MANY
@@ -316,7 +326,7 @@ func RunService04() error {
 	page := int32(1)
 	perPage := int32(5)
 	// Note: nil filter returns ALL symbols (2000+), sorted alphabetically
-	// First symbols are often CFD indices (#AUS200, #ChinaA50) which may show zero prices when markets are closed
+	// The first symbols by name may have no quotes (zero prices), e.g. instruments not in Market Watch or closed markets
 	symbols, total, err := service.GetSymbolParamsMany(ctx, nil, nil, &page, &perPage)
 	if err != nil {
 		return fmt.Errorf("GetSymbolParamsMany failed: %w", err)
@@ -411,18 +421,19 @@ func RunService04() error {
 	// ══════════════════════════════════════════════════════════════
 	fmt.Println("\n3.6. SymbolExist() - Check if symbol exists")
 
-	existsEUR, selectedEUR, err := service.SymbolExist(ctx, "EURUSD")
+	// SymbolExist returns (exists, isCustom): the second value says whether it is a custom symbol
+	existsEUR, customEUR, err := service.SymbolExist(ctx, "EURUSD")
 	if err != nil {
 		return fmt.Errorf("SymbolExist failed: %w", err)
 	}
 
-	existsFake, selectedFake, err := service.SymbolExist(ctx, "FAKESYMBOL123")
+	existsFake, customFake, err := service.SymbolExist(ctx, "FAKESYMBOL123")
 	if err != nil {
 		return fmt.Errorf("SymbolExist failed: %w", err)
 	}
 
-	fmt.Printf("  EURUSD exists:      %t (selected: %t)\n", existsEUR, selectedEUR)
-	fmt.Printf("  FAKESYMBOL123:      %t (selected: %t)\n", existsFake, selectedFake)
+	fmt.Printf("  EURUSD exists:      %t (custom: %t)\n", existsEUR, customEUR)
+	fmt.Printf("  FAKESYMBOL123:      %t (custom: %t)\n", existsFake, customFake)
 
 	// ══════════════════════════════════════════════════════════════
 	// 3.7. GET SYMBOL NAME
@@ -458,7 +469,7 @@ func RunService04() error {
 	fmt.Printf("  Symbol:        %s\n", cfg.TestSymbol)
 	fmt.Printf("  Bid:           %.5f (direct double return)\n", bidPrice)
 	fmt.Printf("  Ask:           %.5f\n", askPrice)
-	fmt.Printf("  Spread:        %.5f points\n", askPrice-bidPrice)
+	fmt.Printf("  Spread:        %.5f (price difference)\n", askPrice-bidPrice)
 
 	// ══════════════════════════════════════════════════════════════
 	// 3.9. SYMBOL SELECT
@@ -508,17 +519,20 @@ func RunService04() error {
 	//       Get quote session times.
 	//       Returns: SessionInfo with start/end times.
 	//       Shows when quotes are available.
-	//       Note: For forex, 00:00-00:00 means 24-hour session (normal)
+	//       From/To are times of day (broker server time); a session that runs to midnight ends at 24:00
+	//       (To is then the next day's 00:00, so count from the start of From's day). A day without a session
+	//       answers with an error (ERR_MARKET_SESSION_INDEX).
 	// ══════════════════════════════════════════════════════════════
 	fmt.Println("\n3.12. GetSymbolSessionQuote() - Get quote session")
 
 	quoteSession, err := service.GetSymbolSessionQuote(ctx, cfg.TestSymbol, pb.DayOfWeek_MONDAY, 0)
 	if !helpers.PrintShortError(err, "GetSymbolSessionQuote failed") {
+		dayStart := quoteSession.From.Truncate(24 * time.Hour)
+		from, to := quoteSession.From.Sub(dayStart), quoteSession.To.Sub(dayStart)
 		fmt.Printf("  Symbol:        %s\n", cfg.TestSymbol)
 		fmt.Printf("  Day:           Monday, Session 0\n")
-		fmt.Printf("  From:          %02d:%02d\n", quoteSession.From.Hour(), quoteSession.From.Minute())
-		fmt.Printf("  To:            %02d:%02d\n", quoteSession.To.Hour(), quoteSession.To.Minute())
-		fmt.Printf("  (00:00-00:00 = 24-hour forex trading)\n")
+		fmt.Printf("  From:          %02d:%02d (broker server time)\n", int(from.Hours()), int(from.Minutes())%60)
+		fmt.Printf("  To:            %02d:%02d\n", int(to.Hours()), int(to.Minutes())%60)
 	}
 
 	// ══════════════════════════════════════════════════════════════
@@ -526,17 +540,18 @@ func RunService04() error {
 	//       Get trading session times.
 	//       Returns: SessionInfo with start/end times.
 	//       Shows when trading is allowed.
-	//       Note: For forex, 00:00-00:00 means 24-hour session (normal)
+	//       From/To as in 3.12 (00:00-24:00 = the whole day).
 	// ══════════════════════════════════════════════════════════════
 	fmt.Println("\n3.13. GetSymbolSessionTrade() - Get trade session")
 
 	tradeSession, err := service.GetSymbolSessionTrade(ctx, cfg.TestSymbol, pb.DayOfWeek_MONDAY, 0)
 	if !helpers.PrintShortError(err, "GetSymbolSessionTrade failed") {
+		dayStart := tradeSession.From.Truncate(24 * time.Hour)
+		from, to := tradeSession.From.Sub(dayStart), tradeSession.To.Sub(dayStart)
 		fmt.Printf("  Symbol:        %s\n", cfg.TestSymbol)
 		fmt.Printf("  Day:           Monday, Session 0\n")
-		fmt.Printf("  From:          %02d:%02d\n", tradeSession.From.Hour(), tradeSession.From.Minute())
-		fmt.Printf("  To:            %02d:%02d\n", tradeSession.To.Hour(), tradeSession.To.Minute())
-		fmt.Printf("  (00:00-00:00 = 24-hour forex trading)\n")
+		fmt.Printf("  From:          %02d:%02d (broker server time)\n", int(from.Hours()), int(from.Minutes())%60)
+		fmt.Printf("  To:            %02d:%02d\n", int(to.Hours()), int(to.Minutes())%60)
 	}
 
 	// #endregion
@@ -636,10 +651,12 @@ func RunService04() error {
 	// ══════════════════════════════════════════════════════════════
 	fmt.Println("\n4.4. GetPositionsHistory() - Get closed positions")
 
-	// Get last 24 hours of history (first 10 positions)
+	// Get last 24 hours of history (first 10 positions).
+	// GetPositionsHistory sends from/to in the UTC request fields (PositionOpenTimeFromUtc/ToUtc): a time.Time is
+	// a real moment, so time.Now() works as it is - the server converts it to broker time itself.
 	now := time.Now()
 	yesterday := now.Add(-24 * time.Hour)
-	pageNum := int32(0)
+	pageNum := int32(1) // pages are 1-based
 	pageSize := int32(10)
 
 	posHistData, err := service.GetPositionsHistory(
@@ -706,8 +723,12 @@ func RunService04() error {
 	// ══════════════════════════════════════════════════════════════
 	fmt.Println("\n5.2. CalculateProfit() - Potential profit calculation")
 
-	// Calculate profit for +10 pips target
-	pipSize := 0.0001 // For EURUSD
+	// Calculate profit for +10 pips target. A pip is 10 points on 5- and 3-digit symbols
+	// (EURUSD: point 0.00001, pip 0.0001; USDJPY: pip 0.01), otherwise 1 point.
+	pipSize := point
+	if digits == 3 || digits == 5 {
+		pipSize *= 10
+	}
 	targetPrice := tick.Ask + (10 * pipSize)
 
 	profitReq := &pb.OrderCalcProfitRequest{
@@ -746,9 +767,10 @@ func RunService04() error {
 	// ══════════════════════════════════════════════════════════════
 	fmt.Println("\n6.1. GetOrderHistory() - Historical orders & deals with separation")
 
-	// Get last 7 days of history
-	historyFrom := time.Now().AddDate(0, 0, -7)
-	historyTo := time.Now()
+	// Get last 7 days of history. GetOrderHistory sends from/to as InputFromUtc/InputToUtc (see 4.4),
+	// so the range is built from time.Now() directly.
+	historyFrom := now.AddDate(0, 0, -7)
+	historyTo := now
 	historyPage := int32(1)
 	historyPerPage := int32(50)
 
@@ -769,11 +791,11 @@ func RunService04() error {
 			}
 		}
 
-		fmt.Printf("  Time Period:   %s to %s\n",
-			historyFrom.Format("2006-01-02"), historyTo.Format("2006-01-02"))
+		fmt.Printf("  Time Period:   %s to %s (broker server time)\n",
+			historyFrom.Format("2006-01-02 15:04"), historyTo.Format("2006-01-02 15:04"))
 		fmt.Printf("  Total Records: %d\n", histData.ArrayTotal)
-		fmt.Printf("  Orders:        %d (pending/limit/stop orders)\n", len(histOrders))
-		fmt.Printf("  Deals:         %d (actual executions with P&L)\n", len(histDeals))
+		fmt.Printf("  Orders:        %d (history orders: market and pending)\n", len(histOrders))
+		fmt.Printf("  Deals:         %d (executions, with their P&L)\n", len(histDeals))
 
 		if len(histOrders) > 0 {
 			fmt.Println("\n  Recent Orders (first 3):")
@@ -810,8 +832,8 @@ func RunService04() error {
 	// ═══════════════════════════════════════════════════════════════════════
 	fmt.Println("\n\nSTEP 7: Trading Operations Methods (Advanced)")
 	fmt.Println("───────────────────────────────────────────────────────────")
-	fmt.Println("NOTE: These methods show API structure.")
-	fmt.Println("      CheckOrder runs validation, others show structure only.")
+	fmt.Println("NOTE: CheckOrder only validates; PlaceOrder places a REAL order (minimal volume),")
+	fmt.Println("      ModifyOrder and CloseOrder then modify and close that position. Use a DEMO account!")
 
 	// ══════════════════════════════════════════════════════════════
 	// 7.1. CHECK ORDER (Pre-validation)
@@ -822,25 +844,38 @@ func RunService04() error {
 	// ══════════════════════════════════════════════════════════════
 	fmt.Println("\n7.1. CheckOrder() - Pre-validate order")
 
-	sl := tick.Ask - (50 * 0.0001)  // 50 pips SL
-	tp := tick.Ask + (100 * 0.0001) // 100 pips TP
+	sl := tick.Ask - (50 * pipSize)  // 50 pips SL
+	tp := tick.Ask + (100 * pipSize) // 100 pips TP
+
+	// The filling mode must be one the symbol allows (SYMBOL_FILLING_MODE flags: 1 = FOK, 2 = IOC);
+	// with a mode the symbol does not allow, the check fails.
+	typeFilling := pb.MRPC_ENUM_ORDER_TYPE_FILLING_ORDER_FILLING_RETURN
+	if fillingFlags, err := service.GetSymbolInteger(ctx, cfg.TestSymbol, pb.SymbolInfoIntegerProperty_SYMBOL_FILLING_MODE); err == nil {
+		if fillingFlags&1 != 0 {
+			typeFilling = pb.MRPC_ENUM_ORDER_TYPE_FILLING_ORDER_FILLING_FOK
+		} else if fillingFlags&2 != 0 {
+			typeFilling = pb.MRPC_ENUM_ORDER_TYPE_FILLING_ORDER_FILLING_IOC
+		}
+	}
 
 	checkReq := &pb.OrderCheckRequest{
 		MqlTradeRequest: &pb.MrpcMqlTradeRequest{
-			Action:     pb.MRPC_ENUM_TRADE_REQUEST_ACTIONS_TRADE_ACTION_DEAL,
-			Symbol:     cfg.TestSymbol,
-			OrderType:  pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY,
-			Volume:     cfg.TestVolume,
-			Price:      tick.Ask,
-			StopLoss:   sl,
-			TakeProfit: tp,
+			Action:      pb.MRPC_ENUM_TRADE_REQUEST_ACTIONS_TRADE_ACTION_DEAL,
+			Symbol:      cfg.TestSymbol,
+			OrderType:   pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY,
+			Volume:      cfg.TestVolume,
+			Price:       tick.Ask,
+			StopLoss:    sl,
+			TakeProfit:  tp,
+			TypeFilling: typeFilling,
 		},
 	}
 
 	checkResult, err := service.CheckOrder(ctx, checkReq)
 	if err != nil {
-		// CheckOrder often fails on DEMO accounts (broker limitation)
-		fmt.Println("  ❌ CheckOrder FAILED (expected on demo accounts)")
+		// The check did not pass (e.g. no money, invalid stops, a filling mode the symbol does not allow)
+		// or the call itself failed
+		fmt.Println("  ❌ CheckOrder FAILED")
 
 		// Truncate error message to avoid terminal clutter
 		errMsg := err.Error()
@@ -848,19 +883,13 @@ func RunService04() error {
 			errMsg = errMsg[:150] + "... [truncated]"
 		}
 		fmt.Printf("     Error: %s\n", errMsg)
-
-		fmt.Println("\n  ℹ️  Known limitation on DEMO accounts:")
-		fmt.Println("     • OrderCheck not supported by many demo brokers")
-		fmt.Println("     • Use OrderCalcMargin()/OrderCalcProfit() for validation instead")
-		fmt.Println("     • OrderSend() will still work despite this error")
-		fmt.Println()
 	} else {
 		fmt.Printf("  Symbol:        %s\n", cfg.TestSymbol)
 		fmt.Printf("  Type:          BUY\n")
 		fmt.Printf("  Volume:        %.2f lots\n", cfg.TestVolume)
 		fmt.Printf("  Price:         %.5f\n", tick.Ask)
 		fmt.Printf("  Return Code:   %d\n", checkResult.ReturnedCode)
-		if checkResult.ReturnedCode == 0 {
+		if checkResult.ReturnedCode == 0 { // OrderCheck: 0 = passed (OrderSend: 10009 = done)
 			fmt.Printf("  ✓ Order Valid:\n")
 			fmt.Printf("    Required Margin:  %.2f %s\n", checkResult.Margin, summary.Currency)
 			fmt.Printf("    Balance After:    %.2f %s\n", checkResult.Balance, summary.Currency)
@@ -922,8 +951,8 @@ func RunService04() error {
 			fmt.Println("\n7.3. ModifyOrder() - Add Stop Loss and Take Profit")
 
 			// Calculate SL/TP levels (10 pips SL, 20 pips TP)
-			newSL := orderResult.Price - (10 * 0.0001)
-			newTP := orderResult.Price + (20 * 0.0001)
+			newSL := orderResult.Price - (10 * pipSize)
+			newTP := orderResult.Price + (20 * pipSize)
 
 			modifyReq := &pb.OrderModifyRequest{
 				Ticket:     orderTicket,
@@ -942,6 +971,8 @@ func RunService04() error {
 
 				if modifyResult.ReturnedCode == 10009 {
 					fmt.Printf("    ✓ Position MODIFIED successfully!\n")
+				} else {
+					fmt.Printf("    ⚠️  Modify returned code %d - %s\n", modifyResult.ReturnedCode, modifyResult.Comment)
 				}
 			}
 
@@ -988,7 +1019,7 @@ func RunService04() error {
 	fmt.Println("\nℹ️  IMPORTANT: Market Depth (Order Book) is only available for exchange-traded instruments")
 	fmt.Println("   • Works for: Stocks, Futures, Options (exchange symbols)")
 	fmt.Println("   • NOT available for: Forex pairs (OTC trading, no centralized order book)")
-	fmt.Println("   • Testing with EURUSD will result in timeout/empty data - this is expected!")
+	fmt.Println("   • For forex (e.g. EURUSD) GetMarketDepth usually returns no levels (or an error)")
 
 	// ══════════════════════════════════════════════════════════════
 	// 8.1. SUBSCRIBE MARKET DEPTH
@@ -1108,8 +1139,9 @@ streamLoop:
 			}
 			eventCount++
 			spread := tick.Ask - tick.Bid
-			fmt.Printf("  Tick #%d: Bid=%.5f Ask=%.5f Spread=%.5f Time=%s\n",
-				eventCount, tick.Bid, tick.Ask, spread, tick.Time.Format("15:04:05"))
+			fmt.Printf("  Tick #%d: %s Bid=%.5f Ask=%.5f Spread=%.5f Time=%s (broker) / %s UTC\n",
+				eventCount, tick.Symbol, tick.Bid, tick.Ask, spread,
+				tick.Time.Format("15:04:05"), tick.TimeUtc.Format("15:04:05"))
 
 			if eventCount >= MAX_STREAMING_EVENTS {
 				streamCancel()
@@ -1137,11 +1169,8 @@ streamLoop:
 	fmt.Println("\n\nFINAL: Disconnect")
 	fmt.Println("───────────────────────────────────────────────────────────")
 
-	// Create separate context with longer timeout for disconnect
-	disconnectCtx, disconnectCancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer disconnectCancel()
-
-	_, err = service.GetAccount().Disconnect(disconnectCtx, &pb.DisconnectRequest{})
+	// Disconnect (stops the terminal) and close the gRPC connection
+	err = service.Disconnect()
 	if !helpers.PrintShortError(err, "Disconnect failed") {
 		fmt.Println("✓ Disconnected successfully")
 	}
@@ -1151,7 +1180,7 @@ streamLoop:
 	fmt.Println("═══════════════════════════════════════════════════════════")
 	fmt.Println()
 	fmt.Println("SUMMARY:")
-	fmt.Println("  • Demonstrated 31 MT5Service methods (excluding streams)")
+	fmt.Println("  • Demonstrated 31 MT5Service methods (excluding streams and Disconnect)")
 	fmt.Println("  • MT5Service provides cleaner API than low-level MT5Account")
 	fmt.Println("  • Native Go types (time.Time, float64, int64, string)")
 	fmt.Println("  • 30-80% less code for common operations")

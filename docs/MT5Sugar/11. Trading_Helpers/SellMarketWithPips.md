@@ -7,7 +7,7 @@
 * **Method:** `sugar.SellMarketWithPips(symbol, volume, stopLossPips, takeProfitPips)`
 * **Package:** `mt5` (MT5Sugar)
 * **Underlying calls:** `CalculateSLTP()`, `SellMarketWithSLTP()`
-* **Timeout:** 10 seconds for the order (`SellMarketWithSLTP`); before that `CalculateSLTP` queries `GetSymbolInfo` (5 s) and `GetBid` (3 s)
+* **Timeout:** 30 seconds for the order (`SellMarketWithSLTP`); before that `CalculateSLTP` queries `GetSymbolInfo` (10 s) and `GetBid` (3 s)
 * **Returns:** Order ticket (for a market order MT5 uses it as the position ticket)
 
 ---
@@ -31,8 +31,10 @@ func (s *MT5Sugar) SellMarketWithPips(
 |-----------|------|-------------|
 | `symbol` | `string` | Trading symbol (e.g., "EURUSD", "GBPUSD") |
 | `volume` | `float64` | Lot size (e.g., 0.1, 1.0) |
-| `stopLossPips` | `float64` | Stop Loss distance in **points** from entry (e.g., 500 = 50 pips on 5-digit EURUSD) |
-| `takeProfitPips` | `float64` | Take Profit distance in **points** from entry (e.g., 1000) |
+| `stopLossPips` | `float64` | Stop Loss distance in **POINTS** from entry despite the name (e.g., 500 = 50 pips on 5-digit EURUSD) |
+| `takeProfitPips` | `float64` | Take Profit distance in **POINTS** from entry despite the name (e.g., 1000 = 100 pips on 5-digit EURUSD) |
+
+**Important:** 1 point = the symbol's `Point` (0.00001 on 5-digit EURUSD, 0.001 on 3-digit USDJPY); on 5- and 3-digit symbols 10 points = 1 pip, so pass 500 for a 50-pip stop.
 
 ---
 
@@ -41,7 +43,7 @@ func (s *MT5Sugar) SellMarketWithPips(
 | Return | Type | Description |
 |--------|------|-------------|
 | `ticket` | `uint64` | Order ticket (`result.Order`); for a market order MT5 uses it as the position ticket |
-| `error` | `error` | `order rejected, code: N, comment: ...` if the return code is not 10009 (TRADE_RETCODE_DONE), or a call error |
+| `error` | `error` | The `CalculateSLTP` error (symbol/price query failed), `order rejected, code: N, comment: ...` if the return code is not 10009 (TRADE_RETCODE_DONE), or `SellMarketWithSLTP failed: ...` |
 
 ---
 
@@ -49,7 +51,7 @@ func (s *MT5Sugar) SellMarketWithPips(
 
 * **What it is:** Opens SELL at market price with SL/TP specified as point distances.
 * **Why you need it:** **Most intuitive way to short** - think in distances, not prices!
-* **Sanity check:** "SELL EURUSD 0.1 lots, 500 point SL, 1000 point TP" → one method call. Passing 0 does NOT mean "no SL/TP" - it puts SL/TP at the entry (Bid) price; use `SellMarket()` for no SL/TP. SL/TP prices and volume are sent unrounded.
+* **Sanity check:** "SELL EURUSD 0.1 lots, 500 point SL, 1000 point TP" → one method call. Passing 0 does NOT mean "no SL/TP" - it puts SL/TP at the entry (Bid) price; use `SellMarket()` for no SL/TP. SL/TP prices are rounded to the symbol's digits; the volume is sent as given. The order has a 30-second timeout - an order that times out on the client side may still have been executed, so check `GetOpenPositions()` before retrying.
 
 ---
 
@@ -71,6 +73,7 @@ func (s *MT5Sugar) SellMarketWithPips(
 Step 1: Get current BID price (entry for SELL)
 Step 2: Calculate SL = entry + (stopLossPips × point)
 Step 3: Calculate TP = entry - (takeProfitPips × point)
+        (both rounded to the symbol's digits)
 Step 4: Open SELL position with calculated SL/TP (SellMarketWithSLTP)
 
 Example (EURUSD):
@@ -167,8 +170,12 @@ if err != nil {
 
 fmt.Printf("✅ Position opened: #%d\n", ticket)
 
-// Step 4: Get entry details
-pos, _ := sugar.GetPositionByTicket(ticket)
+// Step 4: Get entry details (an error if the position is no longer open)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    fmt.Printf("Position not found: %v\n", err)
+    return
+}
 fmt.Printf("\nPosition details:\n")
 fmt.Printf("  Entry:  %.5f\n", pos.PriceOpen)
 fmt.Printf("  SL:     %.5f (above entry)\n", pos.StopLoss)
@@ -727,11 +734,14 @@ ticket, _ := sugar.SellMarketWithPips("EURUSD", lotSize, 500, 1000)
 ```go
 // ❌ WRONG - passing price as distance
 stopLossPrice := 1.09000
-sugar.SellMarketWithPips("EURUSD", 0.1, stopLossPrice, 100)
+sugar.SellMarketWithPips("EURUSD", 0.1, stopLossPrice, 1000)
 
-// ✅ CORRECT - use distance in points
+// ❌ WRONG - passing pips: 50 is read as 50 POINTS (= 5 pips)
+sugar.SellMarketWithPips("EURUSD", 0.1, 50, 100)
+
+// ✅ CORRECT - use distance in points (500 points = 50 pips on EURUSD)
 stopLossPips := 500.0
-sugar.SellMarketWithPips("EURUSD", 0.1, stopLossPips, 100)
+sugar.SellMarketWithPips("EURUSD", 0.1, stopLossPips, 1000)
 ```
 
 ### 3) Not validating before opening
@@ -790,7 +800,7 @@ if err != nil {
 
 6. **R:R ratios** - Use at least 1:1.5, ideally 1:2 or better
 
-7. **Points not pips** - Parameter is points (for 5-digit: 50 points = 5 pips)
+7. **Points not pips** - Parameter is points despite the `...Pips` name (for 5-digit: 50 points = 5 pips; pass 500 for a 50-pip stop)
 
 ---
 

@@ -5,7 +5,7 @@
 **API Information:**
 
 * **Method:** `sugar.SellMarket(symbol, volume)`
-* **Timeout:** 10 seconds
+* **Timeout:** 30 seconds
 * **Returns:** Ticket number - `result.Order`, the order ticket; for a market order MT5 uses the same number as the
   position ticket
 * **Request:** `service.PlaceOrder(ctx, &pb.OrderSendRequest{Symbol, Operation: pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_SELL, Volume})` -

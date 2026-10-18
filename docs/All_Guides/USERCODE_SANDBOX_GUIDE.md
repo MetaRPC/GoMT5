@@ -7,9 +7,8 @@ This is **your sandbox** for writing custom MT5 trading code in Go. Connection s
 ## Quick Start
 
 1. **Case already active in main.go**
-   - Open `examples/demos/main.go`
-   - Case "18" for user code sandbox is ready to use (the menu label "(DISABLED)" and the "uncomment" notes in the
-     file headers are outdated - nothing needs to be uncommented)
+   - Case "18" (also `usercode`, `user`, `sandbox`, `custom`) runs `usercode.RunUserCode()` - nothing needs to be
+     enabled or uncommented; the menu shows it as `[18] User Code Sandbox`
 
 2. **Open `usercode/18_usercode.go`**
    - Write your code or uncomment examples
@@ -69,7 +68,10 @@ go run main.go custom
 
 ## What's already configured
 
-✓ **Connection** - MT5 terminal connected via gRPC (`sugar.QuickConnect(cfg.MtCluster)`)
+✓ **Connection** - MT5 terminal connected via gRPC (`sugar.QuickConnect(cfg.MtCluster)`; the server waits up to 120 s for the terminal)
+
+✓ **Disconnect** - `defer helpers.DisconnectOnExit(sugar)()` (registered before connecting) stops the terminal when
+`RunUserCode` returns, and also after `helpers.Fatal`, a panic or Ctrl+C - you do not need to call `sugar.Disconnect()`
 
 ✓ **Configuration** - Loaded from `config/config.json` or environment variables (`config.LoadConfig()`; API key from `api_key`, `MRPC_API_KEY` or `--api-key`)
 
@@ -157,7 +159,9 @@ lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 500)
 ticket, err = sugar.BuyMarketWithPips("EURUSD", lotSize, 500, 1000)
 ```
 
-Volumes and prices are sent as given (no rounding) - see [Normalization](GLOSSARY.md#normalization).
+`BuyMarket`, `BuyLimit`, ... send volumes and prices as given (no rounding) - see [Normalization](GLOSSARY.md#normalization).
+`CalculateSLTP` (and so the `...WithPips` methods) rounds SL/TP to the symbol's digits; `CalculatePositionSize`
+rounds the volume down to the volume step.
 
 ### Place pending order
 
@@ -204,10 +208,11 @@ fmt.Printf("Positions: %d, pending orders: %d\n", len(opened.PositionInfos), len
 // Close specific position
 err := sugar.ClosePosition(ticket)
 
-// Close all positions for symbol (returns how many were closed)
+// Close all positions for symbol (returns how many were closed; err names every position
+// that could not be closed - closed is still valid then)
 closed, err := sugar.CloseAllBySymbol("EURUSD")
 
-// Close all positions (all symbols)
+// Close all positions (all symbols; pending orders are not touched)
 closed, err = sugar.CloseAllPositions()
 ```
 
@@ -416,11 +421,12 @@ func UserCodeMain() error {
         return fmt.Errorf("setup error: %w", err)
     }
     sugar.GetAccount().ApiKey = cfg.ApiKey
+    // Disconnect on every way out - also when QuickConnect fails: the server may already have started the terminal
+    defer sugar.Disconnect()
 
     if err := sugar.QuickConnect(cfg.MtCluster); err != nil {
         return fmt.Errorf("login error: %w", err)
     }
-    defer sugar.Disconnect()
 
     // sugar.GetService() and sugar.GetAccount() give the lower levels if you need them
 

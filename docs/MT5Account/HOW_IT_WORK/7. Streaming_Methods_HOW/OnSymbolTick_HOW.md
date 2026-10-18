@@ -15,7 +15,8 @@ tickReq := &pb.OnSymbolTickRequest{
     SymbolNames: []string{cfg.TestSymbol}, // Symbols to stream (one or more)
 }
 
-tickChan, tickErrChan := account.OnSymbolTick(ctx, tickReq)
+tickCtx, tickCancel := context.WithCancel(ctx)
+tickChan, tickErrChan := account.OnSymbolTick(tickCtx, tickReq)
 
 fmt.Printf("Streaming %s tick data (max %d events or %d seconds)...\n", cfg.TestSymbol, MAX_EVENTS, MAX_SECONDS)
 
@@ -31,12 +32,16 @@ for {
             break streamTick
         }
         eventCount++
-        tick := tickData.SymbolTick // the tick itself is nested
-        fmt.Printf("  Event #%d: Bid=%.5f Ask=%.5f Spread=%.5f\n",
-            eventCount,
-            tick.Bid,
-            tick.Ask,
-            tick.Ask-tick.Bid)
+        // The tick itself is nested: SymbolTick (nil in a message without a tick)
+        if tickData.SymbolTick != nil {
+            tick := tickData.SymbolTick
+            fmt.Printf("  Event #%d: Symbol=%s Bid=%.5f Ask=%.5f Spread=%.5f\n",
+                eventCount,
+                tick.Symbol,
+                tick.Bid,
+                tick.Ask,
+                tick.Ask-tick.Bid)
+        }
 
         if eventCount >= MAX_EVENTS {
             fmt.Printf("  ✓ Received %d events, stopping stream\n", MAX_EVENTS)
@@ -54,6 +59,7 @@ for {
         break streamTick
     }
 }
+tickCancel() // closes this stream on the server
 ```
 
 ---
@@ -77,8 +83,11 @@ Create a request to stream ticks for the symbol `cfg.TestSymbol` (e.g., `EURUSD`
 ### 2️. Start the Stream
 
 ```go
-tickChan, tickErrChan := account.OnSymbolTick(ctx, tickReq)
+tickCtx, tickCancel := context.WithCancel(ctx)
+tickChan, tickErrChan := account.OnSymbolTick(tickCtx, tickReq)
 ```
+
+The stream gets its own context, derived from `ctx`: `tickCancel()` after the loop closes this stream on the server at once. Without it the stream would stay open, unread, until `ctx` itself ends — and every later stream of the demo would pile up next to it.
 
 The method returns two channels:
 
@@ -129,12 +138,15 @@ Uses the `select` construct to listen to three sources simultaneously:
 ### 5️. Process Incoming Tick
 
 ```go
-tick := tickData.SymbolTick
-fmt.Printf("  Event #%d: Bid=%.5f Ask=%.5f Spread=%.5f\n",
-    eventCount,
-    tick.Bid,
-    tick.Ask,
-    tick.Ask-tick.Bid)
+if tickData.SymbolTick != nil {
+    tick := tickData.SymbolTick
+    fmt.Printf("  Event #%d: Symbol=%s Bid=%.5f Ask=%.5f Spread=%.5f\n",
+        eventCount,
+        tick.Symbol,
+        tick.Bid,
+        tick.Ask,
+        tick.Ask-tick.Bid)
+}
 ```
 
 Each tick (`tickData.SymbolTick`) contains:
@@ -142,7 +154,7 @@ Each tick (`tickData.SymbolTick`) contains:
 * **Symbol** — symbol of the tick;
 * **Bid** — buy price;
 * **Ask** — sell price;
-* **Spread** — difference between Ask and Bid (computed here);
+* **Spread** — not a field: Ask − Bid, computed here (in price units, not points);
 * **Time** / **TimeUtc** — tick timestamp (broker server time / UTC);
 * **Volume** — tick volume;
 * **Last** — last deal price.
@@ -192,11 +204,11 @@ message MrpcSubscriptionMqlTick {
 ## 💡 Example Output
 
 ```
-Streaming EURUSD tick data (max 5 events or 10 seconds)...
-  Event #1: Bid=1.08542 Ask=1.08558 Spread=0.00016
-  Event #2: Bid=1.08540 Ask=1.08555 Spread=0.00015
-  Event #3: Bid=1.08539 Ask=1.08554 Spread=0.00015
-  ✓ Received 3 events, stopping stream
+Streaming EURUSD tick data (max 10 events or 5 seconds)...
+  Event #1: Symbol=EURUSD Bid=1.08542 Ask=1.08558 Spread=0.00016
+  Event #2: Symbol=EURUSD Bid=1.08540 Ask=1.08555 Spread=0.00015
+  Event #3: Symbol=EURUSD Bid=1.08539 Ask=1.08554 Spread=0.00015
+  ⏱ Timeout after 5 seconds, stopping stream
 ```
 
 ---

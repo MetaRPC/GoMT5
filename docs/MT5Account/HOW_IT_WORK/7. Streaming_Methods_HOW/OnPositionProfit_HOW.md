@@ -8,19 +8,24 @@ This stream is particularly useful for:
 * analyzing position dynamics;
 * automated risk management.
 
-> The stream is active only when there are open positions and prices change. If positions are absent — there will be no updates.
+> The stream sends one update every `TimerPeriodMilliseconds` (0 = the default, 1000 ms). Without open positions the updates are empty (all three lists empty) unless `IgnoreEmptyData` is true, which skips them.
 
 ---
 
 ## 🧩 Code example
 
 ```go
-profitReq := &pb.OnPositionProfitRequest{}
+profitReq := &pb.OnPositionProfitRequest{
+	TimerPeriodMilliseconds: 1000,  // one update per second (0 = the default, 1000 ms)
+	IgnoreEmptyData:         false, // false = also send updates with no position in them
+}
 
-profitChan, profitErrChan := account.OnPositionProfit(ctx, profitReq)
+profitCtx, profitCancel := context.WithCancel(ctx)
+profitChan, profitErrChan := account.OnPositionProfit(profitCtx, profitReq)
 
 fmt.Printf("Streaming position P&L updates (max %d events or %d seconds)...\n", MAX_EVENTS, MAX_SECONDS)
-fmt.Println("  NOTE: This stream sends events only when positions exist and prices change")
+fmt.Println("  NOTE: This stream sends an update every TimerPeriodMilliseconds; with no open position the")
+fmt.Println("        update is empty (set IgnoreEmptyData: true to skip empty updates)")
 
 eventCount = 0
 timeout = time.After(MAX_SECONDS * time.Second)
@@ -72,6 +77,7 @@ for {
 		break streamProfit
 	}
 }
+profitCancel() // closes this stream on the server
 ```
 
 ---
@@ -81,18 +87,24 @@ for {
 ### 1️. Subscribe to Stream
 
 ```go
-profitReq := &pb.OnPositionProfitRequest{}
+profitReq := &pb.OnPositionProfitRequest{
+	TimerPeriodMilliseconds: 1000,  // one update per second (0 = the default, 1000 ms)
+	IgnoreEmptyData:         false, // false = also send updates with no position in them
+}
 ```
 
-An empty request is created. The subscription covers all positions on the account.
+The request sets the update period (`TimerPeriodMilliseconds`) and whether empty updates are sent (`IgnoreEmptyData`). There is no symbol filter: the subscription covers all positions on the account (filter by `PositionSymbol` on the client side).
 
 ---
 
 ### 2️. Start the Stream
 
 ```go
-profitChan, profitErrChan := account.OnPositionProfit(ctx, profitReq)
+profitCtx, profitCancel := context.WithCancel(ctx)
+profitChan, profitErrChan := account.OnPositionProfit(profitCtx, profitReq)
 ```
+
+The stream gets its own context, derived from `ctx`: `profitCancel()` after the loop closes this stream on the server at once. Without it the stream would stay open, unread, until `ctx` itself ends — and every later stream of the demo would pile up next to it.
 
 The method returns two channels:
 
@@ -104,10 +116,11 @@ The method returns two channels:
 ### 3️. Informational Message
 
 ```go
-fmt.Println("  NOTE: This stream sends events only when positions exist and prices change")
+fmt.Println("  NOTE: This stream sends an update every TimerPeriodMilliseconds; with no open position the")
+fmt.Println("        update is empty (set IgnoreEmptyData: true to skip empty updates)")
 ```
 
-Explains that the stream is active **only when there are positions** and quotes change.
+Explains that updates arrive **periodically**: with no open position they are empty (`Total=0`), unless `IgnoreEmptyData` skips them.
 
 ---
 
@@ -183,7 +196,8 @@ message OnPositionProfitPositionInfo {
 
 ```
 Streaming position P&L updates (max 5 events or 10 seconds)...
-  NOTE: This stream sends events only when positions exist and prices change
+  NOTE: This stream sends an update every TimerPeriodMilliseconds; with no open position the
+        update is empty (set IgnoreEmptyData: true to skip empty updates)
   Event #1: Type=OrderProfit Total=1 (New=0 Updated=1 Deleted=0)
     Updated Position: Ticket=123456 Symbol=EURUSD Profit=12.45
   Event #2: Type=OrderProfit Total=1 (New=0 Updated=1 Deleted=0)

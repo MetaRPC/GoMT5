@@ -177,7 +177,10 @@ The same five streams, with the same two-channel contract, are available on `MT5
 
 **Demonstration:** `examples/demos/service/05_service_streaming.go` (menu item 5). The context and channel rules below apply to them too.
 
-**Note:** `SymbolTick` carries no symbol name. To tell several symbols apart, open one `StreamTicks` per symbol or use `account.OnSymbolTick` (its `data.SymbolTick.Symbol`).
+**Note:** `SymbolTick` carries the tick's `Symbol`, so one `StreamTicks` for several symbols is enough; its `Time` /
+`TimeMS` are broker server time and `TimeUtc` / `TimeMSUtc` UTC. `StreamTicks` skips stream messages without a tick, and
+cancelling its `ctx` ends it (`ctx.Err()` on the error channel, both channels closed) even when you stopped reading the
+tick channel. The other four `Stream*` methods return the `MT5Account` channels unchanged.
 
 ---
 

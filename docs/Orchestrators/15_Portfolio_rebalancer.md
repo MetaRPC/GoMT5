@@ -2,24 +2,24 @@
 
 ## Description
 
-**🧩 PortfolioRebalancer** maintains balanced exposure across multiple trading symbols by automatically rebalancing positions to match target allocations. Like a mutual fund manager, it aims at diversification and prevents over-concentration in any single symbol.
+**🧩 PortfolioRebalancer** maintains balanced exposure across multiple trading symbols by automatically resizing your positions to match target allocations. Like a mutual fund manager, it aims at diversification and prevents over-concentration in any single symbol.
 
-**Strategy Principle**: At every `CheckInterval` it compares each symbol's exposure with its target and trades when the deviation exceeds the threshold:
+**Strategy Principle**: It checks once when it starts and then every `CheckInterval`, compares each symbol's exposure with its target and trades when the deviation exceeds the threshold:
 
 - **Multi-Symbol Trading**: Manages a portfolio of several symbols simultaneously
 - **Target Allocations**: Each symbol gets a fraction of `TotalExposure` (e.g., 0.25 each for 4 symbols)
-- **Automatic Rebalancing**: When a symbol's exposure deviates more than `RebalanceThreshold` % from its target value, it trades
+- **Automatic Rebalancing**: When a symbol's exposure deviates more than `RebalanceThreshold` % from its target value, it resizes the position - at the regular check, or at once (checked every minute) when the deviation exceeds `MaxDeviation`
 - **Diversification**: Spreads exposure across multiple instruments
 
-> **How "exposure" is measured (simplified):** a position's value is `Volume × 100000` - lots times a fixed 100,000, regardless of symbol, price, contract size, account currency or position direction. Price moves therefore do **not** change the computed allocation; only position volumes do. `TotalExposure` and the target values are in the same unit (e.g. `TotalExposure = 10000` → 2,500 per symbol at 25% = 0.025 lots).
+> **How "exposure" is measured:** a symbol's exposure is the **net notional value** of its positions in the account currency: `Volume × value of 1 lot`, BUY positive, SELL negative. The value of 1 lot is `ContractSize × price` when the symbol's profit currency is the account currency (EURUSD, XAUUSD on a USD account), `ContractSize` when its base currency is the account currency (USDJPY on a USD account), and `price × TickValue / TickSize` otherwise. So `TotalExposure = 10000` means $10,000 of notional value - 2,500 per symbol at 25%, about 0.02 lots of EURUSD.
 >
-> **It opens positions itself.** A symbol with no position has a deviation of −100% and gets a BUY, so on an account without positions the first check opens a BUY market position on every symbol in `Allocations`.
+> **It does not open positions.** The rebalancer resizes the positions you have and keeps their direction: an increase is a trade in the position's direction, a reduction a partial close. A symbol without a position (or with long and short volume that cancel out) stays at HOLD - open its initial position yourself.
 
 **File**: `examples/demos/orchestrators/15_portfolio_rebalancer.go`
 
 > **IMPORTANT DISCLAIMER - EDUCATIONAL EXAMPLE ONLY**
 >
-> This orchestrator is a demonstration showing how GoMT5 methods function and combine into automated portfolio management. **NOT a production-ready trading strategy!** Always test on demo accounts first. Exposure calculation is simplified and may not match your broker's margin requirements.
+> This orchestrator is a demonstration showing how GoMT5 methods function and combine into automated portfolio management. **NOT a production-ready trading strategy!** Always test on demo accounts first. Exposure is notional value; it says nothing about your broker's margin requirements.
 
 ---
 
@@ -57,16 +57,18 @@ PORTFOLIO REBALANCER ORCHESTRATOR
     |
 MT5Sugar Instance
     |
-    |  |  |
-GetOpenPositions  BuyMarket  GetPositionsBySymbol + ClosePosition
-(monitoring)      (increase) (decrease)
+    |  |  |  |
+GetOpenPositions  GetSymbolInfo (+ Service      Service.PlaceOrder          GetPositionsBySymbol +
+(monitoring)      symbol/account properties)   or BuyLimit / SellLimit    ClosePositionPartial / ClosePosition
+                  (valuation)                  (increase)                 (decrease)
 ```
 
 ### Dependencies
 
-- **MT5Sugar**: High-level convenience API (`GetOpenPositions`, `GetPositionsBySymbol`, `BuyMarket`, `ClosePosition`)
+- **MT5Sugar**: High-level convenience API (`GetOpenPositions`, `GetSymbolInfo`, `GetPriceInfo`, `GetPositionsBySymbol`, `BuyLimit`, `SellLimit`, `ClosePositionPartial`, `ClosePosition`)
+- **MT5Service**: `GetAccountString` (account currency), `GetSymbolString` / `GetSymbolDouble` (base/profit currency, tick value/size), `PlaceOrder` (market orders with a maximum deviation), `GetOpenedTickets` + `CloseOrder` (unfilled limit orders)
 - **BaseOrchestrator**: Foundation pattern with metrics tracking and lifecycle management
-- **protobuf types**: `pb.PositionInfo` for position data structures
+- **protobuf types**: `pb.PositionInfo`, `pb.OrderSendRequest`, `pb.OrderCloseRequest`
 
 ---
 
@@ -74,17 +76,17 @@ GetOpenPositions  BuyMarket  GetPositionsBySymbol + ClosePosition
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `Allocations` | map[string]float64 | equal weights of `symbols` | Target fraction per symbol (0.0-1.0); must sum to 1.0 (±0.001) or `Start()` fails |
-| `TotalExposure` | float64 | `10000.0` | Total portfolio "value" in Volume × 100000 units (see above) |
-| `MaxDeviation` | float64 | `0.20` | Declared, but **not read by the current code** |
-| `RebalanceThreshold` | float64 | `10.0` | Rebalance a symbol when \|current − target\| / target × 100 > this value |
-| `CheckInterval` | time.Duration | `1h` | How often to check balance |
-| `MinPositionSize` | float64 | `0.01` | Lower bound for the BUY lot size (`max(lot, MinPositionSize)`) |
-| `UseMarketOrders` | bool | `true` | Declared, but **not read** (BUYs always use `BuyMarket`) |
-| `SlippageTolerance` | float64 | `50` | Declared, but **not read by the current code** |
-| `MaxTradesPerCycle` | int | `10` | Max symbol adjustments per rebalancing cycle |
+| `Allocations` | map[string]float64 | equal weights of `symbols` | Target fraction per symbol (each in (0, 1]); must sum to 1.0 (±0.001) or `Start()` fails |
+| `TotalExposure` | float64 | `10000.0` | Total notional value (account currency) the positions should add up to (must be > 0) |
+| `MaxDeviation` | float64 | `0.20` | Deviation as a fraction (0.20 = 20%) that triggers a rebalance **at once**, between the regular checks (checked every minute; 0 = off; must not be below `RebalanceThreshold`) |
+| `RebalanceThreshold` | float64 | `10.0` | Rebalance a symbol at the regular check when \|current − target\| / target × 100 > this value |
+| `CheckInterval` | time.Duration | `1h` | How often to check balance (0 = 1 h); the first check runs at start |
+| `MinPositionSize` | float64 | `0.01` | Smallest trade in lots: smaller adjustments are skipped |
+| `UseMarketOrders` | bool | `true` | `true`: market orders; `false`: limit orders `SlippageTolerance` points better than the price, deleted at the next check if unfilled (reductions are always partial closes) |
+| `SlippageTolerance` | float64 | `50` | Points: maximum deviation of market orders (`OrderSendRequest.Slippage`), or the price improvement of limit orders (must be > 0 for limit orders) |
+| `MaxTradesPerCycle` | int | `10` | Max trades per rebalancing cycle (0 = 2 × number of symbols) |
 
-Defaults are those of `orchestrators.DefaultPortfolioRebalancerConfig(symbols []string)`. Besides the `Orchestrator` methods, `*PortfolioRebalancer` has `GetCurrentAllocations() []*SymbolAllocation` (runs a fresh analysis), `GetRebalanceCount() int` and `GetLastRebalanceTime() time.Time`.
+Defaults are those of `orchestrators.DefaultPortfolioRebalancerConfig(symbols []string)`. Besides the `Orchestrator` methods, `*PortfolioRebalancer` has `GetCurrentAllocations() []*SymbolAllocation` (the result of the last check - empty before the first one), `GetRebalanceCount() int` and `GetLastRebalanceTime() time.Time`; they are safe to call while it runs.
 
 ### Configuration Example
 
@@ -96,11 +98,11 @@ config := orchestrators.PortfolioRebalancerConfig{
         "USDJPY": 0.25,  // 25% USDJPY
         "XAUUSD": 0.25,  // 25% Gold
     },
-    TotalExposure:      10000.0,          // $10k total portfolio
-    MaxDeviation:       0.20,             // 20% max deviation
+    TotalExposure:      10000.0,          // $10k total notional value
+    MaxDeviation:       0.20,             // 20% off -> rebalance at once
     RebalanceThreshold: 10.0,             // Rebalance at 10% off
     CheckInterval:      30 * time.Minute, // Check every 30 min
-    MinPositionSize:    0.01,             // Min lot size
+    MinPositionSize:    0.01,             // Smallest trade
     UseMarketOrders:    true,             // Use market orders
     SlippageTolerance:  50,               // Max 50 points slippage
     MaxTradesPerCycle:  10,               // Max 10 trades per rebalance
@@ -124,9 +126,9 @@ go run main.go 15
 go run main.go rebalancer
 ```
 
-Both commands (or `go run main.go portfolio`) launch the **PortfolioRebalancer** orchestrator with configuration from `main.go -> RunOrchestrator_PortfolioRebalancer()`. The runner uses `CheckInterval: 30 * time.Minute` and runs for 1 hour (3600 s), so the first check happens after 30 minutes; every 10 seconds the progress line calls `GetCurrentAllocations()`. Then it calls `Stop()` and prints the final metrics.
+Both commands (or `go run main.go portfolio`) launch the **PortfolioRebalancer** orchestrator with configuration from `main.go -> RunOrchestrator_PortfolioRebalancer()`. The runner uses `CheckInterval: 30 * time.Minute` and runs for 1 hour (3600 s): the rebalancer checks at start, after 30 and 60 minutes, and every minute it rebalances at once if a symbol is more than 20% (`MaxDeviation`) off target. Every 10 seconds the progress line shows `GetCurrentAllocations()`. Then it calls `Stop()` and prints the final metrics; the runner then disconnects the terminal - it does so however the run ends, also on an error or Ctrl+C. Each orchestrator also cancels its own context on Ctrl+C / SIGTERM, so a program of yours that waits on `GetContext()` can call `Stop()` and disconnect.
 
-> With the runner's `TotalExposure: 10000` each target is 2,500 = 0.025 lots. Lot sizes are sent unrounded (MT5Sugar does not normalize volumes), so a volume that is not a multiple of the symbol's volume step can be rejected by the broker.
+> The rebalancer only resizes positions that exist: on an account without positions on the four symbols it reports every symbol as HOLD and trades nothing. Volumes are rounded down to each symbol's volume step.
 
 ---
 
@@ -138,33 +140,43 @@ Both commands (or `go run main.go portfolio`) launch the **PortfolioRebalancer**
 START
   |
 Validate Configuration (in Start):
-  - Do allocations sum to 100%? (else Start returns an error)
+  - Do allocations sum to 100%? TotalExposure > 0? (else Start returns an error)
+  - Defaults: CheckInterval 0 -> 1h, MaxTradesPerCycle 0 -> 2 × symbols
+  - Read the account currency
   - Calculate target values per symbol: TotalExposure × allocation
   |
-MONITORING LOOP (every CheckInterval):
+FIRST CHECK at once, then:
+MONITORING LOOP (every CheckInterval; every minute a MaxDeviation check):
+  |
+  Delete our limit orders of the last cycle that did not fill
   |
   Get all open positions
   |
-  Calculate current exposure per symbol:
-    For each position:
-      currentExposure[symbol] += position.Volume × 100000
+  Calculate the net exposure per symbol (account currency):
+    For each position of a symbol in Allocations:
+      value = Volume × value of 1 lot at the position's current price
+      netExposure[symbol] += value (BUY) / -= value (SELL)
   |
   Analyze each symbol in Allocations:
-    | Current value vs. target value
+    | No net position -> HOLD (the rebalancer does not open positions)
+    | |net exposure| vs. target value
     | Deviation % = (current - target) / target × 100
-    | Action needed: BUY (below target) / SELL (above) / HOLD
+    | Action needed (in the position's direction): increase / reduce / HOLD
   |
   Is rebalancing needed?
-    -> If ANY symbol |deviation %| > RebalanceThreshold:
+    -> Regular check: ANY symbol |deviation %| > RebalanceThreshold
+       MaxDeviation check: ANY symbol |deviation %| > MaxDeviation × 100
        |
-       REBALANCING (at most MaxTradesPerCycle symbols):
+       REBALANCING (at most MaxTradesPerCycle trades):
          For each symbol that needs adjustment:
-           | If ActionRequired == "BUY":
-           |   lot = max(|target - current| / 100000, MinPositionSize)
-           |   -> BuyMarket(symbol, lot)
-           | If ActionRequired == "SELL":
-           |   -> ClosePosition(first position of the symbol)
-           |      (closes it completely, whatever the excess is)
+           | lots = |target - current| / value of 1 lot, rounded down to the volume step
+           | lots < MinPositionSize -> skip
+           | Increase -> market order in the position's direction
+           |             (max deviation SlippageTolerance), or a limit order
+           |             SlippageTolerance points better (UseMarketOrders = false)
+           | Reduce   -> partial close of the positions in that direction,
+           |             largest first (whole position if the rest would be
+           |             below the minimum volume)
            | (a failed adjustment is counted as an error and skipped)
            |
          Update rebalanceCount
@@ -173,14 +185,16 @@ MONITORING LOOP (every CheckInterval):
     -> If all within threshold:
        Continue monitoring
   |
-REPEAT until stopped
+REPEAT until stopped (Stop() or Ctrl+C)
+  |
+ON STOP: wait for a check in progress, delete unfilled limit orders
   |
 END
 ```
 
 ### 💡 Visual Example
 
-**Portfolio: TotalExposure 40,000 across 4 symbols, 25% each** (values are Volume × 100000, so a target of 10,000 = 0.10 lots)
+**Portfolio: USD account, TotalExposure $40,000 across 4 symbols, 25% each** (target $10,000 each; at EURUSD 1.1000 one lot is $110,000, so $10,000 is about 0.09 lots)
 
 #### Initial State (Balanced)
 
@@ -189,52 +203,53 @@ Target Allocations:
 +--------+----------+--------------+
 | Symbol | Target % | Target value |
 +--------+----------+--------------+
-| EURUSD |   25%    | 10,000       |
-| GBPUSD |   25%    | 10,000       |
-| USDJPY |   25%    | 10,000       |
-| XAUUSD |   25%    | 10,000       |
+| EURUSD |   25%    | $10,000      |
+| GBPUSD |   25%    | $10,000      |
+| USDJPY |   25%    | $10,000      |
+| XAUUSD |   25%    | $10,000      |
 +--------+----------+--------------+
-Open: 0.10 lots on each symbol -> BALANCED
+Open (all long): positions worth about $10,000 on each symbol -> BALANCED
 ```
 
-#### After Volumes Change (Unbalanced)
+#### After Price and Volume Changes (Unbalanced)
 
 ```
-You added 0.02 lots of EURUSD and partly closed USDJPY to 0.08 lots
-(price moves alone never change these values)
+You added EURUSD volume, USDJPY was partly closed
+(price moves change the values too: exposure is volume × contract × price)
 
 +--------+-------------+---------+-----------+--------+
 | Symbol | Target val. | Current | Deviation | Action |
 +--------+-------------+---------+-----------+--------+
-| EURUSD | 10,000      | 12,000  | +20%      | SELL   |
-| GBPUSD | 10,000      | 10,000  | 0%        | HOLD   |
-| USDJPY | 10,000      |  8,000  | -20%      | BUY    |
-| XAUUSD | 10,000      | 10,000  | 0%        | HOLD   |
+| EURUSD | $10,000     | $12,100 | +21%      | SELL   |
+| GBPUSD | $10,000     | $10,200 | +2%       | HOLD   |
+| USDJPY | $10,000     |  $8,000 | -20%      | BUY    |
+| XAUUSD | $10,000     |  $9,800 | -2%       | HOLD   |
 +--------+-------------+---------+-----------+--------+
-TRIGGER: |deviation| > RebalanceThreshold (10%)
+TRIGGER: |deviation| > RebalanceThreshold (10%) - and EURUSD > MaxDeviation
+         (20%), so the minute check rebalances without waiting for the
+         next CheckInterval
 ```
 
 #### After Rebalancing
 
 ```
 Rebalancing Actions:
-1. EURUSD (SELL): ClosePosition(first EURUSD position) - the whole
-   position is closed, e.g. the 0.10-lot one -> 0.02 lots remain
-2. USDJPY (BUY):  BuyMarket("USDJPY", max(2000/100000, 0.01)) = 0.02 lots
+1. EURUSD (SELL = reduce the long): $2,100 / $110,000 per lot = 0.019
+   -> rounded down to 0.01 lot, closed from the largest EURUSD position
+2. USDJPY (BUY = increase the long): $2,000 / $100,000 per lot = 0.02 lots
+   -> market BUY 0.02 USDJPY
 
 +--------+-------------+---------+-----------+--------+
 | Symbol | Target val. | Current | Deviation | Action |
 +--------+-------------+---------+-----------+--------+
-| EURUSD | 10,000      |  2,000  | -80%      | BUY    |
-| GBPUSD | 10,000      | 10,000  | 0%        | HOLD   |
-| USDJPY | 10,000      | 10,000  | 0%        | HOLD   |
-| XAUUSD | 10,000      | 10,000  | 0%        | HOLD   |
+| EURUSD | $10,000     | $11,000 | +10%      | HOLD   |
+| GBPUSD | $10,000     | $10,200 | +2%       | HOLD   |
+| USDJPY | $10,000     | $10,000 | 0%        | HOLD   |
+| XAUUSD | $10,000     |  $9,800 | -2%       | HOLD   |
 +--------+-------------+---------+-----------+--------+
-
-Next check (CheckInterval later): EURUSD BUY 0.08 lots -> BALANCED
 ```
 
-Because a SELL closes a whole position instead of the excess only, the portfolio can need more than one cycle to settle.
+The volume step limits how closely small targets can be matched: with $10,000 per symbol one EURUSD volume step (0.01 lot) is about 11% of the target.
 
 ---
 
@@ -250,11 +265,19 @@ func (s *MT5Sugar) GetOpenPositions() ([]*pb.PositionInfo, error)
 
 **Usage in PortfolioRebalancer**:
 
-- Called every CheckInterval (and by every `GetCurrentAllocations()` call)
-- Calculates current exposure per symbol (`Volume × 100000`)
-- If it fails, the error is counted and no rebalancing happens in that cycle
+- Called at every check
+- Calculates the net exposure per symbol (`Volume × value of 1 lot` at the position's `PriceCurrent`, BUY +, SELL −)
+- If it fails, the error is counted and no rebalancing happens in that check
 
-### 2. GetPositionsBySymbol
+### 2. GetSymbolInfo
+
+```go
+func (s *MT5Sugar) GetSymbolInfo(symbol string) (*SymbolInfo, error)
+```
+
+**Usage in PortfolioRebalancer**: read once per symbol - `ContractSize` for the value of 1 lot, `VolumeMin`/`VolumeStep`/`VolumeMax` to round trade volumes, `Point`/`Digits` for limit prices. With the base/profit currency (`SYMBOL_CURRENCY_BASE`, `SYMBOL_CURRENCY_PROFIT`) and `SYMBOL_TRADE_TICK_VALUE`/`SYMBOL_TRADE_TICK_SIZE` from the service, it converts the value into the account currency.
+
+### 3. GetPositionsBySymbol
 
 ```go
 func (s *MT5Sugar) GetPositionsBySymbol(symbol string) ([]*pb.PositionInfo, error)
@@ -264,37 +287,34 @@ func (s *MT5Sugar) GetPositionsBySymbol(symbol string) ([]*pb.PositionInfo, erro
 
 **Usage in PortfolioRebalancer**:
 
-- Used when reducing exposure (SELL action)
-- The first position of the returned slice (`positions[0]`) is closed
-- Returns positions filtered by symbol (an error is ignored: nothing is closed)
+- Used when reducing exposure
+- The positions in the net direction are closed from the largest down, only as much volume as the reduction needs
 
-### 3. BuyMarket
+### 4. Service.PlaceOrder / BuyLimit / SellLimit
 
 ```go
-func (s *MT5Sugar) BuyMarket(symbol string, volume float64) (uint64, error)
+func (s *MT5Service) PlaceOrder(ctx context.Context, req *pb.OrderSendRequest) (*OrderResult, error)
+func (s *MT5Sugar) BuyLimit(symbol string, volume, price float64) (uint64, error)
+func (s *MT5Sugar) SellLimit(symbol string, volume, price float64) (uint64, error)
 ```
-
-**Purpose**: Opens a BUY market position at current price.
 
 **Usage in PortfolioRebalancer**:
 
-- Called when increasing exposure (BUY action); `SellMarket` is never used
-- Volume = `max(|target - current| / 100000, MinPositionSize)`, sent unrounded
-- Returns the order ticket (the rebalancer prints it)
+- Increasing exposure with `UseMarketOrders: true`: a market order (BUY for a long, SELL for a short position) through `PlaceOrder` with `Slippage = SlippageTolerance` points; anything but return code 10009 is an error
+- With `UseMarketOrders: false`: `BuyLimit` at Ask − `SlippageTolerance` points or `SellLimit` at Bid + `SlippageTolerance` points; an order that has not filled by the next check (or by `Stop()`) is deleted
 
-### 4. ClosePosition
+### 5. ClosePositionPartial / ClosePosition
 
 ```go
+func (s *MT5Sugar) ClosePositionPartial(ticket uint64, volume float64) error
 func (s *MT5Sugar) ClosePosition(ticket uint64) error
 ```
 
-**Purpose**: Closes specific position by ticket.
-
 **Usage in PortfolioRebalancer**:
 
-- Called when reducing exposure (SELL action)
-- Closes one whole position (the first one of the symbol), not just the excess
-- Reduces over-allocated symbols
+- Reducing exposure: closes the needed volume (rounded down to the volume step) from the largest positions in the net direction
+- A position is closed completely only when the rest would be below the minimum volume
+- Each close counts as one trade toward `MaxTradesPerCycle`
 
 ---
 
@@ -309,7 +329,7 @@ Allocations: map[string]float64{
     "USDJPY": 0.20,  // 20% yen
     "XAUUSD": 0.20,  // 20% gold hedge
 },
-TotalExposure:      5000.0,           // Small portfolio (Volume × 100000 units)
+TotalExposure:      5000.0,           // Small portfolio ($5k notional)
 RebalanceThreshold: 5.0,              // Tight rebalancing
 CheckInterval:      1 * time.Hour,    // Check hourly
 ```
@@ -353,8 +373,9 @@ CheckInterval:      1 * time.Hour,    // Hourly
 
 ### Set Realistic TotalExposure
 
-- `TotalExposure` is not money: it is compared with `Volume × 100000` of your positions
-- Example: TotalExposure 40,000 with 4 × 25% = 0.10 lots per symbol
+- `TotalExposure` is notional value in the account currency, not margin
+- Example: TotalExposure $40,000 with 4 × 25% = $10,000 per symbol, about 0.09 lots of EURUSD at 1.1000
+- Small targets are matched only to the volume step: keep each target well above the value of one volume step
 - Leave margin buffer for drawdowns
 
 ### Match CheckInterval to Trading Style
@@ -394,7 +415,7 @@ CheckInterval:      1 * time.Hour,    // Hourly
 
 - Single-symbol trading (no portfolio needed)
 - High-frequency trading (overhead too high)
-- Strong trending markets (closes whole positions of over-weight symbols)
+- Strong trending markets (rebalancing trims the winners)
 - Very small accounts (<$1,000)
 
 ---

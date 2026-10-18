@@ -6,8 +6,8 @@
 
 * **Method:** `sugar.GetAccountInfo()`
 * **Package:** `mt5` (MT5Sugar)
-* **Underlying calls:** `service.GetAccountSummary()`, `GetMargin()`, `GetFreeMargin()`, `GetMarginLevel()`, `GetProfit()`
-* **Timeout:** 5 seconds for `GetAccountSummary`; the four extra queries (`GetMargin`, `GetFreeMargin`, `GetMarginLevel`, `GetProfit`) use their own 3-second timeouts
+* **Underlying calls:** `service.GetAccountSummary()`, then `service.GetAccountDouble()` for `ACCOUNT_MARGIN`, `ACCOUNT_MARGIN_FREE`, `ACCOUNT_MARGIN_LEVEL`, `ACCOUNT_PROFIT`
+* **Timeout:** 10 seconds for the whole call - the summary and the four extra queries share one context (one deadline)
 * **Returns:** Complete AccountInfo structure
 
 ---
@@ -31,9 +31,47 @@ func (s *MT5Sugar) GetAccountInfo() (*AccountInfo, error)
 | Return | Type | Description |
 |--------|------|-------------|
 | `accountInfo` | `*AccountInfo` | Structure with all account data |
-| `error` | `error` | `GetAccountInfo failed: ...` if `GetAccountSummary` fails |
+| `error` | `error` | `GetAccountInfo failed: ...` if `GetAccountSummary` fails, or `GetAccountInfo failed: margin: ...` / `free margin: ...` / `margin level: ...` / `profit: ...` if one of the four extra queries fails (the result is `nil` then) |
 
-**Note:** errors of the four extra queries are ignored - a failed query leaves `Margin`, `FreeMargin`, `MarginLevel` or `Profit` at `0` without returning an error.
+**Note:** a failed value is reported as an error, never returned as `0` - a `0` in `Margin`, `MarginLevel` or `Profit` is the account's real value (e.g. no open positions).
+
+```go
+func (s *MT5Sugar) GetAccountInfo() (*AccountInfo, error) {
+    ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+    defer cancel()
+
+    // Use Service layer GetAccountSummary
+    summary, err := s.service.GetAccountSummary(ctx)
+    if err != nil {
+        return nil, fmt.Errorf("GetAccountInfo failed: %w", err)
+    }
+
+    // Get additional fields (same context: the whole call has one 10-second deadline)
+    margin, err := s.service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_MARGIN)
+    if err != nil {
+        return nil, fmt.Errorf("GetAccountInfo failed: margin: %w", err)
+    }
+    freeMargin, err := s.service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_MARGIN_FREE)
+    // ... same check ("free margin: ...")
+    marginLevel, err := s.service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_MARGIN_LEVEL)
+    // ... same check ("margin level: ...")
+    profit, err := s.service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_PROFIT)
+    // ... same check ("profit: ...")
+
+    return &AccountInfo{
+        Login:       summary.Login,
+        Balance:     summary.Balance,
+        Equity:      summary.Equity,
+        Margin:      margin,
+        FreeMargin:  freeMargin,
+        MarginLevel: marginLevel,
+        Profit:      profit,
+        Currency:    summary.Currency,
+        Leverage:    summary.Leverage,
+        Company:     summary.CompanyName,
+    }, nil
+}
+```
 
 ### AccountInfo Structure
 
@@ -765,10 +803,9 @@ for range ticker.C {
 **📦 Methods used internally:**
 
 * `service.GetAccountSummary()` - Get core account data
-* `GetMargin()` - Get used margin
-* `GetFreeMargin()` - Get free margin
-* `GetMarginLevel()` - Get margin level
-* `GetProfit()` - Get floating P/L
+* `service.GetAccountDouble()` - Used margin, free margin, margin level, floating P/L (same 10 s context)
+
+(The sugar one-liners `GetMargin()`, `GetFreeMargin()`, `GetMarginLevel()`, `GetProfit()` read the same values, each with its own 3 s timeout.)
 
 **🍬 Complementary sugar methods:**
 

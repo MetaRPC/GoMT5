@@ -11,7 +11,8 @@
 ```go
 transactionReq := &pb.OnTradeTransactionRequest{}
 
-transactionChan, transactionErrChan := account.OnTradeTransaction(ctx, transactionReq)
+transactionCtx, transactionCancel := context.WithCancel(ctx)
+transactionChan, transactionErrChan := account.OnTradeTransaction(transactionCtx, transactionReq)
 
 fmt.Printf("Streaming trade transactions (max %d events or %d seconds)...\n", MAX_EVENTS, MAX_SECONDS)
 fmt.Println("  NOTE: This stream sends events for all trade-related transactions")
@@ -61,6 +62,7 @@ for {
 		break streamTransaction
 	}
 }
+transactionCancel() // closes this stream on the server
 ```
 
 ---
@@ -80,8 +82,11 @@ Create an empty request — subscription applies to **all trading events** of th
 ### 2️. Start the Stream
 
 ```go
-transactionChan, transactionErrChan := account.OnTradeTransaction(ctx, transactionReq)
+transactionCtx, transactionCancel := context.WithCancel(ctx)
+transactionChan, transactionErrChan := account.OnTradeTransaction(transactionCtx, transactionReq)
 ```
+
+The stream gets its own context, derived from `ctx`: `transactionCancel()` after the loop closes this stream on the server at once. Without it the stream would stay open, unread, until `ctx` itself ends — and every later stream of the demo would pile up next to it.
 
 The method returns two channels:
 

@@ -552,7 +552,11 @@ func (a *MT5Account) ConnectEx(ctx context.Context, req *pb.ConnectExRequest) (*
 	}
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
+		wait := uint32(120) // the server's default wait for the login (ConnectExRequest/ConnectRequest.timeout_seconds)
+		if req.TimeoutSeconds != nil {
+			wait = *req.TimeoutSeconds
+		}
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(wait+10)*time.Second)
 		defer cancel()
 	}
 
@@ -605,7 +609,11 @@ func (a *MT5Account) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.C
 	}
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
+		wait := uint32(120) // the server's default wait for the login (ConnectExRequest/ConnectRequest.timeout_seconds)
+		if req.TimeoutSeconds != nil {
+			wait = *req.TimeoutSeconds
+		}
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(wait+10)*time.Second)
 		defer cancel()
 	}
 

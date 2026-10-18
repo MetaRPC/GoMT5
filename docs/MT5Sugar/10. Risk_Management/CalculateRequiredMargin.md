@@ -9,7 +9,7 @@
 * **Underlying calls:** `service.GetSymbolTick()`, `service.CalculateMargin()`
 * **Timeout:** 5 seconds
 * **Considers:** Leverage, symbol specifications, current price
-* **Order type:** Always calculated for a **BUY** (`ORDER_TYPE_TF_BUY`) at the current **Ask** (`OrderCalcMargin`) - there is no SELL variant
+* **Order type:** Always calculated for a **BUY** (`ORDER_TYPE_TF_BUY`) at the current **Ask** (`OrderCalcMargin`) - there is no direction parameter and no SELL variant; a SELL's margin may differ slightly
 
 ---
 

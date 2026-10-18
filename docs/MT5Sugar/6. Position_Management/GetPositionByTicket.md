@@ -5,7 +5,7 @@
 **API Information:**
 
 * **Method:** `sugar.GetPositionByTicket(ticket)`
-* **Timeout:** 5 seconds (it calls `GetOpenPositions()` and searches the result)
+* **Timeout:** 10 seconds (it calls `GetOpenPositions()` and searches the result)
 * **Returns:** `*pb.PositionInfo` structure
 
 ---
@@ -159,12 +159,12 @@ if err != nil {
     return
 }
 
-// Calculate pips
+// Calculate pips (EURUSD: 1 pip = 0.0001 = 10 points)
 var pips float64
 if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
-    pips = (pos.PriceCurrent - pos.PriceOpen) / 0.00001
+    pips = (pos.PriceCurrent - pos.PriceOpen) / 0.0001
 } else {
-    pips = (pos.PriceOpen - pos.PriceCurrent) / 0.00001
+    pips = (pos.PriceOpen - pos.PriceCurrent) / 0.0001
 }
 
 fmt.Printf("Position #%d:\n", pos.Ticket)
@@ -255,12 +255,12 @@ func ShowPositionSummary(sugar *mt5.MT5Sugar, ticket uint64) {
     fmt.Printf("Take Profit: %.5f\n", pos.TakeProfit)
     fmt.Println()
 
-    // Calculate pips
+    // Calculate pips (EURUSD: 1 pip = 0.0001 = 10 points)
     var pips float64
     if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
-        pips = (pos.PriceCurrent - pos.PriceOpen) / 0.00001
+        pips = (pos.PriceCurrent - pos.PriceOpen) / 0.0001
     } else {
-        pips = (pos.PriceOpen - pos.PriceCurrent) / 0.00001
+        pips = (pos.PriceOpen - pos.PriceCurrent) / 0.0001
     }
 
     fmt.Printf("Pips:        %.1f\n", pips)
@@ -329,14 +329,14 @@ if err != nil {
 }
 
 if pos.StopLoss > 0 && pos.TakeProfit > 0 {
-    var riskPips, rewardPips float64
+    var riskPips, rewardPips float64 // (EURUSD: 1 pip = 0.0001 = 10 points)
 
     if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
-        riskPips = (pos.PriceOpen - pos.StopLoss) / 0.00001
-        rewardPips = (pos.TakeProfit - pos.PriceOpen) / 0.00001
+        riskPips = (pos.PriceOpen - pos.StopLoss) / 0.0001
+        rewardPips = (pos.TakeProfit - pos.PriceOpen) / 0.0001
     } else {
-        riskPips = (pos.StopLoss - pos.PriceOpen) / 0.00001
-        rewardPips = (pos.PriceOpen - pos.TakeProfit) / 0.00001
+        riskPips = (pos.StopLoss - pos.PriceOpen) / 0.0001
+        rewardPips = (pos.PriceOpen - pos.TakeProfit) / 0.0001
     }
 
     rr := rewardPips / riskPips
@@ -393,12 +393,12 @@ func MonitorPosition(sugar *mt5.MT5Sugar, ticket uint64, duration time.Duration)
                 lowestProfit = pos.Profit
             }
 
-            // Calculate pips
+            // Calculate pips (EURUSD: 1 pip = 0.0001 = 10 points)
             var pips float64
             if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
-                pips = (pos.PriceCurrent - pos.PriceOpen) / 0.00001
+                pips = (pos.PriceCurrent - pos.PriceOpen) / 0.0001
             } else {
-                pips = (pos.PriceOpen - pos.PriceCurrent) / 0.00001
+                pips = (pos.PriceOpen - pos.PriceCurrent) / 0.0001
             }
 
             // Display update
@@ -472,14 +472,14 @@ pos, err := sugar.GetPositionByTicket(ticket)
 
 ```go
 // ❌ WRONG - assuming BUY
-pips := (pos.PriceCurrent - pos.PriceOpen) / 0.00001
+pips := (pos.PriceCurrent - pos.PriceOpen) / 0.0001
 
 // ✅ CORRECT - check position type
 var pips float64
 if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
-    pips = (pos.PriceCurrent - pos.PriceOpen) / 0.00001
+    pips = (pos.PriceCurrent - pos.PriceOpen) / 0.0001
 } else {
-    pips = (pos.PriceOpen - pos.PriceCurrent) / 0.00001
+    pips = (pos.PriceOpen - pos.PriceCurrent) / 0.0001
 }
 ```
 

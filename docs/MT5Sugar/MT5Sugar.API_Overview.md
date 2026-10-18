@@ -12,7 +12,7 @@
 - 📉 Real-time P&L monitoring and position tracking
 - 🔌 Simplified connection management
 
-> **Note:** MT5Sugar does NOT normalize volumes or prices - they are sent exactly as given (no rounding to `Digits` / `VolumeStep`).
+> **Note:** The order methods (`BuyMarket`, `BuyLimitWithSLTP`, `ModifyPositionSLTP`, ...) send volumes and prices exactly as given (no rounding to `Digits` / `VolumeStep`). The helpers do round: `CalculateSLTP` and `Buy/SellMarketWithPips` round SL/TP prices to the symbol's `Digits`; `CalculatePositionSize` and `GetMaxLotSize` round the volume down to `VolumeStep`.
 
 ---
 
@@ -24,7 +24,7 @@
 
 | Method | Description | Documentation |
 |--------|-------------|---------------|
-| `QuickConnect()` | Connect using cluster name (RECOMMENDED) | [→ Docs](1.%20Connection/QuickConnect.md) |
+| `QuickConnect()` | Connect using cluster name (RECOMMENDED); the server waits up to 120 s for the terminal to start and log in, the call has a 130 s deadline | [→ Docs](1.%20Connection/QuickConnect.md) |
 | `IsConnected()` | Check if connected to MT5 | [→ Docs](1.%20Connection/IsConnected.md) |
 | `Ping()` | Verify connection is alive | [→ Docs](1.%20Connection/Ping.md) |
 
@@ -32,7 +32,7 @@
 
 - `GetService()` - access underlying MT5Service
 - `GetAccount()` - access underlying MT5Account
-- `Disconnect(deleteOnDisconnect ...bool)` - disconnect and release resources
+- `Disconnect(deleteOnDisconnect ...bool)` - stops the terminal on the server (`true` = deletes it instead; the server gets up to 30 s), returns the disconnect error (`Disconnect failed: ...`), then closes the gRPC connection; a second call is a no-op. **Always call it when done - also when `QuickConnect` failed** (the server may already have started the terminal), or the terminal keeps running on the server
 
 ---
 
@@ -50,7 +50,7 @@
 
 **Data structures:**
 
-- `PriceInfo` - complete price data structure
+- `PriceInfo` - complete price data structure (`Time` = broker server time, `TimeUtc` = the same moment in UTC; `SpreadPips` is in **points** despite its name: (Ask - Bid) / `SYMBOL_POINT`)
 
 ---
 
@@ -62,7 +62,7 @@
 |--------|-------------|---------------|
 | `ClosePosition()` | Close position completely by ticket | [→ Docs](6.%20Position_Management/ClosePosition.md) |
 | `ClosePositionPartial()` | Partial close with volume | [→ Docs](6.%20Position_Management/ClosePositionPartial.md) |
-| `CloseAllPositions()` | Close ALL open positions | [→ Docs](6.%20Position_Management/CloseAllPositions.md) |
+| `CloseAllPositions()` | Close ALL open positions (pending orders untouched); returns the closed count and an error naming every position that was not closed | [→ Docs](6.%20Position_Management/CloseAllPositions.md) |
 | `ModifyPositionSLTP()` | Modify both SL and TP | [→ Docs](6.%20Position_Management/ModifyPositionSLTP.md) |
 
 **Also available (no separate page):** `CloseAllBySymbol(symbol)` - close all positions of one symbol, `ModifyPositionSL(ticket, sl)`, `ModifyPositionTP(ticket, tp)`.
@@ -132,14 +132,20 @@
 
 | Method | Description | Documentation |
 |--------|-------------|---------------|
-| `GetDealsToday()` | Closed positions opened today (00:00 to now, local clock) | [→ Docs](8.%20History_Statistics/GetDealsToday.md) |
-| `GetDealsYesterday()` | Closed positions opened yesterday | [→ Docs](8.%20History_Statistics/GetDealsYesterday.md) |
-| `GetDealsThisWeek()` | Closed positions opened this week (Monday 00:00 to now) | [→ Docs](8.%20History_Statistics/GetDealsThisWeek.md) |
-| `GetDealsThisMonth()` | Closed positions opened this month (1st to now) | [→ Docs](8.%20History_Statistics/GetDealsThisMonth.md) |
-| `GetDealsDateRange()` | Closed positions opened in a custom date range | [→ Docs](8.%20History_Statistics/GetDealsDateRange.md) |
-| `GetProfitToday()` | Sum of `Profit` of today's closed positions (no swap/commission) | [→ Docs](8.%20History_Statistics/GetProfitToday.md) |
+| `GetDealsToday()` | Closed positions opened today (local midnight to now) | [→ Docs](8.%20History_Statistics/GetDealsToday.md) |
+| `GetDealsYesterday()` | Closed positions opened yesterday (whole previous local day) | [→ Docs](8.%20History_Statistics/GetDealsYesterday.md) |
+| `GetDealsThisWeek()` | Closed positions opened this week (local Monday 00:00 to now) | [→ Docs](8.%20History_Statistics/GetDealsThisWeek.md) |
+| `GetDealsThisMonth()` | Closed positions opened this month (the 1st, 00:00 local, to now) | [→ Docs](8.%20History_Statistics/GetDealsThisMonth.md) |
+| `GetDealsDateRange()` | Closed positions opened in a custom range (real moments, sent as UTC) | [→ Docs](8.%20History_Statistics/GetDealsDateRange.md) |
+| `GetProfitToday()` | Sum of `Profit` of today's closed positions (no commission/swap/fee) | [→ Docs](8.%20History_Statistics/GetProfitToday.md) |
 | `GetProfitThisWeek()` | Sum of `Profit` of this week's closed positions | [→ Docs](8.%20History_Statistics/GetProfitThisWeek.md) |
 | `GetProfitThisMonth()` | Sum of `Profit` of this month's closed positions | [→ Docs](8.%20History_Statistics/GetProfitThisMonth.md) |
+
+"Deals" here are **closed positions** from PositionsHistory (one entry per position), selected by their **open** time:
+a position opened yesterday and closed today is not in `GetDealsToday()`. The day/week/month boundaries are the local
+calendar of the computer running the program, sent to the server in the request's UTC fields, so the broker's time zone
+does not shift them. All pages are read (cursor paging, 1000 per page), so long ranges are complete. Timeouts (for all
+pages together): 15 s for today/yesterday/week (and `GetDailyStats`), 30 s for month and custom range.
 
 ---
 
@@ -149,9 +155,9 @@
 
 | Method | Description | Documentation |
 |--------|-------------|---------------|
-| `GetSymbolInfo()` | Complete symbol information (all properties) | [→ Docs](9.%20Symbol_Information/GetSymbolInfo.md) |
-| `GetAllSymbols()` | List of all available symbols | [→ Docs](9.%20Symbol_Information/GetAllSymbols.md) |
-| `IsSymbolAvailable()` | Check if symbol exists and is synchronized (trade mode not checked) | [→ Docs](9.%20Symbol_Information/IsSymbolAvailable.md) |
+| `GetSymbolInfo()` | Complete symbol information (exact name match; 10 s) | [→ Docs](9.%20Symbol_Information/GetSymbolInfo.md) |
+| `GetAllSymbols()` | List of all available symbols (reads all pages of 1000; 60 s) | [→ Docs](9.%20Symbol_Information/GetAllSymbols.md) |
+| `IsSymbolAvailable()` | Check if symbol exists and is synchronized (trade mode and sessions not checked) | [→ Docs](9.%20Symbol_Information/IsSymbolAvailable.md) |
 | `GetMinStopLevel()` | Minimum distance for SL/TP in points | [→ Docs](9.%20Symbol_Information/GetMinStopLevel.md) |
 | `GetSymbolDigits()` | Decimal precision for symbol | [→ Docs](9.%20Symbol_Information/GetSymbolDigits.md) |
 
@@ -167,10 +173,12 @@
 
 | Method | Description | Documentation |
 |--------|-------------|---------------|
-| `CalculatePositionSize()` | **PRIMARY METHOD** - auto-calculate lot size by risk % | [→ Docs](10.%20Risk_Management/CalculatePositionSize.md) |
-| `GetMaxLotSize()` | Maximum tradeable volume based on free margin | [→ Docs](10.%20Risk_Management/GetMaxLotSize.md) |
+| `CalculatePositionSize()` | **PRIMARY METHOD** - auto-calculate lot size by risk % (SL distance in points; point value from the tick value, in the account currency); a size below the minimum volume is an error, never raised to it | [→ Docs](10.%20Risk_Management/CalculatePositionSize.md) |
+| `GetMaxLotSize()` | Maximum tradeable volume based on free margin (error if not even the minimum lot fits) | [→ Docs](10.%20Risk_Management/GetMaxLotSize.md) |
 | `CanOpenPosition()` | Comprehensive validation before trading | [→ Docs](10.%20Risk_Management/CanOpenPosition.md) |
 | `CalculateRequiredMargin()` | Margin needed for specific position size | [→ Docs](10.%20Risk_Management/CalculateRequiredMargin.md) |
+
+The margin in all four methods is calculated for a **BUY at the current ASK** (they have no direction parameter; a SELL's margin may differ slightly).
 
 **Example:**
 ```go
@@ -193,8 +201,11 @@ lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 500)
 **Example:**
 ```go
 // Buy EURUSD: 500-point SL, 1000-point TP (1:2 R:R)
+// Ask 1.08500 -> SL 1.08000, TP 1.09500
 ticket, _ := sugar.BuyMarketWithPips("EURUSD", 0.1, 500, 1000)
 ```
+
+`CalculateSLTP` accepts only `"BUY"` or `"SELL"` as direction (anything else is an error).
 
 ---
 
@@ -204,7 +215,7 @@ ticket, _ := sugar.BuyMarketWithPips("EURUSD", 0.1, 500, 1000)
 
 | Method | Description | Documentation |
 |--------|-------------|---------------|
-| `GetAccountInfo()` | Complete account snapshot (one call) | [→ Docs](12.%20Account_Information/GetAccountInfo.md) |
+| `GetAccountInfo()` | Complete account snapshot (one call; any failed value is returned as an error, never as 0) | [→ Docs](12.%20Account_Information/GetAccountInfo.md) |
 | `GetDailyStats()` | Today's trading statistics (win rate, profit, etc.) | [→ Docs](8.%20History_Statistics/GetDailyStats.md) |
 
 **Data structures:**
@@ -290,8 +301,12 @@ fmt.Printf("Floating P/L: $%.2f\n", totalProfit)
 // Emergency close on drawdown
 if totalProfit < -500 {
     fmt.Println("🚨 Drawdown $500 - closing all positions!")
-    closedCount, _ := sugar.CloseAllPositions()
+    closedCount, err := sugar.CloseAllPositions()
     fmt.Printf("Closed %d positions\n", closedCount)
+    if err != nil {
+        // e.g. "1 of 3 position(s) not closed: position #123: close rejected, ..."
+        fmt.Printf("⚠️  %v\n", err)
+    }
 }
 ```
 
@@ -456,9 +471,17 @@ MetaTrader 5 Terminal
 - **Points** - minimum price increment (for 5-digit: 0.00001)
 - **Pips** - standard trader unit (for 5-digit: 1 pip = 10 points = 0.0001)
 - SL/TP distances in the `...WithPips` methods, `CalculateSLTP` and `CalculatePositionSize` are **points**, despite the "pips" names
-- No normalization - volumes and prices are sent exactly as given
-- Timeouts are built-in (3-30 seconds depending on the operation) - no need to specify
-- History ranges (today / yesterday / week / month) are computed from the local clock (`time.Now()`), and positions are selected by their open time
+- No normalization in the order methods - volumes and prices are sent exactly as given (the helpers round SL/TP to `Digits` and computed volumes down to `VolumeStep`)
+- Timeouts are built-in (3-130 seconds depending on the operation) - no need to specify:
+  - `QuickConnect`: the server waits up to 120 s for the terminal, the call has a 130 s deadline; `Disconnect`: 30 s
+  - Trading (orders, modify, close): 30 s per request - an order that times out on the client side may still have been executed
+  - Balance / price queries, `IsConnected`, `Ping`, `CountOpenPositions`, `IsSymbolAvailable`, `GetMinStopLevel`, `GetSymbolDigits`: 3 s
+  - Positions, `GetSymbolInfo`, `GetAccountInfo` (one deadline for the whole call), `CalculatePositionSize`: 10 s; `GetMaxLotSize`, `CanOpenPosition`, `CalculateRequiredMargin`: 5 s
+  - `CloseAllPositions` / `CloseAllBySymbol`: 10 s to list the positions, then 30 s for each close
+  - History: 15 s for today/yesterday/week, 30 s for month/custom range (all pages together); `GetAllSymbols`: 60 s for all pages
+- Times: `PriceInfo.Time` / tick `Time` are broker server time, the `...Utc` fields are UTC
+- History ranges (today / yesterday / week / month) use the local calendar of the computer running the program (sent to the server as UTC), and positions are selected by their open time; profit sums are the `Profit` field (no commission/swap/fee)
+- Always call `Disconnect()` when done - also on error paths. Note that `log.Fatal` exits without running deferred calls, so a `defer sugar.Disconnect()` does not run after it
 
 ---
 
@@ -539,41 +562,55 @@ import (
 )
 
 func main() {
+    // log.Fatal exits without running deferred calls - so the work runs in run(),
+    // whose deferred Disconnect always runs, and main only reports the error.
+    if err := run(); err != nil {
+        log.Fatal(err)
+    }
+}
+
+func run() error {
     // 1. Create MT5Sugar instance (login, password, gRPC server; "" = default mt5.mrpc.pro:443)
     sugar, err := mt5.NewMT5Sugar(12345678, "your_password", "mt5.mrpc.pro:443")
     if err != nil {
-        log.Fatal(err)
+        return err
     }
-    defer sugar.Disconnect()
+    // Stop the terminal when done - also when QuickConnect failed (it may already have started)
+    defer func() {
+        if err := sugar.Disconnect(); err != nil {
+            log.Printf("disconnect: %v", err)
+        }
+    }()
 
-    // 2. Connect
+    // 2. Connect (the server waits up to 120 s for the terminal)
     if err := sugar.QuickConnect("YourBroker-MT5 Demo"); err != nil {
-        log.Fatal(err)
+        return err
     }
 
-    // 3. Calculate position size (risk 2%, 500-point SL)
+    // 3. Calculate position size (risk 2%, 500-point SL = 50 pips on 5-digit EURUSD)
     lotSize, err := sugar.CalculatePositionSize("EURUSD", 2.0, 500)
     if err != nil {
-        log.Fatal(err)
+        return err
     }
 
     // 4. Validate
     canOpen, reason, err := sugar.CanOpenPosition("EURUSD", lotSize)
     if err != nil {
-        log.Fatal(err)
+        return err
     }
     if !canOpen {
-        log.Fatalf("Cannot trade: %s", reason)
+        return fmt.Errorf("cannot trade: %s", reason)
     }
 
     // 5. Trade with SL/TP distances in points
     ticket, err := sugar.BuyMarketWithPips("EURUSD", lotSize, 500, 1000)
     if err != nil {
-        log.Fatal(err)
+        return err
     }
 
     fmt.Printf("✅ Position #%d opened!\n", ticket)
     fmt.Printf("   Risk: 2%% | SL: 500 points | TP: 1000 points | R:R 1:2\n")
+    return nil
 }
 ```
 

@@ -84,7 +84,7 @@ config := orchestrators.GridTraderConfig{
 **Expected Behavior:**
 
 * Places 5 BUY LIMIT and 5 SELL LIMIT pending orders around the mid price
-* With `TakeProfit: 0` and `StopLoss: 0` the orders are sent **without TP/SL** (see [GridTrader](13_Grid_trader.md))
+* With `TakeProfit: 0` each order's TP is one grid step away; `StopLoss: 0` = no SL (see [GridTrader](13_Grid_trader.md))
 * Works best in sideways markets
 * When the cycle ends, `Stop()` deletes the grid's pending orders; filled positions stay open
 
@@ -109,7 +109,7 @@ tsConfig := orchestrators.DefaultTrailingStopConfig()
 tsManager := orchestrators.NewTrailingStopManager(p.sugar, tsConfig)
 
 // Position Scaler: defaults for the symbol (TriggerDistance 200, MinProfitToScale 100,
-// ScaleLotSize 0.05, MaxScales 3, TotalMaxLotSize 1.0, StopLossPerScale 150, CheckInterval 5s)
+// InitialLotSize 0.10, ScaleLotSize 0.05, MaxScales 3, TotalMaxLotSize 1.0, StopLossPerScale 150, CheckInterval 5s)
 scalerConfig := orchestrators.DefaultPositionScalerConfig(p.Symbol)
 scalerConfig.Mode = orchestrators.Pyramiding
 scaler := orchestrators.NewPositionScaler(p.sugar, scalerConfig)
@@ -118,7 +118,7 @@ scaler := orchestrators.NewPositionScaler(p.sugar, scalerConfig)
 **Expected Behavior:**
 
 * Protects profits with trailing stops
-* Scales into winning positions
+* Opens a 0.10-lot BUY base position on the symbol if it has none (`InitialLotSize`, once per scaler run) and scales into it once it is in profit
 * Balanced approach for normal markets
 
 ---
@@ -142,8 +142,8 @@ config.EnableAutoClose = true                      // Auto-close on breach
 **Expected Behavior:**
 
 * Monitors risk limits every 5 seconds during the cycle
-* Closes ALL positions if drawdown reaches 5% (or $1000) from the peak, or the daily loss reaches $500; closes the most losing position if the margin level falls below 150%
-* The peak/daily baseline is the balance when this cycle's RiskManager starts
+* Closes ALL positions if drawdown reaches 5% (or $1000) from the peak, or the daily loss reaches $500; closes the most losing position while the margin level is below 150%
+* The peak/daily baseline is the equity when this cycle's RiskManager starts
 * Defensive mode to prevent blow-ups
 
 ---
@@ -160,16 +160,19 @@ config.EnableAutoClose = true                      // Auto-close on breach
 
 ```go
 // PortfolioSymbols defaults to EURUSD, GBPUSD, USDJPY, XAUUSD -> 0.25 each,
-// TotalExposure 10000, RebalanceThreshold 10, CheckInterval 1 hour
+// TotalExposure 10000, RebalanceThreshold 10, MaxDeviation 0.20
 config := orchestrators.DefaultPortfolioRebalancerConfig(p.PortfolioSymbols)
+// The default 1-hour check interval would never come round in a cycle: the rebalancer checks
+// when it starts and then every fifth of the cycle.
+config.CheckInterval = p.CycleDuration / 5
 rebalancer := orchestrators.NewPortfolioRebalancer(p.sugar, config)
 ```
 
 
 **Expected Behavior**:
 
-* Would maintain balanced allocation and rebalance when deviation > 10%
-* **But:** the default `CheckInterval` is 1 hour while a cycle lasts 5 minutes, so the rebalancer is stopped before its first check — with the default settings Portfolio Mode does not trade. Raise `CycleDuration` or change the config in `executePortfolioMode` to use it
+* Checks when it starts and then every minute (`CycleDuration / 5`), and rebalances the open positions when a symbol deviates more than 10% from its target
+* Resizes existing positions only: symbols of `PortfolioSymbols` without a position are left alone (see [PortfolioRebalancer](15_Portfolio_rebalancer.md))
 
 ---
 
@@ -206,14 +209,14 @@ config.MaxScales = 3         // Max 3 scales
 | `BaseRiskAmount`             | float64       | `20.0`     | Only used for the total-loss stop: stop when total P/L < −5 × BaseRiskAmount |
 | `LowVolatilityThreshold`     | float64       | `25.0`     | Max points for grid mode       |
 | `HighVolatilityThreshold`    | float64       | `50.0`     | Min points for protection mode |
-| `CycleDuration`              | time.Duration | `5m`       | Duration of one cycle          |
+| `CycleDuration`              | time.Duration | `5m`       | Duration of one cycle (0 = 5 m) |
 | `EnablePortfolioMode`        | bool          | `false`    | Enable multi-symbol management |
 | `PortfolioSymbols`           | []string      | 4 symbols  | Symbols for portfolio mode     |
-| `MaxConcurrentOrchestrators` | int           | `2`        | Declared, but **not enforced** by the current code |
-| `MaxDailyLoss`               | float64       | `500.0`    | Stop when balance − start balance < −MaxDailyLoss |
-| `MaxDailyProfit`             | float64       | `1000.0`   | Stop when balance − start balance > MaxDailyProfit |
+| `MaxConcurrentOrchestrators` | int           | `2`        | Most orchestrators started per cycle; a further one is not started (0 = no limit) |
+| `MaxDailyLoss`               | float64       | `500.0`    | Stop when balance − day start balance < −MaxDailyLoss |
+| `MaxDailyProfit`             | float64       | `1000.0`   | Stop when balance − day start balance > MaxDailyProfit |
 
-"Daily" limits are measured from the balance at `Execute()` start; the baseline is never reset. The fields are exported, so set them on the preset before calling `Execute()`.
+"Daily" limits are measured from the balance at `Execute()` start, and from the balance at the first safety check of each new day (local date) after that. The fields are exported, so set them on the preset before calling `Execute()`.
 
 ### Configuration Example
 
@@ -224,10 +227,10 @@ sugar, err := mt5.NewMT5Sugar(12345678, "your_password", "mt5.mrpc.pro:443")
 if err != nil {
     return err
 }
+defer sugar.Disconnect() // also when QuickConnect fails
 if err := sugar.QuickConnect("YourBroker-MT5 Demo"); err != nil {
     return err
 }
-defer sugar.Disconnect()
 
 preset := presets.NewAdaptiveOrchestratorPreset(sugar)
 
@@ -241,7 +244,7 @@ preset.EnablePortfolioMode = false
 preset.MaxDailyLoss = 500.0
 preset.MaxDailyProfit = 1000.0
 
-// Execute: blocks until Ctrl+C / SIGTERM, returns the total P/L
+// Execute: blocks until Ctrl+C / SIGTERM or a safety stop, returns the total P/L
 totalProfit, err := preset.Execute()
 ```
 
@@ -266,7 +269,7 @@ go run main.go preset
 ```
 
 All commands launch `main.go -> RunOrchestrator_AdaptivePreset()`, which connects with `mt5.NewMT5Sugar(...)` + `QuickConnect(...)` and runs the preset with its default configuration (`presets.NewAdaptiveOrchestratorPreset(sugar)` + `Execute()`).
-To stop execution, press `Ctrl+C`; the runner then prints `📊 Final Result: $<total P/L>`.
+The preset runs until you press `Ctrl+C` or a safety limit stops it; either way `Execute()` stops the running orchestrators, shows the final results and returns, the runner prints `📊 Final Result: $<total P/L>` and disconnects the terminal (the runner disconnects however the run ends, also on an error or Ctrl+C).
 
 ---
 
@@ -330,11 +333,8 @@ INFINITE CYCLE LOOP:
 |
 +-- REPEAT CYCLE
 |
-ON SAFETY LIMIT:
-- The cycle loop ends (no new cycles); the orchestrators of the
-  last cycle keep running and Execute() keeps waiting for Ctrl+C
-|
-ON Ctrl+C / SIGTERM:
+ON SAFETY LIMIT or Ctrl+C / SIGTERM:
+- The cycle loop ends (Ctrl+C also ends the running cycle early)
 - Stop all active orchestrators
 - Show final results
 - Return total profit
@@ -344,12 +344,15 @@ END
 
 #### 1. Entry Point: Execute
 
-> Lines `264–304`
+> Lines `265–319`
 
 
 ```go
 func (p *AdaptiveOrchestratorPreset) Execute() (float64, error) {
 	printHeader()
+	if p.CycleDuration <= 0 {
+		p.CycleDuration = 5 * time.Minute
+	}
 	fmt.Printf("   Getting starting balance...\n")
 
 	// Initialize
@@ -359,6 +362,7 @@ func (p *AdaptiveOrchestratorPreset) Execute() (float64, error) {
 		return 0, fmt.Errorf("failed to get balance: %w", err)
 	}
 	p.dailyStartBalance = p.initialBalance
+	p.dailyStartDate = time.Now()
 
 	fmt.Printf("  💰 Starting balance: $%.2f\n", p.initialBalance)
 	fmt.Printf("  📊 Primary symbol: %s\n", p.Symbol)
@@ -372,14 +376,24 @@ func (p *AdaptiveOrchestratorPreset) Execute() (float64, error) {
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigChan)
 
 	// Main cycle loop
-	go p.runCycles()
+	cyclesDone := make(chan struct{})
+	go func() {
+		defer close(cyclesDone)
+		p.runCycles()
+	}()
 
-	// Wait for interrupt
-	<-sigChan
-	fmt.Println("\n\n🛑 Stopping preset...")
+	// Wait for interrupt, or for the cycles to end by themselves (safety stop)
+	select {
+	case <-sigChan:
+		fmt.Println("\n\n🛑 Stopping preset...")
+	case <-cyclesDone:
+		fmt.Println("\n\n🛑 Safety stop - stopping preset...")
+	}
 	p.cancel()
+	<-cyclesDone // the current cycle returns before its orchestrators are stopped
 
 	// Stop all active orchestrators
 	p.stopAllOrchestrators()
@@ -397,14 +411,15 @@ func (p *AdaptiveOrchestratorPreset) Execute() (float64, error) {
 * Creates context for graceful shutdown
 * Sets up Ctrl+C / SIGTERM handling
 * Launches main cycle loop in a goroutine
-* Blocks until the user stops execution (Ctrl+C / SIGTERM) — also after a safety limit has ended the cycles
-* Returns `(totalProfit, nil)`
+* Blocks until the user stops execution (Ctrl+C / SIGTERM) **or** the cycle loop ends by itself after a safety limit
+* Cancels the context and waits for the cycle loop to return, so no cycle starts orchestrators while they are being stopped
+* Stops the orchestrators of the last cycle, shows the final results and returns `(totalProfit, nil)` - the caller can then disconnect
 
 ---
 
 #### 2. Main Cycle Loop
   
-> Lines `307–331`  
+> Lines `322–350`  
 
 
 ```go
@@ -417,9 +432,13 @@ func (p *AdaptiveOrchestratorPreset) runCycles() {
 			p.cycleNumber++
 			p.executeCycle()
 
-			// Check safety limits
+			// Interrupted during the cycle
+			if p.ctx.Err() != nil {
+				return
+			}
+
+			// Check safety limits (Execute stops everything when the cycles end)
 			if p.checkSafetyLimits() {
-				p.cancel()
 				return
 			}
 
@@ -440,15 +459,16 @@ func (p *AdaptiveOrchestratorPreset) runCycles() {
 * Infinite loop running cycles
 * Increments cycle counter
 * Executes one trading cycle
+* Returns at once when the context was cancelled during the cycle (Ctrl+C)
 * Checks safety limits after each cycle
-* Stops the loop if limits are breached
+* Ends the loop if limits are breached; `Execute()` sees the loop end and stops everything
 * Pauses 30 seconds between cycles (interruptible by the context)
 
 ---
 
 #### 3. Execute Single Cycle
   
-> Lines `334–387`  
+> Lines `353–410`  
 
 
 ```go
@@ -476,7 +496,7 @@ func (p *AdaptiveOrchestratorPreset) executeCycle() {
 	p.stopAllOrchestrators()
 
 	// Step 3: Select and execute appropriate orchestrator(s)
-	cycleStartBalance, _ := p.sugar.GetBalance()
+	cycleStartBalance, startErr := p.sugar.GetBalance()
 
 	switch condition.Mode {
 	case GridMode:
@@ -496,8 +516,12 @@ func (p *AdaptiveOrchestratorPreset) executeCycle() {
 	// Monitor for cycle duration
 	p.monitorCycle()
 
-	// Calculate cycle profit
-	cycleEndBalance, _ := p.sugar.GetBalance()
+	// Calculate cycle profit (not counted when a balance could not be read)
+	cycleEndBalance, endErr := p.sugar.GetBalance()
+	if startErr != nil || endErr != nil {
+		fmt.Printf("\n  ⚠️  Cycle #%d result unknown: balance not available (%v %v)\n", p.cycleNumber, startErr, endErr)
+		return
+	}
 	cycleProfit := cycleEndBalance - cycleStartBalance
 	p.totalProfit += cycleProfit
 
@@ -515,7 +539,7 @@ func (p *AdaptiveOrchestratorPreset) executeCycle() {
 * Records starting balance
 * Selects and executes the appropriate mode
 * Monitors execution for the cycle duration (5 minutes)
-* Calculates profit for this cycle (balance difference = realized P/L only)
+* Calculates profit for this cycle (balance difference = realized P/L only); if a balance cannot be read the cycle result is skipped instead of being counted as a huge loss
 * Updates total profit
 * If the market analysis fails, the cycle ends at once (no orchestrators are stopped or started) and the loop moves on to the safety check and pause
 
@@ -523,7 +547,7 @@ func (p *AdaptiveOrchestratorPreset) executeCycle() {
 
 #### 4. Market Analysis
   
-> Lines `394–447`  
+> Lines `417–470`  
 
 
 ```go
@@ -606,7 +630,7 @@ func (p *AdaptiveOrchestratorPreset) analyzeMarketConditions() (*MarketCondition
 
 #### 5. Mode Execution Example: Grid Mode
   
-> Lines `454–477`  
+> Lines `477–494`, `553–566`  
 
 
 ```go
@@ -626,13 +650,24 @@ func (p *AdaptiveOrchestratorPreset) executeGridMode(condition *MarketCondition)
 	}
 
 	gridTrader := orchestrators.NewGridTrader(p.sugar, config)
-	if err := gridTrader.Start(); err != nil {
-		fmt.Printf("  ✗ Failed to start grid trader: %v\n", err)
-		return
-	}
+	p.startOrchestrator(gridTrader, "Grid Trader")
+}
 
-	p.activeOrchestrators = append(p.activeOrchestrators, gridTrader)
-	fmt.Printf("  ✓ Grid Trader started\n")
+// startOrchestrator starts an orchestrator unless MaxConcurrentOrchestrators are already
+// running (0 = no limit) and reports whether it runs.
+func (p *AdaptiveOrchestratorPreset) startOrchestrator(orch orchestrators.Orchestrator, name string) bool {
+	if p.MaxConcurrentOrchestrators > 0 && len(p.activeOrchestrators) >= p.MaxConcurrentOrchestrators {
+		fmt.Printf("  ⏭️  %s not started: %d orchestrator(s) running (MaxConcurrentOrchestrators = %d)\n",
+			name, len(p.activeOrchestrators), p.MaxConcurrentOrchestrators)
+		return false
+	}
+	if err := orch.Start(); err != nil {
+		fmt.Printf("  ✗ Failed to start %s: %v\n", name, err)
+		return false
+	}
+	p.activeOrchestrators = append(p.activeOrchestrators, orch)
+	fmt.Printf("  ✓ %s started\n", name)
+	return true
 }
 ```
 
@@ -640,15 +675,14 @@ func (p *AdaptiveOrchestratorPreset) executeGridMode(condition *MarketCondition)
 
 * Creates configuration for GridTrader
 * Instantiates a new GridTrader orchestrator
-* Starts the orchestrator
-* Adds it to the active orchestrators list
-* Same pattern is used for other modes (ManagedMode, ProtectionMode, etc.)
+* `startOrchestrator()` enforces `MaxConcurrentOrchestrators`, starts the orchestrator (its `Start()` validates the configuration) and adds it to the active orchestrators list
+* Same pattern is used for the other modes (ManagedMode starts the scaler only if the trailing stop manager started)
 
 ---
 
 #### 6. Cycle Monitoring
  
-> Lines `562–580`  
+> Lines `573–591`  
 
 
 ```go
@@ -685,7 +719,7 @@ func (p *AdaptiveOrchestratorPreset) monitorCycle() {
 
 #### 7. Safety Limits Check
  
-> Lines `609–632`  
+> Lines `620–651`  
 
 
 ```go
@@ -696,8 +730,16 @@ func (p *AdaptiveOrchestratorPreset) checkSafetyLimits() bool {
 		return true
 	}
 
-	// Check daily loss
-	currentBalance, _ := p.sugar.GetBalance()
+	// Check daily loss (the day starts again at local midnight)
+	currentBalance, err := p.sugar.GetBalance()
+	if err != nil {
+		fmt.Printf("\n  ⚠️  Safety check skipped: %v\n", err)
+		return false
+	}
+	if y, m, d := time.Now().Date(); !(y == p.dailyStartDate.Year() && m == p.dailyStartDate.Month() && d == p.dailyStartDate.Day()) {
+		p.dailyStartBalance = currentBalance
+		p.dailyStartDate = time.Now()
+	}
 	dailyProfit := currentBalance - p.dailyStartBalance
 
 	if dailyProfit < -p.MaxDailyLoss {
@@ -718,15 +760,16 @@ func (p *AdaptiveOrchestratorPreset) checkSafetyLimits() bool {
 **What happens**:
 
 * **Total loss check**: Stops if loss > $100 (5 × $20 base risk)
-* **Daily loss check**: Stops if the loss since `Execute()` started > $500
-* **Daily profit check**: Stops if the profit since `Execute()` started > $1000 (success)
-* Returns `true` if any limit is breached; `runCycles` then cancels the context and starts no new cycle (`Execute()` still waits for Ctrl+C)
+* **Daily loss check**: Stops if the loss since the start of the day (or of `Execute()`) > $500; the baseline moves to the current balance on a new local date
+* **Daily profit check**: Stops if the profit since the start of the day > $1000 (success)
+* A balance read error skips the check (it is not mistaken for a loss)
+* Returns `true` if any limit is breached; `runCycles` then ends, and `Execute()` stops the orchestrators, shows the final results and returns
 
 ---
 
 #### 8. Stop All Orchestrators
  
-> Lines `599–606`  
+> Lines `610–617`  
 
 
 ```go
@@ -745,7 +788,8 @@ func (p *AdaptiveOrchestratorPreset) stopAllOrchestrators() {
 * Iterates through all active orchestrators
 * Stops each one if still running
 * Clears the orchestrators list
-* Called before starting a new cycle
+* Called before starting a new cycle, and by `Execute()` when the preset stops
+* Each `Stop()` waits for the orchestrator's check in progress (a GridTrader also deletes its pending orders)
 * Ensures a clean slate for the next mode
 
 ---
@@ -819,8 +863,12 @@ for i := 0; i < 60; i++ {
     time.Sleep(time.Second)
 }
 
-// Range in points (EURUSD: 5 digits, point = 0.00001)
-rangePoints := (high - low) / 0.00001
+// Range in points (the point size comes from the symbol: EURUSD 0.00001)
+info, err := sugar.GetSymbolInfo("EURUSD")
+if err != nil {
+    return err
+}
+rangePoints := (high - low) / info.Point
 fmt.Printf("1-minute range: %.0f points\n", rangePoints)
 ```
 
@@ -873,13 +921,13 @@ if dailyProfit > p.MaxDailyProfit {
 
 ### 4. Maximum Concurrent Orchestrators
 
-**Orchestrator Limit**: the field exists (default 2) but the current code **does not read or enforce it**
+**Orchestrator Limit**: at most `MaxConcurrentOrchestrators` orchestrators are started per cycle (default 2; 0 = no limit). A mode that wants more starts the first ones and reports the rest as not started.
 
 ```go
-preset.MaxConcurrentOrchestrators = 2 // declared only
+preset.MaxConcurrentOrchestrators = 2 // Managed Mode needs 2
 ```
 
-**Actual number per mode**:
+**Number per mode**:
 
 * Grid Mode: 1 orchestrator
 * Managed Mode: 2 orchestrators
@@ -889,15 +937,19 @@ preset.MaxConcurrentOrchestrators = 2 // declared only
 
 ### 5. Graceful Shutdown
 
-**Signal Handling**: Catches Ctrl+C for clean exit
+**Signal Handling**: Catches Ctrl+C for clean exit - and a safety stop ends the preset the same way
 
 ```go
-sigChan := make(chan os.Signal, 1)
-signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-
-<-sigChan // Wait for Ctrl+C
+select {
+case <-sigChan: // Ctrl+C / SIGTERM
+case <-cyclesDone: // safety stop
+}
+p.cancel()
+<-cyclesDone             // the running cycle returns
 p.stopAllOrchestrators() // Clean shutdown
 ```
+
+`Execute()` then returns, and the runner's deferred `sugar.Disconnect()` stops the terminal.
 
 ---
 
@@ -933,7 +985,7 @@ p.stopAllOrchestrators() // Clean shutdown
 ### 4. Mode Switching Overhead
 
 * Stops and starts orchestrators every cycle
-* Stopping a GridTrader deletes its pending orders; a new RiskManager starts with a new peak/daily baseline each cycle (other `Stop()` calls do not close positions)
+* Stopping a GridTrader deletes its pending orders; a new RiskManager starts with a new peak/daily baseline each cycle; a new PositionScaler may open a base position again if the symbol has none (other `Stop()` calls do not close positions)
 * Consider longer cycle durations (10–15 minutes)
 * Balance adaptation speed vs. stability
 
@@ -1123,6 +1175,8 @@ When the preset stops (Ctrl+C or safety limit), it shows a summary:
   Cycles Completed: 12
   Average Per Cycle: $29.17
 +============================================================+
+
+(`Average Per Cycle` is left out when no cycle has completed.)
 ```
 
 ---
@@ -1194,7 +1248,7 @@ if len(p.bids) >= 2 {
         high = math.Max(high, b)
         low = math.Min(low, b)
     }
-    condition.VolatilityPoints = (high - low) / 0.00001 // 5-digit symbol
+    condition.VolatilityPoints = (high - low) / p.point // p.point: a field you fill from sugar.GetSymbolInfo(p.Symbol).Point
 
     // Simple trend: last price vs first price, scaled to -1..1
     first, last := p.bids[0], p.bids[len(p.bids)-1]
@@ -1299,7 +1353,7 @@ To use stricter limits, change the configuration lines of `executeProtectionMode
 	config.EnableAutoClose = true
 ```
 
-A stricter variant (keep starting from the defaults: a `RiskManagerConfig` literal with missing fields would leave `CheckInterval = 0`, which makes `time.NewTicker` panic, and `MaxDrawdownAbsolute = 0`, which triggers an emergency close on every check):
+A stricter variant (starting from the defaults keeps the other limits; in a `RiskManagerConfig` literal a missing limit is 0 = off, and a missing `CheckInterval` becomes 5 s):
 
 ```go
 	config := orchestrators.DefaultRiskManagerConfig()

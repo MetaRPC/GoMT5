@@ -78,7 +78,7 @@
  SAFETY FEATURES:
    ✓ Stop-loss protection: Halts if total loss > 5× base risk
    ✓ Maximum concurrent orchestrators: 2
-   ✓ Emergency close all positions on critical errors
+   ✓ Emergency close of all positions in Protection Mode (RiskManager)
    ✓ Cycle-by-cycle profit tracking
    ✓ Daily loss limits and profit targets
 
@@ -195,6 +195,7 @@ type AdaptiveOrchestratorPreset struct {
 	totalProfit      float64
 	initialBalance   float64
 	dailyStartBalance float64
+	dailyStartDate   time.Time // day dailyStartBalance belongs to (reset at local midnight)
 	activeOrchestrators []orchestrators.Orchestrator
 	ctx              context.Context
 	cancel           context.CancelFunc
@@ -263,6 +264,9 @@ type MarketCondition struct {
 // Execute runs the adaptive orchestrator preset.
 func (p *AdaptiveOrchestratorPreset) Execute() (float64, error) {
 	printHeader()
+	if p.CycleDuration <= 0 {
+		p.CycleDuration = 5 * time.Minute
+	}
 	fmt.Printf("   Getting starting balance...\n")
 
 	// Initialize
@@ -272,6 +276,7 @@ func (p *AdaptiveOrchestratorPreset) Execute() (float64, error) {
 		return 0, fmt.Errorf("failed to get balance: %w", err)
 	}
 	p.dailyStartBalance = p.initialBalance
+	p.dailyStartDate = time.Now()
 
 	fmt.Printf("  💰 Starting balance: $%.2f\n", p.initialBalance)
 	fmt.Printf("  📊 Primary symbol: %s\n", p.Symbol)
@@ -285,14 +290,24 @@ func (p *AdaptiveOrchestratorPreset) Execute() (float64, error) {
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigChan)
 
 	// Main cycle loop
-	go p.runCycles()
+	cyclesDone := make(chan struct{})
+	go func() {
+		defer close(cyclesDone)
+		p.runCycles()
+	}()
 
-	// Wait for interrupt
-	<-sigChan
-	fmt.Println("\n\n🛑 Stopping preset...")
+	// Wait for interrupt, or for the cycles to end by themselves (safety stop)
+	select {
+	case <-sigChan:
+		fmt.Println("\n\n🛑 Stopping preset...")
+	case <-cyclesDone:
+		fmt.Println("\n\n🛑 Safety stop - stopping preset...")
+	}
 	p.cancel()
+	<-cyclesDone // the current cycle returns before its orchestrators are stopped
 
 	// Stop all active orchestrators
 	p.stopAllOrchestrators()
@@ -313,9 +328,13 @@ func (p *AdaptiveOrchestratorPreset) runCycles() {
 			p.cycleNumber++
 			p.executeCycle()
 
-			// Check safety limits
+			// Interrupted during the cycle
+			if p.ctx.Err() != nil {
+				return
+			}
+
+			// Check safety limits (Execute stops everything when the cycles end)
 			if p.checkSafetyLimits() {
-				p.cancel()
 				return
 			}
 
@@ -355,7 +374,7 @@ func (p *AdaptiveOrchestratorPreset) executeCycle() {
 	p.stopAllOrchestrators()
 
 	// Step 3: Select and execute appropriate orchestrator(s)
-	cycleStartBalance, _ := p.sugar.GetBalance()
+	cycleStartBalance, startErr := p.sugar.GetBalance()
 
 	switch condition.Mode {
 	case GridMode:
@@ -375,8 +394,12 @@ func (p *AdaptiveOrchestratorPreset) executeCycle() {
 	// Monitor for cycle duration
 	p.monitorCycle()
 
-	// Calculate cycle profit
-	cycleEndBalance, _ := p.sugar.GetBalance()
+	// Calculate cycle profit (not counted when a balance could not be read)
+	cycleEndBalance, endErr := p.sugar.GetBalance()
+	if startErr != nil || endErr != nil {
+		fmt.Printf("\n  ⚠️  Cycle #%d result unknown: balance not available (%v %v)\n", p.cycleNumber, startErr, endErr)
+		return
+	}
 	cycleProfit := cycleEndBalance - cycleStartBalance
 	p.totalProfit += cycleProfit
 
@@ -467,13 +490,7 @@ func (p *AdaptiveOrchestratorPreset) executeGridMode(condition *MarketCondition)
 	}
 
 	gridTrader := orchestrators.NewGridTrader(p.sugar, config)
-	if err := gridTrader.Start(); err != nil {
-		fmt.Printf("  ✗ Failed to start grid trader: %v\n", err)
-		return
-	}
-
-	p.activeOrchestrators = append(p.activeOrchestrators, gridTrader)
-	fmt.Printf("  ✓ Grid Trader started\n")
+	p.startOrchestrator(gridTrader, "Grid Trader")
 }
 
 // executeManagedMode runs trailing stop + position scaler.
@@ -483,23 +500,15 @@ func (p *AdaptiveOrchestratorPreset) executeManagedMode(condition *MarketConditi
 	// Start trailing stop manager
 	tsConfig := orchestrators.DefaultTrailingStopConfig()
 	tsManager := orchestrators.NewTrailingStopManager(p.sugar, tsConfig)
-	if err := tsManager.Start(); err != nil {
-		fmt.Printf("  ✗ Failed to start trailing stop manager: %v\n", err)
+	if !p.startOrchestrator(tsManager, "Trailing Stop Manager") {
 		return
 	}
-	p.activeOrchestrators = append(p.activeOrchestrators, tsManager)
-	fmt.Printf("  ✓ Trailing Stop Manager started\n")
 
 	// Start position scaler
 	scalerConfig := orchestrators.DefaultPositionScalerConfig(p.Symbol)
 	scalerConfig.Mode = orchestrators.Pyramiding
 	scaler := orchestrators.NewPositionScaler(p.sugar, scalerConfig)
-	if err := scaler.Start(); err != nil {
-		fmt.Printf("  ✗ Failed to start position scaler: %v\n", err)
-		return
-	}
-	p.activeOrchestrators = append(p.activeOrchestrators, scaler)
-	fmt.Printf("  ✓ Position Scaler started\n")
+	p.startOrchestrator(scaler, "Position Scaler")
 }
 
 // executeProtectionMode runs risk manager.
@@ -511,13 +520,7 @@ func (p *AdaptiveOrchestratorPreset) executeProtectionMode(condition *MarketCond
 	config.EnableAutoClose = true
 
 	riskManager := orchestrators.NewRiskManager(p.sugar, config)
-	if err := riskManager.Start(); err != nil {
-		fmt.Printf("  ✗ Failed to start risk manager: %v\n", err)
-		return
-	}
-
-	p.activeOrchestrators = append(p.activeOrchestrators, riskManager)
-	fmt.Printf("  ✓ Risk Manager started (Protection Mode Active)\n")
+	p.startOrchestrator(riskManager, "Risk Manager (Protection Mode Active)")
 }
 
 // executePortfolioMode runs portfolio rebalancer.
@@ -525,14 +528,11 @@ func (p *AdaptiveOrchestratorPreset) executePortfolioMode(condition *MarketCondi
 	fmt.Printf("  🎯 Executing: PORTFOLIO REBALANCER\n\n")
 
 	config := orchestrators.DefaultPortfolioRebalancerConfig(p.PortfolioSymbols)
+	// The default 1-hour check interval would never come round in a cycle: the rebalancer checks
+	// when it starts and then every fifth of the cycle.
+	config.CheckInterval = p.CycleDuration / 5
 	rebalancer := orchestrators.NewPortfolioRebalancer(p.sugar, config)
-	if err := rebalancer.Start(); err != nil {
-		fmt.Printf("  ✗ Failed to start portfolio rebalancer: %v\n", err)
-		return
-	}
-
-	p.activeOrchestrators = append(p.activeOrchestrators, rebalancer)
-	fmt.Printf("  ✓ Portfolio Rebalancer started\n")
+	p.startOrchestrator(rebalancer, "Portfolio Rebalancer")
 }
 
 // executeTrendingMode runs position scaler in pyramiding mode.
@@ -545,13 +545,24 @@ func (p *AdaptiveOrchestratorPreset) executeTrendingMode(condition *MarketCondit
 	config.MaxScales = 3
 
 	scaler := orchestrators.NewPositionScaler(p.sugar, config)
-	if err := scaler.Start(); err != nil {
-		fmt.Printf("  ✗ Failed to start position scaler: %v\n", err)
-		return
-	}
+	p.startOrchestrator(scaler, "Position Scaler (Pyramiding Mode)")
+}
 
-	p.activeOrchestrators = append(p.activeOrchestrators, scaler)
-	fmt.Printf("  ✓ Position Scaler started (Pyramiding Mode)\n")
+// startOrchestrator starts an orchestrator unless MaxConcurrentOrchestrators are already
+// running (0 = no limit) and reports whether it runs.
+func (p *AdaptiveOrchestratorPreset) startOrchestrator(orch orchestrators.Orchestrator, name string) bool {
+	if p.MaxConcurrentOrchestrators > 0 && len(p.activeOrchestrators) >= p.MaxConcurrentOrchestrators {
+		fmt.Printf("  ⏭️  %s not started: %d orchestrator(s) running (MaxConcurrentOrchestrators = %d)\n",
+			name, len(p.activeOrchestrators), p.MaxConcurrentOrchestrators)
+		return false
+	}
+	if err := orch.Start(); err != nil {
+		fmt.Printf("  ✗ Failed to start %s: %v\n", name, err)
+		return false
+	}
+	p.activeOrchestrators = append(p.activeOrchestrators, orch)
+	fmt.Printf("  ✓ %s started\n", name)
+	return true
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -613,8 +624,16 @@ func (p *AdaptiveOrchestratorPreset) checkSafetyLimits() bool {
 		return true
 	}
 
-	// Check daily loss
-	currentBalance, _ := p.sugar.GetBalance()
+	// Check daily loss (the day starts again at local midnight)
+	currentBalance, err := p.sugar.GetBalance()
+	if err != nil {
+		fmt.Printf("\n  ⚠️  Safety check skipped: %v\n", err)
+		return false
+	}
+	if y, m, d := time.Now().Date(); !(y == p.dailyStartDate.Year() && m == p.dailyStartDate.Month() && d == p.dailyStartDate.Day()) {
+		p.dailyStartBalance = currentBalance
+		p.dailyStartDate = time.Now()
+	}
 	dailyProfit := currentBalance - p.dailyStartBalance
 
 	if dailyProfit < -p.MaxDailyLoss {
@@ -642,8 +661,10 @@ func (p *AdaptiveOrchestratorPreset) showFinalResults() {
 	fmt.Printf("  Final Balance: $%.2f\n", finalBalance)
 	fmt.Printf("  Total Profit/Loss: $%.2f\n", p.totalProfit)
 	fmt.Printf("  Cycles Completed: %d\n", p.cycleNumber)
-	fmt.Printf("  Average Per Cycle: $%.2f\n", p.totalProfit/float64(p.cycleNumber))
-	fmt.Println("+============================================================+\n")
+	if p.cycleNumber > 0 {
+		fmt.Printf("  Average Per Cycle: $%.2f\n", p.totalProfit/float64(p.cycleNumber))
+	}
+	fmt.Print("+============================================================+\n\n")
 }
 
 // GetCycleNumber returns current cycle number.
@@ -671,5 +692,5 @@ func printHeader() {
 	fmt.Println("\n+============================================================+")
 	fmt.Println("|  ADAPTIVE ORCHESTRATOR PRESET                             |")
 	fmt.Println("|  Intelligent Multi-Strategy Trading System                |")
-	fmt.Println("+============================================================+\n")
+	fmt.Print("+============================================================+\n\n")
 }

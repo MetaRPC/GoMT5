@@ -5,7 +5,7 @@
 **API Information:**
 
 * **Method:** `sugar.SellLimitWithSLTP(symbol, volume, price, sl, tp)`
-* **Timeout:** 10 seconds
+* **Timeout:** 30 seconds
 * **Returns:** Pending order ticket number (`result.Order`)
 * **Request:** `service.PlaceOrder(ctx, &pb.OrderSendRequest{Symbol, Operation: pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_SELL_LIMIT, Volume, Price: &price, StopLoss: &sl, TakeProfit: &tp})` -
   no expiration, comment or magic number; price, volume, SL and TP are sent exactly as given (no rounding, no check

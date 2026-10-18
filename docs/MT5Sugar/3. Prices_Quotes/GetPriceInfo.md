@@ -7,7 +7,7 @@
 * **Method:** `sugar.GetPriceInfo(symbol)`
 * **Timeout:** 3 seconds (shared by both requests)
 * **Returns:** `*PriceInfo` structure
-* **Underlying calls:** `service.GetSymbolTick(ctx, symbol)` + `service.GetSymbolInteger(ctx, symbol, SYMBOL_DIGITS)` - two requests
+* **Underlying calls:** `service.GetSymbolTick(ctx, symbol)` + `service.GetSymbolDouble(ctx, symbol, pb.SymbolInfoDoubleProperty_SYMBOL_POINT)` - two requests
 
 ---
 
@@ -23,20 +23,24 @@ type PriceInfo struct {
     Symbol     string    // Symbol name
     Bid        float64   // Current BID price
     Ask        float64   // Current ASK price
-    SpreadPips float64   // Spread in points
-    Time       time.Time // Server time of last tick
+    SpreadPips float64   // Spread in POINTS (despite the name)
+    Time       time.Time // Time of the last tick in broker server time
+    TimeUtc    time.Time // The same moment in UTC
 }
 ```
 
 **How the fields are filled:**
 
 * `Bid`, `Ask` - from the same tick (`SymbolInfoTick`).
-* `SpreadPips` - despite the name, the spread in **points**: `(Ask - Bid) / point`, where `point = 10^-digits`
+* `SpreadPips` - despite the name, the spread in **points**: `(Ask - Bid) / point`, where `point` is the symbol's `SYMBOL_POINT`
   (EURUSD with 5 digits: `0.00010 / 0.00001 = 10` points = 1 pip). It is computed from the tick, not read from
-  `SYMBOL_SPREAD` like `GetSpread()`, so the two can differ slightly. Not rounded.
-* `Time` - `time.Unix(tick.Time, 0)`. MT5 tick time is the **broker server's** clock written as a Unix timestamp,
-  so `priceInfo.Time.UTC()` shows the server wall-clock time, while `time.Since(priceInfo.Time)` is off by the
-  broker's UTC offset. The examples below print it with `.UTC()`.
+  `SYMBOL_SPREAD` like `GetSpread()`, so the two can differ slightly. Rounded to 0.1 point (float noise:
+  3.9999999 → 4). A symbol whose `SYMBOL_POINT` is <= 0 gives an error.
+* `Time` - the tick time in **broker server time**: MT5 writes the broker's wall clock as a Unix timestamp, and
+  `GetSymbolTick` keeps it as a UTC-located `time.Time` (`time.Unix(tick.Time, 0).UTC()`), so
+  `priceInfo.Time.Format(...)` prints the broker's clock. Do not use it for age checks - `time.Since(priceInfo.Time)`
+  is off by the broker's UTC offset.
+* `TimeUtc` - the same moment in real UTC (`time.Unix(tick.TimeUtc, 0).UTC()`). Use it for `time.Since(...)`.
 
 ---
 
@@ -75,7 +79,7 @@ fmt.Printf("Symbol:  %s\n", priceInfo.Symbol)
 fmt.Printf("BID:     %.5f\n", priceInfo.Bid)
 fmt.Printf("ASK:     %.5f\n", priceInfo.Ask)
 fmt.Printf("Spread:  %.0f points\n", priceInfo.SpreadPips)
-fmt.Printf("Time:    %s\n", priceInfo.Time.UTC().Format("15:04:05"))
+fmt.Printf("Time:    %s\n", priceInfo.Time.Format("15:04:05"))
 
 // Output:
 // Symbol:  EURUSD
@@ -99,7 +103,7 @@ func LogPriceSnapshot(sugar *mt5.MT5Sugar, symbol string) {
 
     // Log to file/database
     logEntry := fmt.Sprintf("[%s] %s: BID=%.5f ASK=%.5f SPREAD=%.0f",
-        priceInfo.Time.UTC().Format("2006-01-02 15:04:05"),
+        priceInfo.Time.Format("2006-01-02 15:04:05"),
         priceInfo.Symbol,
         priceInfo.Bid,
         priceInfo.Ask,
@@ -126,7 +130,7 @@ ask, _ := sugar.GetAsk(symbol)
 spread, _ := sugar.GetSpread(symbol)
 fmt.Printf("BID: %.5f, ASK: %.5f, Spread: %.0f\n", bid, ask, spread)
 
-// ✅ MORE EFFICIENT - 2 API calls (tick + digits)
+// ✅ MORE EFFICIENT - 2 API calls (tick + point size)
 priceInfo, _ := sugar.GetPriceInfo(symbol)
 fmt.Printf("BID: %.5f, ASK: %.5f, Spread: %.0f\n",
     priceInfo.Bid, priceInfo.Ask, priceInfo.SpreadPips)
@@ -180,7 +184,7 @@ func CheckTradingSignal(sugar *mt5.MT5Sugar, symbol string) {
     fmt.Println("║       TRADE SIGNAL CHECK              ║")
     fmt.Println("╚═══════════════════════════════════════╝")
     fmt.Printf("Symbol:    %s\n", priceInfo.Symbol)
-    fmt.Printf("Time:      %s\n", priceInfo.Time.UTC().Format("15:04:05"))
+    fmt.Printf("Time:      %s\n", priceInfo.Time.Format("15:04:05"))
     fmt.Printf("BID:       %.5f\n", priceInfo.Bid)
     fmt.Printf("ASK:       %.5f\n", priceInfo.Ask)
     fmt.Printf("Spread:    %.0f points\n", priceInfo.SpreadPips)
@@ -237,9 +241,9 @@ func RecordPriceHistory(sugar *mt5.MT5Sugar, symbol string, duration time.Durati
                 last := history[len(history)-1]
 
                 fmt.Printf("First: %.5f (BID) at %s\n",
-                    first.Bid, first.Time.UTC().Format("15:04:05"))
+                    first.Bid, first.Time.Format("15:04:05"))
                 fmt.Printf("Last:  %.5f (BID) at %s\n",
-                    last.Bid, last.Time.UTC().Format("15:04:05"))
+                    last.Bid, last.Time.Format("15:04:05"))
                 fmt.Printf("Change: %.5f (%.2f%%)\n",
                     last.Bid-first.Bid,
                     ((last.Bid-first.Bid)/first.Bid)*100)
@@ -258,7 +262,7 @@ func RecordPriceHistory(sugar *mt5.MT5Sugar, symbol string, duration time.Durati
 
             history = append(history, snapshot)
             fmt.Printf("%s: BID=%.5f SPREAD=%.0f\n",
-                priceInfo.Time.UTC().Format("15:04:05"),
+                priceInfo.Time.Format("15:04:05"),
                 priceInfo.Bid,
                 priceInfo.SpreadPips)
         }
@@ -293,7 +297,7 @@ for _, symbol := range symbols {
         priceInfo.Bid,
         priceInfo.Ask,
         priceInfo.SpreadPips,
-        priceInfo.Time.UTC().Format("15:04:05"))
+        priceInfo.Time.Format("15:04:05"))
 }
 ```
 
@@ -319,7 +323,7 @@ func PriceAlertWithInfo(sugar *mt5.MT5Sugar, symbol string, targetBid float64) {
             fmt.Printf("Current:   %.5f (BID)\n", priceInfo.Bid)
             fmt.Printf("ASK:       %.5f\n", priceInfo.Ask)
             fmt.Printf("Spread:    %.0f points\n", priceInfo.SpreadPips)
-            fmt.Printf("Time:      %s\n", priceInfo.Time.UTC().Format("15:04:05"))
+            fmt.Printf("Time:      %s\n", priceInfo.Time.Format("15:04:05"))
             return
         }
 
@@ -335,19 +339,15 @@ func PriceAlertWithInfo(sugar *mt5.MT5Sugar, symbol string, targetBid float64) {
 
 ```go
 // PriceInfo.Time is broker server time, so time.Since(priceInfo.Time) is off by the
-// broker's UTC offset. The raw tick from the account layer also carries TimeUtc,
-// a real UTC Unix timestamp - use that for an age check.
+// broker's UTC offset. PriceInfo.TimeUtc is the same moment in UTC - use that for an age check.
 func IsPriceFresh(sugar *mt5.MT5Sugar, symbol string, maxAge time.Duration) bool {
-    ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-    defer cancel()
-
-    tick, err := sugar.GetAccount().SymbolInfoTick(ctx, &pb.SymbolInfoTickRequest{Symbol: symbol})
+    priceInfo, err := sugar.GetPriceInfo(symbol)
     if err != nil {
-        fmt.Printf("⚠️  Cannot read tick: %v\n", err)
+        fmt.Printf("⚠️  Cannot read price: %v\n", err)
         return false
     }
 
-    age := time.Since(time.Unix(tick.TimeUtc, 0))
+    age := time.Since(priceInfo.TimeUtc)
 
     if age > maxAge {
         fmt.Printf("⚠️  WARNING: Price data is %v old (max: %v)\n", age, maxAge)
@@ -384,7 +384,7 @@ func MakeTradingDecision(sugar *mt5.MT5Sugar, symbol string) {
     fmt.Println("║         TRADING DECISION ANALYSIS             ║")
     fmt.Println("╚═══════════════════════════════════════════════╝")
     fmt.Printf("Symbol:      %s\n", priceInfo.Symbol)
-    fmt.Printf("Server Time: %s\n", priceInfo.Time.UTC().Format("2006-01-02 15:04:05"))
+    fmt.Printf("Server Time: %s\n", priceInfo.Time.Format("2006-01-02 15:04:05"))
     fmt.Printf("BID:         %.5f\n", priceInfo.Bid)
     fmt.Printf("ASK:         %.5f\n", priceInfo.Ask)
     fmt.Printf("Spread:      %.0f points\n", priceInfo.SpreadPips)
@@ -397,15 +397,8 @@ func MakeTradingDecision(sugar *mt5.MT5Sugar, symbol string) {
     }
     fmt.Printf("✅ Spread OK (%.0f < 15 points)\n", priceInfo.SpreadPips)
 
-    // Check 2: Price freshness (uses the tick's UTC stamp - see example 9)
-    ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-    defer cancel()
-    tick, err := sugar.GetAccount().SymbolInfoTick(ctx, &pb.SymbolInfoTickRequest{Symbol: symbol})
-    if err != nil {
-        fmt.Printf("❌ REJECT: cannot read tick: %v\n", err)
-        return
-    }
-    age := time.Since(time.Unix(tick.TimeUtc, 0))
+    // Check 2: Price freshness (uses TimeUtc - see example 9)
+    age := time.Since(priceInfo.TimeUtc)
     if age > 10*time.Second {
         fmt.Printf("❌ REJECT: Price too old (%v)\n", age)
         return
@@ -413,7 +406,7 @@ func MakeTradingDecision(sugar *mt5.MT5Sugar, symbol string) {
     fmt.Printf("✅ Price fresh (%.1f seconds old)\n", age.Seconds())
 
     // Check 3: Market hours (broker server hour: Time holds server wall-clock time)
-    hour := priceInfo.Time.UTC().Hour()
+    hour := priceInfo.Time.Hour()
     if hour < 8 || hour > 17 {
         fmt.Printf("❌ REJECT: Outside trading hours (%d:00)\n", hour)
         return
@@ -443,7 +436,7 @@ func MakeTradingDecision(sugar *mt5.MT5Sugar, symbol string) {
 ## 💎 Pro Tips
 
 1. **Use this instead of individual calls** - Fewer requests (2 vs 3), one consistent tick
-2. **Check timestamp** - Verify price is fresh before trading (mind that `Time` is broker server time)
+2. **Check timestamp** - Verify price is fresh before trading with `TimeUtc` (`Time` is broker server time)
 3. **Store snapshots** - Keep price history for analysis
 4. **Spread validation** - Always check SpreadPips before trading
 5. **Perfect for dashboards** - Get all price data at once

@@ -16,8 +16,21 @@
 func (s *MT5Sugar) GetProfitThisMonth() (float64, error)
 ```
 
-Implementation: calls `GetDealsThisMonth()` and adds up `deal.Profit`. Swap, commission and fee are **not** included,
-and the set of positions is that of `GetDealsThisMonth()`: closed positions **opened** since the 1st 00:00 (your machine's clock).
+Implementation:
+
+```go
+func (s *MT5Sugar) GetProfitThisMonth() (float64, error) {
+    deals, err := s.GetDealsThisMonth()
+    if err != nil {
+        return 0, err
+    }
+    return sumProfit(deals), nil
+}
+```
+
+`sumProfit` adds up `deal.Profit`. Swap, commission and fee are **not** included, and the set of positions is that of
+`GetDealsThisMonth()`: closed positions **opened** since the 1st, 00:00 local (calendar of the computer running the
+program, sent to the server as UTC).
 
 ---
 
@@ -36,7 +49,7 @@ and the set of positions is that of `GetDealsThisMonth()`: closed positions **op
 
 ## 💬 Just the Essentials
 
-* **What it is:** Get this month's total profit/loss from closed positions opened 1st day 00:00 to now.
+* **What it is:** Get this month's total profit/loss from closed positions opened 1st day 00:00 (local) to now.
 * **Why you need it:** Monthly performance tracking, goal monitoring, month-over-month comparison.
 * **Sanity check:** Returns 0 if no closed positions this month. Month starts on 1st.
 
@@ -558,7 +571,7 @@ fmt.Printf("%s profit: $%.2f\n", monthName, monthProfit)
 
 ## 💎 Pro Tips
 
-1. **Month starts 1st** - Always starts from 1st day 00:00:00 (local clock)
+1. **Month starts 1st** - Always starts from 1st day 00:00:00 (local calendar of the computer running the program)
 
 2. **Closed only** - Returns profit from CLOSED positions (not open)
 
@@ -575,7 +588,7 @@ fmt.Printf("%s profit: $%.2f\n", monthName, monthProfit)
 ```
 Month range calculation (GetDealsThisMonth):
 now = time.Now()
-startOfMonth = Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+startOfMonth = Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())  // time.Local
 
 Returns the sum of Profit of closed positions OPENED between startOfMonth and now
 ```

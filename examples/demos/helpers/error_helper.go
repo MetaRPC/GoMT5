@@ -8,7 +8,9 @@ package helpers
    Simplifies error checking and formatting across all demo files.
 
  KEY FUNCTIONS:
-   • Fatal() - Print error and exit (for critical errors)
+   • Fatal() - Print error, run the OnFatal hooks (disconnect) and exit (for critical errors)
+   • OnFatal() / DisconnectOnExit() - Make sure the terminal is disconnected however a demo ends
+   • DisconnectSugar() - Disconnect and print the result
    • PrintIfError() - Print error and continue (for non-critical errors)
    • PrintSuccess() - Print success message
    • PrintWarning() - Print warning message
@@ -32,6 +34,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"sync"
+	"sync/atomic"
 
 	mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
 )
@@ -40,8 +46,94 @@ import (
 // CRITICAL ERROR HANDLING - EXITS PROGRAM
 // ══════════════════════════════════════════════════════════════════════════════
 
+// exitHooks run (last registered first) before Fatal - or Ctrl+C - ends the program.
+var (
+	exitHooksMu     sync.Mutex
+	exitHooks       []*func()
+	interruptHooked sync.Once
+	// gracefulInterrupt: the running code (an orchestrator or preset) handles the first Ctrl+C itself
+	// (it stops, then its deferred disconnect runs); only a second Ctrl+C runs the exit hooks and exits.
+	gracefulInterrupt atomic.Bool
+)
+
+// LetCallerHandleInterrupt makes the first Ctrl+C the running code's own business: an orchestrator or preset
+// that stops gracefully on Ctrl+C (deleting its pending orders, ...) must not be raced by the immediate
+// disconnect-and-exit of the exit hooks. A second Ctrl+C still runs the hooks and exits. The returned function
+// switches it off again (use it with defer).
+func LetCallerHandleInterrupt() (restore func()) {
+	gracefulInterrupt.Store(true)
+	return func() { gracefulInterrupt.Store(false) }
+}
+
+// OnFatal registers a function that runs before Fatal exits the program (and on Ctrl+C).
+// os.Exit skips deferred calls, so cleanup such as a disconnect has to be registered here.
+// The returned function unregisters it. Most demos use DisconnectOnExit instead.
+func OnFatal(hook func()) (unregister func()) {
+	h := &hook
+	exitHooksMu.Lock()
+	exitHooks = append(exitHooks, h)
+	exitHooksMu.Unlock()
+
+	interruptHooked.Do(func() {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, os.Interrupt)
+		go func() {
+			first := true
+			for range sig {
+				if first && gracefulInterrupt.Load() {
+					first = false
+					continue // the orchestrator stops by itself; its deferred disconnect follows
+				}
+				fmt.Println("\nInterrupted - cleaning up...")
+				runExitHooks()
+				os.Exit(130)
+			}
+		}()
+	})
+
+	return func() {
+		exitHooksMu.Lock()
+		defer exitHooksMu.Unlock()
+		for i, x := range exitHooks {
+			if x == h {
+				exitHooks = append(exitHooks[:i], exitHooks[i+1:]...)
+				return
+			}
+		}
+	}
+}
+
+// runExitHooks runs and clears the registered exit hooks, last registered first.
+func runExitHooks() {
+	exitHooksMu.Lock()
+	hooks := exitHooks
+	exitHooks = nil
+	exitHooksMu.Unlock()
+	for i := len(hooks) - 1; i >= 0; i-- {
+		(*hooks[i])()
+	}
+}
+
+// DisconnectOnExit makes sure the demo's terminal is disconnected however the demo ends: normally
+// (the returned function, for defer), through Fatal, a panic or Ctrl+C. Call it right after creating
+// the Sugar/Service - before connecting - because a failed connect may still have started the terminal:
+//
+//   sugar, err := mt5.NewMT5Sugar(cfg.User, cfg.Password, cfg.GrpcServer)
+//   helpers.Fatal(err, "NewMT5Sugar failed")
+//   defer helpers.DisconnectOnExit(sugar)()
+func DisconnectOnExit(d Disconnecter) func() {
+	var once sync.Once
+	disconnect := func() { once.Do(func() { DisconnectSugar(d) }) }
+	unregister := OnFatal(disconnect)
+	return func() {
+		unregister()
+		disconnect()
+	}
+}
+
 // Fatal prints detailed error information and exits the program.
 // Use this for critical errors where continuing is impossible.
+// Functions registered with OnFatal (e.g. a disconnect) run before the exit.
 //
 // Example:
 //   cfg, err := config.LoadConfig()
@@ -52,13 +144,37 @@ func Fatal(err error, context string) {
 	}
 
 	// Check if this is an ApiError from MT5 server
+	var msg string
 	var apiErr *mt5.ApiError
 	if errors.As(err, &apiErr) {
-		log.Fatalf("❌ FATAL: %s\n%s", context, FormatApiError(apiErr))
+		msg = fmt.Sprintf("❌ FATAL: %s\n%s", context, FormatApiError(apiErr))
+	} else {
+		// Regular error
+		msg = fmt.Sprintf("❌ FATAL: %s: %v", context, err)
 	}
+	log.Print(msg)
 
-	// Regular error
-	log.Fatalf("❌ FATAL: %s: %v", context, err)
+	runExitHooks()
+	os.Exit(1)
+}
+
+// Disconnecter is anything with the MT5Sugar/MT5Service Disconnect method.
+type Disconnecter interface {
+	Disconnect(deleteOnDisconnect ...bool) error
+}
+
+// DisconnectSugar stops the demo's terminal on the server and closes the connection, printing the result.
+// Safe to call more than once (later calls do nothing). Use it with defer and OnFatal so every demo
+// run ends with its terminal disconnected - also when the demo fails.
+func DisconnectSugar(d Disconnecter) {
+	if d == nil {
+		return
+	}
+	if err := d.Disconnect(); err != nil {
+		PrintWarning(fmt.Sprintf("Disconnect failed: %v", err))
+		return
+	}
+	fmt.Println("🔌 Disconnected (terminal stopped)")
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

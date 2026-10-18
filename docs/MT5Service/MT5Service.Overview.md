@@ -48,7 +48,7 @@ balance := data.GetRequestedValue()  // ← unpacking!
 // Another example:
 tickData, _ := account.SymbolInfoTick(ctx, &pb.SymbolInfoTickRequest{Symbol: "EURUSD"})
 tick := tickData  // protobuf structure
-t := time.Unix(tick.Time, 0)  // ← manual time conversion
+t := time.Unix(tick.Time, 0).UTC()  // ← manual time conversion (broker wall clock; .UTC() keeps it unshifted)
 ```
 
 **Problems:**
@@ -71,7 +71,7 @@ balance, err := service.GetAccountDouble(ctx,
 
 // Another example:
 tick, _ := service.GetSymbolTick(ctx, "EURUSD")
-// tick.Time is already time.Time!
+// tick.Time is already time.Time! (broker server time; tick.TimeUtc is UTC)
 fmt.Printf("Price at %s: %.5f\n", tick.Time.Format("15:04:05"), tick.Bid)
 ```
 
@@ -164,7 +164,9 @@ account := service.GetAccount()
 
 ## 📚 All 36 MT5Service Methods
 
-MT5Service contains **36 methods**, divided into **6 categories** (plus the helpers `GetAccount()` and `Disconnect(deleteOnDisconnect ...bool)`):
+MT5Service contains **36 methods**, divided into **6 categories** (plus the helpers `GetAccount()` and `Disconnect(deleteOnDisconnect ...bool)`).
+`Disconnect` stops the terminal on the server (Disconnect RPC, up to 30 s; `true` deletes it instead), returns the
+disconnect error and closes the gRPC connection; call it when you are done, also on error paths:
 
 ### 1️⃣ Account Methods (4 methods)
 
@@ -214,8 +216,8 @@ Getting information about open positions, pending orders, history.
 | `GetPositionsTotal(ctx)` | `int32` | Number of open positions |
 | `GetOpenedOrders(ctx, sortMode)` | `*pb.OpenedOrdersData` | Open positions and pending orders |
 | `GetOpenedTickets(ctx)` | `([]int64, []int64)` | **Lightweight** - only ticket numbers |
-| `GetOrderHistory(ctx, from, to, sort, page, perPage)` | `*pb.OrdersHistoryData` | Orders and deals history |
-| `GetPositionsHistory(ctx, sort, from, to, page, perPage)` | `*pb.PositionsHistoryData` | Closed positions history with P&L |
+| `GetOrderHistory(ctx, from, to, sort, page, perPage)` | `*pb.OrdersHistoryData` | Orders and deals history (from/to sent as UTC) |
+| `GetPositionsHistory(ctx, sort, from, to, page, perPage)` | `*pb.PositionsHistoryData` | Closed positions history with P&L (open-time filter sent as UTC) |
 
 📖 **[Full documentation: Position & Orders Methods](./3.%20Position_Orders_Methods.md)**
 
@@ -284,7 +286,8 @@ type AccountSummary struct {
     TradeMode               pb.MrpcEnumAccountTradeMode  // Account type (demo/real)
     CompanyName             string                       // Broker name
     Currency                string                       // Deposit currency
-    ServerTime              *time.Time                   // Server time (already time.Time!)
+    ServerTime              *time.Time                   // Broker server time (already time.Time!)
+    ServerTimeUtc           *time.Time                   // The same moment in UTC
     UtcTimezoneShiftMinutes int64                        // UTC timezone shift
     Credit                  float64                      // Credit
 }
@@ -318,12 +321,15 @@ type SymbolParams struct {
 
 ```go
 type SymbolTick struct {
-    Time       time.Time // Tick time (already time.Time!)
+    Symbol     string    // Symbol of the tick
+    Time       time.Time // Tick time, broker server time (already time.Time!)
+    TimeUtc    time.Time // The same moment in UTC
     Bid        float64   // Bid price
     Ask        float64   // Ask price
     Last       float64   // Last deal price
     Volume     uint64    // Volume
-    TimeMS     int64     // Time in milliseconds
+    TimeMS     int64     // Time in milliseconds (broker server time)
+    TimeMSUtc  int64     // Time in milliseconds (UTC)
     Flags      uint32    // Tick flags
     VolumeReal float64   // Volume with decimals
 }
@@ -415,11 +421,11 @@ tickData, _ := account.SymbolInfoTick(ctx, &pb.SymbolInfoTickRequest{
 })
 bid := tickData.Bid
 ask := tickData.Ask
-t := time.Unix(tickData.Time, 0)  // ← manual conversion
+t := time.Unix(tickData.Time, 0).UTC()  // ← manual conversion (broker wall clock)
 
 // ✅ BECAME (Mid-Level):
 tick, _ := service.GetSymbolTick(ctx, "EURUSD")
-fmt.Printf("Time: %s, Bid: %.5f, Ask: %.5f\n",
+fmt.Printf("Time: %s (broker), Bid: %.5f, Ask: %.5f\n",
     tick.Time.Format("15:04:05"),  // ← already time.Time!
     tick.Bid, tick.Ask)
 ```
@@ -727,7 +733,7 @@ data, _ := account.AccountInfoDouble(ctx, req)
 balance := data.GetRequestedValue()
 
 tickData, _ := account.SymbolInfoTick(ctx, &pb.SymbolInfoTickRequest{Symbol: "EURUSD"})
-t := time.Unix(tickData.Time, 0)
+t := time.Unix(tickData.Time, 0).UTC() // broker wall clock
 ```
 
 ### Became (Mid-Level):

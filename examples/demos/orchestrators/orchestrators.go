@@ -193,8 +193,14 @@ package orchestrators
 import (
 	"context"
 	"fmt"
+	"math"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
+
+	mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
 )
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -318,6 +324,8 @@ type BaseOrchestrator struct {
 	status      OrchestratorStatus
 	metrics     OrchestratorMetrics
 	updateChan  chan struct{}
+	loops       sync.WaitGroup // goroutines started with goLoop; stopLoops waits for them
+	stopTime    time.Time      // when MarkStopped ran (Uptime after Stop)
 }
 
 // NewBaseOrchestrator creates a new base orchestrator with given name.
@@ -347,6 +355,8 @@ func (b *BaseOrchestrator) GetStatus() OrchestratorStatus {
 	status := b.status
 	if b.running {
 		status.Uptime = time.Since(b.status.StartTime)
+	} else if !b.stopTime.IsZero() {
+		status.Uptime = b.stopTime.Sub(b.status.StartTime) // final uptime after Stop()
 	}
 	return status
 }
@@ -418,6 +428,7 @@ func (b *BaseOrchestrator) MarkStopped() {
 
 	b.running = false
 	b.status.IsRunning = false
+	b.stopTime = time.Now()
 }
 
 // GetContext returns the orchestrator's context.
@@ -442,6 +453,105 @@ func (b *BaseOrchestrator) CancelContext() {
 	if b.cancel != nil {
 		b.cancel()
 	}
+}
+
+// begin creates the orchestrator's context, marks it started and makes Ctrl+C (or SIGTERM) cancel that context.
+// A program that waits on GetContext() (like the demos in main.go) then calls Stop() and disconnects,
+// instead of the process being killed with the terminal still connected and the work half done.
+// The handler is removed after the first interrupt, so a second Ctrl+C ends the program the default way.
+func (b *BaseOrchestrator) begin() context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	b.SetContext(ctx, cancel)
+	b.MarkStarted()
+
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
+	b.goLoop(func() {
+		defer signal.Stop(interrupt)
+		select {
+		case <-interrupt:
+			fmt.Printf("\n  🛑 Interrupt received - stopping %s...\n", b.GetStatus().Name)
+			b.CancelContext()
+		case <-ctx.Done():
+		}
+	})
+	return ctx
+}
+
+// goLoop runs fn in a goroutine that stopLoops waits for.
+func (b *BaseOrchestrator) goLoop(fn func()) {
+	b.loops.Add(1)
+	go func() {
+		defer b.loops.Done()
+		fn()
+	}()
+}
+
+// stopLoops cancels the context and waits until every goroutine started with goLoop has returned,
+// so Stop() never cleans up while a check is still placing or closing orders.
+func (b *BaseOrchestrator) stopLoops() {
+	b.CancelContext()
+	b.loops.Wait()
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SYMBOL SPECIFICATION
+// ══════════════════════════════════════════════════════════════════════════════
+
+// symbolSpec holds what the strategies need from a symbol's specification. All distances in the
+// configurations are in POINTS, and a point is symbol-specific: 0.00001 for EURUSD, 0.001 for USDJPY,
+// 0.01 for XAUUSD - so it is read from the symbol, never assumed.
+type symbolSpec struct {
+	Point      float64 // SYMBOL_POINT
+	Digits     int     // price digits (prices are rounded to them before they are sent)
+	VolumeMin  float64 // minimum volume
+	VolumeMax  float64 // maximum volume
+	VolumeStep float64 // volume step
+	StopLevel  int32   // SYMBOL_TRADE_STOPS_LEVEL in points (minimum SL/TP distance from the price)
+	Contract   float64 // contract size (units of 1 lot)
+}
+
+// loadSymbolSpec reads a symbol's specification with sugar.GetSymbolInfo.
+func loadSymbolSpec(sugar *mt5.MT5Sugar, symbol string) (symbolSpec, error) {
+	info, err := sugar.GetSymbolInfo(symbol)
+	if err != nil {
+		return symbolSpec{}, fmt.Errorf("symbol %s: %w", symbol, err)
+	}
+	if info.Point <= 0 {
+		return symbolSpec{}, fmt.Errorf("symbol %s: invalid point size %v", symbol, info.Point)
+	}
+	return symbolSpec{
+		Point:      info.Point,
+		Digits:     int(info.Digits),
+		VolumeMin:  info.VolumeMin,
+		VolumeMax:  info.VolumeMax,
+		VolumeStep: info.VolumeStep,
+		StopLevel:  info.StopLevel,
+		Contract:   info.ContractSize,
+	}, nil
+}
+
+// price rounds a price to the symbol's digits.
+func (s symbolSpec) price(p float64) float64 {
+	return RoundToDigits(p, s.Digits)
+}
+
+// volume rounds a volume DOWN to the symbol's volume step and caps it at the maximum.
+// It returns 0 when the result is below the symbol's minimum volume (the trade is not possible).
+func (s symbolSpec) volume(v float64) float64 {
+	step := s.VolumeStep
+	if step <= 0 {
+		step = 0.01
+	}
+	if s.VolumeMax > 0 && v > s.VolumeMax {
+		v = s.VolumeMax
+	}
+	v = math.Floor(v/step+1e-9) * step
+	v = math.Round(v*1e8) / 1e8 // remove float noise (0.30000000000000004)
+	if v <= 0 || v < s.VolumeMin {
+		return 0
+	}
+	return v
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -477,5 +587,5 @@ func RoundToDigits(price float64, digits int) float64 {
 	for i := 0; i < digits; i++ {
 		multiplier *= 10.0
 	}
-	return float64(int(price*multiplier+0.5)) / multiplier
+	return math.Round(price*multiplier) / multiplier
 }

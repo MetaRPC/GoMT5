@@ -285,7 +285,7 @@ orchestrators.NewGridTrader(sugar, config).Start()
 ```
 examples/demos/helpers/
 ├── connection.go                 ← MT5 connection setup
-├── error_helper.go               ← Error handling and return codes
+├── error_helper.go               ← Error handling, return codes, disconnect-on-exit (Fatal hooks)
 ├── progress_bar.go               ← Visual progress bars
 └── 17_protobuf_inspector.go      ← Protobuf structure inspector (runnable)
 ```
@@ -299,6 +299,7 @@ service := mt5.NewMT5Service(account)
 
 // MT5Sugar creates its own account from the credentials
 sugar, err := mt5.NewMT5Sugar(cfg.User, cfg.Password, cfg.GrpcServer)
+defer helpers.DisconnectOnExit(sugar)() // disconnect at the end, on helpers.Fatal, panic or Ctrl+C
 err = sugar.QuickConnect(cfg.MtCluster)
 ```
 
@@ -315,6 +316,14 @@ if !helpers.CheckRetCode(result.ReturnedCode, "Order placement") {
     // prints the code and its description
 }
 helpers.PrintIfError(err, "Order placement failed") // prints ApiError details when err != nil
+
+// helpers.Fatal prints the error, runs the OnFatal hooks (e.g. the disconnect registered by
+// DisconnectOnExit) and exits - log.Fatal alone would skip deferred calls and leave the terminal running
+helpers.Fatal(err, "QuickConnect failed")
+
+// An orchestrator/preset that stops gracefully on Ctrl+C gets the first Ctrl+C to itself (main.go does this
+// after Start); a second Ctrl+C runs the hooks and exits
+defer helpers.LetCallerHandleInterrupt()()
 ```
 
 **Protobuf inspector (17_protobuf_inspector.go):**

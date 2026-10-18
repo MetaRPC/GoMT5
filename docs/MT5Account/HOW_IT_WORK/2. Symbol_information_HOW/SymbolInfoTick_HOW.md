@@ -24,8 +24,12 @@ if err != nil {
     fmt.Printf("    Last:                        %.5f\n", tickData.Last)
     fmt.Printf("    Volume:                      %d\n", tickData.Volume)
 
-    tickTime := time.Unix(tickData.Time, 0)
-    fmt.Printf("    Time:                        %s\n", tickTime.Format("2006-01-02 15:04:05"))
+    // Time is int64 (Unix seconds), NOT protobuf Timestamp. It counts in the broker server's time zone:
+    // format it as UTC to show the broker's clock (time.Unix alone would convert it to this machine's zone).
+    // TimeUtc is the same moment in real UTC.
+    tickTime := time.Unix(tickData.Time, 0).UTC()
+    fmt.Printf("    Time:                        %s (broker server time)\n", tickTime.Format("2006-01-02 15:04:05"))
+    fmt.Printf("    Time (UTC):                  %s\n", time.Unix(tickData.TimeUtc, 0).UTC().Format("2006-01-02 15:04:05"))
 }
 ```
 
@@ -79,12 +83,15 @@ Prints prices and volume:
 ---
 
 ```go
-tickTime := time.Unix(tickData.Time, 0)
-fmt.Printf("    Time:                        %s\n", tickTime.Format("2006-01-02 15:04:05"))
+tickTime := time.Unix(tickData.Time, 0).UTC()
+fmt.Printf("    Time:                        %s (broker server time)\n", tickTime.Format("2006-01-02 15:04:05"))
+fmt.Printf("    Time (UTC):                  %s\n", time.Unix(tickData.TimeUtc, 0).UTC().Format("2006-01-02 15:04:05"))
 ```
 
-The `Time` field is stored as `int64` — Unix timestamp (in seconds).
-Using `time.Unix()` it is converted to readable date and time.
+The `Time` field is stored as `int64` — Unix-style seconds counted in the **broker server's time zone**.
+`time.Unix()` turns it into a `time.Time`; `.UTC()` keeps that clock as it is (without it, `Format` would shift the
+value into the local time zone of the machine running the program and print a time that is neither broker time
+nor UTC). `TimeUtc` is the same moment in real UTC.
 
 > Format `2006-01-02 15:04:05` is the standard date template in Go.
 
@@ -114,7 +121,8 @@ Last tick for EURUSD:
     Ask:                         1.08560
     Last:                        1.08545
     Volume:                      150
-    Time:                        2026-01-04 22:15:03
+    Time:                        2026-01-04 22:15:03 (broker server time)
+    Time (UTC):                  2026-01-04 20:15:03
 ```
 
 ---

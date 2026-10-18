@@ -98,16 +98,16 @@
    └─────────────────────────────────────────────────────────────┘
 
    ┌─────────────────────────────────────────────────────────────┐
-   │  8. HISTORY & PROFIT ANALYSIS (9 methods)                   │
+   │  8. HISTORY & PROFIT ANALYSIS (8 methods)                   │
    ├─────────────────────────────────────────────────────────────┤
-   │  • GetDealsToday()       - All deals from today             │
-   │  • GetDealsYesterday()   - All deals from yesterday         │
-   │  • GetDealsThisWeek()    - All deals from this week         │
-   │  • GetDealsThisMonth()   - All deals from this month        │
-   │  • GetDealsDateRange()   - Deals within custom date range   │
-   │  • GetProfitToday()      - Total profit from today          │
-   │  • GetProfitThisWeek()   - Total profit from this week      │
-   │  • GetProfitThisMonth()  - Total profit from this month     │
+   │  • GetDealsToday()       - Closed positions opened today    │
+   │  • GetDealsYesterday()   - ... opened yesterday             │
+   │  • GetDealsThisWeek()    - ... opened this week (Mon-now)   │
+   │  • GetDealsThisMonth()   - ... opened this month            │
+   │  • GetDealsDateRange()   - ... opened in a custom range     │
+   │  • GetProfitToday()      - Sum of Profit of today's ones    │
+   │  • GetProfitThisWeek()   - ... of this week's ones          │
+   │  • GetProfitThisMonth()  - ... of this month's ones         │
    └─────────────────────────────────────────────────────────────┘
 
    ┌─────────────────────────────────────────────────────────────┐
@@ -133,9 +133,9 @@
    ┌─────────────────────────────────────────────────────────────┐
    │  11. TRADING HELPERS (3 methods)                            │
    ├─────────────────────────────────────────────────────────────┤
-   │  • CalculateSLTP()       - Convert pips to price levels     │
-   │  • BuyMarketWithPips()   - BUY with SL/TP in pips           │
-   │  • SellMarketWithPips()  - SELL with SL/TP in pips          │
+   │  • CalculateSLTP()       - Point distances to SL/TP prices  │
+   │  • BuyMarketWithPips()   - BUY, SL/TP distances in points   │
+   │  • SellMarketWithPips()  - SELL, SL/TP distances in points  │
    └─────────────────────────────────────────────────────────────┘
 
    ┌─────────────────────────────────────────────────────────────┐
@@ -148,13 +148,19 @@
    └─────────────────────────────────────────────────────────────┘
 
  ⚠️  IMPORTANT NOTES:
-   • All methods have built-in timeouts (3-30 seconds depending on operation)
-   • Market orders timeout: 10 seconds
+   • All methods have built-in timeouts (3-130 seconds depending on operation)
+   • QuickConnect: the server waits up to 120 s for the terminal, the call has a 130 s deadline
+   • Trading (orders, modify, close): 30 seconds per request (the account layer's default)
    • Balance/Price queries timeout: 3 seconds
-   • History queries timeout: 5-30 seconds (5s for day/week, 30s for month/custom range)
+   • Positions, symbol info, account info: 10 seconds
+   • History queries timeout: 15 s for day/week, 30 s for month/custom range
    • Risk management timeout: 10 seconds (CalculatePositionSize with margin checks)
-   • Symbol list queries timeout: 15 seconds (GetAllSymbols - many symbols)
-   • Bulk operations timeout: 30 seconds
+   • Symbol list queries timeout: 60 seconds (GetAllSymbols - reads all pages)
+   • CloseAll*: 10 s to list the positions, then 30 s for each close
+   • Times: tick/price Time fields are broker server time; *Utc fields are UTC. History windows
+     (GetDeals..., GetProfit..., GetDailyStats) use the local calendar of the computer, sent to the server as UTC
+   • Distances named "...Pips" in risk/helper methods are POINTS (10 points = 1 pip on 5-digit symbols)
+   • Always call Disconnect() when done (also on errors), or the terminal keeps running on the server
    • Use GetService() or GetAccount() if you need more control
 
       SEE ALSO:
@@ -170,12 +176,15 @@ package mt5
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	pb "github.com/MetaRPC/GoMT5/package"
 	helpers "github.com/MetaRPC/GoMT5/package/Helpers"
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -199,14 +208,17 @@ type MT5Sugar struct {
 //   Symbol     - Trading symbol name (e.g., "EURUSD")
 //   Bid        - Current BID price for selling
 //   Ask        - Current ASK price for buying
-//   SpreadPips - Spread in points (not price units)
-//   Time       - Server time of the last tick
+//   SpreadPips - Spread in POINTS despite the field name: (Ask - Bid) / SYMBOL_POINT
+//                (EURUSD 5 digits: 1 point = 0.00001, 10 points = 1 pip)
+//   Time       - Time of the last tick in broker server time (the broker's wall clock in a UTC time.Time)
+//   TimeUtc    - The same moment in UTC
 type PriceInfo struct {
 	Symbol     string
 	Bid        float64
 	Ask        float64
 	SpreadPips float64
 	Time       time.Time
+	TimeUtc    time.Time
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -260,7 +272,9 @@ func (s *MT5Sugar) GetAccount() *helpers.MT5Account {
 	return s.service.account
 }
 
-// Disconnect gracefully disconnects from the MT5 terminal and closes resources.
+// Disconnect stops the MT5 terminal on the server and closes the gRPC connection (see MT5Service.Disconnect).
+// Call it when the program is done - also on error paths - or the terminal keeps running on the server.
+// deleteOnDisconnect=true deletes the terminal instance instead of stopping it. A second call is a no-op.
 func (s *MT5Sugar) Disconnect(deleteOnDisconnect ...bool) error {
 	if s == nil || s.service == nil {
 		return nil
@@ -274,7 +288,9 @@ func (s *MT5Sugar) Disconnect(deleteOnDisconnect ...bool) error {
 
 // QuickConnect connects to MT5 terminal using cluster name (RECOMMENDED).
 // This is the easiest connection method - just provide your broker's cluster name.
-// Automatically sets up EURUSD as base chart symbol and uses 30-second timeout.
+// The server waits up to 120 seconds (ConnectExRequest.TimeoutSeconds) for the terminal to start and log in;
+// the call itself has a 130-second deadline. Call Disconnect when you are done - also when QuickConnect
+// returned an error, since the server may already have started the terminal.
 //
 // PARAMETERS:
 //   clusterName - MT5 cluster identifier (e.g., "FxPro-MT5 Demo", "ICMarkets-Live02")
@@ -282,13 +298,17 @@ func (s *MT5Sugar) Disconnect(deleteOnDisconnect ...bool) error {
 // RETURNS:
 //   Error if connection fails, nil on success
 func (s *MT5Sugar) QuickConnect(clusterName string) error {
-	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
+	// A terminal that is not running yet starts first: that takes longer than 30 seconds at times. The server waits
+	// up to TimeoutSeconds for the login; the call itself gets that plus a margin.
+	timeoutSeconds := uint32(120)
+	ctx, cancel := context.WithTimeout(s.ctx, time.Duration(timeoutSeconds+10)*time.Second)
 	defer cancel()
 
 	req := &pb.ConnectExRequest{
-		User:          s.user,
-		Password:      s.password,
-		MtClusterName: clusterName,
+		User:           s.user,
+		Password:       s.password,
+		MtClusterName:  clusterName,
+		TimeoutSeconds: &timeoutSeconds,
 	}
 
 	_, err := s.GetAccount().ConnectEx(ctx, req)
@@ -506,16 +526,19 @@ func (s *MT5Sugar) GetPriceInfo(symbol string) (*PriceInfo, error) {
 		return nil, err
 	}
 
-	digits, err := s.service.GetSymbolInteger(ctx, symbol, pb.SymbolInfoIntegerProperty_SYMBOL_DIGITS)
+	return s.priceInfoFromTick(ctx, symbol, tick)
+}
+
+// priceInfoFromTick builds a PriceInfo from a tick; the spread is converted to points (SYMBOL_POINT).
+func (s *MT5Sugar) priceInfoFromTick(ctx context.Context, symbol string, tick *SymbolTick) (*PriceInfo, error) {
+	point, err := s.service.GetSymbolDouble(ctx, symbol, pb.SymbolInfoDoubleProperty_SYMBOL_POINT)
 	if err != nil {
 		return nil, err
 	}
-
-	point := 1.0
-	for i := int64(0); i < digits; i++ {
-		point /= 10.0
+	if point <= 0 {
+		return nil, fmt.Errorf("symbol %s has no point size (SYMBOL_POINT %v)", symbol, point)
 	}
-	spreadPoints := (tick.Ask - tick.Bid) / point
+	spreadPoints := math.Round((tick.Ask-tick.Bid)/point*10) / 10 // float noise: 3.9999999 -> 4
 
 	return &PriceInfo{
 		Symbol:     symbol,
@@ -523,19 +546,21 @@ func (s *MT5Sugar) GetPriceInfo(symbol string) (*PriceInfo, error) {
 		Ask:        tick.Ask,
 		SpreadPips: spreadPoints,
 		Time:       tick.Time,
+		TimeUtc:    tick.TimeUtc,
 	}, nil
 }
 
-// WaitForPrice waits for a price update for the specified symbol with timeout.
-// This method polls for valid price data (BID > 0 and ASK > 0) until timeout expires.
-// Useful for waiting for market to open or for first price tick after connection.
+// WaitForPrice waits until the symbol has a valid price (BID > 0 and ASK > 0) and returns it.
+// It polls the last tick every 100 ms until the timeout expires; a symbol that already has a price
+// returns at once (it does NOT wait for the next price change). Useful right after connecting, when
+// the first quote of a symbol may not have arrived yet.
 //
 // PARAMETERS:
 //   symbol  - Trading symbol to wait for (e.g., "EURUSD")
 //   timeout - Maximum time to wait (e.g., 5*time.Second)
 //
 // RETURNS:
-//   *PriceInfo with valid price data, or error if timeout expires
+//   *PriceInfo with valid price data (spread in points, like GetPriceInfo), or error if timeout expires
 func (s *MT5Sugar) WaitForPrice(symbol string, timeout time.Duration) (*PriceInfo, error) {
 	ctx, cancel := context.WithTimeout(s.ctx, timeout)
 	defer cancel()
@@ -543,27 +568,23 @@ func (s *MT5Sugar) WaitForPrice(symbol string, timeout time.Duration) (*PriceInf
 	for {
 		tick, err := s.service.GetSymbolTick(ctx, symbol)
 		if err != nil {
-			select {
-			case <-ctx.Done():
-				return nil, fmt.Errorf("timeout waiting for price: %w", ctx.Err())
-			default:
-				time.Sleep(100 * time.Millisecond)
-				continue
+			// An error from the server (unknown symbol, ...) does not go away by waiting: return it.
+			var apiErr *helpers.ApiError
+			if errors.As(err, &apiErr) {
+				return nil, err
 			}
+		} else if tick.Bid > 0 && tick.Ask > 0 {
+			return s.priceInfoFromTick(ctx, symbol, tick)
 		}
 
-		if tick.Bid > 0 && tick.Ask > 0 {
-			spread := tick.Ask - tick.Bid
-			return &PriceInfo{
-				Symbol:     symbol,
-				Bid:        tick.Bid,
-				Ask:        tick.Ask,
-				SpreadPips: spread,
-				Time:       tick.Time,
-			}, nil
+		select {
+		case <-ctx.Done():
+			if err != nil {
+				return nil, fmt.Errorf("timeout waiting for price (last error: %v): %w", err, ctx.Err())
+			}
+			return nil, fmt.Errorf("timeout waiting for price: %w", ctx.Err())
+		case <-time.After(100 * time.Millisecond):
 		}
-
-		time.Sleep(100 * time.Millisecond)
 	}
 }
 
@@ -575,7 +596,7 @@ func (s *MT5Sugar) WaitForPrice(symbol string, timeout time.Duration) (*PriceInf
 
 // BuyMarket opens a BUY position at current market price (instant execution).
 // This is the simplest way to open a long position. Order executes immediately
-// at best available ASK price. Uses 10-second timeout for order execution.
+// at best available ASK price. Uses 30-second timeout for order execution.
 //
 // PARAMETERS:
 //   symbol - Trading symbol (e.g., "EURUSD", "GBPUSD")
@@ -584,7 +605,7 @@ func (s *MT5Sugar) WaitForPrice(symbol string, timeout time.Duration) (*PriceInf
 // RETURNS:
 //   Position ticket number (uint64), or error if order rejected or fails
 func (s *MT5Sugar) BuyMarket(symbol string, volume float64) (uint64, error) {
-	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
 
 	req := &pb.OrderSendRequest{
@@ -607,7 +628,7 @@ func (s *MT5Sugar) BuyMarket(symbol string, volume float64) (uint64, error) {
 
 // SellMarket opens a SELL position at current market price (instant execution).
 // This is the simplest way to open a short position. Order executes immediately
-// at best available BID price. Uses 10-second timeout for order execution.
+// at best available BID price. Uses 30-second timeout for order execution.
 //
 // PARAMETERS:
 //   symbol - Trading symbol (e.g., "EURUSD", "GBPUSD")
@@ -616,7 +637,7 @@ func (s *MT5Sugar) BuyMarket(symbol string, volume float64) (uint64, error) {
 // RETURNS:
 //   Position ticket number (uint64), or error if order rejected or fails
 func (s *MT5Sugar) SellMarket(symbol string, volume float64) (uint64, error) {
-	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
 
 	req := &pb.OrderSendRequest{
@@ -639,7 +660,7 @@ func (s *MT5Sugar) SellMarket(symbol string, volume float64) (uint64, error) {
 
 // BuyLimit places a pending BUY LIMIT order (executes when price drops to specified level).
 // Buy Limit is used to buy at a lower price than current market. Order remains pending
-// until price reaches the specified level or order is cancelled. Uses 10-second timeout.
+// until price reaches the specified level or order is cancelled. Uses 30-second timeout.
 //
 // PARAMETERS:
 //   symbol - Trading symbol (e.g., "EURUSD", "GBPUSD")
@@ -649,7 +670,7 @@ func (s *MT5Sugar) SellMarket(symbol string, volume float64) (uint64, error) {
 // RETURNS:
 //   Pending order ticket number (uint64), or error if order rejected
 func (s *MT5Sugar) BuyLimit(symbol string, volume, price float64) (uint64, error) {
-	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
 
 	req := &pb.OrderSendRequest{
@@ -673,7 +694,7 @@ func (s *MT5Sugar) BuyLimit(symbol string, volume, price float64) (uint64, error
 
 // SellLimit places a pending SELL LIMIT order (executes when price rises to specified level).
 // Sell Limit is used to sell at a higher price than current market. Order remains pending
-// until price reaches the specified level or order is cancelled. Uses 10-second timeout.
+// until price reaches the specified level or order is cancelled. Uses 30-second timeout.
 //
 // PARAMETERS:
 //   symbol - Trading symbol (e.g., "EURUSD", "GBPUSD")
@@ -683,7 +704,7 @@ func (s *MT5Sugar) BuyLimit(symbol string, volume, price float64) (uint64, error
 // RETURNS:
 //   Pending order ticket number (uint64), or error if order rejected
 func (s *MT5Sugar) SellLimit(symbol string, volume, price float64) (uint64, error) {
-	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
 
 	req := &pb.OrderSendRequest{
@@ -707,7 +728,7 @@ func (s *MT5Sugar) SellLimit(symbol string, volume, price float64) (uint64, erro
 
 // BuyStop places a pending BUY STOP order (executes when price rises to specified level).
 // Buy Stop is used to buy at a higher price than current market (breakout trading).
-// Order remains pending until price reaches level or order is cancelled. Uses 10-second timeout.
+// Order remains pending until price reaches level or order is cancelled. Uses 30-second timeout.
 //
 // PARAMETERS:
 //   symbol - Trading symbol (e.g., "EURUSD", "GBPUSD")
@@ -717,7 +738,7 @@ func (s *MT5Sugar) SellLimit(symbol string, volume, price float64) (uint64, erro
 // RETURNS:
 //   Pending order ticket number (uint64), or error if order rejected
 func (s *MT5Sugar) BuyStop(symbol string, volume, price float64) (uint64, error) {
-	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
 
 	req := &pb.OrderSendRequest{
@@ -741,7 +762,7 @@ func (s *MT5Sugar) BuyStop(symbol string, volume, price float64) (uint64, error)
 
 // SellStop places a pending SELL STOP order (executes when price drops to specified level).
 // Sell Stop is used to sell at a lower price than current market (breakout trading).
-// Order remains pending until price reaches level or order is cancelled. Uses 10-second timeout.
+// Order remains pending until price reaches level or order is cancelled. Uses 30-second timeout.
 //
 // PARAMETERS:
 //   symbol - Trading symbol (e.g., "EURUSD", "GBPUSD")
@@ -751,7 +772,7 @@ func (s *MT5Sugar) BuyStop(symbol string, volume, price float64) (uint64, error)
 // RETURNS:
 //   Pending order ticket number (uint64), or error if order rejected
 func (s *MT5Sugar) SellStop(symbol string, volume, price float64) (uint64, error) {
-	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
 
 	req := &pb.OrderSendRequest{
@@ -781,7 +802,7 @@ func (s *MT5Sugar) SellStop(symbol string, volume, price float64) (uint64, error
 
 // BuyMarketWithSLTP opens a BUY position with Stop Loss and Take Profit.
 // This is the recommended way to open positions with risk management built-in.
-// Order executes immediately at market price with SL/TP set. Uses 10-second timeout.
+// Order executes immediately at market price with SL/TP set. Uses 30-second timeout.
 //
 // PARAMETERS:
 //   symbol - Trading symbol (e.g., "EURUSD", "GBPUSD")
@@ -792,7 +813,7 @@ func (s *MT5Sugar) SellStop(symbol string, volume, price float64) (uint64, error
 // RETURNS:
 //   Position ticket number (uint64), or error if order rejected
 func (s *MT5Sugar) BuyMarketWithSLTP(symbol string, volume, sl, tp float64) (uint64, error) {
-	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
 
 	req := &pb.OrderSendRequest{
@@ -817,7 +838,7 @@ func (s *MT5Sugar) BuyMarketWithSLTP(symbol string, volume, sl, tp float64) (uin
 
 // SellMarketWithSLTP opens a SELL position with Stop Loss and Take Profit.
 // This is the recommended way to open short positions with risk management built-in.
-// Order executes immediately at market price with SL/TP set. Uses 10-second timeout.
+// Order executes immediately at market price with SL/TP set. Uses 30-second timeout.
 //
 // PARAMETERS:
 //   symbol - Trading symbol (e.g., "EURUSD", "GBPUSD")
@@ -825,7 +846,7 @@ func (s *MT5Sugar) BuyMarketWithSLTP(symbol string, volume, sl, tp float64) (uin
 //   sl     - Stop Loss price (must be ABOVE entry price for SELL)
 //   tp     - Take Profit price (must be BELOW entry price for SELL)
 func (s *MT5Sugar) SellMarketWithSLTP(symbol string, volume, sl, tp float64) (uint64, error) {
-	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
 
 	req := &pb.OrderSendRequest{
@@ -850,7 +871,7 @@ func (s *MT5Sugar) SellMarketWithSLTP(symbol string, volume, sl, tp float64) (ui
 
 // BuyLimitWithSLTP places a BUY LIMIT order with Stop Loss and Take Profit.
 // Combines pending order functionality with automatic risk management. Order
-// remains pending until price reaches entry level. Uses 10-second timeout.
+// remains pending until price reaches entry level. Uses 30-second timeout.
 //
 // PARAMETERS:
 //   symbol - Trading symbol (e.g., "EURUSD", "GBPUSD")
@@ -862,7 +883,7 @@ func (s *MT5Sugar) SellMarketWithSLTP(symbol string, volume, sl, tp float64) (ui
 // RETURNS:
 //   Pending order ticket number (uint64), or error if order rejected
 func (s *MT5Sugar) BuyLimitWithSLTP(symbol string, volume, price, sl, tp float64) (uint64, error) {
-	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
 
 	req := &pb.OrderSendRequest{
@@ -888,7 +909,7 @@ func (s *MT5Sugar) BuyLimitWithSLTP(symbol string, volume, price, sl, tp float64
 
 // SellLimitWithSLTP places a SELL LIMIT order with Stop Loss and Take Profit.
 // Combines pending order functionality with automatic risk management. Order
-// remains pending until price reaches entry level. Uses 10-second timeout.
+// remains pending until price reaches entry level. Uses 30-second timeout.
 //
 // PARAMETERS:
 //   symbol - Trading symbol (e.g., "EURUSD", "GBPUSD")
@@ -900,7 +921,7 @@ func (s *MT5Sugar) BuyLimitWithSLTP(symbol string, volume, price, sl, tp float64
 // RETURNS:
 //   Pending order ticket number (uint64), or error if order rejected
 func (s *MT5Sugar) SellLimitWithSLTP(symbol string, volume, price, sl, tp float64) (uint64, error) {
-	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
 
 	req := &pb.OrderSendRequest{
@@ -932,7 +953,7 @@ func (s *MT5Sugar) SellLimitWithSLTP(symbol string, volume, price, sl, tp float6
 
 // ClosePosition closes a position completely by ticket number.
 // This is the simplest way to close an open position. Closes at current market
-// price (BID for long positions, ASK for short positions). Uses 10-second timeout.
+// price (BID for long positions, ASK for short positions). Uses 30-second timeout.
 //
 // PARAMETERS:
 //   ticket - Position ticket number to close
@@ -940,7 +961,7 @@ func (s *MT5Sugar) SellLimitWithSLTP(symbol string, volume, price, sl, tp float6
 // RETURNS:
 //   Error if close fails or position not found, nil on success
 func (s *MT5Sugar) ClosePosition(ticket uint64) error {
-	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
 
 	req := &pb.OrderCloseRequest{
@@ -953,7 +974,7 @@ func (s *MT5Sugar) ClosePosition(ticket uint64) error {
 	}
 
 	if retCode != 10009 {
-		return fmt.Errorf("close rejected, code: %d", retCode)
+		return fmt.Errorf("close rejected, code: %d (%s)", retCode, helpers.GetRetCodeMessage(retCode))
 	}
 
 	return nil
@@ -961,7 +982,7 @@ func (s *MT5Sugar) ClosePosition(ticket uint64) error {
 
 // ClosePositionPartial closes a specified volume of a position (partial close).
 // This allows you to take partial profit or reduce exposure while keeping position open.
-// Not all brokers support partial closes. Uses 10-second timeout.
+// Not all brokers support partial closes. Uses 30-second timeout.
 //
 // PARAMETERS:
 //   ticket - Position ticket number
@@ -970,7 +991,7 @@ func (s *MT5Sugar) ClosePosition(ticket uint64) error {
 // RETURNS:
 //   Error if close fails, volume invalid, or broker doesn't support partial close
 func (s *MT5Sugar) ClosePositionPartial(ticket uint64, volume float64) error {
-	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
 
 	req := &pb.OrderCloseRequest{
@@ -984,81 +1005,74 @@ func (s *MT5Sugar) ClosePositionPartial(ticket uint64, volume float64) error {
 	}
 
 	if retCode != 10009 {
-		return fmt.Errorf("partial close rejected, code: %d", retCode)
+		return fmt.Errorf("partial close rejected, code: %d (%s)", retCode, helpers.GetRetCodeMessage(retCode))
 	}
 
 	return nil
 }
 
-// CloseAllPositions closes all currently open positions across all symbols.
-// Iterates through all positions and attempts to close each one. Continues even
-// if some closes fail. Returns count of successfully closed positions. Uses 30-second timeout.
+// CloseAllPositions closes all currently open positions across all symbols (pending orders are not touched).
+// Iterates through all positions and attempts to close each one; it continues when a close fails.
+// Listing the positions uses a 10-second timeout, each close its own 30-second timeout.
 //
 // RETURNS:
-//   Number of positions successfully closed (int), and error if operation fails
+//   Number of positions successfully closed (int), and an error when the positions could not be listed or
+//   when at least one close failed (the error names every failed ticket and why; the count is still valid)
 func (s *MT5Sugar) CloseAllPositions() (int, error) {
-	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
-	defer cancel()
-
-	data, err := s.service.GetOpenedOrders(ctx, pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get positions: %w", err)
-	}
-
-	closed := 0
-	for _, pos := range data.PositionInfos {
-		closeReq := &pb.OrderCloseRequest{
-			Ticket: pos.Ticket,
-		}
-
-		retCode, err := s.service.CloseOrder(ctx, closeReq)
-		if err == nil && retCode == 10009 {
-			closed++
-		}
-	}
-
-	return closed, nil
+	return s.closePositions(func(*pb.PositionInfo) bool { return true })
 }
 
 // CloseAllBySymbol closes all open positions for a specific trading symbol.
 // Useful for closing all positions of one currency pair while leaving others open.
-// Continues even if some closes fail. Returns count of successfully closed positions.
-// Uses 30-second timeout.
+// Continues when a close fails. Listing uses a 10-second timeout, each close its own 30-second timeout.
 //
 // PARAMETERS:
 //   symbol - Trading symbol to close all positions for (e.g., "EURUSD")
 //
 // RETURNS:
-//   Number of positions successfully closed (int), and error if operation fails
+//   Number of positions successfully closed (int), and an error when the positions could not be listed or
+//   when at least one close failed (the error names every failed ticket and why; the count is still valid)
 func (s *MT5Sugar) CloseAllBySymbol(symbol string) (int, error) {
-	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
-	defer cancel()
+	return s.closePositions(func(pos *pb.PositionInfo) bool { return pos.Symbol == symbol })
+}
 
-	data, err := s.service.GetOpenedOrders(ctx, pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC)
+// closePositions closes every open position the filter selects; failures are collected, not hidden.
+func (s *MT5Sugar) closePositions(selected func(*pb.PositionInfo) bool) (int, error) {
+	listCtx, cancelList := context.WithTimeout(s.ctx, 10*time.Second)
+	data, err := s.service.GetOpenedOrders(listCtx, pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC)
+	cancelList()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get positions: %w", err)
 	}
 
 	closed := 0
+	var failures []error
 	for _, pos := range data.PositionInfos {
-		if pos.Symbol == symbol {
-			closeReq := &pb.OrderCloseRequest{
-				Ticket: pos.Ticket,
-			}
-
-			retCode, err := s.service.CloseOrder(ctx, closeReq)
-			if err == nil && retCode == 10009 {
-				closed++
-			}
+		if !selected(pos) {
+			continue
+		}
+		ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
+		retCode, err := s.service.CloseOrder(ctx, &pb.OrderCloseRequest{Ticket: pos.Ticket})
+		cancel()
+		switch {
+		case err != nil:
+			failures = append(failures, fmt.Errorf("position #%d: %w", pos.Ticket, err))
+		case retCode != 10009:
+			failures = append(failures, fmt.Errorf("position #%d: close rejected, code: %d (%s)", pos.Ticket, retCode, helpers.GetRetCodeMessage(retCode)))
+		default:
+			closed++
 		}
 	}
 
+	if len(failures) > 0 {
+		return closed, fmt.Errorf("%d of %d position(s) not closed: %w", len(failures), len(failures)+closed, errors.Join(failures...))
+	}
 	return closed, nil
 }
 
 // ModifyPositionSL modifies the Stop Loss level of an open position.
 // This allows you to move your stop loss to lock in profit or reduce risk.
-// Use 0 to remove Stop Loss (if broker allows). Uses 10-second timeout.
+// Use 0 to remove Stop Loss (if broker allows). Uses 30-second timeout.
 //
 // PARAMETERS:
 //   ticket - Position ticket number
@@ -1067,7 +1081,7 @@ func (s *MT5Sugar) CloseAllBySymbol(symbol string) (int, error) {
 // RETURNS:
 //   Error if modification rejected or fails, nil on success
 func (s *MT5Sugar) ModifyPositionSL(ticket uint64, sl float64) error {
-	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
 
 	req := &pb.OrderModifyRequest{
@@ -1089,7 +1103,7 @@ func (s *MT5Sugar) ModifyPositionSL(ticket uint64, sl float64) error {
 
 // ModifyPositionTP modifies the Take Profit level of an open position.
 // This allows you to adjust your profit target based on market conditions.
-// Use 0 to remove Take Profit (if broker allows). Uses 10-second timeout.
+// Use 0 to remove Take Profit (if broker allows). Uses 30-second timeout.
 //
 // PARAMETERS:
 //   ticket - Position ticket number
@@ -1098,7 +1112,7 @@ func (s *MT5Sugar) ModifyPositionSL(ticket uint64, sl float64) error {
 // RETURNS:
 //   Error if modification rejected or fails, nil on success
 func (s *MT5Sugar) ModifyPositionTP(ticket uint64, tp float64) error {
-	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
 
 	req := &pb.OrderModifyRequest{
@@ -1120,7 +1134,7 @@ func (s *MT5Sugar) ModifyPositionTP(ticket uint64, tp float64) error {
 
 // ModifyPositionSLTP modifies both Stop Loss and Take Profit in one operation.
 // More efficient than calling ModifyPositionSL and ModifyPositionTP separately.
-// This is the recommended way to update risk management levels. Uses 10-second timeout.
+// This is the recommended way to update risk management levels. Uses 30-second timeout.
 //
 // PARAMETERS:
 //   ticket - Position ticket number
@@ -1130,7 +1144,7 @@ func (s *MT5Sugar) ModifyPositionTP(ticket uint64, tp float64) error {
 // RETURNS:
 //   Error if modification rejected or fails, nil on success
 func (s *MT5Sugar) ModifyPositionSLTP(ticket uint64, sl, tp float64) error {
-	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
 
 	req := &pb.OrderModifyRequest{
@@ -1160,12 +1174,12 @@ func (s *MT5Sugar) ModifyPositionSLTP(ticket uint64, sl, tp float64) error {
 // GetOpenPositions returns all currently open positions as protobuf PositionInfo structures.
 // The positions are sorted by open time (oldest first). Each PositionInfo contains full
 // details: ticket, symbol, type, volume, open price, current profit, SL/TP, etc.
-// Uses 5-second timeout.
+// Uses 10-second timeout.
 //
 // RETURNS:
 //   Slice of *pb.PositionInfo with all open positions, or error if query fails
 func (s *MT5Sugar) GetOpenPositions() ([]*pb.PositionInfo, error) {
-	ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
 	defer cancel()
 
 	data, err := s.service.GetOpenedOrders(ctx, pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC)
@@ -1178,7 +1192,7 @@ func (s *MT5Sugar) GetOpenPositions() ([]*pb.PositionInfo, error) {
 
 // GetPositionByTicket finds and returns a specific position by its ticket number.
 // This is useful when you need detailed information about a position you opened earlier.
-// Returns nil if position not found (may have been closed). Uses 5-second timeout.
+// Returns an error if no open position has that ticket (it may have been closed). Uses 10-second timeout.
 //
 // PARAMETERS:
 //   ticket - Position ticket number to search for
@@ -1202,7 +1216,7 @@ func (s *MT5Sugar) GetPositionByTicket(ticket uint64) (*pb.PositionInfo, error) 
 
 // GetPositionsBySymbol returns all open positions for a specific trading symbol.
 // Filters positions by symbol name. Useful for monitoring exposure to a single
-// currency pair or asset. Returns empty slice if no positions found. Uses 5-second timeout.
+// currency pair or asset. Returns empty slice if no positions found. Uses 10-second timeout.
 //
 // PARAMETERS:
 //   symbol - Trading symbol to filter by (e.g., "EURUSD", "XAUUSD")
@@ -1227,7 +1241,7 @@ func (s *MT5Sugar) GetPositionsBySymbol(symbol string) ([]*pb.PositionInfo, erro
 
 // HasOpenPosition checks if there are any open positions for a specific symbol.
 // This is a quick boolean check - more efficient than GetPositionsBySymbol when
-// you only need to know if positions exist. Uses 5-second timeout.
+// you only need to know if positions exist. Uses 10-second timeout.
 //
 // PARAMETERS:
 //   symbol - Trading symbol to check (e.g., "EURUSD", "GBPUSD")
@@ -1263,7 +1277,7 @@ func (s *MT5Sugar) CountOpenPositions() (int, error) {
 
 // GetTotalProfit calculates and returns total floating profit/loss from all open positions.
 // This sums up the profit field from all positions. Positive value means total profit,
-// negative means total loss. Returns 0 if no positions open. Uses 5-second timeout.
+// negative means total loss. Returns 0 if no positions open. Uses 10-second timeout.
 //
 // RETURNS:
 //   Total profit/loss as float64, or error if query fails
@@ -1283,7 +1297,7 @@ func (s *MT5Sugar) GetTotalProfit() (float64, error) {
 
 // GetProfitBySymbol calculates and returns total floating profit/loss for a specific symbol.
 // This sums up profit from all positions matching the symbol. Useful for tracking
-// per-symbol performance. Returns 0 if no positions for symbol. Uses 5-second timeout.
+// per-symbol performance. Returns 0 if no positions for symbol. Uses 10-second timeout.
 //
 // PARAMETERS:
 //   symbol - Trading symbol to calculate profit for (e.g., "EURUSD")
@@ -1309,190 +1323,165 @@ func (s *MT5Sugar) GetProfitBySymbol(symbol string) (float64, error) {
 // ══════════════════════════════════════════════════════════════════════════════
 // #region HISTORY & PROFIT ANALYSIS METHODS
 // ══════════════════════════════════════════════════════════════════════════════
+//
+// HOW THE TIME WINDOWS WORK (all GetDeals*/GetProfit* methods and GetDailyStats):
+//   • "Deals" here are CLOSED POSITIONS from PositionsHistory (one entry per position, not per MT5 deal).
+//   • A position is selected by its OPEN time: a position opened yesterday and closed today is NOT in
+//     GetDealsToday. Still-open positions are not in the list.
+//   • Day/week/month boundaries are calendar boundaries of the computer running the program (time.Local):
+//     "today" = local midnight to now, "this week" = local Monday 00:00 to now, "this month" = the 1st, 00:00
+//     local to now. The window is sent in the request's UTC fields (position_open_time_from_utc/_to_utc),
+//     so the broker's time zone does not shift it. Run the program with TZ set to the broker's time zone
+//     if you want the broker's trading day instead.
+//   • All pages are read (cursor paging: page_size 1000 + next_page_token), so long ranges are complete.
+//   • Profit sums are the positions' Profit field: commission, swap and fee are NOT included.
+// ══════════════════════════════════════════════════════════════════════════════
 
-// GetDealsToday returns all closed positions (deals) from today (00:00 to now).
-// Automatically calculates today's date range. Each deal contains full information:
-// ticket, symbol, volume, profit, open/close times, etc. Uses 5-second timeout.
+// positionsOpenedBetween returns ALL closed positions whose open time lies in [from, to] (real moments).
+// It reads the history with cursor paging (page_size 1000, next_page_token) until the last page, so a long
+// range is never cut to the first page. The timeout covers all pages together.
+func (s *MT5Sugar) positionsOpenedBetween(from, to time.Time, timeout time.Duration) ([]*pb.PositionHistoryInfo, error) {
+	ctx, cancel := context.WithTimeout(s.ctx, timeout)
+	defer cancel()
+
+	var all []*pb.PositionHistoryInfo
+	token := ""
+	for {
+		// A Go time.Time is a moment: the window goes in the *Utc fields (see MT5Service.GetPositionsHistory)
+		data, err := s.GetAccount().PositionsHistory(ctx, &pb.PositionsHistoryRequest{
+			SortType:                pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_ASC,
+			PositionOpenTimeFromUtc: timestamppb.New(from),
+			PositionOpenTimeToUtc:   timestamppb.New(to),
+			PageToken:               token,
+			PageSize:                1000,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("PositionsHistory failed: %w", err)
+		}
+		all = append(all, data.HistoryPositions...)
+		token = data.NextPageToken
+		if token == "" || len(data.HistoryPositions) == 0 {
+			return all, nil
+		}
+	}
+}
+
+// startOfLocalDay returns 00:00 of t's calendar day in t's time zone.
+func startOfLocalDay(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+}
+
+// sumProfit adds up the Profit field (without commission, swap and fee).
+func sumProfit(deals []*pb.PositionHistoryInfo) float64 {
+	var total float64
+	for _, deal := range deals {
+		total += deal.Profit
+	}
+	return total
+}
+
+// GetDealsToday returns the closed positions opened today: local midnight (time.Local) to now.
+// See the region note above for how the window and "deals" are defined. Uses 15-second timeout.
 //
 // RETURNS:
-//   Slice of *pb.PositionHistoryInfo with today's deals, or error if query fails
+//   Slice of *pb.PositionHistoryInfo with today's closed positions, or error if query fails
 func (s *MT5Sugar) GetDealsToday() ([]*pb.PositionHistoryInfo, error) {
 	now := time.Now()
-	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-
-	ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
-	defer cancel()
-
-	data, err := s.service.GetPositionsHistory(ctx,
-		pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_ASC,
-		&startOfDay, &now, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return data.HistoryPositions, nil
+	return s.positionsOpenedBetween(startOfLocalDay(now), now, 15*time.Second)
 }
 
-// GetDealsYesterday returns all closed positions (deals) from yesterday (full day).
-// Automatically calculates yesterday's date range (00:00 to 23:59:59).
-// Useful for analyzing previous day's performance. Uses 5-second timeout.
+// GetDealsYesterday returns the closed positions opened yesterday: the whole previous local calendar day
+// (00:00:00 to 23:59:59.999999999, time.Local). Useful for analyzing the previous day. Uses 15-second timeout.
 //
 // RETURNS:
-//   Slice of *pb.PositionHistoryInfo with yesterday's deals, or error if query fails
+//   Slice of *pb.PositionHistoryInfo with yesterday's closed positions, or error if query fails
 func (s *MT5Sugar) GetDealsYesterday() ([]*pb.PositionHistoryInfo, error) {
-	now := time.Now()
-	yesterday := now.AddDate(0, 0, -1)
-	startOfYesterday := time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), 0, 0, 0, 0, yesterday.Location())
-	endOfYesterday := time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), 23, 59, 59, 0, yesterday.Location())
-
-	ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
-	defer cancel()
-
-	data, err := s.service.GetPositionsHistory(ctx,
-		pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_ASC,
-		&startOfYesterday, &endOfYesterday, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return data.HistoryPositions, nil
+	startOfToday := startOfLocalDay(time.Now())
+	startOfYesterday := startOfLocalDay(startOfToday.AddDate(0, 0, -1))
+	return s.positionsOpenedBetween(startOfYesterday, startOfToday.Add(-time.Nanosecond), 15*time.Second)
 }
 
-// GetDealsThisWeek returns all closed positions (deals) from this week.
-// Week starts on Monday. Automatically calculates start of week (Monday 00:00)
-// to current time. Useful for weekly performance tracking. Uses 5-second timeout.
+// GetDealsThisWeek returns the closed positions opened this week.
+// The week starts on Monday: local Monday 00:00 (time.Local) to now. Useful for weekly
+// performance tracking. Uses 15-second timeout.
 //
 // RETURNS:
-//   Slice of *pb.PositionHistoryInfo with this week's deals, or error if query fails
+//   Slice of *pb.PositionHistoryInfo with this week's closed positions, or error if query fails
 func (s *MT5Sugar) GetDealsThisWeek() ([]*pb.PositionHistoryInfo, error) {
 	now := time.Now()
 	weekday := int(now.Weekday())
 	if weekday == 0 {
 		weekday = 7
 	}
-	startOfWeek := now.AddDate(0, 0, -(weekday - 1))
-	startOfWeek = time.Date(startOfWeek.Year(), startOfWeek.Month(), startOfWeek.Day(), 0, 0, 0, 0, startOfWeek.Location())
-
-	ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
-	defer cancel()
-
-	data, err := s.service.GetPositionsHistory(ctx,
-		pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_ASC,
-		&startOfWeek, &now, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return data.HistoryPositions, nil
+	startOfWeek := startOfLocalDay(now.AddDate(0, 0, -(weekday - 1)))
+	return s.positionsOpenedBetween(startOfWeek, now, 15*time.Second)
 }
 
-// GetDealsThisMonth returns all closed positions (deals) from this month.
-// Automatically calculates start of month (1st day 00:00) to current time.
+// GetDealsThisMonth returns the closed positions opened this month: the 1st, 00:00 local (time.Local) to now.
 // Useful for monthly performance tracking and reports. Uses 30-second timeout
 // (longer than day/week queries due to potentially large data volume).
 //
 // RETURNS:
-//   Slice of *pb.PositionHistoryInfo with this month's deals, or error if query fails
+//   Slice of *pb.PositionHistoryInfo with this month's closed positions, or error if query fails
 func (s *MT5Sugar) GetDealsThisMonth() ([]*pb.PositionHistoryInfo, error) {
 	now := time.Now()
 	startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-
-	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
-	defer cancel()
-
-	data, err := s.service.GetPositionsHistory(ctx,
-		pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_ASC,
-		&startOfMonth, &now, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return data.HistoryPositions, nil
+	return s.positionsOpenedBetween(startOfMonth, now, 30*time.Second)
 }
 
-// GetDealsDateRange returns all closed positions (deals) within a custom date range.
-// You specify exact start and end times. Useful for custom period analysis,
-// backtesting, or generating reports for specific time frames. Uses 30-second timeout
-// (longer to accommodate large date ranges with many deals).
+// GetDealsDateRange returns the closed positions opened within a custom time range.
+// from and to are real moments (time.Now().AddDate(0, 0, -7), time.Date(..., time.Local), time.Date(..., time.UTC)):
+// they are sent as UTC, so the result does not depend on the broker's time zone. Useful for custom period
+// analysis or reports. Uses 30-second timeout (longer to accommodate large ranges).
 //
 // PARAMETERS:
-//   from - Start date/time for the range (inclusive)
-//   to   - End date/time for the range (inclusive)
+//   from - Start of the range for the position open time (inclusive)
+//   to   - End of the range for the position open time (inclusive)
 //
 // RETURNS:
-//   Slice of *pb.PositionHistoryInfo with deals in range, or error if query fails
+//   Slice of *pb.PositionHistoryInfo with the closed positions in range, or error if query fails
 func (s *MT5Sugar) GetDealsDateRange(from, to time.Time) ([]*pb.PositionHistoryInfo, error) {
-	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
-	defer cancel()
-
-	data, err := s.service.GetPositionsHistory(ctx,
-		pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_ASC,
-		&from, &to, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return data.HistoryPositions, nil
+	return s.positionsOpenedBetween(from, to, 30*time.Second)
 }
 
-// GetProfitToday calculates and returns total realized profit/loss from today's closed positions.
-// This sums up the profit from all deals closed today (00:00 to now). Positive means
-// net profit, negative means net loss. Returns 0 if no deals today. Uses 5-second timeout.
+// GetProfitToday returns the summed Profit of the closed positions opened today (local midnight to now).
+// Commission, swap and fee are not included. Positive means profit, negative means loss.
+// Returns 0 if there are none. Uses 15-second timeout.
 //
 // RETURNS:
-//   Total profit/loss from today's deals as float64, or error if query fails
+//   Total profit/loss of today's closed positions as float64, or error if query fails
 func (s *MT5Sugar) GetProfitToday() (float64, error) {
 	deals, err := s.GetDealsToday()
 	if err != nil {
 		return 0, err
 	}
-
-	var totalProfit float64
-	for _, deal := range deals {
-		totalProfit += deal.Profit
-	}
-
-	return totalProfit, nil
+	return sumProfit(deals), nil
 }
 
-// GetProfitThisWeek calculates and returns total realized profit/loss from this week's deals.
-// This sums up profit from all deals closed this week (Monday to now). Positive means
-// net profit, negative means net loss. Returns 0 if no deals this week. Uses 5-second timeout.
+// GetProfitThisWeek returns the summed Profit of the closed positions opened this week (local Monday 00:00
+// to now). Commission, swap and fee are not included. Returns 0 if there are none. Uses 15-second timeout.
 //
 // RETURNS:
-//   Total profit/loss from this week's deals as float64, or error if query fails
+//   Total profit/loss of this week's closed positions as float64, or error if query fails
 func (s *MT5Sugar) GetProfitThisWeek() (float64, error) {
 	deals, err := s.GetDealsThisWeek()
 	if err != nil {
 		return 0, err
 	}
-
-	var totalProfit float64
-	for _, deal := range deals {
-		totalProfit += deal.Profit
-	}
-
-	return totalProfit, nil
+	return sumProfit(deals), nil
 }
 
-// GetProfitThisMonth calculates and returns total realized profit/loss from this month's deals.
-// This sums up profit from all deals closed this month (1st to now). Positive means net
-// profit, negative means net loss. Returns 0 if no deals this month. Uses 5-second timeout.
+// GetProfitThisMonth returns the summed Profit of the closed positions opened this month (the 1st, 00:00
+// local to now). Commission, swap and fee are not included. Returns 0 if there are none. Uses 30-second timeout.
 //
 // RETURNS:
-//   Total profit/loss from this month's deals as float64, or error if query fails
+//   Total profit/loss of this month's closed positions as float64, or error if query fails
 func (s *MT5Sugar) GetProfitThisMonth() (float64, error) {
 	deals, err := s.GetDealsThisMonth()
 	if err != nil {
 		return 0, err
 	}
-
-	var totalProfit float64
-	for _, deal := range deals {
-		totalProfit += deal.Profit
-	}
-
-	return totalProfit, nil
+	return sumProfit(deals), nil
 }
 
 // #endregion
@@ -1532,7 +1521,7 @@ type SymbolInfo struct {
 
 // GetSymbolInfo retrieves comprehensive information about a symbol in one call.
 // This is more efficient than calling individual methods for each property.
-// Perfect for validation before placing orders. Uses 5-second timeout.
+// Perfect for validation before placing orders. Uses 10-second timeout.
 //
 // PARAMETERS:
 //   symbol - Trading symbol (e.g., "EURUSD", "GBPUSD", "XAUUSD")
@@ -1540,7 +1529,7 @@ type SymbolInfo struct {
 // RETURNS:
 //   *SymbolInfo structure with all important symbol parameters, or error if symbol not found
 func (s *MT5Sugar) GetSymbolInfo(symbol string) (*SymbolInfo, error) {
-	ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
 	defer cancel()
 
 	// Get symbol parameters using Service layer
@@ -1550,16 +1539,22 @@ func (s *MT5Sugar) GetSymbolInfo(symbol string) (*SymbolInfo, error) {
 		return nil, fmt.Errorf("GetSymbolInfo failed: %w", err)
 	}
 
-	if len(params) == 0 {
+	// Take the entry with exactly this name (the name filter may return similar names too).
+	var p *SymbolParams
+	for i := range params {
+		if params[i].Name == symbol {
+			p = &params[i]
+			break
+		}
+	}
+	if p == nil {
 		return nil, fmt.Errorf("symbol %s not found", symbol)
 	}
 
-	p := params[0]
-
-	// Get stop level
+	// Get stop level (0 = no minimum distance; a failed request is an error, not a 0)
 	stopLevel, err := s.service.GetSymbolInteger(ctx, symbol, pb.SymbolInfoIntegerProperty_SYMBOL_TRADE_STOPS_LEVEL)
 	if err != nil {
-		stopLevel = 0 // Some symbols don't have stop level
+		return nil, fmt.Errorf("GetSymbolInfo failed: stop level: %w", err)
 	}
 
 	return &SymbolInfo{
@@ -1579,37 +1574,45 @@ func (s *MT5Sugar) GetSymbolInfo(symbol string) (*SymbolInfo, error) {
 
 // GetAllSymbols retrieves a list of all available trading symbols.
 // This returns symbol names only (not full info). Useful for discovering available
-// instruments or building symbol selection menus. Uses 15-second timeout
-// (longer than single symbol queries due to potentially large number of symbols).
+// instruments or building symbol selection menus. SymbolParamsMany answers one page at a
+// time (a request without paging returns only the first page), so this method reads page
+// after page until it has SymbolsTotal names. Uses 60-second timeout for all pages together
+// (brokers with stocks have thousands of symbols).
 //
 // RETURNS:
 //   Slice of symbol names ([]string), or error if query fails
 func (s *MT5Sugar) GetAllSymbols() ([]string, error) {
-	ctx, cancel := context.WithTimeout(s.ctx, 15*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 60*time.Second)
 	defer cancel()
 
-	params, _, err := s.service.GetSymbolParamsMany(ctx, nil, nil, nil, nil)
-	if err != nil {
-		return nil, fmt.Errorf("GetAllSymbols failed: %w", err)
-	}
-
-	symbols := make([]string, len(params))
-	for i, p := range params {
-		symbols[i] = p.Name
+	const perPage = int32(1000)
+	var symbols []string
+	for page := int32(1); ; page++ {
+		pageNumber, itemsPerPage := page, perPage
+		params, total, err := s.service.GetSymbolParamsMany(ctx, nil, nil, &pageNumber, &itemsPerPage)
+		if err != nil {
+			return nil, fmt.Errorf("GetAllSymbols failed (page %d): %w", page, err)
+		}
+		for _, p := range params {
+			symbols = append(symbols, p.Name)
+		}
+		if len(params) == 0 || int32(len(symbols)) >= total {
+			break
+		}
 	}
 
 	return symbols, nil
 }
 
-// IsSymbolAvailable checks if a symbol exists and is available for trading.
-// This verifies both existence and trading permissions. More comprehensive than
-// just checking if symbol name is valid. Uses 3-second timeout.
+// IsSymbolAvailable checks if a symbol exists in the terminal and its data is synchronized
+// with the trade server (SymbolExist + SymbolIsSynchronized). It does NOT check the symbol's
+// trade mode (SYMBOL_TRADE_MODE) or trading sessions. Uses 3-second timeout.
 //
 // PARAMETERS:
 //   symbol - Symbol name to check (e.g., "EURUSD")
 //
 // RETURNS:
-//   true if symbol exists and is tradeable, false otherwise, or error if query fails
+//   true if the symbol exists and is synchronized, false otherwise, or error if query fails
 func (s *MT5Sugar) IsSymbolAvailable(symbol string) (bool, error) {
 	ctx, cancel := context.WithTimeout(s.ctx, 3*time.Second)
 	defer cancel()
@@ -1680,22 +1683,33 @@ func (s *MT5Sugar) GetSymbolDigits(symbol string) (int32, error) {
 // tool - automatically calculates position size considering BOTH risk and margin limits.
 //
 // ALGORITHM:
-//   1. Calculate size based on risk: (Balance * RiskPercent / 100) / (StopLossPips * PipValue)
-//   2. Calculate max size based on free margin (with 80% safety buffer)
-//   3. Return MINIMUM of the two - prevents margin calls!
+//   1. Value of 1 point for 1 lot, in the account currency:
+//      PointValue = SYMBOL_TRADE_TICK_VALUE * SYMBOL_POINT / SYMBOL_TRADE_TICK_SIZE
+//   2. Size based on risk: (Balance * RiskPercent / 100) / (StopLossPoints * PointValue),
+//      rounded down to the volume step and capped at the symbol's max volume. A size below the
+//      minimum volume is an ERROR (raising it to the minimum would risk more than RiskPercent)
+//   3. Max size based on free margin (80% of it; margin for 1 lot from OrderCalcMargin for a BUY at ASK -
+//      the method has no direction)
+//   4. Return the SMALLER of the two - prevents margin calls!
 //
 // PARAMETERS:
 //   symbol       - Trading symbol (e.g., "EURUSD")
 //   riskPercent  - Percentage of balance to risk (e.g., 2.0 = 2%)
-//   stopLossPips - Stop Loss distance in points (not price!)
+//   stopLossPips - Stop Loss distance in POINTS despite the name (1 point = SYMBOL_POINT,
+//                  0.00001 on 5-digit EURUSD, so 10 points = 1 pip). Must be > 0.
 //
 // RETURNS:
-//   Recommended lot size (float64), or error if calculation fails or insufficient margin
+//   Recommended lot size (float64), or error if the calculation fails, the risk does not allow the
+//   minimum volume, or the margin is insufficient
 //
-// EXAMPLE:
-//   Balance: $10,000, Risk: 2% ($200), SL: 50 pips
-//   → Risk-based: 0.40 lots, Margin-limited: 0.30 lots → Returns: 0.30 lots
+// EXAMPLE (USD account, EURUSD 5 digits: 1 point of 1 lot = 1 USD):
+//   Balance: $10,000, Risk: 2% ($200), SL: 500 points (= 50 pips)
+//   → Risk-based: 200 / (500 * 1) = 0.40 lots; if 80% of free margin only covers 0.30 lots → Returns: 0.30 lots
 func (s *MT5Sugar) CalculatePositionSize(symbol string, riskPercent, stopLossPips float64) (float64, error) {
+	if stopLossPips <= 0 {
+		return 0, fmt.Errorf("stop loss distance must be > 0 points, got %v", stopLossPips)
+	}
+
 	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
 	defer cancel()
 
@@ -1714,31 +1728,29 @@ func (s *MT5Sugar) CalculatePositionSize(symbol string, riskPercent, stopLossPip
 	// Calculate risk amount
 	riskAmount := balance * riskPercent / 100.0
 
-	// Calculate pip value for 1 lot
-	// For forex: pip value = (contract size * point)
-	tick, err := s.service.GetSymbolTick(ctx, symbol)
+	// Value of 1 point for 1 lot in the ACCOUNT currency (contract size * point would be in the quote
+	// currency, wrong for e.g. USDJPY on a USD account).
+	tickValue, err := s.service.GetSymbolDouble(ctx, symbol, pb.SymbolInfoDoubleProperty_SYMBOL_TRADE_TICK_VALUE)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to get tick value: %w", err)
 	}
-
-	currentPrice := tick.Bid
-	if currentPrice == 0 {
-		currentPrice = tick.Ask
+	tickSize, err := s.service.GetSymbolDouble(ctx, symbol, pb.SymbolInfoDoubleProperty_SYMBOL_TRADE_TICK_SIZE)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get tick size: %w", err)
 	}
-
-	// Pip value per lot
-	pipValue := info.ContractSize * info.Point
+	if tickValue <= 0 || tickSize <= 0 {
+		return 0, fmt.Errorf("symbol %s has no tick value yet (tick value %v, tick size %v)", symbol, tickValue, tickSize)
+	}
+	pointValue := tickValue * info.Point / tickSize
 
 	// Calculate position size based on risk
-	positionSize := riskAmount / (stopLossPips * pipValue)
+	positionSize := floorToStep(riskAmount/(stopLossPips*pointValue), info.VolumeStep)
 
-	// Round down to volume step using proper rounding to avoid float precision issues
-	steps := positionSize / info.VolumeStep
-	positionSize = float64(int(steps)) * info.VolumeStep
-
-	// Ensure within min/max limits
+	// Within min/max limits. A size below the minimum volume is NOT raised to it: that would risk more
+	// than riskPercent.
 	if positionSize < info.VolumeMin {
-		positionSize = info.VolumeMin
+		return 0, fmt.Errorf("risk %.2f%% with a %v-point stop allows %.4f lots, below the minimum volume %.2f of %s",
+			riskPercent, stopLossPips, riskAmount/(stopLossPips*pointValue), info.VolumeMin, symbol)
 	}
 	if positionSize > info.VolumeMax {
 		positionSize = info.VolumeMax
@@ -1751,12 +1763,17 @@ func (s *MT5Sugar) CalculatePositionSize(symbol string, riskPercent, stopLossPip
 		return 0, fmt.Errorf("failed to get free margin: %w", err)
 	}
 
-	// Calculate margin required for 1 lot
+	tick, err := s.service.GetSymbolTick(ctx, symbol)
+	if err != nil {
+		return 0, err
+	}
+
+	// Calculate margin required for 1 lot (a BUY opens at ASK)
 	marginReq := &pb.OrderCalcMarginRequest{
 		Symbol:    symbol,
 		OrderType: pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY,
 		Volume:    1.0,
-		OpenPrice: currentPrice,
+		OpenPrice: tick.Ask,
 	}
 
 	marginForOneLot, err := s.service.CalculateMargin(ctx, marginReq)
@@ -1765,12 +1782,8 @@ func (s *MT5Sugar) CalculatePositionSize(symbol string, riskPercent, stopLossPip
 	}
 
 	if marginForOneLot > 0 {
-		// Calculate max lots with 80% safety buffer
-		maxLots := (freeMargin * 0.8) / marginForOneLot
-
-		// Round down to volume step using proper rounding to avoid float precision issues
-		steps := maxLots / info.VolumeStep
-		maxLots = float64(int(steps)) * info.VolumeStep
+		// Calculate max lots with 80% safety buffer, rounded down to the volume step
+		maxLots := floorToStep((freeMargin*0.8)/marginForOneLot, info.VolumeStep)
 
 		// Return minimum of risk-based size and margin-limited size
 		if positionSize > maxLots {
@@ -1786,15 +1799,28 @@ func (s *MT5Sugar) CalculatePositionSize(symbol string, riskPercent, stopLossPip
 	return positionSize, nil
 }
 
+// floorToStep rounds a volume down to a multiple of step (with a little tolerance for float noise:
+// 0.3/0.01 = 29.9999999 must give 0.30, not 0.29) and trims the float noise of the result.
+func floorToStep(volume, step float64) float64 {
+	if step <= 0 {
+		return volume
+	}
+	v := math.Floor(volume/step+1e-9) * step
+	return math.Round(v*1e8) / 1e8
+}
+
 // GetMaxLotSize calculates the maximum lot size you can open with current free margin.
 // This helps prevent margin calls by showing your maximum trading capacity.
-// Uses conservative estimate with safety buffer. Uses 5-second timeout.
+// Conservative estimate: 80% of the free margin divided by the margin of 1 lot, rounded down to the
+// volume step and capped at the maximum volume. The margin is calculated for a BUY at the current ASK
+// (the method has no direction; a SELL's margin may differ slightly). Uses 5-second timeout.
 //
 // PARAMETERS:
 //   symbol - Trading symbol (e.g., "EURUSD")
 //
 // RETURNS:
-//   Maximum safe lot size (float64), or error if calculation fails
+//   Maximum safe lot size (float64), or an error if the calculation fails or the free margin does not
+//   cover even the minimum volume
 func (s *MT5Sugar) GetMaxLotSize(symbol string) (float64, error) {
 	ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
 	defer cancel()
@@ -1837,13 +1863,13 @@ func (s *MT5Sugar) GetMaxLotSize(symbol string) (float64, error) {
 	// Calculate max lots with 80% safety buffer
 	maxLots := (freeMargin * 0.8) / marginForOneLot
 
-	// Round down to volume step using proper rounding to avoid float precision issues
-	steps := maxLots / info.VolumeStep
-	maxLots = float64(int(steps)) * info.VolumeStep
+	// Round down to the volume step
+	maxLots = floorToStep(maxLots, info.VolumeStep)
 
 	// Ensure within limits
 	if maxLots < info.VolumeMin {
-		return 0, nil // Not enough margin even for minimum
+		return 0, fmt.Errorf("insufficient margin: 80%% of the free margin %.2f does not cover the minimum volume %.2f of %s",
+			freeMargin, info.VolumeMin, symbol)
 	}
 	if maxLots > info.VolumeMax {
 		maxLots = info.VolumeMax
@@ -1853,8 +1879,9 @@ func (s *MT5Sugar) GetMaxLotSize(symbol string) (float64, error) {
 }
 
 // CanOpenPosition checks if it's possible to open a position with specified volume.
-// This performs comprehensive validation: margin check, volume limits, symbol availability.
-// Always call this before PlaceOrder to prevent rejections. Uses 5-second timeout.
+// This performs comprehensive validation: margin check, volume limits, symbol availability
+// (IsSymbolAvailable). The margin is calculated for a BUY at the current ASK - the method has no
+// direction, so a SELL's margin may differ slightly. Uses 5-second timeout.
 //
 // PARAMETERS:
 //   symbol - Trading symbol (e.g., "EURUSD")
@@ -1935,7 +1962,8 @@ func (s *MT5Sugar) CanOpenPosition(symbol string, volume float64) (bool, string,
 
 // CalculateRequiredMargin calculates how much margin is required to open a position.
 // This helps you plan your trades and manage account exposure. Considers leverage
-// and symbol specifications. Uses 5-second timeout.
+// and symbol specifications. The margin is calculated for a BUY at the current ASK (the method
+// has no direction; a SELL's margin may differ slightly). Uses 5-second timeout.
 //
 // PARAMETERS:
 //   symbol - Trading symbol (e.g., "EURUSD")
@@ -1968,17 +1996,23 @@ func (s *MT5Sugar) CalculateRequiredMargin(symbol string, volume float64) (float
 // ══════════════════════════════════════════════════════════════════════════════
 // #region TRADING HELPERS METHODS
 // ══════════════════════════════════════════════════════════════════════════════
+//
+// UNITS: the "...Pips" parameters of these helpers are distances in POINTS (1 point = SYMBOL_POINT,
+// e.g. 0.00001 on 5-digit EURUSD, 0.001 on 3-digit USDJPY). On 5- and 3-digit symbols 10 points = 1 pip,
+// so pass 500 for a 50-pip stop. The names are kept for compatibility.
+// ══════════════════════════════════════════════════════════════════════════════
 
-// CalculateSLTP calculates Stop Loss and Take Profit prices from entry price and pip distances.
-// This converts pip distances to actual prices based on symbol specifications.
-// Handles both BUY and SELL directions correctly. Uses 3-second timeout.
+// CalculateSLTP calculates Stop Loss and Take Profit prices from an entry price and point distances.
+// The distances are multiplied by the symbol's point size (SYMBOL_POINT) and the results are rounded
+// to the symbol's digits. Handles both BUY and SELL directions correctly. Uses the timeouts of
+// GetSymbolInfo (10 s) and GetAsk/GetBid (3 s).
 //
 // PARAMETERS:
 //   symbol         - Trading symbol (e.g., "EURUSD")
-//   direction      - "BUY" or "SELL"
-//   entryPrice     - Entry price (use 0 for current market price)
-//   stopLossPips   - Distance to SL in points (e.g., 50)
-//   takeProfitPips - Distance to TP in points (e.g., 100)
+//   direction      - "BUY" or "SELL" (anything else is an error)
+//   entryPrice     - Entry price (use 0 for the current market price: ASK for BUY, BID for SELL)
+//   stopLossPips   - Distance to SL in points (e.g., 500 = 50 pips on EURUSD)
+//   takeProfitPips - Distance to TP in points (e.g., 1000 = 100 pips on EURUSD)
 //
 // RETURNS:
 //   sl    - Stop Loss price
@@ -1986,9 +2020,13 @@ func (s *MT5Sugar) CalculateRequiredMargin(symbol string, volume float64) (float
 //   error - error if calculation fails
 //
 // EXAMPLE:
-//   EURUSD BUY at 1.08500, SL=50 pips, TP=100 pips
-//   → SL=1.08000, TP=1.09000
+//   EURUSD (5 digits) BUY at 1.08500, SL=500 points, TP=1000 points
+//   → SL=1.08000, TP=1.09500
 func (s *MT5Sugar) CalculateSLTP(symbol, direction string, entryPrice, stopLossPips, takeProfitPips float64) (float64, float64, error) {
+	if direction != "BUY" && direction != "SELL" {
+		return 0, 0, fmt.Errorf("direction must be \"BUY\" or \"SELL\", got %q", direction)
+	}
+
 	// Get symbol info for point size
 	info, err := s.GetSymbolInfo(symbol)
 	if err != nil {
@@ -2019,25 +2057,27 @@ func (s *MT5Sugar) CalculateSLTP(symbol, direction string, entryPrice, stopLossP
 		tp = entryPrice - (takeProfitPips * info.Point)
 	}
 
-	return sl, tp, nil
+	// Round to the symbol's digits (1.0800000000000001 -> 1.08)
+	scale := math.Pow(10, float64(info.Digits))
+	return math.Round(sl*scale) / scale, math.Round(tp*scale) / scale, nil
 }
 
-// BuyMarketWithPips opens a BUY position with SL/TP specified in pips (not price!).
-// This is more intuitive than BuyMarketWithSLTP - you specify risk/reward in pips
-// and the method calculates exact prices automatically. Uses 10-second timeout.
+// BuyMarketWithPips opens a BUY position with SL/TP given as distances in POINTS from the
+// current ASK (see the UNITS note above - the name says pips). The method calculates the
+// exact prices with CalculateSLTP and opens the position with BuyMarketWithSLTP (30-second timeout).
 //
 // PARAMETERS:
 //   symbol         - Trading symbol (e.g., "EURUSD")
 //   volume         - Lot size (e.g., 0.1)
-//   stopLossPips   - Stop Loss distance in pips from entry (e.g., 50)
-//   takeProfitPips - Take Profit distance in pips from entry (e.g., 100)
+//   stopLossPips   - Stop Loss distance in points from entry (e.g., 500 = 50 pips on EURUSD)
+//   takeProfitPips - Take Profit distance in points from entry (e.g., 1000 = 100 pips on EURUSD)
 //
 // RETURNS:
 //   Position ticket number (uint64), or error if order rejected
 //
 // EXAMPLE:
-//   ticket, _ := sugar.BuyMarketWithPips("EURUSD", 0.1, 50, 100)
-//   // Opens BUY at market, SL = entry - 50 pips, TP = entry + 100 pips
+//   ticket, _ := sugar.BuyMarketWithPips("EURUSD", 0.1, 500, 1000)
+//   // Opens BUY at market, SL = ASK - 500 points (50 pips), TP = ASK + 1000 points (100 pips)
 func (s *MT5Sugar) BuyMarketWithPips(symbol string, volume, stopLossPips, takeProfitPips float64) (uint64, error) {
 	// Calculate SL/TP prices
 	sl, tp, err := s.CalculateSLTP(symbol, "BUY", 0, stopLossPips, takeProfitPips)
@@ -2049,22 +2089,22 @@ func (s *MT5Sugar) BuyMarketWithPips(symbol string, volume, stopLossPips, takePr
 	return s.BuyMarketWithSLTP(symbol, volume, sl, tp)
 }
 
-// SellMarketWithPips opens a SELL position with SL/TP specified in pips (not price!).
-// This is more intuitive than SellMarketWithSLTP - you specify risk/reward in pips
-// and the method calculates exact prices automatically. Uses 10-second timeout.
+// SellMarketWithPips opens a SELL position with SL/TP given as distances in POINTS from the
+// current BID (see the UNITS note above - the name says pips). The method calculates the
+// exact prices with CalculateSLTP and opens the position with SellMarketWithSLTP (30-second timeout).
 //
 // PARAMETERS:
 //   symbol         - Trading symbol (e.g., "EURUSD")
 //   volume         - Lot size (e.g., 0.1)
-//   stopLossPips   - Stop Loss distance in pips from entry (e.g., 50)
-//   takeProfitPips - Take Profit distance in pips from entry (e.g., 100)
+//   stopLossPips   - Stop Loss distance in points from entry (e.g., 500 = 50 pips on EURUSD)
+//   takeProfitPips - Take Profit distance in points from entry (e.g., 1000 = 100 pips on EURUSD)
 //
 // RETURNS:
 //   Position ticket number (uint64), or error if order rejected
 //
 // EXAMPLE:
-//   ticket, _ := sugar.SellMarketWithPips("EURUSD", 0.1, 50, 100)
-//   // Opens SELL at market, SL = entry + 50 pips, TP = entry - 100 pips
+//   ticket, _ := sugar.SellMarketWithPips("EURUSD", 0.1, 500, 1000)
+//   // Opens SELL at market, SL = BID + 500 points (50 pips), TP = BID - 1000 points (100 pips)
 func (s *MT5Sugar) SellMarketWithPips(symbol string, volume, stopLossPips, takeProfitPips float64) (uint64, error) {
 	// Calculate SL/TP prices
 	sl, tp, err := s.CalculateSLTP(symbol, "SELL", 0, stopLossPips, takeProfitPips)
@@ -2111,12 +2151,14 @@ type AccountInfo struct {
 
 // GetAccountInfo retrieves complete account information in one call.
 // This is more efficient than calling individual Get* methods. Perfect for
-// account monitoring dashboards or trading reports. Uses 5-second timeout.
+// account monitoring dashboards or trading reports. Uses one 10-second timeout for the
+// whole call (the summary and the margin/free margin/margin level/profit values).
 //
 // RETURNS:
-//   *AccountInfo structure with all account data, or error if query fails
+//   *AccountInfo structure with all account data, or error if any of the queries fails
+//   (a failed value is reported, never returned as 0)
 func (s *MT5Sugar) GetAccountInfo() (*AccountInfo, error) {
-	ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(s.ctx, 10*time.Second)
 	defer cancel()
 
 	// Use Service layer GetAccountSummary
@@ -2125,11 +2167,23 @@ func (s *MT5Sugar) GetAccountInfo() (*AccountInfo, error) {
 		return nil, fmt.Errorf("GetAccountInfo failed: %w", err)
 	}
 
-	// Get additional fields
-	margin, _ := s.GetMargin()
-	freeMargin, _ := s.GetFreeMargin()
-	marginLevel, _ := s.GetMarginLevel()
-	profit, _ := s.GetProfit()
+	// Get additional fields (same context: the whole call has one 10-second deadline)
+	margin, err := s.service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_MARGIN)
+	if err != nil {
+		return nil, fmt.Errorf("GetAccountInfo failed: margin: %w", err)
+	}
+	freeMargin, err := s.service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_MARGIN_FREE)
+	if err != nil {
+		return nil, fmt.Errorf("GetAccountInfo failed: free margin: %w", err)
+	}
+	marginLevel, err := s.service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_MARGIN_LEVEL)
+	if err != nil {
+		return nil, fmt.Errorf("GetAccountInfo failed: margin level: %w", err)
+	}
+	profit, err := s.service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_PROFIT)
+	if err != nil {
+		return nil, fmt.Errorf("GetAccountInfo failed: profit: %w", err)
+	}
 
 	return &AccountInfo{
 		Login:       summary.Login,
@@ -2145,17 +2199,18 @@ func (s *MT5Sugar) GetAccountInfo() (*AccountInfo, error) {
 	}, nil
 }
 
-// DailyStats holds trading statistics for today.
+// DailyStats holds trading statistics for today (the closed positions GetDealsToday returns:
+// opened since local midnight, see the HISTORY region note).
 // Useful for tracking daily performance and generating reports.
 //
 // FIELDS:
-//   TotalDeals   - Total number of closed deals today
-//   WinningDeals - Number of profitable deals
-//   LosingDeals  - Number of losing deals
-//   WinRate      - Win rate percentage (0-100)
-//   TotalProfit  - Total realized profit/loss today
-//   BestDeal     - Largest profitable deal
-//   WorstDeal    - Largest losing deal
+//   TotalDeals   - Number of those closed positions
+//   WinningDeals - Number with Profit > 0
+//   LosingDeals  - Number with Profit < 0
+//   WinRate      - WinningDeals / TotalDeals * 100 (0-100)
+//   TotalProfit  - Sum of their Profit (commission, swap and fee not included)
+//   BestDeal     - Largest Profit (0 if none was profitable)
+//   WorstDeal    - Smallest (most negative) Profit (0 if none lost)
 type DailyStats struct {
 	TotalDeals   int
 	WinningDeals int
@@ -2166,9 +2221,9 @@ type DailyStats struct {
 	WorstDeal    float64
 }
 
-// GetDailyStats calculates trading statistics for today (00:00 to now).
-// This analyzes all closed positions from today and provides performance metrics.
-// Perfect for daily reports and performance tracking. Uses 5-second timeout.
+// GetDailyStats calculates trading statistics for today: the closed positions opened
+// between local midnight (time.Local) and now, as GetDealsToday returns them.
+// Perfect for daily reports and performance tracking. Uses 15-second timeout.
 //
 // RETURNS:
 //   *DailyStats structure with today's performance, or error if query fails

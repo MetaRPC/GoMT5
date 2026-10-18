@@ -1,12 +1,12 @@
 # 📅📆 Get Deals This Month (`GetDealsThisMonth`)
 
-> **Sugar method:** Returns closed positions ("deals") that were **opened** this month (1st day 00:00 to now).
+> **Sugar method:** Returns closed positions ("deals") that were **opened** this month (the 1st, 00:00 local, to now).
 
 **API Information:**
 
 * **Method:** `sugar.GetDealsThisMonth()`
 * **Timeout:** 30 seconds
-* **Returns:** Slice of position history info, sorted by open time (oldest first)
+* **Returns:** Slice of position history info (one entry per closed position), sorted by open time (oldest first)
 
 ---
 
@@ -16,14 +16,25 @@
 func (s *MT5Sugar) GetDealsThisMonth() ([]*pb.PositionHistoryInfo, error)
 ```
 
-How it works: the 1st of the current month 00:00 (your machine's clock) and `time.Now()` are passed to
-`MT5Service.GetPositionsHistory(ctx, pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_ASC, &startOfMonth, &now, nil, nil)`.
-The range is sent as `PositionOpenTimeFrom` / `PositionOpenTimeTo`, so it filters by the position's **open** time:
-a position opened last month and closed this month is not included. No paging parameters are sent.
+How it works:
 
-**Time zone note:** the boundaries come from your local clock and are sent as absolute instants in the request fields that
-the server reads as broker server time. If your machine, UTC and the broker server use different time zones, the window is
-shifted accordingly - use `GetDealsDateRange()` when you need exact boundaries.
+```go
+func (s *MT5Sugar) GetDealsThisMonth() ([]*pb.PositionHistoryInfo, error) {
+    now := time.Now()
+    startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+    return s.positionsOpenedBetween(startOfMonth, now, 30*time.Second)
+}
+```
+
+`positionsOpenedBetween` reads `PositionsHistory` (sorted by open time) with **cursor paging** - page size
+1000, `PageToken` = the previous `NextPageToken` - until the last page, so long ranges are complete. The range filters by the position's **open** time:
+a position opened last month and closed this month is not included. Still-open positions are not in the list.
+The timeout covers all pages together.
+
+**Time zone note:** the month is the calendar month of the computer running the program (`time.Local`): the 1st, 00:00
+local, to now. The window is sent in the request's UTC fields (`PositionOpenTimeFromUtc` /
+`PositionOpenTimeToUtc`), so the broker's time zone does not shift it. If you want the broker's month instead, run the
+program with `TZ` set to the broker's time zone or pass explicit boundaries to `GetDealsDateRange()`.
 
 ---
 
@@ -36,7 +47,7 @@ shifted accordingly - use `GetDealsDateRange()` when you need exact boundaries.
 | Output | Type | Description |
 |--------|------|-------------|
 | `[]*pb.PositionHistoryInfo` | slice | Closed positions opened this month |
-| `error` | `error` | `"GetPositionsHistory failed: ..."` if retrieval failed |
+| `error` | `error` | `"PositionsHistory failed: ..."` if a page query failed (or the timeout expired) |
 
 ---
 
@@ -647,7 +658,7 @@ fmt.Printf("Daily average: $%.2f\n", dailyAvg)
 
 ```go
 // ❌ WRONG - assuming "this month" is the broker's month of CLOSED trades
-// The range is computed from YOUR machine's clock and matched against OPEN time:
+// The range is the calendar month of YOUR computer and is matched against OPEN time:
 // a position opened on the 31st of last month and closed today is missing
 deals, _ := sugar.GetDealsThisMonth()
 
@@ -672,15 +683,17 @@ if len(deals) > 0 {
 
 ## 💎 Pro Tips
 
-1. **Month starts 1st** - Always starts from 1st day 00:00:00 (local clock)
+1. **Month starts 1st** - Always starts from 1st day 00:00:00 (local calendar)
 
 2. **Incomplete data** - Mid-month calls return partial month
 
-3. **Performance** - 30-second timeout (longer than day/week queries)
+3. **Performance** - 30-second timeout (longer than the 15 s of day/week queries)
 
 4. **Empty OK** - Returns empty slice if no trades (not error)
 
 5. **Auto-range** - Automatically calculates from 1st to now
+
+6. **Profit field only** - `Profit` does not include commission, swap or fee
 
 ---
 
@@ -689,10 +702,10 @@ if len(deals) > 0 {
 ```
 Month range calculation:
 now = time.Now()
-startOfMonth = Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+startOfMonth = Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())  // time.Local
 
 Returns closed positions whose OPEN time is between startOfMonth and now
-(PositionOpenTimeFrom / PositionOpenTimeTo), sorted by open time ascending
+(sent as PositionOpenTimeFromUtc / PositionOpenTimeToUtc), sorted by open time ascending
 ```
 
 ---

@@ -21,13 +21,13 @@
    - NOT recommended for beginners
 
 3. **SCALE OUT MODE** (Profit protection):
-   - Partially closes a position once its profit (measured from the base entry) reaches `TriggerDistance`
+   - Partially closes the largest position at profit levels `TriggerDistance` apart (first level: `TriggerDistance` from the base entry, each next one `TriggerDistance` beyond the previous scale-out)
    - Takes partial profits while letting remainder run
    - Reduces risk exposure over time
    - Secures gains while maintaining market exposure
    - Best for volatile markets or profit protection
 
-> **The scaler does not open the base position.** It only works on positions that are already open (opened by you or another program). Positions are grouped per symbol: the first position seen for a symbol becomes the group's base (`BaseTicket`, `BasePrice`, direction), and all profit/loss checks are measured from that base entry.
+> **Base position.** In Pyramiding and AveragingDown mode the scaler opens a **BUY** base position of `InitialLotSize` for each symbol listed in `Symbols` that has no open position - once per run (the example has no entry signal, so the base is always a BUY). With `InitialLotSize: 0`, in ScaleOut mode, or with an empty `Symbols` list (= all symbols) it opens nothing and only works on positions that are already open (opened by you or another program). Positions are grouped per symbol: the oldest position (lowest ticket) of a symbol is the group's base (`BaseTicket`, `BasePrice`, direction), the group's size counts the symbol's positions in that direction, and all profit/loss checks are measured from the base entry.
 
 **File**: `examples/demos/orchestrators/12_position_scaler.go`
 
@@ -44,14 +44,14 @@ POSITION SCALER ORCHESTRATOR
     |
 MT5Sugar Instance
     |
-    |  |  |  |
-GetOpenPositions  GetPriceInfo  Buy/SellMarketWithSLTP  GetPositionsBySymbol + ClosePositionPartial
-(monitoring)      (tracking)    (scaling in)            (scaling out)
+    |  |  |  |  |
+GetOpenPositions  GetSymbolInfo  GetPriceInfo  BuyMarket / Buy/SellMarketWithSLTP     GetPositionsBySymbol + ClosePosition(Partial)
+(monitoring)      (point, volume) (tracking)   (base position / scaling in)          (scaling out)
 ```
 
 ### Dependencies
 
-- **MT5Sugar**: High-level convenience API (`GetOpenPositions`, `GetPriceInfo`, `BuyMarketWithSLTP`, `SellMarketWithSLTP`, `GetPositionsBySymbol`, `ClosePositionPartial`)
+- **MT5Sugar**: High-level convenience API (`GetOpenPositions`, `GetSymbolInfo`, `GetPriceInfo`, `BuyMarket`, `BuyMarketWithSLTP`, `SellMarketWithSLTP`, `GetPositionsBySymbol`, `ClosePosition`, `ClosePositionPartial`)
 - **BaseOrchestrator**: Foundation pattern with metrics tracking and lifecycle management
 - **protobuf types**: `pb.PositionInfo` for position data structures
 
@@ -62,22 +62,22 @@ GetOpenPositions  GetPriceInfo  Buy/SellMarketWithSLTP  GetPositionsBySymbol + C
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `Mode` | ScalingMode | `Pyramiding` | Scaling strategy (Pyramiding/AveragingDown/ScaleOut) |
-| `TriggerDistance` | float64 | `200` | Points moved to trigger next scale |
+| `TriggerDistance` | float64 | `200` | Points the price must move for the next scale: from the base entry for the first, from the last scale price for the next ones (must be > 0) |
 | `MinProfitToScale` | float64 | `100` | Min profit before scaling (pyramiding mode) |
-| `MaxLossToAverage` | float64 | `500` | Max loss before stopping averaging (critical safety) |
-| `InitialLotSize` | float64 | `0.10` | Declared "initial position size", but **not read by the current code** (the scaler never opens the base position) |
-| `ScaleLotSize` | float64 | `0.05` | Size for each scale-in operation |
-| `MaxScales` | int | `3` | Maximum number of scale operations (scale-ins, or partial closes in ScaleOut mode) |
-| `ReducePerScale` | float64 | `0.0` | If > 0: next size = `ScaleLotSize × (1 − ReducePerScale × ScaleCount)` |
-| `TotalMaxLotSize` | float64 | `1.0` | Maximum total position size across all scales |
-| `ScaleOutPercent` | float64 | `0.33` | Fraction of the position to close at each scale-out (volume is not rounded to the volume step) |
-| `StopLossPerScale` | float64 | `150` | SL distance in points for each scale-in |
+| `MaxLossToAverage` | float64 | `500` | Max loss before stopping averaging (critical safety; must be > 0 in AveragingDown mode) |
+| `InitialLotSize` | float64 | `0.10` | Size of the BUY base position opened for a listed symbol without a position (once per run; 0 = only manage existing positions; not used in ScaleOut mode) |
+| `ScaleLotSize` | float64 | `0.05` | Size for each scale-in operation (must be > 0 for the scale-in modes) |
+| `MaxScales` | int | `3` | Maximum number of scale operations (scale-ins, or partial closes in ScaleOut mode; must be > 0) |
+| `ReducePerScale` | float64 | `0.0` | If > 0: next size = `ScaleLotSize × (1 − ReducePerScale × ScaleCount)` (0 to < 1) |
+| `TotalMaxLotSize` | float64 | `1.0` | Maximum total size of the symbol's positions in the base direction (must be > 0 for the scale-in modes) |
+| `ScaleOutPercent` | float64 | `0.33` | Fraction of the largest position to close at each scale-out (0 to 1) |
+| `StopLossPerScale` | float64 | `150` | SL distance in points for each scale-in (at least the symbol's stops level; 0 = no SL) |
 | `Symbols` | []string | `[]string{symbol}` | Symbols to manage (empty = all symbols) |
-| `CheckInterval` | time.Duration | `5s` | How often to check for scaling opportunities |
+| `CheckInterval` | time.Duration | `5s` | How often to check for scaling opportunities (0 = 5 s) |
 
-Defaults are those of `orchestrators.DefaultPositionScalerConfig(symbol string)`.
+Defaults are those of `orchestrators.DefaultPositionScalerConfig(symbol string)`. `Start()` validates the configuration: a `CheckInterval` of 0 becomes 5 s, values that cannot work (see the table) return an `invalid configuration` error instead of starting.
 
-> **Point size:** all distances are in points, and the scaler does not query the symbol's point size: `getSymbolPoint()` caches a hard-coded `0.00001` (5-digit symbol) for every symbol. Distances are therefore only correct for 5-digit symbols such as EURUSD.
+> **Point size and volumes:** all distances are in points of the symbol. The scaler reads the point size, digits, stops level and volume limits once per symbol with `sugar.GetSymbolInfo(symbol)`, so 200 points are 0.00200 on EURUSD, 0.200 on USDJPY and 2.00 on XAUUSD. Every volume is rounded down to the symbol's volume step; a size below the minimum volume is not traded. SL prices are rounded to the symbol's digits.
 
 ### Configuration Example
 
@@ -87,7 +87,7 @@ config := orchestrators.PositionScalerConfig{
     Mode:             orchestrators.Pyramiding,
     TriggerDistance:  200,           // Scale every 200 points
     MinProfitToScale: 100,           // Activate after +100 points profit
-    InitialLotSize:   0.10,          // Not read by the current code
+    InitialLotSize:   0.10,          // BUY base position if EURUSD has none
     ScaleLotSize:     0.05,          // Add 0.05 lots each scale
     MaxScales:        3,             // Maximum 3 additional positions
     TotalMaxLotSize:  1.0,           // Total max 1.0 lots
@@ -116,7 +116,7 @@ go run main.go 12
 go run main.go scaler
 ```
 
-Both commands will launch the **PositionScaler** orchestrator with the configuration specified in `main.go -> RunOrchestrator_PositionScaler()` (Pyramiding mode on `cfg.TestSymbol`). The runner runs the scaler for 5 minutes (300 s), then calls `Stop()` and prints the final metrics. Open a position on that symbol yourself - the scaler only adds to existing positions.
+Both commands will launch the **PositionScaler** orchestrator with the configuration specified in `main.go -> RunOrchestrator_PositionScaler()` (Pyramiding mode on `cfg.TestSymbol`). The runner runs the scaler for 5 minutes (300 s), then calls `Stop()` and prints the final metrics; the runner then disconnects the terminal - it does so however the run ends, also on an error or Ctrl+C. Each orchestrator also cancels its own context on Ctrl+C / SIGTERM, so a program of yours that waits on `GetContext()` can call `Stop()` and disconnect. If the symbol has no position, the first check opens a 0.10-lot BUY base position (`InitialLotSize`); the scaler adds to it once the price has moved `TriggerDistance` in its favour. Positions stay open when the scaler stops.
 
 ---
 
@@ -131,66 +131,75 @@ Initialize PositionScaler
   |
 Create empty position group tracker
   |
+Start(): validate config (CheckInterval 0 -> 5s; invalid values -> error)
+  |
 MONITORING LOOP (every CheckInterval):
   | Get all open positions
   |
+  BASE POSITION (Pyramiding / AveragingDown, InitialLotSize > 0):
+    | Listed symbol without a position and no base opened for it in this run?
+    |   -> BuyMarket(symbol, InitialLotSize rounded to the volume step); end this check
+  |
   UPDATE GROUPS (one PositionGroup per symbol):
     | Skip positions whose symbol is not tracked (if Symbols list specified)
-    | First position seen for a symbol -> new group (base ticket, base price, direction)
-    | Recalculate total lot size for each symbol
+    | Oldest position (lowest ticket) of a symbol = base -> group (base ticket, base price, direction)
+    | A new base ticket starts a new group (ScaleCount 0)
+    | Total lot size = the symbol's positions in the base direction
     | Remove groups whose symbol has no open position any more
   |
   FOR each group: Should we scale this group?
       |
       | Check 1: Have we reached MaxScales? -> YES: Skip
-      | Check 2: Would total exceed TotalMaxLotSize? -> YES: Skip
+      | Check 2 (scale-in modes): would total exceed TotalMaxLotSize,
+      |          or is the next size below the minimum volume? -> YES: Skip
       | Check 3: Get current price; profit in points vs BASE price
-      |          (BUY: Bid - BasePrice, SELL: BasePrice - Ask)
+      |          (BUY: Bid - BasePrice, SELL: BasePrice - Ask), point from GetSymbolInfo
+      |          and the favourable move since the last scale (no scale yet: = profit)
       |
       | MODE-SPECIFIC CHECKS:
       |
       | PYRAMIDING MODE:
       |   | Is profit >= MinProfitToScale? -> NO: Skip
-      |   | First scale: profit >= TriggerDistance? -> NO: Skip
-      |   | Later scales: moved TriggerDistance from last scale price? -> NO: Skip
+      |   | Moved TriggerDistance in our favour since the last scale (or the base entry)? -> NO: Skip
       |   | YES -> SCALE IN (open additional position)
       |
       | AVERAGING DOWN MODE:
       |   | Is position in loss? -> NO: Skip
       |   | Is loss <= MaxLossToAverage? -> NO: Skip (safety)
-      |   | First scale: loss >= TriggerDistance? -> NO: Skip
-      |   | Later scales: moved TriggerDistance against last scale price? -> NO: Skip
+      |   | Moved TriggerDistance against us since the last scale (or the base entry)? -> NO: Skip
       |   | YES -> SCALE IN (open additional position at better price)
       |
       | SCALE OUT MODE:
-      |   | Is profit (from base) >= TriggerDistance? -> NO: Skip
-      |   | YES -> SCALE OUT (close ScaleOutPercent of position)
+      |   | Moved TriggerDistance in our favour since the last scale-out (or the base entry)? -> NO: Skip
+      |   | YES -> SCALE OUT (close ScaleOutPercent of the largest position)
       |
   FOR SCALE IN operation:
-    | Calculate next scale lot size
+    | Calculate next scale lot size, round down to the volume step
     | Get current price
-    | Calculate stop loss for scale-in (BUY: Bid - StopLossPerScale*point,
-    |                                   SELL: Ask + StopLossPerScale*point), TP = 0
+    | Calculate stop loss for scale-in (distance = max(StopLossPerScale, stops level);
+    |   BUY: Bid - distance*point, SELL: Ask + distance*point; none if StopLossPerScale = 0), TP = 0
     | BuyMarketWithSLTP / SellMarketWithSLTP
-    | LastScalePrice = Ask (BUY) / Bid (SELL)
+    | LastScalePrice = Bid (BUY) / Ask (SELL) - the price the moves are measured with
     | Add ticket to PositionGroup.ScaleTickets
     | Increment PositionGroup.ScaleCount
     | Update PositionGroup.TotalLotSize
     | Update metrics
   |
   FOR SCALE OUT operation:
-    | GetPositionsBySymbol, take the FIRST position returned
-    | Calculate close volume (its volume × ScaleOutPercent, not rounded)
-    | ClosePositionPartial
+    | GetPositionsBySymbol, take the LARGEST position in the group's direction
+    | Close volume = its volume × ScaleOutPercent, rounded down to the volume step
+    |   (the whole position if the rest would be below the minimum volume)
+    | ClosePositionPartial (or ClosePosition for the whole position)
+    | LastScalePrice = current Bid (BUY) / Ask (SELL): the next level is TriggerDistance beyond
     | Update PositionGroup.ScaleCount
     | Update PositionGroup.TotalLotSize
     | Update metrics
   |
-REPEAT until stopped
+REPEAT until stopped (Stop() or Ctrl+C)
   |
 ON STOP:
-  | Cancel monitoring loop
-  | Clear all position groups
+  | Cancel monitoring loop and wait for a check in progress
+  | Clear all position groups (positions stay open)
   |
 END
 ```
@@ -199,7 +208,7 @@ END
 
 #### 1. Initialization
  
-> Lines `194–202`  
+> Lines `232–241`  
 > `examples/demos/orchestrators/12_position_scaler.go`
 
 
@@ -210,7 +219,8 @@ func NewPositionScaler(sugar *mt5.MT5Sugar, config PositionScalerConfig) *Positi
         sugar:            sugar,
         config:           config,
         trackedGroups:    make(map[string]*PositionGroup),
-        symbolPoints:     make(map[string]float64),
+        symbolSpecs:      make(map[string]symbolSpec),
+        baseOpened:       make(map[string]bool),
     }
 }
 ```
@@ -220,25 +230,27 @@ func NewPositionScaler(sugar *mt5.MT5Sugar, config PositionScalerConfig) *Positi
 - Creates new scaler instance with provided configuration
 - Initializes empty position group tracker (maps symbol to PositionGroup)
 - Each symbol gets one PositionGroup tracking all related positions
-- The point cache is filled by `getSymbolPoint()` with a hard-coded `0.00001` for every symbol (the symbol is not queried)
+- `symbolSpecs` caches point size, digits, stops level and volume limits per symbol, read once with `sugar.GetSymbolInfo(symbol)`
+- `baseOpened` remembers for which symbols this run already tried to open the base position
 
 **PositionGroup structure**:
 ```go
 type PositionGroup struct {
     Symbol         string    // Symbol being traded
     IsBuy          bool      // Direction (true=BUY, false=SELL)
-    BaseTicket     uint64    // Original position ticket
-    ScaleTickets   []uint64  // Tickets of scale-in positions
+    BaseTicket     uint64    // Original position ticket (the oldest position of the symbol)
+    ScaleTickets   []uint64  // Tickets of scale-in positions (or of the positions scaled out)
     BasePrice      float64   // Entry price of base position
-    TotalLotSize   float64   // Total position size across all scales
+    TotalLotSize   float64   // Total size of the symbol's positions in the base direction
     ScaleCount     int       // Number of scales executed
-    LastScalePrice float64   // Price of last scale-in
+    LastScalePrice float64   // Price of last scale (0 = none yet)
     LastScaleTime  time.Time // When last scaled
 }
 ```
 
 #### 2. Starting the Scaler
 
+> Lines `244–262`
 
 ```go
 func (p *PositionScaler) Start() error {
@@ -246,15 +258,16 @@ func (p *PositionScaler) Start() error {
         return fmt.Errorf("position scaler already running")
     }
 
-    // Create context
-    ctx, cancel := context.WithCancel(context.Background())
-    p.SetContext(ctx, cancel)
+    // Validate configuration (applies the default CheckInterval)
+    if err := p.config.validate(); err != nil {
+        return fmt.Errorf("invalid configuration: %w", err)
+    }
 
-    // Mark as started
-    p.MarkStarted()
+    // Create context, mark as started, stop on Ctrl+C
+    p.begin()
 
     // Start monitoring loop
-    go p.monitorLoop()
+    p.goLoop(p.monitorLoop)
 
     return nil
 }
@@ -263,13 +276,14 @@ func (p *PositionScaler) Start() error {
 **What happens**:
 
 - Checks if already running (prevents duplicate starts)
-- Creates cancellable context for graceful shutdown
-- Marks orchestrator as started in metrics
-- Launches monitoring loop in separate goroutine
+- Validates the configuration (`CheckInterval` 0 becomes 5 s - a zero interval would make `time.NewTicker` panic; values that cannot work are an error)
+- `begin()` creates the cancellable context, marks the orchestrator as started and cancels the context on Ctrl+C / SIGTERM
+- `goLoop()` launches the monitoring loop in a goroutine that `Stop()` waits for
 - Returns immediately (non-blocking)
 
 #### 3. Monitoring Loop
 
+> Lines `285–297`
 
 ```go
 func (p *PositionScaler) monitorLoop() {
@@ -291,88 +305,51 @@ func (p *PositionScaler) monitorLoop() {
 
 1. **Ticker triggers**: Every 5 seconds by default
 2. **Context check**: Monitors for stop signal
-3. **Check opportunities**: Calls `checkScalingOpportunities()` to process positions
-4. **Graceful exit**: Stops cleanly when context is cancelled
+3. **Check opportunities**: Calls `checkScalingOpportunities()`, which first opens a missing base position (once per symbol and run), then updates the groups and scales them
+4. **Graceful exit**: Stops cleanly when context is cancelled (`Stop()` or Ctrl+C); `Stop()` waits for a check in progress
 
 #### 4. Scaling Decision Logic
 
 
-`shouldScale()` (lines 333-437) first returns `false` when `ScaleCount >= MaxScales` or when `TotalLotSize + nextScaleSize > TotalMaxLotSize`, then computes `profitPoints` from the group's base price (BUY: `(Bid - BasePrice) / point`, SELL: `(BasePrice - Ask) / point`) and switches on the mode:
+`shouldScale()` (lines 439-511) first returns `false` when `ScaleCount >= MaxScales`, or (scale-in modes) when the next size rounded to the volume step is 0 or `TotalLotSize + nextScaleSize > TotalMaxLotSize`. It then computes `profitPoints` from the group's base price (BUY: `(Bid - BasePrice) / point`, SELL: `(BasePrice - Ask) / point`, `point` from `GetSymbolInfo`) and the favourable move since the last scale:
 
-**For Pyramiding Mode** (lines 371-396):
 ```go
-	case Pyramiding:
-		// For pyramiding: position must be in profit
-		if profitPoints < p.config.MinProfitToScale {
-			return false
-		}
-
-		// Check if price moved enough from last scale
-		if group.ScaleCount > 0 {
-			priceMove := 0.0
-			if group.IsBuy {
-				priceMove = (currentPrice - group.LastScalePrice) / point
-			} else {
-				priceMove = (group.LastScalePrice - currentPrice) / point
-			}
-
-			if priceMove < p.config.TriggerDistance {
-				return false
-			}
+	// Favourable move since the last scale (no scale yet: since the base entry)
+	moveSinceLast := profitPoints
+	if group.ScaleCount > 0 {
+		if group.IsBuy {
+			moveSinceLast = (currentPrice - group.LastScalePrice) / point
 		} else {
-			// First scale: check distance from base
-			if profitPoints < p.config.TriggerDistance {
-				return false
-			}
+			moveSinceLast = (group.LastScalePrice - currentPrice) / point
 		}
-
-		return true
+	}
 ```
 
-**For Averaging Down Mode** (lines 398-426):
+and switches on the mode (lines 490-508):
+
 ```go
+	switch p.config.Mode {
+	case Pyramiding:
+		// For pyramiding: position must be in profit and the price must have moved
+		// TriggerDistance in our favour since the last scale (first scale: since the base entry)
+		return profitPoints >= p.config.MinProfitToScale && moveSinceLast >= p.config.TriggerDistance
+
 	case AveragingDown:
 		// For averaging: position must be in loss but not too much
-		if profitPoints > 0 {
+		if profitPoints > 0 || -profitPoints > p.config.MaxLossToAverage {
 			return false
 		}
+		// ... and the price must have moved TriggerDistance against us since the last average
+		return -moveSinceLast >= p.config.TriggerDistance
 
-		if -profitPoints > p.config.MaxLossToAverage {
-			return false
-		}
-
-		// Check if price moved enough from last average
-		if group.ScaleCount > 0 {
-			priceMove := 0.0
-			if group.IsBuy {
-				priceMove = (group.LastScalePrice - currentPrice) / point
-			} else {
-				priceMove = (currentPrice - group.LastScalePrice) / point
-			}
-
-			if priceMove < p.config.TriggerDistance {
-				return false
-			}
-		} else {
-			if -profitPoints < p.config.TriggerDistance {
-				return false
-			}
-		}
-
-		return true
-```
-
-**For Scale Out Mode** (lines 428-433):
-```go
 	case ScaleOut:
-		// For scale-out: check if profit target reached
-		if profitPoints < p.config.TriggerDistance {
-			return false
-		}
-		return true
+		// For scale-out: each level is TriggerDistance beyond the previous one
+		// (first level: TriggerDistance from the base entry)
+		return moveSinceLast >= p.config.TriggerDistance
+	}
 ```
 
-> Note: `MaxLossToAverage` is measured from the base entry only, and it only stops further averaging - it does not close anything. In ScaleOut mode the profit is always measured from the base price and no "last scale-out price" is kept, so once the profit reaches `TriggerDistance` the scaler partially closes again on every check until `MaxScales` is reached.
+> Note: `MaxLossToAverage` is measured from the base entry only, and it only stops further averaging - it does not close anything. `LastScalePrice` is recorded with the same price the moves are checked with (Bid for BUY groups, Ask for SELL groups), so the spread does not add to the trigger distance. In ScaleOut mode `LastScalePrice` is the price of the last partial close, so the levels are `TriggerDistance` apart (e.g. +300 / +600 / +900).
 
 ---
 
@@ -387,7 +364,7 @@ func (p *PositionScaler) monitorLoop() {
 - MinProfitToScale: 100 points
 - ScaleLotSize: 0.05 lots
 - MaxScales: 3
-- Prices ignore the spread: a BUY scale price is recorded as the Ask while the move is checked on the Bid, so each later trigger needs TriggerDistance plus the spread
+- Prices in the example are Bid prices: the moves are checked on the Bid and the scale price is recorded as the Bid (a BUY fills at the Ask, one spread higher)
 
 ```
 TIME 0: Initial Position Opened
@@ -548,9 +525,9 @@ This is why MaxLossToAverage and MaxScales are CRITICAL safety parameters!
 
 **Configuration**:
 
-- Entry: 1.10000 BUY EURUSD 0.40 lots (opened by you)
+- Entry: 1.10000 BUY EURUSD 0.40 lots (opened by you - ScaleOut mode opens no base position)
 - TriggerDistance: 300 points
-- ScaleOutPercent: 0.50 (50% - chosen so every close volume is a multiple of 0.01)
+- ScaleOutPercent: 0.50 (50%)
 - MaxScales: 3
 - CheckInterval: 5s
 
@@ -560,50 +537,63 @@ TIME 0: Large Position Opened
 Price:        1.10000 (Entry)
 Position:     0.40 lots
 Profit:       0 points
-Status:       Waiting for profit target (+300pts from entry)
+Status:       Waiting for the first level (+300pts from entry)
 
 TIME 1: Check at 1.10300 (FIRST SCALE OUT)
 
 Price:        1.10300
-Profit:       +300 points (from base entry)
-Action:       SCALE OUT! Close 50% of the first position
+Move:         +300 points from the base entry
+Action:       SCALE OUT! Close 50% of the largest position
 Close:        0.40 × 0.50 = 0.20 lots CLOSED
 Locked Profit: 0.20 lots × 300pts = +$60 SECURED
 Remaining:    0.20 lots still open
+Next level:   1.10300 + 300pts = 1.10600
 
-TIME 2: Next check, 5 s later, price 1.10310 (SECOND SCALE OUT)
+TIME 2: Next check, 5 s later, price 1.10310
 
 Price:        1.10310
-Profit:       +310 points from base - still >= TriggerDistance
-Action:       SCALE OUT again (no new +300pts move is required:
-              the profit is always measured from the base entry)
+Move:         +10 points since the last scale-out - below TriggerDistance
+Action:       none
+
+TIME 3: Price reaches 1.10600 (SECOND SCALE OUT)
+
+Price:        1.10600
 Close:        0.20 × 0.50 = 0.10 lots CLOSED
-Locked Profit: 0.10 lots × 310pts = +$31 SECURED
+Locked Profit: 0.10 lots × 600pts = +$60 SECURED
 Remaining:    0.10 lots still open
+Next level:   1.10900
 
-TIME 3: Next check, price 1.10305 (THIRD SCALE OUT)
+TIME 4: Price reaches 1.10900 (THIRD SCALE OUT)
 
-Price:        1.10305
+Price:        1.10900
 Close:        0.10 × 0.50 = 0.05 lots CLOSED
-Locked Profit: 0.05 lots × 305pts = ~+$15 SECURED
+Locked Profit: 0.05 lots × 900pts = +$45 SECURED
 Remaining:    0.05 lots still open
-Total Locked: $60 + $31 + $15 = ~$106 secured
+Total Locked: $60 + $60 + $45 = $165 secured
 Status:       MAX SCALES REACHED (3/3) - no more scale-outs
 
 RESULT:
-  - Three partial closes on three consecutive checks (about 15 s apart
-    in total), all at roughly +300pts
-  - The scale-outs are NOT spaced TriggerDistance apart: to take profits
-    at +300 / +600 / +900 you would have to change the code (for example
-    track a last scale-out price, as the scale-in modes do)
+  - Three partial closes at +300 / +600 / +900 points
   - 0.05 lots stay open for further gains
-  - With ScaleOutPercent 0.33 and 0.30 lots the close volume would be
-    0.099 lots: it is sent unrounded and the broker can reject it
+  - Close volumes are rounded down to the volume step: with
+    ScaleOutPercent 0.33 and 0.30 lots the scaler closes 0.09 lots
+    (not 0.099); when the rest would be below the minimum volume
+    the whole position is closed
 ```
 
 ---
 
 ## Used MT5Sugar Methods
+
+### 0. GetSymbolInfo and BuyMarket
+
+```go
+func (s *MT5Sugar) GetSymbolInfo(symbol string) (*SymbolInfo, error)
+func (s *MT5Sugar) BuyMarket(symbol string, volume float64) (uint64, error)
+```
+
+- `GetSymbolInfo` is read once per symbol: `Point` converts the point distances into prices, `Digits` rounds SL prices, `StopLevel` is the minimum SL distance, `VolumeMin`/`VolumeStep`/`VolumeMax` round every volume
+- `BuyMarket` opens the BUY base position of `InitialLotSize` for a listed symbol without a position (once per run)
 
 ### 1. GetOpenPositions
 
@@ -651,9 +641,9 @@ func (s *MT5Sugar) SellMarketWithSLTP(symbol string, volume, sl, tp float64) (ui
 
 - Called when scaling into position (Pyramiding or Averaging Down)
 - Opens additional position with calculated lot size
-- Sets stop loss based on StopLossPerScale parameter (BUY: Bid - StopLossPerScale*point, SELL: Ask + StopLossPerScale*point)
+- Sets stop loss based on StopLossPerScale parameter (BUY: Bid - distance*point, SELL: Ask + distance*point, distance = max(StopLossPerScale, stops level); no SL when StopLossPerScale is 0)
 - TP is always 0 for scale-ins
-- Volume and prices are sent as given (MT5Sugar does not round them)
+- MT5Sugar sends volume and prices as given, so the scaler rounds them first (volume down to the volume step, SL to the symbol's digits)
 
 **Parameters**:
 
@@ -675,23 +665,25 @@ func (s *MT5Sugar) GetPositionsBySymbol(symbol string) ([]*pb.PositionInfo, erro
 **Usage in PositionScaler**:
 
 - Used in Scale Out mode to find positions to close
-- The scaler partially closes the FIRST position in the returned slice (`positions[0]`) - it does not search for the largest one
+- The scaler picks the LARGEST position in the group's direction
 - Returns the open positions filtered by symbol (nil slice when none)
 
 **Returns**: Slice of positions for the symbol
 
-### 5. ClosePositionPartial
+### 5. ClosePositionPartial / ClosePosition
 
 ```go
 func (s *MT5Sugar) ClosePositionPartial(ticket uint64, volume float64) error
+func (s *MT5Sugar) ClosePosition(ticket uint64) error
 ```
 
-**Purpose**: Closes a partial amount of a position.
+**Purpose**: Closes a partial amount of a position / the whole position.
 
 **Usage in PositionScaler**:
 
-- Core method for Scale Out mode
-- Closes `ScaleOutPercent` of the first position's volume (the volume is sent as calculated, not rounded to the symbol's volume step - a value like 0.30 × 0.33 = 0.099 can be rejected by the broker)
+- Core methods for Scale Out mode
+- Closes `ScaleOutPercent` of the largest position's volume, rounded down to the symbol's volume step (0.30 × 0.33 = 0.099 becomes 0.09)
+- `ClosePosition` is used instead when the rest would be below the minimum volume (or the rounded volume is 0)
 - Allows gradual profit taking while maintaining exposure
 
 **Parameters**:
@@ -748,7 +740,7 @@ func (s *MT5Sugar) ClosePositionPartial(ticket uint64, volume float64) error
 
    - Too small TriggerDistance -> too many scales
    - **Solution**: Match TriggerDistance to symbol volatility
-   - Example: EURUSD 200pts (the point size is hard-coded to 0.00001, so non-5-digit symbols need a code change first)
+   - Example: EURUSD 200pts (= 0.00200; the point size is read from each symbol, so 200 points are 2.00 on XAUUSD)
 
 4. **Capital Requirements**:
 
@@ -806,8 +798,8 @@ StopLossPerScale: 150,
 
 ```go
 Mode:             ScaleOut,
-TriggerDistance:  200,     // Start once profit from entry >= 200pts (then one close per check)
-ScaleOutPercent:  0.25,    // Close 25% of the first position each time
+TriggerDistance:  200,     // Close at +200 / +400 / +600 / +800pts
+ScaleOutPercent:  0.25,    // Close 25% of the largest position each time
 MaxScales:        4,       // At most 4 partial closes
 ```
 

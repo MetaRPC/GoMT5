@@ -5,7 +5,7 @@
 **API Information:**
 
 * **Method:** `sugar.GetPositionsBySymbol(symbol)`
-* **Timeout:** 5 seconds (it calls `GetOpenPositions()` and filters the result in Go)
+* **Timeout:** 10 seconds (it calls `GetOpenPositions()` and filters the result in Go)
 * **Returns:** Slice of `*pb.PositionInfo` structures
 
 ---

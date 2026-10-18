@@ -57,7 +57,7 @@ After the order is opened (`OrderSend()` returned `sendData.Price`), stop levels
 * **StopLoss** is set 10 pips below the opening price;
 * **TakeProfit** — 20 pips above.
 
-`pipSize` — size of one pip (for EURUSD = 0.0001).
+`pipSize` — size of one pip, computed in step 2.2 from the symbol's `SYMBOL_POINT` and `SYMBOL_DIGITS` (EURUSD: 0.0001).
 
 > 💡 This way we programmatically set protection levels and profit targets.
 

@@ -74,8 +74,8 @@ Automatically moves stop-loss orders to protect profits as price moves favorably
 * Activates after profit threshold is reached
 * Trails stop-loss behind price (never moves unfavorably)
 * Handles multiple positions simultaneously
-* Runs in the background until `Stop()` is called
-* Point size is hard-coded to 0.00001 (5-digit symbols)
+* Runs in the background until `Stop()` is called (or Ctrl+C)
+* Distances in points of each symbol (point size read with `GetSymbolInfo`); the SL is never closer than `MinDistance` or the broker's stops level
 
 ### Configuration Example
 
@@ -131,7 +131,7 @@ Adds to winning or losing positions based on the configured mode (Pyramiding, Av
 * Configurable trigger distances
 * Maximum scale limits
 * Fixed scale lot size, optionally reduced per scale (`ReducePerScale`)
-* Works on positions that are already open (it never opens the base position)
+* Opens a BUY base position of `InitialLotSize` for a listed symbol without a position (once per run; 0 = only existing positions); scale-outs are `TriggerDistance` apart and close part of the largest position
 
 ### Configuration Example
 
@@ -179,9 +179,10 @@ scaler.Start()
 ### Key Features
 
 * Configurable grid size and spacing
-* Automatic BUY LIMIT / SELL LIMIT placement (with TP/SL only when `TakeProfit > 0` or `StopLoss > 0`)
+* Automatic BUY LIMIT / SELL LIMIT placement, every order with a TP (one grid step, or `TakeProfit`), prices rounded to the symbol's digits
 * Works best in sideways markets
-* Grid is rebuilt when price drifts more than 2 grid steps from the center (`RebuildOnFill` is not read by the code)
+* Grid is rebuilt when price drifts more than 2 grid steps from the center, and after a fill with `RebuildOnFill`
+* `MaxPositions` is enforced (no more pending orders than the room left; at the limit they are deleted)
 
 ### Configuration Example
 
@@ -191,7 +192,7 @@ config.GridSize = 5     // 5 grid levels each side
 config.GridStep = 100   // 100 points spacing
 config.LotSize = 0.01
 config.MaxPositions = 10
-config.TakeProfit = 100 // without TakeProfit/StopLoss the orders get no TP/SL
+config.TakeProfit = 100 // 0 = one grid step
 config.CheckInterval = 5 * time.Second
 
 gridTrader := orchestrators.NewGridTrader(sugar, config)
@@ -239,15 +240,15 @@ Monitors account-level risk metrics while running and automatically intervenes w
   4. Margin level monitoring
   5. Position count limits
 * Emergency close of all positions (`CloseAllPositions`)
-* Trading-blocked flag when daily limits are hit (`IsTradingBlocked()` — your code must check it; orders are not intercepted)
+* Trade blocking after the daily limits (and while margin usage > `MaxMarginUsed`): positions opened while blocked are closed again; check `IsTradingBlocked()` in your code
+* One event per breach; after an emergency close the drawdown peak is reset; a limit of 0 is off
 * Daily automatic reset
 
 
 ### Configuration Example
 
 ```go
-// Start from the defaults: zero-valued fields are dangerous here
-// (CheckInterval 0 panics, MaxDrawdownAbsolute 0 closes everything on every check)
+// Start from the defaults (in a literal, a missing limit is 0 = off)
 config := orchestrators.DefaultRiskManagerConfig()
 config.MaxDrawdownPercent = 10.0   // 10% max drawdown
 config.MaxDrawdownAbsolute = 1000.0 // $1000 max loss
@@ -297,14 +298,14 @@ Maintains balanced exposure across multiple trading symbols by automatically reb
 * Equal-weight or custom allocation percentages
 * Automatic rebalancing when deviation exceeds threshold
 * Multi-symbol portfolio management
-* Simplified exposure: a position counts as `Volume × 100000` (no prices, no direction); it opens BUY positions for under-weight symbols and closes a whole position of over-weight ones
+* Exposure = net notional value in the account currency (volume × contract size × price, BUY +, SELL −); it resizes existing positions in their direction (never opens a symbol without a position) and reduces with partial closes
 
 ### Configuration Example
 
 ```go
 // Equal weights (0.25 each), MinPositionSize 0.01, MaxTradesPerCycle 10, ...
 config := orchestrators.DefaultPortfolioRebalancerConfig([]string{"EURUSD", "GBPUSD", "USDJPY", "XAUUSD"})
-config.TotalExposure = 10000.0     // in Volume × 100000 units (0.025 lots per symbol)
+config.TotalExposure = 10000.0     // $10,000 notional ($2,500 per symbol)
 config.RebalanceThreshold = 10.0   // Rebalance at 10% off
 config.CheckInterval = 30 * time.Minute
 
@@ -354,7 +355,8 @@ Intelligent multi-strategy system that analyzes market conditions every 5 minute
   4. **Portfolio Mode** — multi-symbol (only with `EnablePortfolioMode = true`) → PortfolioRebalancer
   5. **Trending Mode** — strong trend → PositionScaler (pyramiding)
 * Automatic mode switching every cycle
-* Safety limits (total loss, loss/profit since start) checked after each cycle
+* Safety limits (total loss, daily loss/profit) checked after each cycle; a safety stop ends `Execute()` like Ctrl+C
+* `MaxConcurrentOrchestrators` caps the orchestrators started per cycle
 * Volatility and trend are simplified placeholders (spread-based)
 
 
@@ -371,7 +373,7 @@ preset.CycleDuration = 5 * time.Minute
 preset.MaxDailyLoss = 500.0
 preset.MaxDailyProfit = 1000.0
 
-// Run (blocks until stopped with Ctrl+C)
+// Run (blocks until Ctrl+C or a safety stop)
 totalProfit, _ := preset.Execute()
 ```
 
@@ -503,7 +505,7 @@ riskManager.Start()
 **Purpose**: Maintain balanced multi-symbol portfolio with protection
 
 ```go
-// Portfolio rebalance (defaults: equal weights, TotalExposure 10000, CheckInterval 1h)
+// Portfolio rebalance (defaults: equal weights, TotalExposure 10000, CheckInterval 1h - first check at start)
 portfolioConfig := orchestrators.DefaultPortfolioRebalancerConfig([]string{"EURUSD", "GBPUSD", "USDJPY", "XAUUSD"})
 
 rebalancer := orchestrators.NewPortfolioRebalancer(sugar, portfolioConfig)
@@ -584,18 +586,21 @@ sugar, err := mt5.NewMT5Sugar(12345678, "your_password", "mt5.mrpc.pro:443")
 if err != nil {
     log.Fatal(err)
 }
-if err := sugar.QuickConnect("YourBroker-MT5 Demo"); err != nil {
-    log.Fatal(err)
-}
+// Disconnect also when QuickConnect fails (the server may have started the terminal)
 defer sugar.Disconnect()
+if err := sugar.QuickConnect("YourBroker-MT5 Demo"); err != nil {
+    log.Println(err) // not log.Fatal: it would skip the deferred Disconnect
+    return
+}
 
 // Create orchestrator with config
 config := orchestrators.DefaultTrailingStopConfig()
 orchestrator := orchestrators.NewTrailingStopManager(sugar, config)
 
-// Start (non-blocking)
+// Start (non-blocking; an invalid config is an error)
 if err := orchestrator.Start(); err != nil {
-    log.Fatal(err)
+    log.Println(err)
+    return
 }
 
 // Monitor status
@@ -709,7 +714,8 @@ if err := orchestrator.Start(); err != nil {
 
 * `Stop()` was called — the runners in `main.go` stop each orchestrator after a fixed time (3, 5, 10, 15 or 60 minutes)
 * Errors do **not** stop an orchestrator: they are counted in `ErrorCount` / `LastError` and the loop continues
-* A zero `CheckInterval` / `UpdateInterval` makes the monitoring goroutine panic (`time.NewTicker`); start from the `Default...Config` functions
+* An invalid configuration makes `Start()` return an `invalid configuration` error (a zero `CheckInterval` / `UpdateInterval` gets its default)
+* Ctrl+C cancels the orchestrator's context (`GetContext()`); the runners in `main.go` disconnect the terminal however the run ends
 
 **Solution**:
 
@@ -862,7 +868,11 @@ for i := 0; i < 60; i++ {
     }
     time.Sleep(time.Second)
 }
-rangePoints := (high - low) / 0.00001 // 5-digit symbol
+info, err := sugar.GetSymbolInfo("EURUSD")
+if err != nil {
+    return err
+}
+rangePoints := (high - low) / info.Point // point size of the symbol
 
 // Adjust orchestrator parameters based on analysis
 config := orchestrators.DefaultTrailingStopConfig()

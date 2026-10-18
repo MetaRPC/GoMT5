@@ -5,7 +5,7 @@
 **API Information:**
 
 * **Method:** `sugar.ClosePosition(ticket)`
-* **Timeout:** 10 seconds
+* **Timeout:** 30 seconds
 * **Returns:** Error if close failed
 * **Request:** `pb.OrderCloseRequest{Ticket: ticket}` sent via `MT5Service.CloseOrder` (MT5 `OrderClose`)
 
@@ -27,7 +27,7 @@ func (s *MT5Sugar) ClosePosition(ticket uint64) error
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `error` | `error` | `nil` when the server returns code 10009 (done); `"ClosePosition failed: ..."` if the call fails; `"close rejected, code: N"` for any other return code |
+| `error` | `error` | `nil` when the server returns code 10009 (done); `"ClosePosition failed: ..."` if the call fails; `"close rejected, code: N (meaning)"` for any other return code (the meaning comes from `helpers.GetRetCodeMessage`) |
 
 ---
 
@@ -328,12 +328,12 @@ func ClosePositionWithAnalysis(sugar *mt5.MT5Sugar, ticket uint64) error {
     fmt.Printf("  Profit:    $%.2f\n", pos.Profit)
     fmt.Printf("  Duration:  %v\n", time.Since(pos.OpenTimeUtc.AsTime()).Round(time.Minute))
 
-    // Calculate metrics
+    // Calculate metrics (EURUSD: 1 pip = 0.0001 = 10 points)
     var pips float64
     if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
-        pips = (pos.PriceCurrent - pos.PriceOpen) / 0.00001
+        pips = (pos.PriceCurrent - pos.PriceOpen) / 0.0001
     } else {
-        pips = (pos.PriceOpen - pos.PriceCurrent) / 0.00001
+        pips = (pos.PriceOpen - pos.PriceCurrent) / 0.0001
     }
 
     fmt.Printf("  Pips:      %.1f\n", pips)
