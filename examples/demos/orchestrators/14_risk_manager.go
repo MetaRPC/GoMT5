@@ -47,6 +47,7 @@
 package orchestrators
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -150,6 +151,13 @@ type RiskManager struct {
 	riskEvents []RiskEvent
 }
 
+// errAccountNotLoaded: the equity read 0. That is not a real reading: a terminal that has just been
+// started again by the server (after a TERMINAL_INSTANCE_NOT_FOUND, for example) answers 0 for the
+// account values - and an empty position list - until it has loaded the account. Taken as real, it
+// was a 100% drawdown: emergency close, trading blocked for the day, and the positions that showed
+// up a few seconds later were closed as "opened while trading is blocked" (seen on a test server).
+var errAccountNotLoaded = errors.New("account data not loaded yet (equity 0)")
+
 // RiskEvent records a risk limit breach.
 type RiskEvent struct {
 	Timestamp   time.Time
@@ -226,6 +234,10 @@ func (r *RiskManager) initialize() error {
 	if err != nil {
 		return fmt.Errorf("failed to get equity: %w", err)
 	}
+	if equity <= 0 {
+		// A 0 baseline would turn the first real reading into a huge daily profit
+		return errAccountNotLoaded
+	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -266,6 +278,11 @@ func (r *RiskManager) checkRiskLimits() {
 	equity, err := r.sugar.GetEquity()
 	if err != nil {
 		r.IncrementError(fmt.Sprintf("failed to get equity: %v", err))
+		return
+	}
+	if equity <= 0 {
+		// Not a real reading (see errAccountNotLoaded): no limit is checked on it
+		r.IncrementError(errAccountNotLoaded.Error() + " - check skipped")
 		return
 	}
 	margin, marginErr := r.sugar.GetMargin()
@@ -368,6 +385,10 @@ func (r *RiskManager) resetPeak() {
 	equity, err := r.sugar.GetEquity()
 	if err != nil {
 		r.IncrementError(fmt.Sprintf("failed to get equity: %v", err))
+		return
+	}
+	if equity <= 0 {
+		r.IncrementError(errAccountNotLoaded.Error() + " - peak not reset")
 		return
 	}
 	r.mu.Lock()
@@ -659,6 +680,10 @@ func (r *RiskManager) checkDailyReset() {
 	equity, err := r.sugar.GetEquity()
 	if err != nil {
 		r.IncrementError(fmt.Sprintf("daily reset: failed to get equity: %v", err))
+		return
+	}
+	if equity <= 0 {
+		r.IncrementError("daily reset: " + errAccountNotLoaded.Error()) // retried on the next check
 		return
 	}
 

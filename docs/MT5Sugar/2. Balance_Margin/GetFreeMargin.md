@@ -85,8 +85,9 @@ fmt.Printf("✅ Position #%d opened\n", ticket)
 ```go
 func GetMaxTradableLots(sugar *mt5.MT5Sugar, symbol string) float64 {
     // GetMaxLotSize already uses 80% of free margin for safety:
-    // (free margin × 0.8) / margin for 1 lot (BUY at Ask),
-    // rounded down to the volume step and capped at the symbol's max volume.
+    // the largest volume whose margin (BUY at Ask, calculated by the server for that
+    // volume) fits in free margin × 0.8, rounded down to the volume step and capped at
+    // the symbol's max volume.
     // It returns 0 when even the minimum volume does not fit.
     maxLots, err := sugar.GetMaxLotSize(symbol)
     if err != nil {

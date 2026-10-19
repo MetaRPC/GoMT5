@@ -450,8 +450,8 @@ func RunOrchestrator_TrailingStop() error {
 
 			fmt.Printf("\r  📊 Positions: %d | SL Updates: %d | Success: %d | Errors: %d        ",
 				metrics.CurrentPositions,
-				status.SuccessCount,
-				status.SuccessCount,
+				metrics.OperationsTotal, // one per SL modification
+				status.SuccessCount,     // one per check that moved at least one SL
 				status.ErrorCount)
 
 			return true // Continue monitoring
@@ -539,10 +539,14 @@ func RunOrchestrator_PositionScaler() error {
 			// Display live metrics during operation
 			status := scaler.GetStatus()
 			metrics := scaler.GetMetrics()
+			scales := 0 // scale-ins of the tracked groups (SuccessCount also counts the base position)
+			for _, group := range scaler.GetTrackedGroups() {
+				scales += group.ScaleCount
+			}
 
 			fmt.Printf("\r  📊 Groups: %d | Scales: %d | Trades: %d | Errors: %d        ",
 				metrics.CurrentPositions,
-				status.SuccessCount,
+				scales,
 				metrics.TotalTrades,
 				status.ErrorCount)
 
@@ -896,9 +900,12 @@ func RunOrchestrator_AdaptivePreset() error {
 
 	// Create and execute preset
 	preset := presets.NewAdaptiveOrchestratorPreset(sugar)
+	// Two cycles (about 11 minutes), then the preset stops by itself like the other runners -
+	// also when nobody can press Ctrl+C (stdin closed, CI). 0 = run until Ctrl+C or a safety stop.
+	preset.MaxCycles = 2
 
 	fmt.Println("\n🚀 Starting Adaptive Preset...")
-	fmt.Println("  ✓ Press Ctrl+C to stop")
+	fmt.Printf("  ✓ %d cycles of %v; press Ctrl+C to stop earlier\n", preset.MaxCycles, preset.CycleDuration)
 
 	// The preset stops by itself on Ctrl+C: the first Ctrl+C is left to it, the disconnect follows on return
 	defer helpers.LetCallerHandleInterrupt()()

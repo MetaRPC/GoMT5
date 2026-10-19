@@ -167,13 +167,25 @@ func RunSugarAdvancedDemo() {
 	fmt.Printf("    Contract Size:    %.0f\n", symbolInfo.ContractSize)
 	fmt.Println()
 
-	// Check symbol availability
+	// Check symbol availability. Right after connecting the symbol may still be synchronizing
+	// (false for a few seconds although it quotes and trades): retry for up to 10 s before
+	// concluding that it is not available.
 	available, err := sugar.IsSymbolAvailable(symbol)
+	waited := 0
+	for err == nil && !available && waited < 10 {
+		time.Sleep(time.Second)
+		waited++
+		available, err = sugar.IsSymbolAvailable(symbol)
+	}
 	if err != nil {
 		printError("IsSymbolAvailable", err)
 	} else {
 		if available {
-			printSuccess(fmt.Sprintf("IsSymbolAvailable(\"%s\")", symbol), "Symbol is available for trading")
+			msg := "Symbol is available for trading"
+			if waited > 0 {
+				msg += fmt.Sprintf(" (after %d s of synchronizing)", waited)
+			}
+			printSuccess(fmt.Sprintf("IsSymbolAvailable(\"%s\")", symbol), msg)
 		} else {
 			printWarning(fmt.Sprintf("IsSymbolAvailable(\"%s\")", symbol), "Symbol is NOT available")
 		}
@@ -229,6 +241,11 @@ func RunSugarAdvancedDemo() {
 		printSuccess(fmt.Sprintf("GetMaxLotSize(\"%s\")", symbol), fmt.Sprintf("Max lots: %.2f", maxLots))
 		fmt.Printf("    Free Margin:      %.2f %s\n", accountInfo.FreeMargin, accountInfo.Currency)
 		fmt.Printf("    Maximum Lots:     %.2f (with 80%% safety buffer)\n", maxLots)
+		// The margin of the max volume itself (it can be more than max lots x margin of 1 lot)
+		if maxMargin, err := sugar.CalculateRequiredMargin(symbol, maxLots); err == nil {
+			fmt.Printf("    Its margin:       %.2f %s (80%% of the free margin: %.2f)\n",
+				maxMargin, accountInfo.Currency, accountInfo.FreeMargin*0.8)
+		}
 		fmt.Println()
 	}
 

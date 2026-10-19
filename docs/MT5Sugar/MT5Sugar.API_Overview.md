@@ -141,7 +141,7 @@
 | `GetProfitThisWeek()` | Sum of `Profit` of this week's closed positions | [→ Docs](8.%20History_Statistics/GetProfitThisWeek.md) |
 | `GetProfitThisMonth()` | Sum of `Profit` of this month's closed positions | [→ Docs](8.%20History_Statistics/GetProfitThisMonth.md) |
 
-"Deals" here are **closed positions** from PositionsHistory (one entry per position), selected by their **open** time:
+"Deals" here are **closed positions** from PositionsHistory (one entry per closed position; a position closed in parts has one entry per partial close), selected by their **open** time:
 a position opened yesterday and closed today is not in `GetDealsToday()`. The day/week/month boundaries are the local
 calendar of the computer running the program, sent to the server in the request's UTC fields, so the broker's time zone
 does not shift them. All pages are read (cursor paging, 1000 per page), so long ranges are complete. Timeouts (for all

@@ -1325,7 +1325,8 @@ func (s *MT5Sugar) GetProfitBySymbol(symbol string) (float64, error) {
 // ══════════════════════════════════════════════════════════════════════════════
 //
 // HOW THE TIME WINDOWS WORK (all GetDeals*/GetProfit* methods and GetDailyStats):
-//   • "Deals" here are CLOSED POSITIONS from PositionsHistory (one entry per position, not per MT5 deal).
+//   • "Deals" here are CLOSED POSITIONS from PositionsHistory (one entry per position, not per MT5 deal;
+//     a position closed in parts has one entry per partial close, each with the closed volume).
 //   • A position is selected by its OPEN time: a position opened yesterday and closed today is NOT in
 //     GetDealsToday. Still-open positions are not in the list.
 //   • Day/week/month boundaries are calendar boundaries of the computer running the program (time.Local):
@@ -1688,8 +1689,10 @@ func (s *MT5Sugar) GetSymbolDigits(symbol string) (int32, error) {
 //   2. Size based on risk: (Balance * RiskPercent / 100) / (StopLossPoints * PointValue),
 //      rounded down to the volume step and capped at the symbol's max volume. A size below the
 //      minimum volume is an ERROR (raising it to the minimum would risk more than RiskPercent)
-//   3. Max size based on free margin (80% of it; margin for 1 lot from OrderCalcMargin for a BUY at ASK -
-//      the method has no direction)
+//   3. Max size based on free margin: the largest volume whose margin (OrderCalcMargin for a BUY at ASK -
+//      the method has no direction) fits in 80% of the free margin. The margin is checked for that
+//      volume itself: brokers can charge a higher rate for larger volumes, so 80% / margin of 1 lot can
+//      be too large
 //   4. Return the SMALLER of the two - prevents margin calls!
 //
 // PARAMETERS:
@@ -1768,27 +1771,16 @@ func (s *MT5Sugar) CalculatePositionSize(symbol string, riskPercent, stopLossPip
 		return 0, err
 	}
 
-	// Calculate margin required for 1 lot (a BUY opens at ASK)
-	marginReq := &pb.OrderCalcMarginRequest{
-		Symbol:    symbol,
-		OrderType: pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY,
-		Volume:    1.0,
-		OpenPrice: tick.Ask,
-	}
-
-	marginForOneLot, err := s.service.CalculateMargin(ctx, marginReq)
-	if err != nil {
+	// Largest volume whose margin (a BUY opens at ASK) fits in 80% of the free margin
+	maxLots, err := s.maxVolumeForMargin(ctx, symbol, tick.Ask, freeMargin*0.8, info)
+	switch {
+	case errors.Is(err, errNoMarginRate):
+		// the server gives no margin for the symbol: no margin cap
+	case err != nil:
 		return 0, fmt.Errorf("failed to calculate margin: %w", err)
-	}
-
-	if marginForOneLot > 0 {
-		// Calculate max lots with 80% safety buffer, rounded down to the volume step
-		maxLots := floorToStep((freeMargin*0.8)/marginForOneLot, info.VolumeStep)
-
+	case positionSize > maxLots:
 		// Return minimum of risk-based size and margin-limited size
-		if positionSize > maxLots {
-			positionSize = maxLots
-		}
+		positionSize = maxLots
 	}
 
 	// Final check - ensure not below minimum
@@ -1809,11 +1801,71 @@ func floorToStep(volume, step float64) float64 {
 	return math.Round(v*1e8) / 1e8
 }
 
+// errNoMarginRate: OrderCalcMargin gave 0 for 1 lot of the symbol.
+var errNoMarginRate = errors.New("the server calculates no margin for the symbol")
+
+// maxVolumeForMargin returns the largest volume (rounded down to the volume step, at most VolumeMax)
+// whose margin for a BUY at ask, as OrderCalcMargin calculates it, fits in budget; 0 if not even one
+// volume step fits.
+//
+// The margin is not always proportional to the volume: a broker can charge a higher margin rate for
+// larger volumes (MetaQuotes-Demo, EURUSD at 1.1226: 0.10 lot needs 112.26, 4.00 lots need 5980.64 -
+// a third more than 4 times the margin of 1 lot). So budget / margin of 1 lot is only a first guess:
+// it is scaled down by budget / margin(guess) until OrderCalcMargin confirms that it fits (usually
+// one or two more calls).
+func (s *MT5Sugar) maxVolumeForMargin(ctx context.Context, symbol string, ask, budget float64, info *SymbolInfo) (float64, error) {
+	margin := func(volume float64) (float64, error) {
+		return s.service.CalculateMargin(ctx, &pb.OrderCalcMarginRequest{
+			Symbol:    symbol,
+			OrderType: pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY,
+			Volume:    volume,
+			OpenPrice: ask,
+		})
+	}
+	step := info.VolumeStep
+	if step <= 0 {
+		step = info.VolumeMin
+	}
+	if step <= 0 {
+		step = 0.01
+	}
+
+	marginForOneLot, err := margin(1.0)
+	if err != nil {
+		return 0, err
+	}
+	if marginForOneLot <= 0 {
+		return 0, fmt.Errorf("%w %s", errNoMarginRate, symbol)
+	}
+	volume := math.Min(floorToStep(budget/marginForOneLot, step), floorToStep(info.VolumeMax, step))
+
+	for attempt := 0; attempt < 20 && volume > 0; attempt++ {
+		m, err := margin(volume)
+		if err != nil {
+			return 0, err
+		}
+		if m <= budget {
+			return volume, nil
+		}
+		next := floorToStep(volume*budget/m, step)
+		if next >= volume {
+			next = floorToStep(volume-step, step)
+		}
+		volume = next
+	}
+	if volume <= 0 {
+		return 0, nil
+	}
+	return 0, fmt.Errorf("no volume of %s found whose margin fits in %.2f", symbol, budget)
+}
+
 // GetMaxLotSize calculates the maximum lot size you can open with current free margin.
 // This helps prevent margin calls by showing your maximum trading capacity.
-// Conservative estimate: 80% of the free margin divided by the margin of 1 lot, rounded down to the
-// volume step and capped at the maximum volume. The margin is calculated for a BUY at the current ASK
-// (the method has no direction; a SELL's margin may differ slightly). Uses 5-second timeout.
+// Conservative estimate: the largest volume whose margin fits in 80% of the free margin, rounded down
+// to the volume step and capped at the maximum volume. The margin is calculated by the server
+// (OrderCalcMargin) for that volume - not as volume x margin of 1 lot, which is too low when the broker
+// charges a higher rate for larger volumes - for a BUY at the current ASK (the method has no direction;
+// a SELL's margin may differ slightly). Uses 5-second timeout.
 //
 // PARAMETERS:
 //   symbol - Trading symbol (e.g., "EURUSD")
@@ -1837,42 +1889,25 @@ func (s *MT5Sugar) GetMaxLotSize(symbol string) (float64, error) {
 		return 0, err
 	}
 
-	// Calculate margin required for 1 lot
-	// Get current price
+	// Get current price (a BUY opens at ASK)
 	tick, err := s.service.GetSymbolTick(ctx, symbol)
 	if err != nil {
 		return 0, err
 	}
 
-	marginReq := &pb.OrderCalcMarginRequest{
-		Symbol:    symbol,
-		OrderType: pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY,
-		Volume:    1.0,
-		OpenPrice: tick.Ask,
+	// Largest volume whose margin fits in 80% of the free margin (safety buffer)
+	maxLots, err := s.maxVolumeForMargin(ctx, symbol, tick.Ask, freeMargin*0.8, info)
+	if errors.Is(err, errNoMarginRate) {
+		return 0, fmt.Errorf("failed to calculate margin for %s", symbol)
 	}
-
-	marginForOneLot, err := s.service.CalculateMargin(ctx, marginReq)
 	if err != nil {
 		return 0, err
 	}
-
-	if marginForOneLot == 0 {
-		return 0, fmt.Errorf("failed to calculate margin for %s", symbol)
-	}
-
-	// Calculate max lots with 80% safety buffer
-	maxLots := (freeMargin * 0.8) / marginForOneLot
-
-	// Round down to the volume step
-	maxLots = floorToStep(maxLots, info.VolumeStep)
 
 	// Ensure within limits
 	if maxLots < info.VolumeMin {
 		return 0, fmt.Errorf("insufficient margin: 80%% of the free margin %.2f does not cover the minimum volume %.2f of %s",
 			freeMargin, info.VolumeMin, symbol)
-	}
-	if maxLots > info.VolumeMax {
-		maxLots = info.VolumeMax
 	}
 
 	return maxLots, nil

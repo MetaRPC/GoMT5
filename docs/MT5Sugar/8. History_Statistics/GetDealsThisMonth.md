@@ -6,7 +6,7 @@
 
 * **Method:** `sugar.GetDealsThisMonth()`
 * **Timeout:** 30 seconds
-* **Returns:** Slice of position history info (one entry per closed position), sorted by open time (oldest first)
+* **Returns:** Slice of position history info (one entry per closed position; a position closed in parts has one entry per partial close), sorted by open time (oldest first)
 
 ---
 

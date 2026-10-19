@@ -96,10 +96,10 @@ func RunSugarPositionsDemo() {
 	fmt.Println("PREPARATION: Opening test positions")
 	fmt.Println(strings.Repeat("-", 80))
 
-	bid, err := sugar.GetBid(testSymbol)
-	helpers.Fatal(err, "GetBid failed")
-	ask, err := sugar.GetAsk(testSymbol)
-	helpers.Fatal(err, "GetAsk failed")
+	// BID and ASK from ONE tick: two calls (GetBid, then GetAsk) can read two different ticks
+	quote, err := sugar.GetPriceInfo(testSymbol)
+	helpers.Fatal(err, "GetPriceInfo failed")
+	bid, ask := quote.Bid, quote.Ask
 	symbolInfo, err := sugar.GetSymbolInfo(testSymbol)
 	helpers.Fatal(err, "GetSymbolInfo failed")
 	point := symbolInfo.Point // SL/TP distances below are in points (200 points = 20 pips on 5-digit EURUSD)

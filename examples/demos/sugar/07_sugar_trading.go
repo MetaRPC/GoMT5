@@ -90,10 +90,11 @@ func RunSugarTradingDemo() {
 
 	// Get current price and the symbol's point size (distances below are in points:
 	// 1 point = 0.00001 on 5-digit EURUSD, so 200 points = 20 pips)
-	bid, err := sugar.GetBid(testSymbol)
-	helpers.Fatal(err, "GetBid failed")
-	ask, err := sugar.GetAsk(testSymbol)
-	helpers.Fatal(err, "GetAsk failed")
+	// BID and ASK from ONE tick: two calls (GetBid, then GetAsk) can read two different ticks,
+	// so on a moving market they could even show BID > ASK.
+	quote, err := sugar.GetPriceInfo(testSymbol)
+	helpers.Fatal(err, "GetPriceInfo failed")
+	bid, ask := quote.Bid, quote.Ask
 	symbolInfo, err := sugar.GetSymbolInfo(testSymbol)
 	helpers.Fatal(err, "GetSymbolInfo failed")
 	point := symbolInfo.Point

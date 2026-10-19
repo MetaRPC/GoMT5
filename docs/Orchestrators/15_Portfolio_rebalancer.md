@@ -128,7 +128,7 @@ go run main.go rebalancer
 
 Both commands (or `go run main.go portfolio`) launch the **PortfolioRebalancer** orchestrator with configuration from `main.go -> RunOrchestrator_PortfolioRebalancer()`. The runner uses `CheckInterval: 30 * time.Minute` and runs for 1 hour (3600 s): the rebalancer checks at start, after 30 and 60 minutes, and every minute it rebalances at once if a symbol is more than 20% (`MaxDeviation`) off target. Every 10 seconds the progress line shows `GetCurrentAllocations()`. Then it calls `Stop()` and prints the final metrics; the runner then disconnects the terminal - it does so however the run ends, also on an error or Ctrl+C. Each orchestrator also cancels its own context on Ctrl+C / SIGTERM, so a program of yours that waits on `GetContext()` can call `Stop()` and disconnect.
 
-> The rebalancer only resizes positions that exist: on an account without positions on the four symbols it reports every symbol as HOLD and trades nothing. Volumes are rounded down to each symbol's volume step.
+> The rebalancer only resizes positions that exist: on an account without positions on the four symbols it reports every symbol as HOLD and trades nothing. Trade volumes are rounded to the nearest volume step of the symbol (a reduction rounded down could leave the symbol further from its target: in a run with 0.10 lot EURUSD and a $2,500 target, 0.0777 lots rounded down to 0.07 left +35% - above `MaxDeviation`, so the minute check fired every minute with no trade possible; 0.08 leaves -10%).
 
 ---
 
@@ -169,7 +169,7 @@ MONITORING LOOP (every CheckInterval; every minute a MaxDeviation check):
        |
        REBALANCING (at most MaxTradesPerCycle trades):
          For each symbol that needs adjustment:
-           | lots = |target - current| / value of 1 lot, rounded down to the volume step
+           | lots = |target - current| / value of 1 lot, rounded to the nearest volume step
            | lots < MinPositionSize -> skip
            | Increase -> market order in the position's direction
            |             (max deviation SlippageTolerance), or a limit order
@@ -235,14 +235,14 @@ TRIGGER: |deviation| > RebalanceThreshold (10%) - and EURUSD > MaxDeviation
 ```
 Rebalancing Actions:
 1. EURUSD (SELL = reduce the long): $2,100 / $110,000 per lot = 0.019
-   -> rounded down to 0.01 lot, closed from the largest EURUSD position
+   -> rounded to 0.02 lot, closed from the largest EURUSD position
 2. USDJPY (BUY = increase the long): $2,000 / $100,000 per lot = 0.02 lots
    -> market BUY 0.02 USDJPY
 
 +--------+-------------+---------+-----------+--------+
 | Symbol | Target val. | Current | Deviation | Action |
 +--------+-------------+---------+-----------+--------+
-| EURUSD | $10,000     | $11,000 | +10%      | HOLD   |
+| EURUSD | $10,000     |  $9,900 | -1%       | HOLD   |
 | GBPUSD | $10,000     | $10,200 | +2%       | HOLD   |
 | USDJPY | $10,000     | $10,000 | 0%        | HOLD   |
 | XAUUSD | $10,000     |  $9,800 | -2%       | HOLD   |
@@ -312,7 +312,7 @@ func (s *MT5Sugar) ClosePosition(ticket uint64) error
 
 **Usage in PortfolioRebalancer**:
 
-- Reducing exposure: closes the needed volume (rounded down to the volume step) from the largest positions in the net direction
+- Reducing exposure: closes the needed volume (rounded to the nearest volume step) from the largest positions in the net direction
 - A position is closed completely only when the rest would be below the minimum volume
 - Each close counts as one trade toward `MaxTradesPerCycle`
 

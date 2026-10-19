@@ -194,7 +194,7 @@ END
 
 #### 1. Initialization
  
-> Lines `219–243`  
+> Lines `227–255`  
 
 
 ```go
@@ -207,6 +207,10 @@ func (r *RiskManager) initialize() error {
 	equity, err := r.sugar.GetEquity()
 	if err != nil {
 		return fmt.Errorf("failed to get equity: %w", err)
+	}
+	if equity <= 0 {
+		// A 0 baseline would turn the first real reading into a huge daily profit
+		return errAccountNotLoaded
 	}
 
 	r.mu.Lock()
@@ -224,11 +228,13 @@ func (r *RiskManager) initialize() error {
 - Gets the current balance (kept as the starting balance) and equity
 - The peak and the daily start are the current **equity** (drawdown and today's P/L both include floating P/L)
 - Initializes trading as unblocked and clears the breach memory
-- `Start()` fails if the balance or equity cannot be read
+- `Start()` fails if the balance or equity cannot be read, or if the equity reads 0 (`account data not loaded yet (equity 0)`)
+
+> **An equity of 0 is never taken as real.** A terminal that the server has just started again (after a `TERMINAL_INSTANCE_NOT_FOUND`, for example) answers 0 for the account values - and an empty position list - for a few seconds, until it has loaded the account. Every check that reads 0 is skipped (counted as an error: `account data not loaded yet (equity 0) - check skipped`). Before this guard, a run on a test server took such a reading as a 100% drawdown: emergency close, trading blocked for the day, and the position that showed up a few seconds later was closed as "opened while trading is blocked".
 
 #### 2. Monitoring Loop
  
-> Lines `246–258`  
+> Lines `258–270`  
 
 
 ```go
@@ -256,13 +262,13 @@ func (r *RiskManager) monitorLoop() {
 
 #### 3. Daily Reset Check
   
-> Lines `652–675`  
+> Lines `673–700`  
 
 `checkDailyReset()` compares the local date (year, month, day of the machine running the program) with the date of the last reset. On a new day it sets the daily start to the current equity, lifts the daily block and allows the daily loss / profit target events again. Today's profit starts again from zero.
 
 #### 4. One Event per Breach
  
-> Lines `322–332`  
+> Lines `339–349`  
 
 
 ```go
@@ -283,7 +289,7 @@ func (r *RiskManager) breach(key string, exceeded bool) bool {
 
 #### 5. Drawdown Protection
  
-> Lines `337–378`  
+> Lines `354–399`  
 
 
 ```go
@@ -326,7 +332,7 @@ func (r *RiskManager) checkDrawdownLimit(drawdownPercent, drawdownAbsolute float
 
 #### 6. Daily Limits Protection
  
-> Lines `381–420`  
+> Lines `402–441`  
 
 - Today's profit is `equity - dailyStartBalance` (the daily start is the equity at the start of the day), so floating P/L counts
 - **Daily loss limit** (once per day): logs a CRITICAL event, closes all positions (if `EnableAutoClose`) and blocks trading until the next day (if `EnableTradeBlocking`)
@@ -334,7 +340,7 @@ func (r *RiskManager) checkDrawdownLimit(drawdownPercent, drawdownAbsolute float
 
 #### 7. Margin Safety
   
-> Lines `423–453`  
+> Lines `444–474`  
 
 - **Margin Level** = (Equity / Margin) × 100, read with `GetMarginLevel()`; 0 (no margin used) is ignored
 - While the level is below `MinMarginLevel` (strictly `<`) and `EnableAutoClose` is on, the position with the most negative `Profit` is closed on every check (each close is logged) until the level is safe again; without auto-close the breach is logged once
@@ -346,14 +352,14 @@ func (r *RiskManager) checkDrawdownLimit(drawdownPercent, drawdownAbsolute float
 
 #### 8. Position Limits
   
-> Lines `456–538`  
+> Lines `477–559`  
 
 - `MaxOpenPositions` and `MaxSymbolExposure`: WARNING events only (one per breach)
 - `MaxPositionSize`: a WARNING event per oversized position; with `EnableAutoClose` the excess is closed - rounded UP to the symbol's volume step (from `GetSymbolInfo`), so the rest is at most the limit (the whole position when the rest would be below the minimum volume)
 
 #### 9. Trade Blocking
   
-> Lines `550–583`  
+> Lines `571–604`  
 
 ```go
 func (r *RiskManager) enforceTradeBlock(positions []*pb.PositionInfo) {
@@ -381,7 +387,7 @@ Trading is blocked by the daily loss limit or the daily profit target (until the
 
 #### 10. Emergency Close All
   
-> Lines `601–619`  
+> Lines `622–640`  
 
 - Calls `sugar.CloseAllPositions()`: closes every open position of the account (pending orders are not touched)
 - `CloseAllPositions` keeps going when a close fails and returns an error naming the failed tickets; the risk manager counts it as an error and still logs how many positions were closed

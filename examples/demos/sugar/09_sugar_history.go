@@ -367,7 +367,7 @@ func RunSugarHistoryDemo() {
 	fmt.Println("  • Time-based queries: GetDealsToday, GetDealsYesterday, GetDealsThisWeek, GetDealsThisMonth")
 	fmt.Println("  • Custom ranges: GetDealsDateRange(from, to)")
 	fmt.Println("  • Profit calculations: GetProfitToday, GetProfitThisWeek, GetProfitThisMonth")
-	fmt.Println("  • Returns: []*pb.PositionHistoryInfo (one entry per closed position)")
+	fmt.Println("  • Returns: []*pb.PositionHistoryInfo (one entry per closed position or partial close)")
 	fmt.Println("\n✅ All history operations demonstrated!")
 	fmt.Println("\n📚 SUGAR API COMPLETE!")
 	fmt.Println("   You've now seen all 4 demo categories:")

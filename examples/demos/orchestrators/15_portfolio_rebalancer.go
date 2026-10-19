@@ -679,8 +679,16 @@ func (p *PortfolioRebalancer) adjustSymbolExposure(alloc *SymbolAllocation, maxT
 		return 0, fmt.Errorf("no value per lot")
 	}
 
-	// Lots needed for the adjustment, rounded down to the volume step
-	lotSize := s.spec.volume(math.Abs(alloc.AdjustmentValue) / alloc.ValuePerLot)
+	// Lots needed for the adjustment, rounded to the NEAREST volume step (+ half a step, then down).
+	// Rounded down, a reduction could leave the symbol further from its target than one step more:
+	// EURUSD 0.10 lot ($11,225), target $2,500 → 0.0777 lots to close; 0.07 left 0.03 lot (+35%,
+	// above MaxDeviation, so the minute check fired again every minute with no trade possible),
+	// 0.08 leaves 0.02 lot (-10%).
+	step := s.spec.VolumeStep
+	if step <= 0 {
+		step = 0.01
+	}
+	lotSize := s.spec.volume(math.Abs(alloc.AdjustmentValue)/alloc.ValuePerLot + step/2)
 	if lotSize == 0 || lotSize < p.config.MinPositionSize {
 		p.UpdateMetrics(func(m *OrchestratorMetrics) {
 			m.LastOperation = fmt.Sprintf("%s: adjustment below MinPositionSize/volume step, skipped", alloc.Symbol)
@@ -1096,7 +1104,7 @@ For each symbol that needs adjustment:
 
 1. Calculate lot size needed:
    lotSize = |AdjustmentValue| / value of 1 lot,
-   rounded down to the volume step (skipped if below MinPositionSize)
+   rounded to the nearest volume step (skipped if below MinPositionSize)
 
 2. Execute trade:
    • Increase: market order in the position's direction with

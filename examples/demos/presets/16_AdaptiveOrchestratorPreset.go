@@ -130,13 +130,15 @@
    • CycleDuration: How long each cycle runs (default: 5 minutes)
    • EnablePortfolioMode: Enable multi-symbol portfolio management
    • MaxConcurrentOrchestrators: Maximum orchestrators running at once
+   • MaxCycles: Stop after this many cycles (default: 0 = until Ctrl+C or a
+     safety stop; the demo runner in main.go sets 2)
 
  DEMONSTRATED FEATURES:
    [1] Multi-orchestrator coordination - Uses all 5 orchestrators
    [2] Market regime detection - Volatility and trend-based analysis
    [3] Dynamic strategy selection - Adaptive switching based on conditions
    [4] Risk management - Position sizing, stop-loss, cycle limits
-   [5] Continuous operation - Infinite loop with safety stops
+   [5] Continuous operation - Cycles until Ctrl+C, a safety stop or MaxCycles
    [6] Performance tracking - Comprehensive metrics collection
 
  USE CASE:
@@ -157,6 +159,7 @@ package presets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -189,6 +192,7 @@ type AdaptiveOrchestratorPreset struct {
 	MaxConcurrentOrchestrators int
 	MaxDailyLoss              float64
 	MaxDailyProfit            float64
+	MaxCycles                 int // stop after this many cycles (0 = until Ctrl+C / SIGTERM or a safety stop)
 
 	// State
 	cycleNumber      int
@@ -271,7 +275,7 @@ func (p *AdaptiveOrchestratorPreset) Execute() (float64, error) {
 
 	// Initialize
 	var err error
-	p.initialBalance, err = p.sugar.GetBalance()
+	p.initialBalance, err = p.loadedBalance()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get balance: %w", err)
 	}
@@ -299,12 +303,12 @@ func (p *AdaptiveOrchestratorPreset) Execute() (float64, error) {
 		p.runCycles()
 	}()
 
-	// Wait for interrupt, or for the cycles to end by themselves (safety stop)
+	// Wait for interrupt, or for the cycles to end by themselves (safety stop or MaxCycles)
 	select {
 	case <-sigChan:
 		fmt.Println("\n\n🛑 Stopping preset...")
 	case <-cyclesDone:
-		fmt.Println("\n\n🛑 Safety stop - stopping preset...")
+		fmt.Println("\n\n🛑 Cycles ended - stopping preset...")
 	}
 	p.cancel()
 	<-cyclesDone // the current cycle returns before its orchestrators are stopped
@@ -335,6 +339,12 @@ func (p *AdaptiveOrchestratorPreset) runCycles() {
 
 			// Check safety limits (Execute stops everything when the cycles end)
 			if p.checkSafetyLimits() {
+				return
+			}
+
+			// Planned number of cycles done
+			if p.MaxCycles > 0 && p.cycleNumber >= p.MaxCycles {
+				fmt.Printf("\n  ✓ %d cycle(s) done (MaxCycles)\n", p.cycleNumber)
 				return
 			}
 
@@ -374,7 +384,7 @@ func (p *AdaptiveOrchestratorPreset) executeCycle() {
 	p.stopAllOrchestrators()
 
 	// Step 3: Select and execute appropriate orchestrator(s)
-	cycleStartBalance, startErr := p.sugar.GetBalance()
+	cycleStartBalance, startErr := p.loadedBalance()
 
 	switch condition.Mode {
 	case GridMode:
@@ -395,7 +405,7 @@ func (p *AdaptiveOrchestratorPreset) executeCycle() {
 	p.monitorCycle()
 
 	// Calculate cycle profit (not counted when a balance could not be read)
-	cycleEndBalance, endErr := p.sugar.GetBalance()
+	cycleEndBalance, endErr := p.loadedBalance()
 	if startErr != nil || endErr != nil {
 		fmt.Printf("\n  ⚠️  Cycle #%d result unknown: balance not available (%v %v)\n", p.cycleNumber, startErr, endErr)
 		return
@@ -616,6 +626,20 @@ func (p *AdaptiveOrchestratorPreset) stopAllOrchestrators() {
 	p.activeOrchestrators = make([]orchestrators.Orchestrator, 0)
 }
 
+// errBalanceNotLoaded: the balance read 0. A terminal that the server has just started again answers 0
+// for the account values until it has loaded the account; taken as real, a cycle would "lose" the
+// whole balance and the total-loss stop would end the preset.
+var errBalanceNotLoaded = errors.New("account data not loaded yet (balance 0)")
+
+// loadedBalance is GetBalance with a 0 reading turned into errBalanceNotLoaded.
+func (p *AdaptiveOrchestratorPreset) loadedBalance() (float64, error) {
+	balance, err := p.sugar.GetBalance()
+	if err == nil && balance <= 0 {
+		return 0, errBalanceNotLoaded
+	}
+	return balance, err
+}
+
 // checkSafetyLimits checks if any safety limits are breached.
 func (p *AdaptiveOrchestratorPreset) checkSafetyLimits() bool {
 	// Check max loss
@@ -625,7 +649,7 @@ func (p *AdaptiveOrchestratorPreset) checkSafetyLimits() bool {
 	}
 
 	// Check daily loss (the day starts again at local midnight)
-	currentBalance, err := p.sugar.GetBalance()
+	currentBalance, err := p.loadedBalance()
 	if err != nil {
 		fmt.Printf("\n  ⚠️  Safety check skipped: %v\n", err)
 		return false

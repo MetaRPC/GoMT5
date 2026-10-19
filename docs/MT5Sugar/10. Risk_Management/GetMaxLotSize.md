@@ -40,7 +40,8 @@ func (s *MT5Sugar) GetMaxLotSize(symbol string) (float64, error)
 - Returns an **error** (`insufficient margin: ...`) if you don't have enough margin even for the minimum lot - never `(0, nil)`
 - Rounded DOWN to symbol's `VolumeStep` (same `floorToStep` as `CalculatePositionSize`, with a small float tolerance: 0.3 / 0.01 gives 0.30, not 0.29)
 - Capped at `VolumeMax` (a result below `VolumeMin` is the error above, it is not raised to `VolumeMin`)
-- Margin per lot is calculated for a **BUY** at the current **Ask** - the method has no direction, a SELL's margin may differ slightly
+- The margin is calculated for a **BUY** at the current **Ask** - the method has no direction, a SELL's margin may differ slightly
+- The margin is calculated by the server **for the result volume itself**: brokers can charge a higher margin rate for larger volumes, so the margin is not always proportional to the volume (MetaQuotes-Demo, EURUSD: 0.10 lot needs 112.26 USD, 4.00 lots need 5980.64 USD - a third more than 4 × the margin of 1 lot)
 
 ---
 
@@ -70,15 +71,22 @@ func (s *MT5Sugar) GetMaxLotSize(symbol string) (float64, error)
 Step 1: Get your free margin (e.g., $5,000)
 Step 2: Calculate margin required for 1 lot of the symbol (OrderCalcMargin, BUY at Ask)
 Step 3: Apply safety buffer (80% of free margin)
-Step 4: Calculate: maxLots = (freeMargin × 0.8) / marginPerLot
-Step 5: Round down to VolumeStep
-Step 6: Below VolumeMin → error "insufficient margin: ..."; above VolumeMax → return VolumeMax
+Step 4: First guess: maxLots = (freeMargin × 0.8) / marginPerLot, rounded down to VolumeStep,
+        at most VolumeMax
+Step 5: Check the guess with OrderCalcMargin for maxLots itself; while its margin is above
+        freeMargin × 0.8, scale it down by (freeMargin × 0.8) / margin(maxLots), rounded down to
+        VolumeStep (usually one or two more calls)
+Step 6: Below VolumeMin → error "insufficient margin: ..."
 
-Example:
+Example (margin proportional to the volume):
 - Free margin: $5,000
 - Margin per lot: $500 (for EURUSD with 1:100 leverage)
 - Safety margin: $5,000 × 0.8 = $4,000
-- Max lots: $4,000 / $500 = 8.0 lots
+- Max lots: $4,000 / $500 = 8.0 lots; OrderCalcMargin(8.0) = $4,000 fits → 8.0 lots
+
+Example (higher rate for larger volumes):
+- Same account, but OrderCalcMargin(8.0) = $5,330 (above $4,000)
+- Next guess: 8.0 × 4,000 / 5,330 = 6.00 lots; OrderCalcMargin(6.0) = $3,990 fits → 6.00 lots
 ```
 
 ---
@@ -532,7 +540,7 @@ if !canOpen {
 
 * `GetFreeMargin()` - Get available margin
 * `GetSymbolInfo()` - Get volume limits and step
-* `service.CalculateMargin()` - Calculate margin for 1 lot
+* `service.CalculateMargin()` - Margin of 1 lot (first guess) and of the result volume (check)
 
 **🍬 Complementary sugar methods:**
 

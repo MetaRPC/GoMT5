@@ -44,7 +44,7 @@ func (s *MT5Sugar) CalculatePositionSize(
 
 - Rounded DOWN to the symbol's `VolumeStep` (with a small float tolerance: 0.3 / 0.01 gives 0.30, not 0.29)
 - Capped at `VolumeMax`. A risk-based size below `VolumeMin` is an **error** (`risk X% with a N-point stop allows Y lots, below the minimum volume ...`) - it is never raised to `VolumeMin`, which would risk more than `riskPercent`
-- Then capped at 80% of free margin ÷ margin for 1 lot (margin of a BUY at the current ASK - the method has no direction; also rounded down to `VolumeStep`)
+- Then capped at the largest volume whose margin fits in 80% of free margin (margin of a BUY at the current ASK - the method has no direction; also rounded down to `VolumeStep`). The margin is calculated by the server for that volume itself, not as volume × margin of 1 lot: brokers can charge a higher rate for larger volumes (MetaQuotes-Demo, EURUSD: 4.00 lots need a third more margin than 4 × 1 lot)
 - If that cap pushes it below `VolumeMin`, an `insufficient margin` error is returned instead
 - Ready to use in `BuyMarket()` / `SellMarket()` calls
 
@@ -82,7 +82,9 @@ Where:
 Then:
   - Round DOWN to VolumeStep
   - Below VolumeMin → error (never raised to VolumeMin); above VolumeMax → VolumeMax
-  - Cap at MaxLots = (FreeMargin × 0.8) / MarginFor1Lot  (BUY, 1 lot, at ASK - no direction; rounded down to VolumeStep)
+  - Cap at MaxLots = the largest volume with OrderCalcMargin(BUY, MaxLots, ASK) <= FreeMargin × 0.8
+    (no direction; rounded down to VolumeStep; first guess (FreeMargin × 0.8) / MarginFor1Lot,
+    scaled down while the server's margin for it is above FreeMargin × 0.8)
   - Error "insufficient margin" if the result is below VolumeMin
 ```
 
@@ -174,25 +176,16 @@ func (s *MT5Sugar) CalculatePositionSize(symbol string, riskPercent, stopLossPip
     tick, err := s.service.GetSymbolTick(ctx, symbol)
     // ... error check
 
-    // Calculate margin required for 1 lot (a BUY opens at ASK)
-    marginReq := &pb.OrderCalcMarginRequest{
-        Symbol:    symbol,
-        OrderType: pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY,
-        Volume:    1.0,
-        OpenPrice: tick.Ask,
-    }
-
-    marginForOneLot, err := s.service.CalculateMargin(ctx, marginReq)
-    // ... error check
-
-    if marginForOneLot > 0 {
-        // Calculate max lots with 80% safety buffer, rounded down to the volume step
-        maxLots := floorToStep((freeMargin*0.8)/marginForOneLot, info.VolumeStep)
-
+    // Largest volume whose margin (a BUY opens at ASK) fits in 80% of the free margin
+    maxLots, err := s.maxVolumeForMargin(ctx, symbol, tick.Ask, freeMargin*0.8, info)
+    switch {
+    case errors.Is(err, errNoMarginRate):
+        // the server gives no margin for the symbol: no margin cap
+    case err != nil:
+        return 0, fmt.Errorf("failed to calculate margin: %w", err)
+    case positionSize > maxLots:
         // Return minimum of risk-based size and margin-limited size
-        if positionSize > maxLots {
-            positionSize = maxLots
-        }
+        positionSize = maxLots
     }
 
     // Final check - ensure not below minimum
@@ -211,6 +204,41 @@ func floorToStep(volume, step float64) float64 {
     }
     v := math.Floor(volume/step+1e-9) * step
     return math.Round(v*1e8) / 1e8
+}
+
+// maxVolumeForMargin returns the largest volume (rounded down to the volume step, at most VolumeMax)
+// whose margin for a BUY at ask, as OrderCalcMargin calculates it, fits in budget; 0 if not even one
+// volume step fits. The margin is not always proportional to the volume (a broker can charge a higher
+// rate for larger volumes), so budget / margin of 1 lot is only a first guess: it is scaled down by
+// budget / margin(guess) until OrderCalcMargin confirms that it fits.
+func (s *MT5Sugar) maxVolumeForMargin(ctx context.Context, symbol string, ask, budget float64, info *SymbolInfo) (float64, error) {
+    margin := func(volume float64) (float64, error) {
+        return s.service.CalculateMargin(ctx, &pb.OrderCalcMarginRequest{
+            Symbol:    symbol,
+            OrderType: pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY,
+            Volume:    volume,
+            OpenPrice: ask,
+        })
+    }
+    step := info.VolumeStep // (VolumeMin, then 0.01, when the symbol gives no step)
+
+    marginForOneLot, err := margin(1.0)
+    // ... error check; 0 → errNoMarginRate
+    volume := math.Min(floorToStep(budget/marginForOneLot, step), floorToStep(info.VolumeMax, step))
+
+    for attempt := 0; attempt < 20 && volume > 0; attempt++ {
+        m, err := margin(volume)
+        // ... error check
+        if m <= budget {
+            return volume, nil
+        }
+        next := floorToStep(volume*budget/m, step)
+        if next >= volume {
+            next = floorToStep(volume-step, step)
+        }
+        volume = next
+    }
+    // ... 0 when nothing fits, an error after 20 attempts
 }
 ```
 
@@ -267,19 +295,25 @@ if lotSize > p.VolumeMax {
     lotSize = p.VolumeMax
 }
 
-// Cap by 80% of free margin
+// Cap by 80% of free margin: the margin of lotSize itself must fit (it is not always
+// lotSize × margin of 1 lot - brokers can charge a higher rate for larger volumes)
 freeMargin, _ := service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_MARGIN_FREE)
-marginForOneLot, _ := service.CalculateMargin(ctx, &pb.OrderCalcMarginRequest{
-    Symbol:    symbol,
-    OrderType: pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY,
-    Volume:    1.0,
-    OpenPrice: tick.Ask, // a BUY opens at ASK
-})
-if marginForOneLot > 0 {
-    maxLots := math.Floor((freeMargin*0.8)/marginForOneLot/p.VolumeStep+1e-9) * p.VolumeStep
-    if lotSize > maxLots {
-        lotSize = maxLots
+budget := freeMargin * 0.8
+for attempt := 0; attempt < 20 && lotSize > 0; attempt++ {
+    margin, err := service.CalculateMargin(ctx, &pb.OrderCalcMarginRequest{
+        Symbol:    symbol,
+        OrderType: pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY,
+        Volume:    lotSize,
+        OpenPrice: tick.Ask, // a BUY opens at ASK
+    })
+    if err != nil || margin <= budget {
+        break
     }
+    smaller := math.Floor(lotSize*budget/margin/p.VolumeStep+1e-9) * p.VolumeStep
+    if smaller >= lotSize {
+        smaller = lotSize - p.VolumeStep
+    }
+    lotSize = smaller
 }
 if lotSize < p.VolumeMin {
     // insufficient margin
@@ -660,7 +694,7 @@ CalculateTradeRisk(sugar, "EURUSD", 2.0, 500)
 * `GetBalance()` - Get current account balance
 * `GetSymbolInfo()` - Get symbol specifications
 * `service.GetSymbolDouble()` - Tick value and tick size (point value in the account currency)
-* `service.GetSymbolTick()` - Get current market price (ASK for the margin of 1 lot)
+* `service.GetSymbolTick()` - Get current market price (ASK, the open price of the margin calculation)
 * `GetFreeMargin()`, `service.CalculateMargin()` - Margin cap
 
 **🍬 Complementary sugar methods:**

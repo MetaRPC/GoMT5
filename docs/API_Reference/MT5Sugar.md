@@ -1231,8 +1231,8 @@ Returns `*DailyStats` structure with today's performance, or error if query fail
 Calculates the optimal lot size based on risk percentage with automatic margin limit protection. This is THE MOST IMPORTANT risk management tool - automatically calculates position size considering BOTH risk and margin limits.
 
 **Algorithm:**
-1. Calculate size based on risk: (Balance * RiskPercent / 100) / (StopLossPips * PipValue), where PipValue = ContractSize * Point (no tick-value or currency conversion); rounded down to VolumeStep and clamped to VolumeMin..VolumeMax
-2. Calculate max size based on free margin (80% of free margin / margin for 1 lot BUY at Bid)
+1. Calculate size based on risk: (Balance * RiskPercent / 100) / (StopLossPips * PointValue), where PointValue = SYMBOL_TRADE_TICK_VALUE * SYMBOL_POINT / SYMBOL_TRADE_TICK_SIZE (value of a 1-point move of 1 lot in the account currency; `StopLossPips` is in points); rounded down to VolumeStep and capped at VolumeMax. A size below VolumeMin is an error (never raised to VolumeMin)
+2. Calculate max size based on free margin: the largest volume whose margin (OrderCalcMargin for a BUY at Ask, checked for that volume itself - brokers can charge a higher rate for larger volumes) fits in 80% of the free margin
 3. Return MINIMUM of the two; error if the result is below VolumeMin. Uses 10-second timeout.
 
 **Signature**
@@ -1325,7 +1325,7 @@ Returns `can` (true if position can be opened), `reason` (explanation if can't o
 
 ## GetMaxLotSize
 
-Calculates the maximum lot size you can open with current free margin. This helps prevent margin calls by showing your maximum trading capacity. Computed as 80% of free margin / margin for 1 lot (BUY at Ask), rounded down to VolumeStep and capped at VolumeMax. Uses 5-second timeout.
+Calculates the maximum lot size you can open with current free margin. This helps prevent margin calls by showing your maximum trading capacity. Computed as the largest volume whose margin (OrderCalcMargin for a BUY at Ask, checked for that volume itself - brokers can charge a higher rate for larger volumes, so 80% of free margin / margin for 1 lot is only the first guess) fits in 80% of free margin, rounded down to VolumeStep and capped at VolumeMax. Uses 5-second timeout.
 
 **Signature**
 ```go

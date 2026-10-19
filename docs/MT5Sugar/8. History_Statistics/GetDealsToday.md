@@ -6,7 +6,7 @@
 
 * **Method:** `sugar.GetDealsToday()`
 * **Timeout:** 15 seconds
-* **Returns:** Slice of position history info (one entry per closed position), sorted by open time (oldest first)
+* **Returns:** Slice of position history info (one entry per closed position; a position closed in parts has one entry per partial close), sorted by open time (oldest first)
 
 ---
 
@@ -54,7 +54,7 @@ func (s *MT5Sugar) positionsOpenedBetween(from, to time.Time, timeout time.Durat
 }
 ```
 
-"Deals" are **closed positions** from PositionsHistory (one entry per position, not per MT5 deal). The range filters by
+"Deals" are **closed positions** from PositionsHistory (one entry per closed position, not per MT5 deal; a position closed in parts has one entry per partial close, each with the closed volume). The range filters by
 the position's **open** time: a position opened yesterday and closed today is not included. Still-open positions are not
 in the list. All pages are read (cursor paging, 1000 per page); the timeout covers all pages together.
 

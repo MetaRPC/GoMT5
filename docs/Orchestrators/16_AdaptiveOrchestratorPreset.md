@@ -215,6 +215,7 @@ config.MaxScales = 3         // Max 3 scales
 | `MaxConcurrentOrchestrators` | int           | `2`        | Most orchestrators started per cycle; a further one is not started (0 = no limit) |
 | `MaxDailyLoss`               | float64       | `500.0`    | Stop when balance − day start balance < −MaxDailyLoss |
 | `MaxDailyProfit`             | float64       | `1000.0`   | Stop when balance − day start balance > MaxDailyProfit |
+| `MaxCycles`                  | int           | `0`        | Stop after this many cycles (0 = until Ctrl+C / SIGTERM or a safety stop; the demo runner sets 2) |
 
 "Daily" limits are measured from the balance at `Execute()` start, and from the balance at the first safety check of each new day (local date) after that. The fields are exported, so set them on the preset before calling `Execute()`.
 
@@ -243,8 +244,9 @@ preset.CycleDuration = 5 * time.Minute
 preset.EnablePortfolioMode = false
 preset.MaxDailyLoss = 500.0
 preset.MaxDailyProfit = 1000.0
+preset.MaxCycles = 0 // 0 = until Ctrl+C; e.g. 2 = stop after two cycles
 
-// Execute: blocks until Ctrl+C / SIGTERM or a safety stop, returns the total P/L
+// Execute: blocks until Ctrl+C / SIGTERM, a safety stop or MaxCycles cycles, returns the total P/L
 totalProfit, err := preset.Execute()
 ```
 
@@ -268,8 +270,8 @@ go run main.go adaptive
 go run main.go preset
 ```
 
-All commands launch `main.go -> RunOrchestrator_AdaptivePreset()`, which connects with `mt5.NewMT5Sugar(...)` + `QuickConnect(...)` and runs the preset with its default configuration (`presets.NewAdaptiveOrchestratorPreset(sugar)` + `Execute()`).
-The preset runs until you press `Ctrl+C` or a safety limit stops it; either way `Execute()` stops the running orchestrators, shows the final results and returns, the runner prints `📊 Final Result: $<total P/L>` and disconnects the terminal (the runner disconnects however the run ends, also on an error or Ctrl+C).
+All commands launch `main.go -> RunOrchestrator_AdaptivePreset()`, which connects with `mt5.NewMT5Sugar(...)` + `QuickConnect(...)` and runs the preset with its default configuration and `MaxCycles = 2` (`presets.NewAdaptiveOrchestratorPreset(sugar)`, `preset.MaxCycles = 2`, `Execute()`).
+The preset runs two cycles (about 11 minutes) - so it also ends when nobody can press `Ctrl+C`, e.g. with stdin closed - unless you press `Ctrl+C` or a safety limit stops it earlier; either way `Execute()` stops the running orchestrators, shows the final results and returns, the runner prints `📊 Final Result: $<total P/L>` and disconnects the terminal (the runner disconnects however the run ends, also on an error or Ctrl+C).
 
 ---
 
@@ -327,13 +329,14 @@ INFINITE CYCLE LOOP:
 |   - Total loss > $100? → STOP
 |   - Daily loss > $500? → STOP
 |   - Daily profit > $1000? → STOP (success)
+|   - MaxCycles cycles done (if > 0)? → STOP
 |
 +-- STEP 7: PAUSE
 |   - Wait 30 seconds before next cycle
 |
 +-- REPEAT CYCLE
 |
-ON SAFETY LIMIT or Ctrl+C / SIGTERM:
+ON SAFETY LIMIT, MaxCycles or Ctrl+C / SIGTERM:
 - The cycle loop ends (Ctrl+C also ends the running cycle early)
 - Stop all active orchestrators
 - Show final results
@@ -344,7 +347,7 @@ END
 
 #### 1. Entry Point: Execute
 
-> Lines `265–319`
+> Lines `269–323`
 
 
 ```go
@@ -357,7 +360,7 @@ func (p *AdaptiveOrchestratorPreset) Execute() (float64, error) {
 
 	// Initialize
 	var err error
-	p.initialBalance, err = p.sugar.GetBalance()
+	p.initialBalance, err = p.loadedBalance()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get balance: %w", err)
 	}
@@ -385,12 +388,12 @@ func (p *AdaptiveOrchestratorPreset) Execute() (float64, error) {
 		p.runCycles()
 	}()
 
-	// Wait for interrupt, or for the cycles to end by themselves (safety stop)
+	// Wait for interrupt, or for the cycles to end by themselves (safety stop or MaxCycles)
 	select {
 	case <-sigChan:
 		fmt.Println("\n\n🛑 Stopping preset...")
 	case <-cyclesDone:
-		fmt.Println("\n\n🛑 Safety stop - stopping preset...")
+		fmt.Println("\n\n🛑 Cycles ended - stopping preset...")
 	}
 	p.cancel()
 	<-cyclesDone // the current cycle returns before its orchestrators are stopped
@@ -407,11 +410,11 @@ func (p *AdaptiveOrchestratorPreset) Execute() (float64, error) {
 
 **What happens**:
 
-* Gets starting balance for profit calculation (fails if the balance cannot be read)
+* Gets starting balance for profit calculation (fails if the balance cannot be read). All balance reads go through `loadedBalance()`, which turns a balance of 0 into the error `account data not loaded yet (balance 0)`: a terminal that the server has just started again answers 0 for a few seconds, and taken as real that would be a cycle "losing" the whole balance and a total-loss stop
 * Creates context for graceful shutdown
 * Sets up Ctrl+C / SIGTERM handling
 * Launches main cycle loop in a goroutine
-* Blocks until the user stops execution (Ctrl+C / SIGTERM) **or** the cycle loop ends by itself after a safety limit
+* Blocks until the user stops execution (Ctrl+C / SIGTERM) **or** the cycle loop ends by itself after a safety limit or `MaxCycles` cycles
 * Cancels the context and waits for the cycle loop to return, so no cycle starts orchestrators while they are being stopped
 * Stops the orchestrators of the last cycle, shows the final results and returns `(totalProfit, nil)` - the caller can then disconnect
 
@@ -419,7 +422,7 @@ func (p *AdaptiveOrchestratorPreset) Execute() (float64, error) {
 
 #### 2. Main Cycle Loop
   
-> Lines `322–350`  
+> Lines `326–360`  
 
 
 ```go
@@ -442,6 +445,14 @@ func (p *AdaptiveOrchestratorPreset) runCycles() {
 				return
 			}
 
+			// Planned number of cycles done
+			if p.MaxCycles > 0 && p.cycleNumber >= p.MaxCycles {
+				fmt.Printf("
+  ✓ %d cycle(s) done (MaxCycles)
+", p.cycleNumber)
+				return
+			}
+
 			// Wait before next cycle
 			fmt.Printf("\n⏸️  Pausing 30 seconds before next cycle...\n")
 			select {
@@ -456,19 +467,19 @@ func (p *AdaptiveOrchestratorPreset) runCycles() {
 
 **What happens**:
 
-* Infinite loop running cycles
+* Loop running cycles (endless with `MaxCycles = 0`)
 * Increments cycle counter
 * Executes one trading cycle
 * Returns at once when the context was cancelled during the cycle (Ctrl+C)
 * Checks safety limits after each cycle
-* Ends the loop if limits are breached; `Execute()` sees the loop end and stops everything
+* Ends the loop if limits are breached or `MaxCycles` cycles are done; `Execute()` sees the loop end and stops everything
 * Pauses 30 seconds between cycles (interruptible by the context)
 
 ---
 
 #### 3. Execute Single Cycle
   
-> Lines `353–410`  
+> Lines `363–420`  
 
 
 ```go
@@ -496,7 +507,7 @@ func (p *AdaptiveOrchestratorPreset) executeCycle() {
 	p.stopAllOrchestrators()
 
 	// Step 3: Select and execute appropriate orchestrator(s)
-	cycleStartBalance, startErr := p.sugar.GetBalance()
+	cycleStartBalance, startErr := p.loadedBalance()
 
 	switch condition.Mode {
 	case GridMode:
@@ -517,7 +528,7 @@ func (p *AdaptiveOrchestratorPreset) executeCycle() {
 	p.monitorCycle()
 
 	// Calculate cycle profit (not counted when a balance could not be read)
-	cycleEndBalance, endErr := p.sugar.GetBalance()
+	cycleEndBalance, endErr := p.loadedBalance()
 	if startErr != nil || endErr != nil {
 		fmt.Printf("\n  ⚠️  Cycle #%d result unknown: balance not available (%v %v)\n", p.cycleNumber, startErr, endErr)
 		return
@@ -539,7 +550,7 @@ func (p *AdaptiveOrchestratorPreset) executeCycle() {
 * Records starting balance
 * Selects and executes the appropriate mode
 * Monitors execution for the cycle duration (5 minutes)
-* Calculates profit for this cycle (balance difference = realized P/L only); if a balance cannot be read the cycle result is skipped instead of being counted as a huge loss
+* Calculates profit for this cycle (balance difference = realized P/L only); if a balance cannot be read (or reads 0) the cycle result is skipped instead of being counted as a huge loss
 * Updates total profit
 * If the market analysis fails, the cycle ends at once (no orchestrators are stopped or started) and the loop moves on to the safety check and pause
 
@@ -547,7 +558,7 @@ func (p *AdaptiveOrchestratorPreset) executeCycle() {
 
 #### 4. Market Analysis
   
-> Lines `417–470`  
+> Lines `427–480`  
 
 
 ```go
@@ -630,7 +641,7 @@ func (p *AdaptiveOrchestratorPreset) analyzeMarketConditions() (*MarketCondition
 
 #### 5. Mode Execution Example: Grid Mode
   
-> Lines `477–494`, `553–566`  
+> Lines `487–504`, `563–576`  
 
 
 ```go
@@ -682,7 +693,7 @@ func (p *AdaptiveOrchestratorPreset) startOrchestrator(orch orchestrators.Orches
 
 #### 6. Cycle Monitoring
  
-> Lines `573–591`  
+> Lines `583–601`  
 
 
 ```go
@@ -719,7 +730,7 @@ func (p *AdaptiveOrchestratorPreset) monitorCycle() {
 
 #### 7. Safety Limits Check
  
-> Lines `620–651`  
+> Lines `644–675`  
 
 
 ```go
@@ -731,7 +742,7 @@ func (p *AdaptiveOrchestratorPreset) checkSafetyLimits() bool {
 	}
 
 	// Check daily loss (the day starts again at local midnight)
-	currentBalance, err := p.sugar.GetBalance()
+	currentBalance, err := p.loadedBalance()
 	if err != nil {
 		fmt.Printf("\n  ⚠️  Safety check skipped: %v\n", err)
 		return false
@@ -769,7 +780,7 @@ func (p *AdaptiveOrchestratorPreset) checkSafetyLimits() bool {
 
 #### 8. Stop All Orchestrators
  
-> Lines `610–617`  
+> Lines `620–627`  
 
 
 ```go
