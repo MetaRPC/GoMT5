@@ -5,8 +5,13 @@
 **API Information:**
 
 * **Method:** `sugar.BuyLimit(symbol, volume, price)`
-* **Timeout:** 10 seconds
-* **Returns:** Pending order ticket number
+* **Timeout:** 30 seconds
+* **Returns:** Pending order ticket number (`result.Order`)
+* **Request:** `service.PlaceOrder(ctx, &pb.OrderSendRequest{Symbol, Operation: pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_BUY_LIMIT, Volume, Price: &price})` -
+  no SL/TP, expiration, comment or magic number; price and volume are sent exactly as given (no rounding, no check
+  against the current price - a wrong price is rejected by the trade server)
+* **Success:** only return code `10009` (TRADE_RETCODE_DONE); any other code gives the error
+  `order rejected, code: N, comment: ...`, a failed call gives `BuyLimit failed: ...`
 
 ---
 
@@ -45,7 +50,7 @@ func (s *MT5Sugar) BuyLimit(symbol string, volume, price float64) (uint64, error
 
 ```
 Current ASK: 1.08500
-BUY LIMIT:   1.08000 (500 pips BELOW current price)
+BUY LIMIT:   1.08000 (500 points BELOW current price)
 
 When price drops to 1.08000 → Order executes automatically
 ```
@@ -75,7 +80,7 @@ When price drops to 1.08000 → Order executes automatically
 ```go
 symbol := "EURUSD"
 currentAsk, _ := sugar.GetAsk(symbol)
-supportLevel := currentAsk - 0.00050 // 50 pips below
+supportLevel := currentAsk - 0.00050 // 50 points below (5-digit symbol)
 
 ticket, err := sugar.BuyLimit(symbol, 0.1, supportLevel)
 if err != nil {
@@ -86,7 +91,7 @@ if err != nil {
 fmt.Printf("✅ BUY LIMIT order placed\n")
 fmt.Printf("   Ticket: #%d\n", ticket)
 fmt.Printf("   Entry:  %.5f (current: %.5f)\n", supportLevel, currentAsk)
-fmt.Printf("   Will execute when price drops %.0f pips\n",
+fmt.Printf("   Will execute when price drops %.0f points\n",
     (currentAsk-supportLevel)/0.00001)
 ```
 
@@ -99,7 +104,7 @@ symbol := "EURUSD"
 
 // Current uptrend, wait for pullback
 currentAsk, _ := sugar.GetAsk(symbol)
-pullbackLevel := currentAsk - 0.00030 // Wait for 30 pip pullback
+pullbackLevel := currentAsk - 0.00030 // Wait for 30-point pullback
 
 ticket, _ := sugar.BuyLimit(symbol, 0.1, pullbackLevel)
 
@@ -119,9 +124,9 @@ volume := 0.1
 
 // Set limits at different support levels
 levels := []float64{
-    currentAsk - 0.00020, // -20 pips
-    currentAsk - 0.00050, // -50 pips
-    currentAsk - 0.00100, // -100 pips
+    currentAsk - 0.00020, // -20 points
+    currentAsk - 0.00050, // -50 points
+    currentAsk - 0.00100, // -100 points
 }
 
 fmt.Println("Placing multiple BUY LIMIT orders:")
@@ -133,15 +138,15 @@ for i, level := range levels {
         continue
     }
 
-    pipsAway := (currentAsk - level) / 0.00001
-    fmt.Printf("✅ Level %d: %.5f (%.0f pips away) - Ticket #%d\n",
-        i+1, level, pipsAway, ticket)
+    pointsAway := (currentAsk - level) / 0.00001
+    fmt.Printf("✅ Level %d: %.5f (%.0f points away) - Ticket #%d\n",
+        i+1, level, pointsAway, ticket)
 }
 
-// Output:
-// ✅ Level 1: 1.08300 (20 pips away) - Ticket #12345
-// ✅ Level 2: 1.08000 (50 pips away) - Ticket #12346
-// ✅ Level 3: 1.07500 (100 pips away) - Ticket #12347
+// Output (current ASK 1.08500):
+// ✅ Level 1: 1.08480 (20 points away) - Ticket #12345
+// ✅ Level 2: 1.08450 (50 points away) - Ticket #12346
+// ✅ Level 3: 1.08400 (100 points away) - Ticket #12347
 ```
 
 ---
@@ -157,7 +162,7 @@ currentAsk, _ := sugar.GetAsk(symbol)
 
 // Calculate entry price (support level)
 info, _ := sugar.GetSymbolInfo(symbol)
-entryPrice := currentAsk - (50 * info.Point) // 50 pips below
+entryPrice := currentAsk - (50 * info.Point) // 50 points below
 
 // Validate entry price is below current
 if entryPrice >= currentAsk {
@@ -187,21 +192,19 @@ fmt.Printf("✅ BUY LIMIT placed at %.5f\n", entryPrice)
 ```go
 symbol := "EURUSD"
 currentAsk, _ := sugar.GetAsk(symbol)
-entryPrice := currentAsk - 0.00050 // 50 pips below
+entryPrice := currentAsk - 0.00050 // 50 points below
 
-// Place buy limit
-ticket, _ := sugar.BuyLimit(symbol, 0.1, entryPrice)
-
-// Calculate SL/TP from entry price
+// Calculate SL/TP from entry price (distances in points)
 sl, tp, _ := sugar.CalculateSLTP(symbol, "BUY", entryPrice, 30, 60)
 
-// Set SL/TP on pending order
-sugar.ModifyPositionSLTP(ticket, sl, tp)
+// BuyLimit itself sends no SL/TP; the ModifyPosition* methods are meant for
+// open positions. Put SL/TP into the pending order itself:
+ticket, _ := sugar.BuyLimitWithSLTP(symbol, 0.1, entryPrice, sl, tp)
 
-fmt.Printf("BUY LIMIT with SL/TP:\n")
+fmt.Printf("BUY LIMIT with SL/TP: Ticket #%d\n", ticket)
 fmt.Printf("  Entry: %.5f\n", entryPrice)
-fmt.Printf("  SL:    %.5f (-30 pips)\n", sl)
-fmt.Printf("  TP:    %.5f (+60 pips)\n", tp)
+fmt.Printf("  SL:    %.5f (-30 points)\n", sl)
+fmt.Printf("  TP:    %.5f (+60 points)\n", tp)
 ```
 
 ---
@@ -219,7 +222,7 @@ volumePerEntry := totalVolume / float64(entries)
 fmt.Printf("Scaling in with %d BUY LIMIT orders\n", entries)
 
 for i := 1; i <= entries; i++ {
-    // Each level 20 pips apart
+    // Each level 20 points apart
     entryPrice := currentAsk - (float64(i) * 0.00020)
 
     ticket, err := sugar.BuyLimit(symbol, volumePerEntry, entryPrice)
@@ -247,13 +250,20 @@ fmt.Printf("BUY LIMIT placed: Ticket #%d\n", ticket)
 fmt.Println("Waiting 5 minutes...")
 time.Sleep(5 * time.Minute)
 
-// Check if filled
+// Check if filled (the position opened by the order has the order's ticket)
 pos, err := sugar.GetPositionByTicket(ticket)
 if err != nil {
-    // Not filled - cancel it
+    // Not filled - cancel it. Sugar has no DeleteOrder: delete the pending
+    // order with the Service's CloseOrder (MT5 OrderClose deletes a pending order)
     fmt.Println("Order not filled - canceling...")
-    // Note: Use OrderDelete for pending orders
-    // sugar.DeleteOrder(ticket) // If you have this method
+    ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second) // trade requests: 30 s like Sugar
+    defer cancel()
+    retCode, err := sugar.GetService().CloseOrder(ctx, &pb.OrderCloseRequest{Ticket: ticket})
+    if err != nil || retCode != 10009 {
+        fmt.Printf("❌ Cancel failed: code %d, err %v\n", retCode, err)
+    } else {
+        fmt.Println("✅ Pending order deleted")
+    }
 } else {
     fmt.Printf("✅ Order filled at %.5f\n", pos.PriceOpen)
 }
@@ -293,7 +303,7 @@ symbol := "EURUSD"
 currentAsk, _ := sugar.GetAsk(symbol)
 
 gridLevels := 5
-gridSpacing := 0.00020 // 20 pips
+gridSpacing := 0.00020 // 20 points
 volume := 0.01
 
 fmt.Printf("Grid trading: %d BUY LIMIT orders\n", gridLevels)
@@ -307,9 +317,9 @@ for i := 1; i <= gridLevels; i++ {
         continue
     }
 
-    pipsAway := (currentAsk - entryPrice) / 0.00001
-    fmt.Printf("Grid %d: %.5f (%.0f pips) - #%d\n",
-        i, entryPrice, pipsAway, ticket)
+    pointsAway := (currentAsk - entryPrice) / 0.00001
+    fmt.Printf("Grid %d: %.5f (%.0f points) - #%d\n",
+        i, entryPrice, pointsAway, ticket)
 }
 ```
 
@@ -318,13 +328,13 @@ for i := 1; i <= gridLevels; i++ {
 ### 10) Advanced buy limit with monitoring
 
 ```go
-func PlaceBuyLimitWithMonitoring(sugar *mt5.MT5Sugar, symbol string, pipsBelow float64) {
+func PlaceBuyLimitWithMonitoring(sugar *mt5.MT5Sugar, symbol string, pointsBelow float64) {
     // Get current price
     currentAsk, _ := sugar.GetAsk(symbol)
     info, _ := sugar.GetSymbolInfo(symbol)
 
     // Calculate entry
-    entryPrice := currentAsk - (pipsBelow * info.Point)
+    entryPrice := currentAsk - (pointsBelow * info.Point)
 
     fmt.Printf("╔═══════════════════════════════════════╗\n")
     fmt.Printf("║       BUY LIMIT ORDER                 ║\n")
@@ -332,7 +342,7 @@ func PlaceBuyLimitWithMonitoring(sugar *mt5.MT5Sugar, symbol string, pipsBelow f
     fmt.Printf("Symbol:       %s\n", symbol)
     fmt.Printf("Current ASK:  %.5f\n", currentAsk)
     fmt.Printf("Entry Price:  %.5f\n", entryPrice)
-    fmt.Printf("Distance:     %.0f pips\n", pipsBelow)
+    fmt.Printf("Distance:     %.0f points\n", pointsBelow)
 
     // Place order
     ticket, err := sugar.BuyLimit(symbol, 0.1, entryPrice)
@@ -359,7 +369,7 @@ func PlaceBuyLimitWithMonitoring(sugar *mt5.MT5Sugar, symbol string, pipsBelow f
         case <-ticker.C:
             ask, _ := sugar.GetAsk(symbol)
             distance := ask - entryPrice
-            distancePips := distance / info.Point
+            distancePoints := distance / info.Point
 
             // Check if filled
             _, err := sugar.GetPositionByTicket(ticket)
@@ -368,8 +378,8 @@ func PlaceBuyLimitWithMonitoring(sugar *mt5.MT5Sugar, symbol string, pipsBelow f
                 return
             }
 
-            fmt.Printf("ASK: %.5f (%.0f pips away from entry)\n",
-                ask, distancePips)
+            fmt.Printf("ASK: %.5f (%.0f points away from entry)\n",
+                ask, distancePoints)
         }
     }
 }
@@ -425,7 +435,7 @@ sugar.BuyStop("EURUSD", 0.1, 1.09000) // Buy when rises to 1.09000
 2. **Set at support levels** - Use technical analysis
 3. **Multiple levels** - Scale in at different prices
 4. **Monitor fills** - Check if order was executed
-5. **Use with SL/TP** - Set risk management on pending orders
+5. **Use with SL/TP** - `BuyLimitWithSLTP()` puts SL/TP into the pending order
 
 ---
 

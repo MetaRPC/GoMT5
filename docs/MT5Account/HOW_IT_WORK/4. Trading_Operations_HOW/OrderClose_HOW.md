@@ -32,8 +32,6 @@ if !helpers.PrintShortError(err, "OrderClose failed") {
             mt5.GetRetCodeMessage(closeData.ReturnedCode),
             closeData.ReturnedCode)
     }
-} else {
-    fmt.Printf("    ✗ Order execution FAILED - check return code and comment\n")
 }
 ```
 
@@ -128,7 +126,7 @@ message OrderCloseData {
   uint32 ReturnedCode = 1;           // Result code (TRADE_RETCODE_*)
   string ReturnedStringCode = 2;     // Text designation
   string ReturnedCodeDescription = 3;// Result description
-  ENUM_CLOSE_MODE CloseMode = 4;     // Position close mode
+  MRPC_ORDER_CLOSE_MODE CloseMode = 4; // Close mode (market close / partial close / pending order remove)
 }
 ```
 

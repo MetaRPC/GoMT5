@@ -5,9 +5,11 @@
 **API Information:**
 
 * **Method:** `sugar.QuickConnect(clusterName)`
-* **Package:** `mt5` (MT5Sugar)
-* **Underlying calls:** `account.Connect()` with automatic cluster lookup
-* **Timeout:** Built-in connection timeout
+* **Package:** `mt5` (MT5Sugar), import `mt5 "github.com/MetaRPC/GoMT5/examples/mt5"` - it lives in the repository's
+  *examples* module (`github.com/MetaRPC/GoMT5/examples`), so you get it by cloning the repository, not by `go get` of the SDK package
+* **Underlying calls:** `account.ConnectEx()` with `pb.ConnectExRequest{User, Password, MtClusterName, TimeoutSeconds}`
+* **Timeout:** the server waits up to 120 seconds (`TimeoutSeconds`) for the terminal to start and log in; the call itself has a 130-second deadline
+* **Cleanup:** call `sugar.Disconnect()` when you are done - also when `QuickConnect` returned an error
 
 ---
 
@@ -37,8 +39,8 @@ func (s *MT5Sugar) QuickConnect(clusterName string) error
 
 ## 💬 Just the Essentials
 
-* **What it is:** Simplest connection method - connects using just cluster name.
-* **Why you need it:** You don't need to know host/port - just the cluster name from MT5 terminal.
+* **What it is:** Simplest connection method - connects using just cluster name (login and password were given to `NewMT5Sugar`).
+* **Why you need it:** You don't need to know the broker's MT5 server host/port - just the cluster name from MT5 terminal.
 * **Sanity check:** After successful connect, `IsConnected()` returns `true`.
 
 ---
@@ -48,8 +50,9 @@ func (s *MT5Sugar) QuickConnect(clusterName string) error
 Use it when you want the simplest connection:
 
 * **Quick connection** - One parameter, one call
-* **Auto-discovery** - Finds server host/port automatically
-* **Beginner-friendly** - No need to configure host:port
+* **Auto-discovery** - The cluster name is resolved server-side; no MT5 server host/port needed
+* **Beginner-friendly** - No need to configure the broker's host:port (the gRPC gateway address is the third
+  argument of `NewMT5Sugar`; `""` means `"mt5.mrpc.pro:443"`)
 * **Demo/Live switching** - Just change cluster name
 
 ---
@@ -62,6 +65,11 @@ Use it when you want the simplest connection:
 * **First call** - Must be called before any trading operations
 * **One-time** - Only need to connect once per session
 * **Check connection** - Use `IsConnected()` to verify
+* **Slow first start** - A terminal that is not running yet has to start first; that can take well over 30 seconds,
+  which is why the server waits up to 120 s and the call has a 130 s deadline
+* **Always disconnect** - Call `sugar.Disconnect()` when the program is done, also when `QuickConnect` failed (the
+  server may already have started the terminal). Otherwise the terminal keeps running on the server.
+  `Disconnect()` stops the terminal, `Disconnect(true)` deletes it; a second call is a no-op
 
 ---
 
@@ -69,21 +77,30 @@ Use it when you want the simplest connection:
 
 ```go
 func (s *MT5Sugar) QuickConnect(clusterName string) error {
-    ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
+    // A terminal that is not running yet starts first: that takes longer than 30 seconds at times. The server waits
+    // up to TimeoutSeconds for the login; the call itself gets that plus a margin.
+    timeoutSeconds := uint32(120)
+    ctx, cancel := context.WithTimeout(s.ctx, time.Duration(timeoutSeconds+10)*time.Second)
     defer cancel()
 
-    baseSymbol := "EURUSD"
     req := &pb.ConnectExRequest{
-        User:            s.user,
-        Password:        s.password,
-        MtClusterName:   clusterName,
-        BaseChartSymbol: &baseSymbol,
+        User:           s.user,
+        Password:       s.password,
+        MtClusterName:  clusterName,
+        TimeoutSeconds: &timeoutSeconds,
     }
 
     _, err := s.GetAccount().ConnectEx(ctx, req)
     return err
 }
 ```
+
+Only `User`, `Password`, `MtClusterName` and `TimeoutSeconds` (120) are set - no base chart symbol (there is no such
+field), no experts. The context deadline is 130 seconds (120 + 10 s margin).
+On success `ConnectEx` stores the returned terminal instance id in the account, and every later call uses it.
+
+`Disconnect()` (see `MT5Service.Disconnect`) sends the Disconnect request with a 30-second timeout, then closes the
+gRPC connection, and returns the disconnect error (`"Disconnect failed: ..."`).
 
 **What it improves:**
 
@@ -97,15 +114,26 @@ func (s *MT5Sugar) QuickConnect(clusterName string) error {
 
 **WITHOUT sugar:**
 ```go
-// Need to know exact host and port
-account, _ := mt5account.NewMT5Account(591129415, "password")
-err := account.Connect(ctx, 591129415, "password", "FxPro-MT5 Demo")
+// helpers "github.com/MetaRPC/GoMT5/package/Helpers", pb "github.com/MetaRPC/GoMT5/package", "github.com/google/uuid"
+account, _ := helpers.NewMT5Account(12345678, "your_password", "mt5.mrpc.pro:443", uuid.New())
+
+timeoutSeconds := uint32(120)
+ctx, cancel := context.WithTimeout(context.Background(), 130*time.Second)
+defer cancel()
+
+_, err := account.ConnectEx(ctx, &pb.ConnectExRequest{
+    User:           12345678,
+    Password:       "your_password",
+    MtClusterName:  "YourBroker-MT5 Demo",
+    TimeoutSeconds: &timeoutSeconds,
+})
 ```
 
 **WITH sugar:**
 ```go
-sugar, _ := mt5.NewMT5Sugar(591129415, "password", "mt5.mrpc.pro:443")
-err := sugar.QuickConnect("FxPro-MT5 Demo")
+sugar, _ := mt5.NewMT5Sugar(12345678, "your_password", "mt5.mrpc.pro:443")
+defer sugar.Disconnect()
+err := sugar.QuickConnect("YourBroker-MT5 Demo")
 ```
 
 **Benefits:**
@@ -125,7 +153,8 @@ package main
 
 import (
     "fmt"
-    "github.com/MetaRPC/GoMT5/package/Helpers"
+
+    mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
 )
 
 func main() {
@@ -139,6 +168,12 @@ func main() {
         fmt.Printf("Failed to create Sugar: %v\n", err)
         return
     }
+    // Stop the terminal on the server when done - also when QuickConnect fails
+    defer func() {
+        if err := sugar.Disconnect(); err != nil {
+            fmt.Printf("Disconnect failed: %v\n", err)
+        }
+    }()
 
     // Connect to MT5
     err = sugar.QuickConnect("FxPro-MT5 Demo")
@@ -195,8 +230,11 @@ if err != nil {
 
 fmt.Println("✅ Connected to DEMO account")
 
-// ... Later, to switch to LIVE (requires reconnection):
-// sugar.QuickConnect("FxPro-MT5 Live")
+// ... Later, to switch to LIVE: the cluster name is the only thing QuickConnect takes,
+// login and password come from NewMT5Sugar - so a live account with its own login
+// needs its own instance:
+// sugarLive, _ := mt5.NewMT5Sugar(liveLogin, "live_password", "mt5.mrpc.pro:443")
+// sugarLive.QuickConnect("FxPro-MT5 Live")
 ```
 
 ---
@@ -237,11 +275,14 @@ for i := 0; i < maxRetries; i++ {
 ```go
 sugar, _ := mt5.NewMT5Sugar(591129415, "password", "mt5.mrpc.pro:443")
 
+defer sugar.Disconnect() // also runs when the connect failed or timed out
+
 // Create context with timeout
-ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 defer cancel()
 
-// Connect (connection has built-in timeout, but we add extra safety)
+// Connect (QuickConnect has its own 130 s deadline; this shorter one only stops
+// waiting - the connect keeps running in the goroutine)
 done := make(chan error, 1)
 
 go func() {
@@ -297,17 +338,27 @@ fmt.Printf("Company:    %s\n", accountInfo.Company)
 ### 7) Connection from environment variables
 
 ```go
-import "os"
+import (
+    "os"
+    "strconv"
+)
 
 // Get credentials from environment
-login := os.Getenv("MT5_USER")
+loginStr := os.Getenv("MT5_USER")
 password := os.Getenv("MT5_PASSWORD")
 server := os.Getenv("MT5_GRPC_SERVER")
 cluster := os.Getenv("MT5_MT_CLUSTER")
 
 // Validate
-if login == "" || password == "" || server == "" || cluster == "" {
+if loginStr == "" || password == "" || server == "" || cluster == "" {
     fmt.Println("❌ Missing environment variables")
+    return
+}
+
+// NewMT5Sugar takes the login as uint64
+login, err := strconv.ParseUint(loginStr, 10, 64)
+if err != nil {
+    fmt.Printf("❌ MT5_USER is not a number: %v\n", err)
     return
 }
 
@@ -414,6 +465,7 @@ func ConnectToMT5(login uint64, password, server, cluster string) (*mt5.MT5Sugar
     // Connect
     err = sugar.QuickConnect(cluster)
     if err != nil {
+        sugar.Disconnect() // the server may already have started the terminal
         return nil, fmt.Errorf("connection failed: %w", err)
     }
 
@@ -421,10 +473,11 @@ func ConnectToMT5(login uint64, password, server, cluster string) (*mt5.MT5Sugar
     connected := sugar.IsConnected()
 
     if !connected {
+        sugar.Disconnect()
         return nil, fmt.Errorf("connection not established")
     }
 
-    return sugar, nil
+    return sugar, nil // the caller calls sugar.Disconnect() when done
 }
 
 // Usage:
@@ -438,6 +491,7 @@ if err != nil {
     fmt.Printf("❌ %v\n", err)
     return
 }
+defer sugar.Disconnect()
 
 fmt.Println("✅ Connected and ready to trade!")
 ```
@@ -515,6 +569,23 @@ sugar, _ := mt5.NewMT5Sugar(591129415, "password", "mt5.mrpc.pro:443")
 sugar.QuickConnect("FxPro-MT5 Demo")
 ```
 
+### 5) Never disconnecting
+
+```go
+// ❌ WRONG - the terminal keeps running on the server after the program exits
+sugar, _ := mt5.NewMT5Sugar(591129415, "password", "mt5.mrpc.pro:443")
+if err := sugar.QuickConnect("FxPro-MT5 Demo"); err != nil {
+    return // a failed connect may already have started the terminal
+}
+
+// ✅ CORRECT - disconnect on every path, also after a failed QuickConnect
+sugar, _ := mt5.NewMT5Sugar(591129415, "password", "mt5.mrpc.pro:443")
+defer sugar.Disconnect() // stops the terminal; Disconnect(true) deletes it
+if err := sugar.QuickConnect("FxPro-MT5 Demo"); err != nil {
+    return
+}
+```
+
 ---
 
 ## 💎 Pro Tips
@@ -525,6 +596,7 @@ sugar.QuickConnect("FxPro-MT5 Demo")
 4. **One connection per session** - Don't reconnect unless necessary
 5. **Demo first** - Always test on demo before live
 6. **Cluster name** - Copy exact name from MT5 Terminal
+7. **Always Disconnect** - `defer sugar.Disconnect()` right after `NewMT5Sugar`, before `QuickConnect`
 
 ---
 

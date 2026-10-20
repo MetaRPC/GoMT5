@@ -45,11 +45,11 @@ Want detailed explanations with line-by-line code breakdown? Check these guides:
 
 | If you need…                                     | Use                      | Returns                    | Key inputs                               |
 | ------------------------------------------------ | ------------------------ | -------------------------- | ---------------------------------------- |
-| Count of open positions                          | `PositionsTotal`         | PositionsTotalData (int64) | *(none)*                                 |
-| All open positions/orders (full details)         | `OpenedOrders`           | OpenedOrdersData           | Symbol (optional), Group (optional)      |
-| Ticket numbers only (lightweight)                | `OpenedOrdersTickets`    | Two arrays of uint64       | Symbol (optional), Group (optional)      |
-| Historical orders in time range                  | `OrderHistory`           | OrdersHistoryData          | InputFrom, InputTo, PageNumber, ItemsPerPage |
-| Closed positions in time range                   | `PositionsHistory`       | PositionsHistoryData       | PositionOpenTimeFrom, PositionOpenTimeTo, PageNumber, ItemsPerPage |
+| Count of open positions                          | `PositionsTotal`         | PositionsTotalData (int32) | *(none)*                                 |
+| All open positions/orders (full details)         | `OpenedOrders`           | OpenedOrdersData           | InputSortMode (optional; no symbol filter, filter on the client side) |
+| Ticket numbers only (lightweight)                | `OpenedOrdersTickets`    | Two arrays of int64        | *(none: always all symbols)*             |
+| Historical orders in time range                  | `OrderHistory`           | OrdersHistoryData          | InputFrom/InputFromUtc, InputTo/InputToUtc, InputSortMode, PageNumber, ItemsPerPage (or PageToken/PageSize) |
+| Closed positions in time range                   | `PositionsHistory`       | PositionsHistoryData       | SortType, PositionOpenTimeFrom(Utc), PositionOpenTimeTo(Utc), PageNumber, ItemsPerPage (or PageToken/PageSize) |
 
 ---
 
@@ -59,7 +59,7 @@ Want detailed explanations with line-by-line code breakdown? Check these guides:
 * **OpenedOrders returns both** - Returns open positions AND pending orders in separate arrays.
 * **Tickets** - Unique identifier for each position/order.
 * **Pagination** - OrderHistory and PositionsHistory support PageNumber/ItemsPerPage for large datasets.
-* **Time range** - OrderHistory and PositionsHistory use `google.protobuf.Timestamp` (convert from `time.Time` using `timestamppb.New()`).
+* **Time range** - OrderHistory and PositionsHistory use `google.protobuf.Timestamp` (convert from `time.Time` using `timestamppb.New()`). The plain fields are broker server time; the `*Utc` fields take UTC (use them for values built from `time.Now()`).
 * **OpenedOrdersTickets** - Much lighter than OpenedOrders if you only need ticket numbers.
 * **Historical data limits** - Broker may limit how far back you can query.
 
@@ -114,9 +114,9 @@ now := time.Now()
 weekAgo := now.Add(-7 * 24 * time.Hour)
 
 data, err := account.OrderHistory(ctx, &pb.OrderHistoryRequest{
-    InputFrom:    timestamppb.New(weekAgo),
-    InputTo:      timestamppb.New(now),
-    PageNumber:   0,
+    InputFromUtc: timestamppb.New(weekAgo),
+    InputToUtc:   timestamppb.New(now),
+    PageNumber:   1,
     ItemsPerPage: 100,
 })
 if err != nil {
@@ -140,11 +140,13 @@ for _, item := range data.HistoryData {
 now := time.Now()
 startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
+page, perPage := int32(1), int32(100) // PageNumber/ItemsPerPage are *int32 here
+
 data, err := account.PositionsHistory(ctx, &pb.PositionsHistoryRequest{
-    PositionOpenTimeFrom: timestamppb.New(startOfDay),
-    PositionOpenTimeTo:   timestamppb.New(now),
-    PageNumber:           0,
-    ItemsPerPage:         100,
+    PositionOpenTimeFromUtc: timestamppb.New(startOfDay),
+    PositionOpenTimeToUtc:   timestamppb.New(now),
+    PageNumber:              &page,
+    ItemsPerPage:            &perPage,
 })
 if err != nil {
     log.Fatalf("Failed: %v", err)

@@ -5,16 +5,18 @@
 **API Information:**
 
 * **Method:** `sugar.GetPositionsBySymbol(symbol)`
-* **Timeout:** 3 seconds
-* **Returns:** Slice of `*PositionInfo` structures
+* **Timeout:** 10 seconds (it calls `GetOpenPositions()` and filters the result in Go)
+* **Returns:** Slice of `*pb.PositionInfo` structures
 
 ---
 
 ## 📋 Method Signature
 
 ```go
-func (s *MT5Sugar) GetPositionsBySymbol(symbol string) ([]*PositionInfo, error)
+func (s *MT5Sugar) GetPositionsBySymbol(symbol string) ([]*pb.PositionInfo, error)
 ```
+
+The filter is an exact string comparison `pos.Symbol == symbol`; the order is that of `GetOpenPositions()` (open time, oldest first).
 
 ---
 
@@ -26,8 +28,8 @@ func (s *MT5Sugar) GetPositionsBySymbol(symbol string) ([]*PositionInfo, error)
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `[]*PositionInfo` | slice | Positions for specified symbol |
-| `error` | `error` | Error if retrieval failed |
+| `[]*pb.PositionInfo` | slice | Positions for specified symbol |
+| `error` | `error` | The `GetOpenPositions` error if retrieval failed |
 
 ---
 
@@ -35,7 +37,7 @@ func (s *MT5Sugar) GetPositionsBySymbol(symbol string) ([]*PositionInfo, error)
 
 * **What it is:** Filter open positions to show only one symbol.
 * **Why you need it:** Symbol-specific operations, hedging, symbol P/L tracking.
-* **Sanity check:** Returns empty slice if no positions for that symbol.
+* **Sanity check:** Returns a `nil` slice (length 0) if there are no positions for that symbol - check `len(positions)`.
 
 ---
 
@@ -118,7 +120,7 @@ buyVolume := 0.0
 sellVolume := 0.0
 
 for _, pos := range positions {
-    if pos.Type == "BUY" {
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
         buyVolume += pos.Volume
     } else {
         sellVolume += pos.Volume
@@ -195,7 +197,7 @@ hasBuy := false
 hasSell := false
 
 for _, pos := range positions {
-    if pos.Type == "BUY" {
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
         hasBuy = true
     } else {
         hasSell = true
@@ -226,11 +228,11 @@ if len(positions) == 0 {
 }
 
 // Separate BUY and SELL
-buyPositions := []*PositionInfo{}
-sellPositions := []*PositionInfo{}
+buyPositions := []*pb.PositionInfo{}
+sellPositions := []*pb.PositionInfo{}
 
 for _, pos := range positions {
-    if pos.Type == "BUY" {
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
         buyPositions = append(buyPositions, pos)
     } else {
         sellPositions = append(sellPositions, pos)
@@ -284,19 +286,19 @@ oldest := positions[0]
 newest := positions[0]
 
 for _, pos := range positions {
-    if pos.TimeOpen.Before(oldest.TimeOpen) {
+    if pos.OpenTimeUtc.AsTime().Before(oldest.OpenTimeUtc.AsTime()) {
         oldest = pos
     }
-    if pos.TimeOpen.After(newest.TimeOpen) {
+    if pos.OpenTimeUtc.AsTime().After(newest.OpenTimeUtc.AsTime()) {
         newest = pos
     }
 }
 
 fmt.Printf("%s Position Age:\n", symbol)
 fmt.Printf("Oldest: #%d opened %v ago ($%.2f)\n",
-    oldest.Ticket, time.Since(oldest.TimeOpen).Round(time.Minute), oldest.Profit)
+    oldest.Ticket, time.Since(oldest.OpenTimeUtc.AsTime()).Round(time.Minute), oldest.Profit)
 fmt.Printf("Newest: #%d opened %v ago ($%.2f)\n",
-    newest.Ticket, time.Since(newest.TimeOpen).Round(time.Minute), newest.Profit)
+    newest.Ticket, time.Since(newest.OpenTimeUtc.AsTime()).Round(time.Minute), newest.Profit)
 ```
 
 ---
@@ -375,7 +377,7 @@ func MonitorSymbol(sugar *mt5.MT5Sugar, symbol string) {
         buyProfit, sellProfit := 0.0, 0.0
 
         for _, pos := range positions {
-            if pos.Type == "BUY" {
+            if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
                 buyCount++
                 buyVolume += pos.Volume
                 buyProfit += pos.Profit
@@ -428,11 +430,11 @@ func AnalyzeSymbolPositions(sugar *mt5.MT5Sugar, symbol string) {
     fmt.Println("╚═══════════════════════════════════════╝")
 
     // Separate by type
-    buyPos := []*PositionInfo{}
-    sellPos := []*PositionInfo{}
+    buyPos := []*pb.PositionInfo{}
+    sellPos := []*pb.PositionInfo{}
 
     for _, pos := range positions {
-        if pos.Type == "BUY" {
+        if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
             buyPos = append(buyPos, pos)
         } else {
             sellPos = append(sellPos, pos)
@@ -485,7 +487,7 @@ func AnalyzeSymbolPositions(sugar *mt5.MT5Sugar, symbol string) {
     netVolume := 0.0
     netProfit := 0.0
     for _, pos := range positions {
-        if pos.Type == "BUY" {
+        if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
             netVolume += pos.Volume
         } else {
             netVolume -= pos.Volume
@@ -520,7 +522,9 @@ AnalyzeSymbolPositions(sugar, "EURUSD")
 
 **🍬 Symbol-specific operations:**
 
-* `CloseAllPositions()` - Close all (use with filter for symbol)
+* `CloseAllBySymbol()` - Close all positions of one symbol
+* `HasOpenPosition(symbol)` - `len(GetPositionsBySymbol(symbol)) > 0`
+* `GetProfitBySymbol()` - Sum of `Profit` for one symbol
 
 ---
 
@@ -574,7 +578,7 @@ allPositions, _ := sugar.GetOpenPositions()
 
 4. **Hedging** - Useful to see both sides of hedged positions
 
-5. **Batch operations** - Collect tickets before closing/modifying
+5. **Batch operations** - The slice is a snapshot; fetch again after closing/modifying
 
 ---
 

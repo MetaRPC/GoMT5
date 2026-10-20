@@ -1,7 +1,7 @@
 ### Example from file: `examples/demos/lowlevel/03_streaming_methods.go`
 
 > The **`OnPositionsAndPendingOrdersTickets()`** method is used to receive real-time updates of **order and position ticket numbers**.
-It reports when orders or positions **appear, disappear, or change**.
+It sends the **current lists** of position and pending-order tickets at a fixed period, so you can see when orders or positions **appear or disappear**.
 
 > This stream doesn't transmit detailed data — only **ticket number lists**. It's a lightweight way to synchronize the current account state without excessive load.
 
@@ -10,12 +10,16 @@ It reports when orders or positions **appear, disappear, or change**.
 ## 🧩 Code example
 
 ```go
-ticketsReq := &pb.OnPositionsAndPendingOrdersTicketsRequest{}
+ticketsReq := &pb.OnPositionsAndPendingOrdersTicketsRequest{
+	TimerPeriodMilliseconds: 1000, // one snapshot per second (0 = the default, 1000 ms)
+}
 
-ticketsChan, ticketsErrChan := account.OnPositionsAndPendingOrdersTickets(ctx, ticketsReq)
+ticketsCtx, ticketsCancel := context.WithCancel(ctx)
+ticketsChan, ticketsErrChan := account.OnPositionsAndPendingOrdersTickets(ticketsCtx, ticketsReq)
 
 fmt.Printf("Streaming ticket changes (max %d events or %d seconds)...\n", MAX_EVENTS, MAX_SECONDS)
-fmt.Println("  NOTE: This stream sends events when orders/positions open or close")
+fmt.Println("  NOTE: This stream sends the current ticket lists every TimerPeriodMilliseconds,")
+fmt.Println("        whether they changed or not: compare them to the previous ones to see changes")
 
 eventCount = 0
 timeout = time.After(MAX_SECONDS * time.Second)
@@ -52,6 +56,7 @@ for {
 		break streamTickets
 	}
 }
+ticketsCancel() // closes this stream on the server
 ```
 
 ---
@@ -61,18 +66,23 @@ for {
 ### 1️. Subscribe to Ticket Stream
 
 ```go
-ticketsReq := &pb.OnPositionsAndPendingOrdersTicketsRequest{}
+ticketsReq := &pb.OnPositionsAndPendingOrdersTicketsRequest{
+	TimerPeriodMilliseconds: 1000, // one snapshot per second (0 = the default, 1000 ms)
+}
 ```
 
-Create a request without parameters — the stream automatically tracks **all tickets** of positions and orders on the current account.
+The only parameter is the period, `TimerPeriodMilliseconds` (0 = the default, 1000 ms). The stream covers **all tickets** of positions and pending orders on the current account.
 
 ---
 
 ### 2️. Start the Stream
 
 ```go
-ticketsChan, ticketsErrChan := account.OnPositionsAndPendingOrdersTickets(ctx, ticketsReq)
+ticketsCtx, ticketsCancel := context.WithCancel(ctx)
+ticketsChan, ticketsErrChan := account.OnPositionsAndPendingOrdersTickets(ticketsCtx, ticketsReq)
 ```
+
+The stream gets its own context, derived from `ctx`: `ticketsCancel()` after the loop closes this stream on the server at once. Without it the stream would stay open, unread, until `ctx` itself ends — and every later stream of the demo would pile up next to it.
 
 The method returns two channels:
 
@@ -87,7 +97,7 @@ The method returns two channels:
 case ticketsData, ok := <-ticketsChan:
 ```
 
-Each time orders or positions change, a new message arrives. It contains **current ticket lists**.
+A new message arrives every `TimerPeriodMilliseconds`, whether anything changed or not. It contains the **current ticket lists**: compare them with the previous message to detect opened or closed tickets.
 
 ---
 
@@ -123,8 +133,11 @@ The stream closes when:
 
 ```protobuf
 message OnPositionsAndPendingOrdersTicketsData {
-  repeated uint64 PendingOrderTickets = 1;
-  repeated uint64 PositionTickets = 2;
+  repeated uint64 position_tickets = 1;
+  repeated uint64 pending_order_tickets = 2;
+  google.protobuf.Timestamp server_time = 3;      // broker server time
+  google.protobuf.Timestamp server_time_utc = 5;  // server_time in UTC
+  string terminal_instance_guid_id = 4;
 }
 ```
 
@@ -136,9 +149,11 @@ message OnPositionsAndPendingOrdersTicketsData {
 
 ```
 Streaming ticket changes (max 5 events or 10 seconds)...
-  NOTE: This stream sends events when orders/positions open or close
+  NOTE: This stream sends the current ticket lists every TimerPeriodMilliseconds,
+        whether they changed or not: compare them to the previous ones to see changes
   Event #1: Total tickets=3 (Pending Orders=1 Positions=2)
-  Event #2: Total tickets=2 (Pending Orders=0 Positions=2)
+  Event #2: Total tickets=3 (Pending Orders=1 Positions=2)
+  Event #3: Total tickets=2 (Pending Orders=0 Positions=2)
   ✓ Received 5 events, stopping stream
 ```
 

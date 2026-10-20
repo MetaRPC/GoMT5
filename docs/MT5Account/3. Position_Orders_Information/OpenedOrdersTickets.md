@@ -60,8 +60,7 @@ func (a *MT5Account) OpenedOrdersTickets(
 
 ```protobuf
 OpenedOrdersTicketsRequest {
-  string Symbol = 1;  // Optional symbol filter (empty = all symbols)
-  string Group = 2;   // Optional group filter
+  // no fields: always returns the tickets of all symbols
 }
 ```
 
@@ -83,14 +82,9 @@ OpenedOrdersTicketsReply {
 | Parameter | Type                                | Description                                   |
 | --------- | ----------------------------------- | --------------------------------------------- |
 | `ctx`     | `context.Context`                   | Context for deadline/timeout and cancellation |
-| `req`     | `*pb.OpenedOrdersTicketsRequest`    | Request with optional Symbol and Group filter |
+| `req`     | `*pb.OpenedOrdersTicketsRequest`    | Empty request (pass `&pb.OpenedOrdersTicketsRequest{}`) |
 
-**Request fields:**
-
-| Field    | Type     | Description                                         |
-| -------- | -------- | --------------------------------------------------- |
-| `Symbol` | `string` | Optional symbol filter (empty string = all symbols) |
-| `Group`  | `string` | Optional group filter                               |
+**Request fields:** none. The request has no symbol or group filter; it always returns the tickets of all open positions and pending orders. To get the tickets of one symbol, use [OpenedOrders](./OpenedOrders.md) and filter by `Symbol` on the client side.
 
 ---
 
@@ -98,8 +92,8 @@ OpenedOrdersTicketsReply {
 
 | Field                    | Type       | Go Type    | Description                         |
 | ------------------------ | ---------- | ---------- | ----------------------------------- |
-| `OpenedOrdersTickets`    | `uint64[]` | `[]uint64` | Array of pending order tickets      |
-| `OpenedPositionTickets`  | `uint64[]` | `[]uint64` | Array of open position tickets      |
+| `OpenedOrdersTickets`    | `int64[]`  | `[]int64`  | Array of pending order tickets      |
+| `OpenedPositionTickets`  | `int64[]`  | `[]int64`  | Array of open position tickets      |
 
 ---
 
@@ -109,7 +103,8 @@ OpenedOrdersTicketsReply {
 * **Automatic reconnection:** All `MT5Account` methods have built-in protection against transient gRPC errors with automatic reconnection via `ExecuteWithReconnect`.
 * **Default timeout:** If context has no deadline, a default `5s` timeout is applied automatically.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
-* **Symbol filter:** Use Symbol field to get tickets for specific instrument only.
+* **No symbol filter:** The request has no fields; filter by symbol on the client side with [OpenedOrders](./OpenedOrders.md) (each position/order carries its `Symbol`).
+* **Ticket type:** Tickets are `int64` here (`uint64` in `OpenedOrders` and in `OrderClose`/`OrderModify` requests); convert with `uint64(t)` when needed.
 * **Performance:** Much faster than OpenedOrders, use when you only need ticket numbers.
 
 ---
@@ -122,6 +117,7 @@ OpenedOrdersTicketsReply {
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -131,15 +127,22 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
 
-    data, err := account.OpenedOrdersTickets(ctx, &pb.OpenedOrdersTicketsRequest{
-        Symbol: "", // All symbols
-    })
+    data, err := account.OpenedOrdersTickets(ctx, &pb.OpenedOrdersTicketsRequest{}) // always all symbols
     if err != nil {
         panic(err)
     }
@@ -157,19 +160,25 @@ func main() {
 
 ### 2) Get tickets for specific symbol
 
+`OpenedOrdersTickets` cannot filter by symbol, so this uses `OpenedOrders` (which returns the symbol of each position) and filters on the client side:
+
 ```go
 func GetSymbolTickets(account *mt5.MT5Account, symbol string) ([]uint64, error) {
     ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
     defer cancel()
 
-    data, err := account.OpenedOrdersTickets(ctx, &pb.OpenedOrdersTicketsRequest{
-        Symbol: symbol,
-    })
+    data, err := account.OpenedOrders(ctx, &pb.OpenedOrdersRequest{})
     if err != nil {
-        return nil, fmt.Errorf("failed to get tickets: %w", err)
+        return nil, fmt.Errorf("failed to get positions: %w", err)
     }
 
-    return data.OpenedPositionTickets, nil
+    tickets := []uint64{}
+    for _, pos := range data.PositionInfos {
+        if pos.Symbol == symbol {
+            tickets = append(tickets, pos.Ticket)
+        }
+    }
+    return tickets, nil
 }
 
 // Usage:
@@ -185,7 +194,7 @@ func MonitorNewPositions(account *mt5.MT5Account, interval time.Duration) {
     ticker := time.NewTicker(interval)
     defer ticker.Stop()
 
-    var lastTickets []uint64
+    var lastTickets []int64
 
     for range ticker.C {
         data, err := account.OpenedOrdersTickets(ctx, &pb.OpenedOrdersTicketsRequest{})
@@ -220,13 +229,13 @@ func MonitorNewPositions(account *mt5.MT5Account, interval time.Duration) {
     }
 }
 
-func findNewTickets(old, new []uint64) []uint64 {
-    oldSet := make(map[uint64]bool)
+func findNewTickets(old, new []int64) []int64 {
+    oldSet := make(map[int64]bool)
     for _, t := range old {
         oldSet[t] = true
     }
 
-    newTickets := []uint64{}
+    newTickets := []int64{}
     for _, t := range new {
         if !oldSet[t] {
             newTickets = append(newTickets, t)
@@ -239,7 +248,7 @@ func findNewTickets(old, new []uint64) []uint64 {
 ### 4) Check if specific ticket is still open
 
 ```go
-func IsTicketOpen(account *mt5.MT5Account, ticket uint64) (bool, error) {
+func IsTicketOpen(account *mt5.MT5Account, ticket int64) (bool, error) {
     ctx := context.Background()
 
     data, err := account.OpenedOrdersTickets(ctx, &pb.OpenedOrdersTicketsRequest{})
@@ -266,13 +275,12 @@ func IsTicketOpen(account *mt5.MT5Account, ticket uint64) (bool, error) {
 ### 5) Quick position count
 
 ```go
-func QuickPositionCount(account *mt5.MT5Account, symbol string) (int, error) {
+func QuickPositionCount(account *mt5.MT5Account) (int, error) {
     ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
     defer cancel()
 
-    data, err := account.OpenedOrdersTickets(ctx, &pb.OpenedOrdersTicketsRequest{
-        Symbol: symbol,
-    })
+    // Counts the positions of all symbols (the request has no symbol filter)
+    data, err := account.OpenedOrdersTickets(ctx, &pb.OpenedOrdersTicketsRequest{})
     if err != nil {
         return 0, err
     }
@@ -326,10 +334,10 @@ func HasAnyPositions(account *mt5.MT5Account) bool {
 ```go
 type TicketMonitor struct {
     account     *mt5.MT5Account
-    lastTickets map[uint64]bool
+    lastTickets map[int64]bool
 }
 
-func (tm *TicketMonitor) CheckChanges() (added, removed []uint64, err error) {
+func (tm *TicketMonitor) CheckChanges() (added, removed []int64, err error) {
     ctx := context.Background()
 
     data, err := tm.account.OpenedOrdersTickets(ctx, &pb.OpenedOrdersTicketsRequest{})
@@ -337,7 +345,7 @@ func (tm *TicketMonitor) CheckChanges() (added, removed []uint64, err error) {
         return nil, nil, err
     }
 
-    currentTickets := make(map[uint64]bool)
+    currentTickets := make(map[int64]bool)
     for _, t := range data.OpenedPositionTickets {
         currentTickets[t] = true
 

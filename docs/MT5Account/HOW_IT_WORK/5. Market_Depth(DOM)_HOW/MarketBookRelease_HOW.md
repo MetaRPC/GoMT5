@@ -23,7 +23,7 @@ if err != nil {
     fmt.Printf("  ⚠️  Unsubscribe failed: %v\n", err)
     fmt.Println("     → Not critical - connection will close anyway")
 } else {
-    if marketBookReleaseData.Success {
+    if marketBookReleaseData.ClosedSuccessfully {
         fmt.Println("  ✓ Unsubscribed successfully")
     } else {
         fmt.Println("  ⚠️  Unsubscribe reported unsuccessful")
@@ -74,14 +74,14 @@ if err != nil {
 * **Successful or unsuccessful unsubscribe:**
 
   ```go
-  if marketBookReleaseData.Success {
+  if marketBookReleaseData.ClosedSuccessfully {
       fmt.Println("  ✓ Unsubscribed successfully")
   } else {
       fmt.Println("  ⚠️  Unsubscribe reported unsuccessful")
   }
   ```
 
-  If `Success = true`, the broker confirmed successful subscription closure.
+  If `ClosedSuccessfully = true`, the broker confirmed successful subscription closure.
 
 ---
 
@@ -89,7 +89,7 @@ if err != nil {
 
 ```protobuf
 message MarketBookReleaseData {
-  bool Success = 1; // True if unsubscription was successful
+  bool closed_successfully = 1; // True if unsubscription was successful
 }
 ```
 

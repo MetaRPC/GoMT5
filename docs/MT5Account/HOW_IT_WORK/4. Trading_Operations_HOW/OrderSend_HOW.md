@@ -175,6 +175,10 @@ message OrderSendData {
   double Bid = 6;
   double Ask = 7;
   string Comment = 8;
+  uint32 RequestId = 9;
+  int32 RetCodeExternal = 10;
+  string ReturnedStringCode = 11;
+  string ReturnedCodeDescription = 12;
 }
 ```
 

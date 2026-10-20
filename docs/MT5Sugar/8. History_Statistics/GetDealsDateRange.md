@@ -1,12 +1,12 @@
 # 📅🎯 Get Deals Date Range (`GetDealsDateRange`)
 
-> **Sugar method:** Returns all closed positions (deals) within a custom date range.
+> **Sugar method:** Returns closed positions ("deals") whose **open** time lies within a custom date range.
 
 **API Information:**
 
 * **Method:** `sugar.GetDealsDateRange(from, to)`
-* **Timeout:** 5 seconds
-* **Returns:** Slice of position history info
+* **Timeout:** 30 seconds
+* **Returns:** Slice of position history info (one entry per closed position; a position closed in parts has one entry per partial close), sorted by open time (oldest first)
 
 ---
 
@@ -16,27 +16,45 @@
 func (s *MT5Sugar) GetDealsDateRange(from, to time.Time) ([]*pb.PositionHistoryInfo, error)
 ```
 
+How it works:
+
+```go
+func (s *MT5Sugar) GetDealsDateRange(from, to time.Time) ([]*pb.PositionHistoryInfo, error) {
+    return s.positionsOpenedBetween(from, to, 30*time.Second)
+}
+```
+
+`positionsOpenedBetween` reads `PositionsHistory` (sorted by open time) with **cursor paging** - page size
+1000, `PageToken` = the previous `NextPageToken` - until the last page, so long ranges are complete. The range filters by the position's **open** time
+(a position opened before `from` and closed inside the range is not included). Still-open positions are not in the list.
+The timeout covers all pages together. The arguments are not validated.
+
+**Time zone note:** `from`/`to` are **real moments**: they are sent in the request's UTC
+fields (`PositionOpenTimeFromUtc` / `PositionOpenTimeToUtc`), so the result does not depend on the broker's time zone.
+Build them in whatever zone you think in: `time.Now().AddDate(0, 0, -7)`, `time.Date(..., time.Local)`,
+`time.Date(..., time.UTC)`, or `time.Date(..., brokerZone)` for the broker's calendar day.
+
 ---
 
 ## 🔽 Input / ⬆️ Output
 
 | Input | Type | Description |
 |-------|------|-------------|
-| `from` | `time.Time` | Start date/time (inclusive) |
-| `to` | `time.Time` | End date/time (inclusive) |
+| `from` | `time.Time` | Start of the open-time range (inclusive) |
+| `to` | `time.Time` | End of the open-time range (inclusive) |
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `[]*pb.PositionHistoryInfo` | slice | All closed positions in range |
-| `error` | `error` | Error if retrieval failed |
+| `[]*pb.PositionHistoryInfo` | slice | Closed positions opened in range |
+| `error` | `error` | `"PositionsHistory failed: ..."` if a page query failed (or the timeout expired) |
 
 ---
 
 ## 💬 Just the Essentials
 
-* **What it is:** Get all closed trades within a custom time range you specify.
-* **Why you need it:** Custom period analysis, backtesting, specific timeframe reports.
-* **Sanity check:** Returns empty slice if no deals in range. Both `from` and `to` are inclusive.
+* **What it is:** Get closed trades that were opened within a custom time range you specify.
+* **Why you need it:** Custom period analysis, specific timeframe reports.
+* **Sanity check:** Returns an empty (possibly `nil`) slice if no deals in range - check `len(deals)`. Both `from` and `to` are inclusive.
 
 ---
 
@@ -44,7 +62,7 @@ func (s *MT5Sugar) GetDealsDateRange(from, to time.Time) ([]*pb.PositionHistoryI
 
 ✅ **Custom reports** - Analyze specific time periods
 
-✅ **Backtesting** - Review performance for exact date ranges
+✅ **Period review** - Review account history for exact date ranges
 
 ✅ **Comparison** - Compare different periods
 
@@ -76,7 +94,7 @@ fmt.Printf("Last 7 days: %d deals\n\n", len(deals))
 totalProfit := 0.0
 for i, deal := range deals {
     fmt.Printf("%d. #%d %s: $%.2f\n",
-        i+1, deal.Ticket, deal.Symbol, deal.Profit)
+        i+1, deal.PositionTicket, deal.Symbol, deal.Profit)
     totalProfit += deal.Profit
 }
 
@@ -323,10 +341,10 @@ if len(deals) == 0 {
     return
 }
 
-// Filter by closing hour
+// Filter by closing hour (CloseTime is broker server time)
 tradingHoursDeals := []*pb.PositionHistoryInfo{}
 for _, deal := range deals {
-    hour := deal.TimeClose.Hour()
+    hour := deal.CloseTime.AsTime().Hour()
     if hour >= 9 && hour < 17 { // 9 AM to 5 PM
         tradingHoursDeals = append(tradingHoursDeals, deal)
     }
@@ -433,7 +451,7 @@ func AnalyzeDateRange(sugar *mt5.MT5Sugar, from, to time.Time) (*DateRangeStats,
             winCount++
         }
 
-        dayKey := deal.TimeClose.Format("2006-01-02")
+        dayKey := deal.CloseTime.AsTime().Format("2006-01-02")
         dailyProfit[dayKey] += deal.Profit
     }
 
@@ -511,7 +529,7 @@ stats.Print()
 
 **🍬 Profit calculations:**
 
-* `GetProfitToday()` - Profit total methods
+* `GetProfitToday()`, `GetProfitThisWeek()`, `GetProfitThisMonth()` - Profit totals (sum of `Profit`)
 
 ---
 
@@ -523,7 +541,7 @@ stats.Print()
 // ❌ WRONG - from > to
 to := time.Now()
 from := to.AddDate(0, 0, 7) // 7 days in future!
-deals, _ := sugar.GetDealsDateRange(from, to) // Returns nothing
+deals, _ := sugar.GetDealsDateRange(from, to) // Arguments are not validated - no useful result
 
 // ✅ CORRECT - from < to
 from := to.AddDate(0, 0, -7) // 7 days in past
@@ -533,13 +551,25 @@ deals, _ := sugar.GetDealsDateRange(from, to)
 ### 2) Not handling timezone
 
 ```go
-// ❌ WRONG - mixing timezones
-from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-to := time.Date(2024, 1, 31, 23, 59, 59, 0, time.Local) // Different TZ!
+// ❌ WRONG - writing the broker's calendar day in time.UTC
+// (from/to are real moments: this is the UTC day, not the broker's day)
+from := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+to := time.Date(2024, 1, 15, 23, 59, 59, 0, time.UTC)
 
-// ✅ CORRECT - same timezone
-from := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
-to := time.Date(2024, 1, 31, 23, 59, 59, 0, time.UTC)
+// ✅ CORRECT - build the boundaries in the zone whose calendar you mean
+broker := time.FixedZone("broker", 2*60*60) // e.g. a broker at UTC+2
+from := time.Date(2024, 1, 15, 0, 0, 0, 0, broker)
+to := time.Date(2024, 1, 15, 23, 59, 59, 0, broker)
+```
+
+### 2b) Expecting positions opened before `from`
+
+```go
+// ❌ WRONG - a position opened Dec 31 and closed Jan 2 is NOT in January's result
+deals, _ := sugar.GetDealsDateRange(jan1, jan31)
+
+// ✅ CORRECT - start earlier and filter on CloseTime yourself
+deals, _ := sugar.GetDealsDateRange(jan1.AddDate(0, 0, -30), jan31)
 ```
 
 ### 3) Exclusive vs inclusive range
@@ -558,13 +588,15 @@ to := time.Date(2024, 1, 31, 23, 59, 59, 0, time.UTC)
 
 1. **Both inclusive** - Both `from` and `to` are inclusive
 
-2. **Timezone aware** - Use same timezone for both parameters
+2. **Timezone aware** - `from`/`to` are real moments sent as UTC; the broker's time zone does not shift them
 
 3. **Flexible** - Most flexible history method for custom periods
 
-4. **Performance** - 5-second timeout, suitable for analysis
+4. **Performance** - 30-second timeout for large ranges
 
 5. **Empty OK** - Returns empty slice if no trades (not error)
+
+6. **Profit field only** - `Profit` does not include commission, swap or fee
 
 ---
 

@@ -1,12 +1,12 @@
 # 📅💼 Get Deals Today (`GetDealsToday`)
 
-> **Sugar method:** Returns all closed positions (deals) from today (00:00 to now).
+> **Sugar method:** Returns closed positions ("deals") that were **opened** today (local midnight to now).
 
 **API Information:**
 
 * **Method:** `sugar.GetDealsToday()`
-* **Timeout:** 5 seconds
-* **Returns:** Slice of position history info
+* **Timeout:** 15 seconds
+* **Returns:** Slice of position history info (one entry per closed position; a position closed in parts has one entry per partial close), sorted by open time (oldest first)
 
 ---
 
@@ -15,6 +15,53 @@
 ```go
 func (s *MT5Sugar) GetDealsToday() ([]*pb.PositionHistoryInfo, error)
 ```
+
+How it works:
+
+```go
+func (s *MT5Sugar) GetDealsToday() ([]*pb.PositionHistoryInfo, error) {
+    now := time.Now()
+    return s.positionsOpenedBetween(startOfLocalDay(now), now, 15*time.Second)
+}
+
+// positionsOpenedBetween returns ALL closed positions whose open time lies in [from, to] (real moments).
+// It reads the history with cursor paging (page_size 1000, next_page_token) until the last page, so a long
+// range is never cut to the first page. The timeout covers all pages together.
+func (s *MT5Sugar) positionsOpenedBetween(from, to time.Time, timeout time.Duration) ([]*pb.PositionHistoryInfo, error) {
+    ctx, cancel := context.WithTimeout(s.ctx, timeout)
+    defer cancel()
+
+    var all []*pb.PositionHistoryInfo
+    token := ""
+    for {
+        // A Go time.Time is a moment: the window goes in the *Utc fields (see MT5Service.GetPositionsHistory)
+        data, err := s.GetAccount().PositionsHistory(ctx, &pb.PositionsHistoryRequest{
+            SortType:                pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_ASC,
+            PositionOpenTimeFromUtc: timestamppb.New(from),
+            PositionOpenTimeToUtc:   timestamppb.New(to),
+            PageToken:               token,
+            PageSize:                1000,
+        })
+        if err != nil {
+            return nil, fmt.Errorf("PositionsHistory failed: %w", err)
+        }
+        all = append(all, data.HistoryPositions...)
+        token = data.NextPageToken
+        if token == "" || len(data.HistoryPositions) == 0 {
+            return all, nil
+        }
+    }
+}
+```
+
+"Deals" are **closed positions** from PositionsHistory (one entry per closed position, not per MT5 deal; a position closed in parts has one entry per partial close, each with the closed volume). The range filters by
+the position's **open** time: a position opened yesterday and closed today is not included. Still-open positions are not
+in the list. All pages are read (cursor paging, 1000 per page); the timeout covers all pages together.
+
+**Time zone note:** "today" is the calendar day of the computer running the program (`time.Local`): local midnight to now.
+The window is sent in the request's UTC fields (`PositionOpenTimeFromUtc` /
+`PositionOpenTimeToUtc`), so the broker's time zone does not shift it. If you want the broker's trading day instead, run
+the program with `TZ` set to the broker's time zone or pass explicit boundaries to `GetDealsDateRange()`.
 
 ---
 
@@ -26,16 +73,16 @@ func (s *MT5Sugar) GetDealsToday() ([]*pb.PositionHistoryInfo, error)
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `[]*pb.PositionHistoryInfo` | slice | All closed positions from today |
-| `error` | `error` | Error if retrieval failed |
+| `[]*pb.PositionHistoryInfo` | slice | Closed positions opened today |
+| `error` | `error` | `"PositionsHistory failed: ..."` if a page query failed (or the timeout expired) |
 
 ---
 
 ## 💬 Just the Essentials
 
-* **What it is:** Get all closed trades from today (00:00 to current time).
+* **What it is:** Get closed trades opened today (00:00 to current time, local clock).
 * **Why you need it:** Daily performance tracking, today's profit/loss analysis, trade review.
-* **Sanity check:** Returns empty slice if no deals today. Automatically calculates today's time range.
+* **Sanity check:** Returns an empty (possibly `nil`) slice if there are no deals - check `len(deals)`. Automatically calculates today's time range.
 
 ---
 
@@ -71,7 +118,7 @@ fmt.Printf("Today's deals: %d\n\n", len(deals))
 
 for i, deal := range deals {
     fmt.Printf("%d. Ticket #%d: %s %.2f lots\n",
-        i+1, deal.Ticket, deal.Symbol, deal.Volume)
+        i+1, deal.PositionTicket, deal.Symbol, deal.Volume)
     fmt.Printf("   Profit: $%.2f\n", deal.Profit)
 }
 ```
@@ -184,14 +231,14 @@ fmt.Println("──────────────────────�
 if largestWin != nil {
     fmt.Printf("🏆 Largest win:\n")
     fmt.Printf("   #%d %s %.2f lots: $%.2f\n",
-        largestWin.Ticket, largestWin.Symbol,
+        largestWin.PositionTicket, largestWin.Symbol,
         largestWin.Volume, largestWin.Profit)
 }
 
 if largestLoss != nil && largestLoss.Profit < 0 {
     fmt.Printf("\n💔 Largest loss:\n")
     fmt.Printf("   #%d %s %.2f lots: $%.2f\n",
-        largestLoss.Ticket, largestLoss.Symbol,
+        largestLoss.PositionTicket, largestLoss.Symbol,
         largestLoss.Volume, largestLoss.Profit)
 }
 ```
@@ -208,11 +255,11 @@ if len(deals) == 0 {
     return
 }
 
-// Group by hour
+// Group by close hour (CloseTime is broker server time)
 hourlyActivity := make(map[int]int)
 
 for _, deal := range deals {
-    hour := deal.TimeClose.Hour()
+    hour := deal.CloseTime.AsTime().Hour()
     hourlyActivity[hour]++
 }
 
@@ -280,14 +327,15 @@ func MonitorTodaysDeals(sugar *mt5.MT5Sugar, interval time.Duration) {
             // New deals closed
             newDeals := currentCount - previousCount
 
-            // Get latest deal
+            // Last element = most recently OPENED of today's closed positions
+            // (the list is sorted by open time, not close time)
             if len(deals) > 0 {
                 latest := deals[len(deals)-1]
 
-                fmt.Printf("[%s] New deal closed!\n",
-                    time.Now().Format("15:04:05"))
+                fmt.Printf("[%s] %d new deal(s) closed!\n",
+                    time.Now().Format("15:04:05"), newDeals)
                 fmt.Printf("   #%d %s: $%.2f\n",
-                    latest.Ticket, latest.Symbol, latest.Profit)
+                    latest.PositionTicket, latest.Symbol, latest.Profit)
             }
         }
 
@@ -378,15 +426,18 @@ writer.Write([]string{
 
 // Data
 for _, deal := range deals {
-    duration := deal.TimeClose.Sub(deal.TimeOpen)
+    // OpenTime/CloseTime are *timestamppb.Timestamp in broker server time
+    openTime := deal.OpenTime.AsTime()
+    closeTime := deal.CloseTime.AsTime()
+    duration := closeTime.Sub(openTime)
 
     writer.Write([]string{
-        fmt.Sprintf("%d", deal.Ticket),
+        fmt.Sprintf("%d", deal.PositionTicket),
         deal.Symbol,
         fmt.Sprintf("%.2f", deal.Volume),
         fmt.Sprintf("%.2f", deal.Profit),
-        deal.TimeOpen.Format("15:04:05"),
-        deal.TimeClose.Format("15:04:05"),
+        openTime.Format("15:04:05"),
+        closeTime.Format("15:04:05"),
         duration.String(),
     })
 }
@@ -489,7 +540,8 @@ stats.Print()
 
 **🍬 Profit calculations:**
 
-* `GetProfitToday()` - Just today's profit total
+* `GetProfitToday()` - Just today's profit total (sum of `Profit`)
+* `GetDailyStats()` - Win/loss statistics built from this method
 
 ---
 
@@ -512,14 +564,27 @@ if len(deals) > 0 {
 ### 2) Not considering timezone
 
 ```go
-// ❌ WRONG - "today" depends on server timezone
-// MT5 server might be in different timezone
+// ❌ WRONG - assuming "today" is the broker's trading day
+// The window is the calendar day of YOUR computer (time.Local)
 deals, _ := sugar.GetDealsToday()
 
-// ✅ CORRECT - aware of timezone difference
-// Today = 00:00 server time to now server time
+// ✅ CORRECT - pass explicit boundaries in the broker's time zone when the day must match the broker's day
+// (the times are real moments: they are sent as UTC, so any time zone works)
+broker := time.FixedZone("broker", 3*60*60) // e.g. a broker at UTC+3
+from := time.Date(2026, 10, 16, 0, 0, 0, 0, broker)
+to := from.AddDate(0, 0, 1).Add(-time.Nanosecond)
+deals, _ := sugar.GetDealsDateRange(from, to)
+```
+
+### 2b) Expecting positions opened before today
+
+```go
+// ❌ WRONG - a position opened yesterday and closed today is NOT returned:
+// the range filters on the position's OPEN time
 deals, _ := sugar.GetDealsToday()
-fmt.Println("Deals from server's 'today' (00:00 to now)")
+
+// ✅ CORRECT - widen the range and filter on CloseTime yourself
+deals, _ := sugar.GetDealsThisWeek()
 ```
 
 ### 3) Treating as real-time feed
@@ -538,33 +603,42 @@ closedDeals, _ := sugar.GetDealsToday()      // Closed today
 
 ## 💎 Pro Tips
 
-1. **Empty slice OK** - Returns empty slice if no deals (not an error)
+1. **Empty slice OK** - Returns an empty slice if no deals (not an error)
 
 2. **Closed only** - Only includes closed positions, not currently open
 
-3. **Server time** - "Today" is based on MT5 server time (00:00 server time)
+3. **Local calendar** - "Today" is local midnight to now on the computer running the program, matched against the position's open time (sent to the server as UTC)
 
-4. **Performance** - Uses 5-second timeout, suitable for frequent calls
+4. **Performance** - Uses 15-second timeout
 
-5. **Auto-range** - Automatically calculates today's range (00:00 to now)
+5. **Auto-range** - Automatically calculates today's range (local 00:00 to now)
+
+6. **Profit field only** - `Profit` does not include commission, swap or fee; add `Commission`, `Swap` and `Fee` yourself for the net result
 
 ---
 
 ## 📊 Deal Structure
 
-Each deal (`*pb.PositionHistoryInfo`) contains:
+Each deal (`*pb.PositionHistoryInfo`) is one closed position:
 ```
-Ticket       - Position ticket number
-Symbol       - Trading symbol (e.g., "EURUSD")
-Volume       - Trade volume in lots
-Profit       - Realized profit/loss
-Commission   - Trading commission
-Swap         - Swap charges
-TimeOpen     - Position open time
-TimeClose    - Position close time
-PriceOpen    - Entry price
-PriceClose   - Exit price
-Type         - Position type (BUY/SELL)
+Index          - Index in the result
+PositionTicket - Position ticket number
+OrderType      - pb.AH_ENUM_POSITIONS_HISTORY_ORDER_TYPE (e.g. ..._AH_ORDER_TYPE_BUY / ..._AH_ORDER_TYPE_SELL)
+Symbol         - Trading symbol (e.g., "EURUSD")
+Volume         - Trade volume in lots
+OpenPrice      - Entry price
+ClosePrice     - Exit price
+StopLoss       - Stop Loss
+TakeProfit     - Take Profit
+Profit         - Realized profit/loss (without commission, swap and fee)
+Commission     - Trading commission
+Fee            - Fees
+Swap           - Swap charges
+MarketValue    - Market value
+OpenTime       - Open time (*timestamppb.Timestamp, broker server time); OpenTimeUtc = same moment in UTC
+CloseTime      - Close time (*timestamppb.Timestamp, broker server time); CloseTimeUtc = same moment in UTC
+Comment        - Comment
+Magic          - Magic number
 ```
 
 ---

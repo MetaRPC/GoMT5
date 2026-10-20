@@ -51,9 +51,9 @@ type ConnectionClient interface {
 	//	 "password": "7dPjA*Jm",
 	//	 "host": "d51a1.octanetwork.net",
 	//	 "port": "443",
-	//	 "proxyUser": "ProxyUser123",
-	//	 "proxyPassword": "qwerty123",
-	//	 "proxyHost": "65.108.126.217",
+	//	 "proxyUser": "proxy-user",
+	//	 "proxyPassword": "proxy-password",
+	//	 "proxyHost": "proxy.example.com",
 	//	 "proxyPort": "1080",
 	//	 "proxyType": "Socks5"
 	//	}
@@ -360,9 +360,9 @@ type ConnectionServer interface {
 	//	 "password": "7dPjA*Jm",
 	//	 "host": "d51a1.octanetwork.net",
 	//	 "port": "443",
-	//	 "proxyUser": "ProxyUser123",
-	//	 "proxyPassword": "qwerty123",
-	//	 "proxyHost": "65.108.126.217",
+	//	 "proxyUser": "proxy-user",
+	//	 "proxyPassword": "proxy-password",
+	//	 "proxyHost": "proxy.example.com",
 	//	 "proxyPort": "1080",
 	//	 "proxyType": "Socks5"
 	//	}

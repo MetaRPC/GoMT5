@@ -12,10 +12,11 @@
 
 ```go
 tickReq := &pb.OnSymbolTickRequest{
-    Symbol: cfg.TestSymbol, // Single symbol to stream
+    SymbolNames: []string{cfg.TestSymbol}, // Symbols to stream (one or more)
 }
 
-tickChan, tickErrChan := account.OnSymbolTick(ctx, tickReq)
+tickCtx, tickCancel := context.WithCancel(ctx)
+tickChan, tickErrChan := account.OnSymbolTick(tickCtx, tickReq)
 
 fmt.Printf("Streaming %s tick data (max %d events or %d seconds)...\n", cfg.TestSymbol, MAX_EVENTS, MAX_SECONDS)
 
@@ -31,11 +32,16 @@ for {
             break streamTick
         }
         eventCount++
-        fmt.Printf("  Event #%d: Bid=%.5f Ask=%.5f Spread=%.5f\n",
-            eventCount,
-            tickData.Bid,
-            tickData.Ask,
-            tickData.Ask-tickData.Bid)
+        // The tick itself is nested: SymbolTick (nil in a message without a tick)
+        if tickData.SymbolTick != nil {
+            tick := tickData.SymbolTick
+            fmt.Printf("  Event #%d: Symbol=%s Bid=%.5f Ask=%.5f Spread=%.5f\n",
+                eventCount,
+                tick.Symbol,
+                tick.Bid,
+                tick.Ask,
+                tick.Ask-tick.Bid)
+        }
 
         if eventCount >= MAX_EVENTS {
             fmt.Printf("  ✓ Received %d events, stopping stream\n", MAX_EVENTS)
@@ -53,6 +59,7 @@ for {
         break streamTick
     }
 }
+tickCancel() // closes this stream on the server
 ```
 
 ---
@@ -63,21 +70,24 @@ for {
 
 ```go
 tickReq := &pb.OnSymbolTickRequest{
-    Symbol: cfg.TestSymbol,
+    SymbolNames: []string{cfg.TestSymbol},
 }
 ```
 
 Create a request to stream ticks for the symbol `cfg.TestSymbol` (e.g., `EURUSD`).
 
-> 🔸 Note: To stream multiple symbols, create separate streams for each symbol.
+> 🔸 Note: `SymbolNames` is a list: one stream can carry several symbols (each tick says its `Symbol`).
 
 ---
 
 ### 2️. Start the Stream
 
 ```go
-tickChan, tickErrChan := account.OnSymbolTick(ctx, tickReq)
+tickCtx, tickCancel := context.WithCancel(ctx)
+tickChan, tickErrChan := account.OnSymbolTick(tickCtx, tickReq)
 ```
+
+The stream gets its own context, derived from `ctx`: `tickCancel()` after the loop closes this stream on the server at once. Without it the stream would stay open, unread, until `ctx` itself ends — and every later stream of the demo would pile up next to it.
 
 The method returns two channels:
 
@@ -128,19 +138,24 @@ Uses the `select` construct to listen to three sources simultaneously:
 ### 5️. Process Incoming Tick
 
 ```go
-fmt.Printf("  Event #%d: Bid=%.5f Ask=%.5f Spread=%.5f\n",
-    eventCount,
-    tickData.Bid,
-    tickData.Ask,
-    tickData.Ask-tickData.Bid)
+if tickData.SymbolTick != nil {
+    tick := tickData.SymbolTick
+    fmt.Printf("  Event #%d: Symbol=%s Bid=%.5f Ask=%.5f Spread=%.5f\n",
+        eventCount,
+        tick.Symbol,
+        tick.Bid,
+        tick.Ask,
+        tick.Ask-tick.Bid)
+}
 ```
 
-Each tick contains:
+Each tick (`tickData.SymbolTick`) contains:
 
+* **Symbol** — symbol of the tick;
 * **Bid** — buy price;
 * **Ask** — sell price;
-* **Spread** — difference between Ask and Bid;
-* **Time** — tick timestamp;
+* **Spread** — not a field: Ask − Bid, computed here (in price units, not points);
+* **Time** / **TimeUtc** — tick timestamp (broker server time / UTC);
 * **Volume** — tick volume;
 * **Last** — last deal price.
 
@@ -165,12 +180,22 @@ The stream stops either by event count (`MAX_EVENTS`) or when `timeout` expires.
 
 ```protobuf
 message OnSymbolTickData {
-  double Bid = 1;     // Current bid price
-  double Ask = 2;     // Current ask price
-  double Last = 3;    // Last deal price
-  uint64 Volume = 4;  // Volume
-  google.protobuf.Timestamp Time = 5; // Tick timestamp
-  uint32 Flags = 6;   // Tick flags
+  MrpcSubscriptionMqlTick symbol_tick = 1;
+  string terminal_instance_guid_id = 2;
+}
+
+message MrpcSubscriptionMqlTick {
+  google.protobuf.Timestamp time = 1;       // Tick time (broker server time)
+  google.protobuf.Timestamp time_utc = 10;  // Tick time in UTC
+  double bid = 2;                           // Current bid price
+  double ask = 3;                           // Current ask price
+  double last = 4;                          // Last deal price
+  uint64 volume = 5;                        // Volume
+  int64 time_msc = 6;                       // Tick time in milliseconds (broker server time)
+  int64 time_msc_utc = 11;                  // time_msc in UTC
+  uint32 flags = 7;                         // Tick flags
+  double volume_real = 8;                   // Volume with greater accuracy
+  string symbol = 9;                        // Symbol
 }
 ```
 
@@ -179,11 +204,11 @@ message OnSymbolTickData {
 ## 💡 Example Output
 
 ```
-Streaming EURUSD tick data (max 5 events or 10 seconds)...
-  Event #1: Bid=1.08542 Ask=1.08558 Spread=0.00016
-  Event #2: Bid=1.08540 Ask=1.08555 Spread=0.00015
-  Event #3: Bid=1.08539 Ask=1.08554 Spread=0.00015
-  ✓ Received 3 events, stopping stream
+Streaming EURUSD tick data (max 10 events or 5 seconds)...
+  Event #1: Symbol=EURUSD Bid=1.08542 Ask=1.08558 Spread=0.00016
+  Event #2: Symbol=EURUSD Bid=1.08540 Ask=1.08555 Spread=0.00015
+  Event #3: Symbol=EURUSD Bid=1.08539 Ask=1.08554 Spread=0.00015
+  ⏱ Timeout after 5 seconds, stopping stream
 ```
 
 ---

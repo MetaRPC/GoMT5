@@ -114,7 +114,9 @@ for {
 
     if drawdown > maxDrawdownPercent {
         fmt.Printf("🚨 Max drawdown reached! Closing all positions...\n")
-        sugar.CloseAllPositions()
+        if closed, err := sugar.CloseAllPositions(); err != nil {
+            fmt.Printf("⚠️  %d closed, some not: %v\n", closed, err)
+        }
         break
     }
 
@@ -166,8 +168,13 @@ func MonitorEquityStopLoss(sugar *mt5.MT5Sugar, stopLossEquity float64) {
                 equity, stopLossEquity)
             fmt.Println("   Closing all positions...")
 
-            sugar.CloseAllPositions()
-            fmt.Println("   All positions closed!")
+            closed, err := sugar.CloseAllPositions()
+            if err != nil {
+                // names every position that was not closed; closed is still valid
+                fmt.Printf("   ⚠️  %d closed, but: %v\n", closed, err)
+                return
+            }
+            fmt.Printf("   All %d positions closed!\n", closed)
             return
         }
     }
@@ -222,7 +229,7 @@ if profit > 0 {
 ```go
 // ❌ WRONG - don't use Equity for risk calculation
 equity, _ := sugar.GetEquity()
-lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 50) // Uses Balance internally ✅
+lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 50) // Uses Balance internally ✅ (50 = stop distance in points)
 
 // Equity changes with every tick - use Balance for consistent risk!
 ```

@@ -114,7 +114,8 @@ After each `SymbolInfoInteger()` call, the gateway returns a protobuf structure:
 
 ```protobuf
 message SymbolInfoIntegerData {
-  int64 Value = 1; // Integer value of the property
+  int64 Value = 1;    // Integer value of the property
+  int64 ValueUtc = 2; // UTC of Value when the property is a time (SYMBOL_TIME, SYMBOL_TIME_MSC, SYMBOL_START_TIME, SYMBOL_EXPIRATION_TIME); 0 otherwise
 }
 ```
 
@@ -122,7 +123,7 @@ The `Value` field contains the numeric value of the selected parameter (`Type`).
 
 ---
 
-### 📘 All PropertyId enum values (SymbolInfoIntegerProperty)
+### 📘 All Type enum values (SymbolInfoIntegerProperty)
 
 | Constant | Value | Description |
 |----------|-------|-------------|

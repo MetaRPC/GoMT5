@@ -118,6 +118,8 @@ func RunGeneral01() error {
 	}
 
 	fmt.Printf("✓ MT5Account created (UUID: %s)\n", account.Id)
+	// Runs however the demo ends: the terminal is disconnected (stopped) and the gRPC connection closed.
+	// Errors after the connection below are returned (not helpers.Fatal, which exits at once and skips this).
 	defer account.DisconnectAndClose()
 
 	// Create cancellable context for proper cleanup
@@ -142,16 +144,18 @@ func RunGeneral01() error {
 	fmt.Printf("  Context Timeout: 180 seconds\n")
 	fmt.Println()
 
-	// Use context timeout for ConnectEx (replaces old TerminalReadinessWaitingTimeoutSeconds)
+	// The server waits up to ConnectExRequest.TimeoutSeconds (default 120 s) for the terminal to log in;
+	// the call's own deadline must be longer than that.
 	connectCtx, connectCancel := context.WithTimeout(context.Background(), 180*time.Second)
 	defer connectCancel()
 
 	connectData, err := account.ConnectEx(connectCtx, connectExReq)
-	helpers.Fatal(err, "ConnectEx failed")
+	if err != nil {
+		return fmt.Errorf("ConnectEx failed: %w", err)
+	}
 
-	// CRITICAL: Update account GUID with the one returned by server
-	account.TerminalInstanceGuid = connectData.TerminalInstanceGuid
-	account.Id = mt5.ParseGuidSafe(connectData.TerminalInstanceGuid)
+	// ConnectEx has stored the terminal GUID in the account (account.TerminalInstanceGuid / account.Id):
+	// every later call is sent to this terminal.
 	fmt.Printf("✓ Connected successfully\n")
 	fmt.Printf("  Terminal GUID: %s\n", connectData.TerminalInstanceGuid)
 
@@ -159,7 +163,9 @@ func RunGeneral01() error {
 	fmt.Println("\n2.2. CheckConnect() - Verify connection status")
 	checkReq := &pb.CheckConnectRequest{}
 	checkData, err := account.CheckConnect(ctx, checkReq)
-	helpers.Fatal(err, "CheckConnect failed")
+	if err != nil {
+		return fmt.Errorf("CheckConnect failed: %w", err)
+	}
 
 	// Access nested field properly
 	if checkData.HealthCheck != nil {
@@ -191,7 +197,9 @@ func RunGeneral01() error {
 	defer summaryCancel()
 
 	summaryData, err := account.AccountSummary(summaryCtx, summaryReq)
-	helpers.Fatal(err, "AccountSummary failed")
+	if err != nil {
+		return fmt.Errorf("AccountSummary failed: %w", err)
+	}
 
 	fmt.Println("\nAccount Summary (direct protobuf field access):")
 	fmt.Println("─────────────────────────────────────────────────")
@@ -205,10 +213,13 @@ func RunGeneral01() error {
 	fmt.Printf("  Leverage:            1:%d\n", summaryData.AccountLeverage)
 	fmt.Printf("  Trade Mode:          %v\n", summaryData.AccountTradeMode)
 
-	// ServerTime is a protobuf Timestamp - need to convert
+	// ServerTime is a protobuf Timestamp in the broker server's time zone; ServerTimeUtc is the same moment in UTC
 	if summaryData.ServerTime != nil {
 		serverTime := summaryData.ServerTime.AsTime()
-		fmt.Printf("  Server Time:         %s\n", serverTime.Format("2006-01-02 15:04:05"))
+		fmt.Printf("  Server Time:         %s (broker server time)\n", serverTime.Format("2006-01-02 15:04:05"))
+	}
+	if summaryData.ServerTimeUtc != nil {
+		fmt.Printf("  Server Time (UTC):   %s\n", summaryData.ServerTimeUtc.AsTime().Format("2006-01-02 15:04:05"))
 	}
 
 // UTC Timezone Shift: server time offset from UTC in minutes
@@ -575,9 +586,12 @@ func RunGeneral01() error {
 		fmt.Printf("    Last:                        %.5f\n", tickData.Last)
 		fmt.Printf("    Volume:                      %d\n", tickData.Volume)
 
-		// Time is int64 (Unix timestamp), NOT protobuf Timestamp
-		tickTime := time.Unix(tickData.Time, 0)
-		fmt.Printf("    Time:                        %s\n", tickTime.Format("2006-01-02 15:04:05"))
+		// Time is int64 (Unix seconds), NOT protobuf Timestamp. It counts in the broker server's time zone:
+		// format it as UTC to show the broker's clock (time.Unix alone would convert it to this machine's zone).
+		// TimeUtc is the same moment in real UTC.
+		tickTime := time.Unix(tickData.Time, 0).UTC()
+		fmt.Printf("    Time:                        %s (broker server time)\n", tickTime.Format("2006-01-02 15:04:05"))
+		fmt.Printf("    Time (UTC):                  %s\n", time.Unix(tickData.TimeUtc, 0).UTC().Format("2006-01-02 15:04:05"))
 	}
 
 	// ══════════════════════════════════════════════════════════════
@@ -598,15 +612,14 @@ func RunGeneral01() error {
 		helpers.PrintShortError(err, "SymbolInfoSessionQuote failed")
 	} else {
 		fmt.Printf("  Monday quote session #0:\n")
-		// From and To are *timestamppb.Timestamp - convert to seconds from day start
-		if quoteSessionData.From != nil {
-			fromTime := quoteSessionData.From.AsTime()
-			fromSeconds := fromTime.Hour()*3600 + fromTime.Minute()*60 + fromTime.Second()
+		// From and To are *timestamppb.Timestamp holding a time of day (broker server time); their date is not meaningful.
+		// Count the seconds from the start of From's day: a session that runs to midnight ends at 24:00 = 86400
+		// (To is then the next day's 00:00, which Hour()/Minute() alone would show as 0).
+		if quoteSessionData.From != nil && quoteSessionData.To != nil {
+			dayStart := quoteSessionData.From.AsTime().Truncate(24 * time.Hour)
+			fromSeconds := int64(quoteSessionData.From.AsTime().Sub(dayStart).Seconds())
+			toSeconds := int64(quoteSessionData.To.AsTime().Sub(dayStart).Seconds())
 			fmt.Printf("    From (seconds from day start): %d\n", fromSeconds)
-		}
-		if quoteSessionData.To != nil {
-			toTime := quoteSessionData.To.AsTime()
-			toSeconds := toTime.Hour()*3600 + toTime.Minute()*60 + toTime.Second()
 			fmt.Printf("    To (seconds from day start):   %d\n", toSeconds)
 		}
 	}
@@ -629,15 +642,14 @@ func RunGeneral01() error {
 		helpers.PrintShortError(err, "SymbolInfoSessionTrade failed")
 	} else {
 		fmt.Printf("  Monday trade session #0:\n")
-		// From and To are *timestamppb.Timestamp - convert to seconds from day start
-		if tradeSessionData.From != nil {
-			fromTime := tradeSessionData.From.AsTime()
-			fromSeconds := fromTime.Hour()*3600 + fromTime.Minute()*60 + fromTime.Second()
+		// From and To are *timestamppb.Timestamp holding a time of day (broker server time); their date is not meaningful.
+		// Count the seconds from the start of From's day: a session that runs to midnight ends at 24:00 = 86400
+		// (To is then the next day's 00:00, which Hour()/Minute() alone would show as 0).
+		if tradeSessionData.From != nil && tradeSessionData.To != nil {
+			dayStart := tradeSessionData.From.AsTime().Truncate(24 * time.Hour)
+			fromSeconds := int64(tradeSessionData.From.AsTime().Sub(dayStart).Seconds())
+			toSeconds := int64(tradeSessionData.To.AsTime().Sub(dayStart).Seconds())
 			fmt.Printf("    From (seconds from day start): %d\n", fromSeconds)
-		}
-		if tradeSessionData.To != nil {
-			toTime := tradeSessionData.To.AsTime()
-			toSeconds := toTime.Hour()*3600 + toTime.Minute()*60 + toTime.Second()
 			fmt.Printf("    To (seconds from day start):   %d\n", toSeconds)
 		}
 	}
@@ -650,8 +662,7 @@ func RunGeneral01() error {
 	// ══════════════════════════════════════════════════════════════
 	fmt.Println("\n4.13. SymbolParamsMany() - Get detailed parameters for multiple symbols")
 
-	// Note: SymbolParamsMany uses pagination/filtering, not array of symbol names
-	// For simplicity, getting first page of symbols matching test symbol
+	// SymbolParamsMany has no array of symbol names: SymbolName filters one symbol (nil = all symbols)
 	symbolFilter := cfg.TestSymbol
 	paramsManyReq := &pb.SymbolParamsManyRequest{
 		SymbolName:   &symbolFilter, // Filter by symbol name (optional pointer to string)
@@ -663,25 +674,24 @@ func RunGeneral01() error {
 	if err != nil {
 		helpers.PrintShortError(err, "SymbolParamsMany failed")
 	} else {
-		// Direct field access: SymbolInfos (not SymbolParams)
-		fmt.Printf("  Retrieved parameters for %d symbols matching '%s':\n", len(paramsManyData.SymbolInfos), cfg.TestSymbol)
-		// Show first 3 symbols only
+		fmt.Printf("  Retrieved parameters for %d symbols:\n", len(paramsManyData.SymbolInfos))
+		// Show only first 3 symbols
 		maxShow := 3
 		if len(paramsManyData.SymbolInfos) < maxShow {
 			maxShow = len(paramsManyData.SymbolInfos)
 		}
 		for i := 0; i < maxShow; i++ {
-			info := paramsManyData.SymbolInfos[i]
-			fmt.Printf("\n  Symbol #%d: %s\n", i+1, info.Name)
-			fmt.Printf("    Bid:                         %.5f\n", info.Bid)
-			fmt.Printf("    Ask:                         %.5f\n", info.Ask)
-			fmt.Printf("    Digits:                      %d\n", info.Digits)
-			fmt.Printf("    Spread:                      %d points\n", info.Spread)
-			fmt.Printf("    Volume Min:                  %.2f\n", info.VolumeMin)
-			fmt.Printf("    Volume Max:                  %.2f\n", info.VolumeMax)
-			fmt.Printf("    Volume Step:                 %.2f\n", info.VolumeStep)
-			fmt.Printf("    Contract Size:               %.2f\n", info.TradeContractSize)
-			fmt.Printf("    Point:                       %.5f\n", info.Point)
+			params := paramsManyData.SymbolInfos[i]
+			fmt.Printf("\n  Symbol #%d: %s\n", i+1, params.Name)
+			fmt.Printf("    Bid:                         %.5f\n", params.Bid)
+			fmt.Printf("    Ask:                         %.5f\n", params.Ask)
+			fmt.Printf("    Digits:                      %d\n", params.Digits)
+			fmt.Printf("    Spread:                      %d points\n", params.Spread)
+			fmt.Printf("    Volume Min:                  %.2f\n", params.VolumeMin)
+			fmt.Printf("    Volume Max:                  %.2f\n", params.VolumeMax)
+			fmt.Printf("    Volume Step:                 %.2f\n", params.VolumeStep)
+			fmt.Printf("    Contract Size:               %.2f\n", params.TradeContractSize)
+			fmt.Printf("    Point:                       %.5f\n", params.Point)
 		}
 	}
 
@@ -691,28 +701,24 @@ func RunGeneral01() error {
 	//      Returns: TradeTickValue, TradeTickSize, TradeContractSize, etc.
 	//      Useful for calculating position value and P&L accurately.
 	// ══════════════════════════════════════════════════════════════
-	fmt.Println("\n4.14. SymbolInfoDouble() - Get tick value and size info")
+	fmt.Println("\n4.14. TickValueWithSize() - Get tick value and size info")
 
-	tickValReq := &pb.SymbolInfoDoubleRequest{
-		Symbol: cfg.TestSymbol,
-		Type:   pb.SymbolInfoDoubleProperty_SYMBOL_TRADE_TICK_VALUE,
+	tickValueReq := &pb.TickValueWithSizeRequest{
+		SymbolNames: []string{cfg.TestSymbol}, // Array of symbol names
 	}
-	tickValData, err := account.SymbolInfoDouble(ctx, tickValReq)
+	tickValueData, err := account.TickValueWithSize(ctx, tickValueReq)
 	if err != nil {
-		helpers.PrintShortError(err, "SymbolInfoDouble(SYMBOL_TRADE_TICK_VALUE) failed")
+		helpers.PrintShortError(err, "TickValueWithSize failed")
 	} else {
-		fmt.Printf("    Trade Tick Value:        %.5f\n", tickValData.Value)
-	}
-
-	tickSizeReq := &pb.SymbolInfoDoubleRequest{
-		Symbol: cfg.TestSymbol,
-		Type:   pb.SymbolInfoDoubleProperty_SYMBOL_TRADE_TICK_SIZE,
-	}
-	tickSizeData, err := account.SymbolInfoDouble(ctx, tickSizeReq)
-	if err != nil {
-		helpers.PrintShortError(err, "SymbolInfoDouble(SYMBOL_TRADE_TICK_SIZE) failed")
-	} else {
-		fmt.Printf("    Trade Tick Size:         %.5f\n", tickSizeData.Value)
+		fmt.Printf("  Retrieved tick value/size data for %d symbols:\n", len(tickValueData.SymbolTickSizeInfos))
+		for _, info := range tickValueData.SymbolTickSizeInfos {
+			fmt.Printf("\n  Symbol: %s (Index: %d)\n", info.Name, info.Index)
+			fmt.Printf("    Trade Tick Value:        %.5f\n", info.TradeTickValue)
+			fmt.Printf("    Trade Tick Value Profit: %.5f\n", info.TradeTickValueProfit)
+			fmt.Printf("    Trade Tick Value Loss:   %.5f\n", info.TradeTickValueLoss)
+			fmt.Printf("    Trade Tick Size:         %.5f\n", info.TradeTickSize)
+			fmt.Printf("    Trade Contract Size:     %.2f\n", info.TradeContractSize)
+		}
 	}
 
 	//#endregion Symbol Info
@@ -750,7 +756,9 @@ func RunGeneral01() error {
 	// ══════════════════════════════════════════════════════════════
 	fmt.Println("\n5.2. OpenedOrders() - Get all opened orders & positions")
 
-	openedOrdersReq := &pb.OpenedOrdersRequest{}
+	openedOrdersReq := &pb.OpenedOrdersRequest{
+		InputSortMode: pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC,
+	}
 	openedOrdersData, err := account.OpenedOrders(ctx, openedOrdersReq)
 	if err != nil {
 		helpers.PrintShortError(err, "OpenedOrders failed")
@@ -826,8 +834,11 @@ func RunGeneral01() error {
 	toTimestamp := timestamppb.New(now)
 
 	orderHistoryReq := &pb.OrderHistoryRequest{
-		InputFrom: fromTimestamp,
-		InputTo:   toTimestamp,
+		InputFromUtc:  fromTimestamp, // time.Now() is UTC-based: use the *Utc fields
+		InputToUtc:    toTimestamp,
+		InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_BMT5_SORT_BY_OPEN_TIME_ASC,
+		PageNumber:    0, // 0 = page-number paging not used (all items)
+		ItemsPerPage:  0, // 0 = page-number paging not used (all items)
 	}
 	orderHistoryData, err := account.OrderHistory(ctx, orderHistoryReq)
 	if err != nil {
@@ -865,8 +876,11 @@ func RunGeneral01() error {
 	fmt.Println("\n5.5. PositionsHistory() - Get historical positions with P&L")
 
 	positionsHistoryReq := &pb.PositionsHistoryRequest{
-		PositionOpenTimeFrom: fromTimestamp,
-		PositionOpenTimeTo:   toTimestamp,
+		SortType:                pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE_AH_POSITION_OPEN_TIME_ASC,
+		PositionOpenTimeFromUtc: fromTimestamp, // time.Now() is UTC-based: use the *Utc fields
+		PositionOpenTimeToUtc:   toTimestamp,
+		PageNumber:              nil, // nil for all items
+		ItemsPerPage:            nil, // nil for all items
 	}
 	positionsHistoryData, err := account.PositionsHistory(ctx, positionsHistoryReq)
 	if err != nil {
@@ -916,10 +930,8 @@ func RunGeneral01() error {
 	fmt.Println()
 	fmt.Println("Expected behavior for this demo:")
 	fmt.Println("  → Subscription may succeed (MarketBookAdd)")
-	fmt.Println("  → But data retrieval will timeout (MarketBookGet)")
-	fmt.Println("  → This is NORMAL and EXPECTED")
-	fmt.Println()
-	fmt.Println("For detailed capability check, use: go run main.go capabilities")
+	fmt.Println("  → But MarketBookGet may return no price levels (or an error)")
+	fmt.Println("  → That only means the broker publishes no book for this symbol")
 	fmt.Println()
 
 	//#region Market Book (DOM)
@@ -962,7 +974,7 @@ func RunGeneral01() error {
 	fmt.Println("\n6.2. MarketBookGet() - Get DOM snapshot")
 	fmt.Println("    Testing if data is actually available...")
 
-	// Use very short timeout - we know it will likely fail
+	// Short timeout: the call should not hang the demo
 	bookGetCtx, bookGetCancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer bookGetCancel()
 
@@ -971,9 +983,8 @@ func RunGeneral01() error {
 	}
 	marketBookGetData, err := account.MarketBookGet(bookGetCtx, marketBookGetReq)
 	if err != nil {
-		fmt.Println("  ❌ No data available (timeout)")
-		fmt.Println("     → This is EXPECTED for forex pairs on demo accounts")
-		fmt.Println("     → Not an error - just a limitation of forex market structure")
+		fmt.Printf("  ❌ No data available: %v\n", err)
+		fmt.Println("     → Usual when the broker publishes no book for this symbol (e.g. forex)")
 	} else {
 		if len(marketBookGetData.MqlBookInfos) > 0 {
 			fmt.Printf("  ✅ SUCCESS! Received %d price levels\n", len(marketBookGetData.MqlBookInfos))
@@ -989,11 +1000,10 @@ func RunGeneral01() error {
 			for i := 0; i < maxShow; i++ {
 				level := marketBookGetData.MqlBookInfos[i]
 				bookType := "SELL"
-				if level.Type == pb.BookType_BOOK_TYPE_BUY {
+				if level.Type == pb.BookType_BOOK_TYPE_BUY || level.Type == pb.BookType_BOOK_TYPE_BUY_MARKET {
 					bookType = "BUY"
 				}
-				fmt.Printf("    [%d] %s  Price: %.5f  Volume: %d\n",
-					i+1, bookType, level.Price, level.Volume)
+				fmt.Printf("    [%d] %s  Price: %.5f  Volume: %.2f\n", i+1, bookType, level.Price, level.VolumeReal)
 			}
 		} else {
 			fmt.Println("  ⚠️  Call succeeded but no data returned")

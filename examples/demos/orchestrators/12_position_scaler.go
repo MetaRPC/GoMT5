@@ -54,11 +54,17 @@
    • TriggerDistance: Points moved to trigger next scale (default: 200)
    • MinProfitToScale: Min profit before scaling (pyramiding, default: 100)
    • MaxLossToAverage: Max loss before stopping (averaging, default: 500)
-   • InitialLotSize: Base position size (default: 0.10 lots)
+   • InitialLotSize: BUY base position opened for a listed symbol without a
+     position, once per run (default: 0.10 lots; 0 = manage existing only)
    • ScaleLotSize: Size for each scale-in (default: 0.05 lots)
    • MaxScales: Maximum number of scale-ins (default: 3)
    • TotalMaxLotSize: Maximum total position size (default: 1.0 lots)
    • StopLossPerScale: SL distance for scale-ins (default: 150 pts)
+   • ScaleOutPercent: Part of the largest position closed per level (ScaleOut)
+
+   Distances are in POINTS of the symbol: the point size is read from the
+   symbol (EURUSD 0.00001, USDJPY 0.001, XAUUSD 0.01). Volumes are rounded
+   down to the symbol's volume step.
 
  USE CASES:
 
@@ -96,8 +102,8 @@
 package orchestrators
 
 import (
-	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	pb "github.com/MetaRPC/GoMT5/package"
@@ -118,29 +124,30 @@ const (
 )
 
 // PositionScalerConfig holds position scaling parameters.
+// Distances are in points of the symbol (the point size is read from the symbol).
 type PositionScalerConfig struct {
 	// Strategy
 	Mode ScalingMode // Scaling mode
 
 	// Trigger Rules
-	TriggerDistance  float64 // Points moved to trigger next scale
+	TriggerDistance  float64 // Points moved to trigger next scale (from the base entry, then from the last scale)
 	MinProfitToScale float64 // Minimum profit before scaling (pyramiding)
 	MaxLossToAverage float64 // Maximum loss before stopping averaging
 
 	// Position Sizing
-	InitialLotSize  float64 // Initial position size
+	InitialLotSize  float64 // BUY base position opened for a listed symbol without one (0 = manage existing only)
 	ScaleLotSize    float64 // Size for each scale-in
-	MaxScales       int     // Maximum number of scale-ins
-	ReducePerScale  float64 // Reduce lot size by this % each scale (0-1)
+	MaxScales       int     // Maximum number of scale-ins (or scale-outs)
+	ReducePerScale  float64 // Reduce lot size by this fraction each scale (0-1)
 
 	// Risk Management
-	TotalMaxLotSize float64 // Maximum total position size
-	ScaleOutPercent float64 // % of position to close at each level (scale-out)
-	StopLossPerScale float64 // SL distance for each scale-in position
+	TotalMaxLotSize float64 // Maximum total size of the symbol's positions in the base direction
+	ScaleOutPercent float64 // Fraction of the largest position to close at each level (scale-out)
+	StopLossPerScale float64 // SL distance for each scale-in position (0 = no SL)
 
 	// Operational
 	Symbols       []string      // Symbols to manage (empty = all)
-	CheckInterval time.Duration // How often to check for scaling opportunities
+	CheckInterval time.Duration // How often to check for scaling opportunities (0 = 5s)
 }
 
 // DefaultPositionScalerConfig returns sensible defaults for pyramiding.
@@ -162,6 +169,41 @@ func DefaultPositionScalerConfig(symbol string) PositionScalerConfig {
 	}
 }
 
+// validate applies the default CheckInterval and rejects values that cannot work.
+func (c *PositionScalerConfig) validate() error {
+	if c.CheckInterval <= 0 {
+		c.CheckInterval = 5 * time.Second
+	}
+	if c.TriggerDistance <= 0 {
+		return fmt.Errorf("TriggerDistance must be > 0 points, got %v", c.TriggerDistance)
+	}
+	if c.MaxScales <= 0 {
+		return fmt.Errorf("MaxScales must be > 0, got %d", c.MaxScales)
+	}
+	if c.InitialLotSize < 0 || c.MinProfitToScale < 0 || c.StopLossPerScale < 0 {
+		return fmt.Errorf("InitialLotSize, MinProfitToScale and StopLossPerScale must not be negative")
+	}
+	if c.ReducePerScale < 0 || c.ReducePerScale >= 1 {
+		return fmt.Errorf("ReducePerScale must be in [0, 1), got %v", c.ReducePerScale)
+	}
+	switch c.Mode {
+	case Pyramiding, AveragingDown:
+		if c.ScaleLotSize <= 0 || c.TotalMaxLotSize <= 0 {
+			return fmt.Errorf("ScaleLotSize and TotalMaxLotSize must be > 0")
+		}
+		if c.Mode == AveragingDown && c.MaxLossToAverage <= 0 {
+			return fmt.Errorf("MaxLossToAverage must be > 0 points in AveragingDown mode")
+		}
+	case ScaleOut:
+		if c.ScaleOutPercent <= 0 || c.ScaleOutPercent > 1 {
+			return fmt.Errorf("ScaleOutPercent must be in (0, 1], got %v", c.ScaleOutPercent)
+		}
+	default:
+		return fmt.Errorf("unknown scaling mode %d", c.Mode)
+	}
+	return nil
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // POSITION SCALER IMPLEMENTATION
 // ══════════════════════════════════════════════════════════════════════════════
@@ -172,21 +214,23 @@ type PositionScaler struct {
 	sugar  *mt5.MT5Sugar
 	config PositionScalerConfig
 
-	// Position Tracking
+	// Position Tracking (mu guards it: GetTrackedGroups may run on another goroutine)
+	mu            sync.Mutex
 	trackedGroups map[string]*PositionGroup // Symbol -> position group
-	symbolPoints  map[string]float64        // Symbol -> point value
+	symbolSpecs   map[string]symbolSpec     // Symbol -> point, digits, volume limits
+	baseOpened    map[string]bool           // Symbols this run already opened a base position for
 }
 
 // PositionGroup tracks a group of related positions for one symbol.
 type PositionGroup struct {
 	Symbol         string
 	IsBuy          bool
-	BaseTicket     uint64    // Original position ticket
-	ScaleTickets   []uint64  // Tickets of scale-in positions
+	BaseTicket     uint64    // Original position ticket (the oldest position of the symbol)
+	ScaleTickets   []uint64  // Tickets of scale-in positions (or of the positions scaled out)
 	BasePrice      float64   // Entry price of base position
-	TotalLotSize   float64   // Total position size
+	TotalLotSize   float64   // Total size of the symbol's positions in the base direction
 	ScaleCount     int       // Number of scales executed
-	LastScalePrice float64   // Price of last scale-in
+	LastScalePrice float64   // Price of last scale (0 = none yet)
 	LastScaleTime  time.Time // When last scaled
 }
 
@@ -197,40 +241,45 @@ func NewPositionScaler(sugar *mt5.MT5Sugar, config PositionScalerConfig) *Positi
 		sugar:            sugar,
 		config:           config,
 		trackedGroups:    make(map[string]*PositionGroup),
-		symbolPoints:     make(map[string]float64),
+		symbolSpecs:      make(map[string]symbolSpec),
+		baseOpened:       make(map[string]bool),
 	}
 }
 
-// Start begins position scaling operations.
+// Start validates the configuration and begins position scaling operations.
 func (p *PositionScaler) Start() error {
 	if p.IsRunning() {
 		return fmt.Errorf("position scaler already running")
 	}
 
-	// Create context
-	ctx, cancel := context.WithCancel(context.Background())
-	p.SetContext(ctx, cancel)
+	// Validate configuration (applies the default CheckInterval)
+	if err := p.config.validate(); err != nil {
+		return fmt.Errorf("invalid configuration: %w", err)
+	}
 
-	// Mark as started
-	p.MarkStarted()
+	// Create context, mark as started, stop on Ctrl+C
+	p.begin()
 
 	// Start monitoring loop
-	go p.monitorLoop()
+	p.goLoop(p.monitorLoop)
 
 	return nil
 }
 
-// Stop gracefully stops position scaling.
+// Stop gracefully stops position scaling (positions stay open).
+// It waits until a check that is in progress has finished.
 func (p *PositionScaler) Stop() error {
 	if !p.IsRunning() {
 		return fmt.Errorf("position scaler not running")
 	}
 
-	// Cancel context
-	p.CancelContext()
+	// Cancel context and wait for the monitoring loop
+	p.stopLoops()
 
 	// Clear tracked groups
+	p.mu.Lock()
 	p.trackedGroups = make(map[string]*PositionGroup)
+	p.mu.Unlock()
 
 	// Mark as stopped
 	p.MarkStopped()
@@ -255,11 +304,19 @@ func (p *PositionScaler) monitorLoop() {
 
 // checkScalingOpportunities looks for positions to scale.
 func (p *PositionScaler) checkScalingOpportunities() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	// Get all open positions
 	positions, err := p.sugar.GetOpenPositions()
 	if err != nil {
 		p.IncrementError(fmt.Sprintf("failed to get positions: %v", err))
 		return
+	}
+
+	// Open the base position of a listed symbol that has none (once per run)
+	if p.openBasePositions(positions) {
+		return // the next check picks the new position up
 	}
 
 	// Update tracked groups with current positions
@@ -282,40 +339,95 @@ func (p *PositionScaler) checkScalingOpportunities() {
 	})
 }
 
-// updateTrackedGroups updates position groups based on current positions.
-func (p *PositionScaler) updateTrackedGroups(positions []*pb.PositionInfo) {
-	// Clear groups that are no longer open
-	activeSymbols := make(map[string]bool)
-
-	for _, pos := range positions {
-		// Skip if symbol not in our list
-		if len(p.config.Symbols) > 0 && !p.isSymbolTracked(pos.Symbol) {
+// openBasePositions opens a BUY base position of InitialLotSize for every listed symbol without a position.
+// The example has no entry signal, so the base is always a BUY; it is opened at most once per symbol and run.
+// Nothing is opened in ScaleOut mode, with InitialLotSize 0, or when Symbols is empty (= all symbols).
+func (p *PositionScaler) openBasePositions(positions []*pb.PositionInfo) bool {
+	if p.config.Mode == ScaleOut || p.config.InitialLotSize <= 0 {
+		return false
+	}
+	opened := false
+	for _, symbol := range p.config.Symbols {
+		if p.baseOpened[symbol] || hasPositionOn(positions, symbol) {
 			continue
 		}
+		p.baseOpened[symbol] = true // one attempt per run (a closed market must not cause a retry every check)
 
-		activeSymbols[pos.Symbol] = true
+		spec, err := p.getSymbolSpec(symbol)
+		if err != nil {
+			p.IncrementError(fmt.Sprintf("base position for %s: %v", symbol, err))
+			continue
+		}
+		lotSize := spec.volume(p.config.InitialLotSize)
+		if lotSize == 0 {
+			p.IncrementError(fmt.Sprintf("base position for %s: InitialLotSize %.2f is below the symbol's minimum volume %.2f",
+				symbol, p.config.InitialLotSize, spec.VolumeMin))
+			continue
+		}
+		ticket, err := p.sugar.BuyMarket(symbol, lotSize)
+		if err != nil {
+			p.IncrementError(fmt.Sprintf("base position for %s: %v", symbol, err))
+			continue
+		}
+		opened = true
+		p.IncrementSuccess()
+		fmt.Printf("\n  [BASE] Opened BUY %s %.2f lots (ticket #%d)\n", symbol, lotSize, ticket)
+		p.UpdateMetrics(func(m *OrchestratorMetrics) {
+			m.TotalTrades++
+			m.LastOperation = fmt.Sprintf("[BASE] Opened BUY %s %.2f lots (#%d)", symbol, lotSize, ticket)
+		})
+	}
+	return opened
+}
 
-		// Check if we're tracking this group
-		group, exists := p.trackedGroups[pos.Symbol]
-		if !exists {
-			// Create new group for this position
+// hasPositionOn reports whether positions contain one on symbol.
+func hasPositionOn(positions []*pb.PositionInfo, symbol string) bool {
+	for _, pos := range positions {
+		if pos.Symbol == symbol {
+			return true
+		}
+	}
+	return false
+}
+
+// updateTrackedGroups updates position groups based on current positions.
+// The oldest position (lowest ticket) of a symbol is the base and sets the direction; the group's
+// size counts the symbol's positions in that direction only.
+func (p *PositionScaler) updateTrackedGroups(positions []*pb.PositionInfo) {
+	// Base position per tracked symbol
+	bases := make(map[string]*pb.PositionInfo)
+	for _, pos := range positions {
+		// Skip if symbol not in our list
+		if !p.isSymbolTracked(pos.Symbol) {
+			continue
+		}
+		if base, ok := bases[pos.Symbol]; !ok || pos.Ticket < base.Ticket {
+			bases[pos.Symbol] = pos
+		}
+	}
+
+	for symbol, base := range bases {
+		isBuy := base.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY
+
+		// Check if we're tracking this group (a new base starts a new group)
+		group, exists := p.trackedGroups[symbol]
+		if !exists || group.BaseTicket != base.Ticket {
 			group = &PositionGroup{
-				Symbol:       pos.Symbol,
-				IsBuy:        pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY,
-				BaseTicket:   pos.Ticket,
-				BasePrice:    pos.PriceOpen,
-				TotalLotSize: pos.Volume,
+				Symbol:       symbol,
+				IsBuy:        isBuy,
+				BaseTicket:   base.Ticket,
+				BasePrice:    base.PriceOpen,
 				ScaleTickets: make([]uint64, 0),
 				ScaleCount:   0,
 			}
-			p.trackedGroups[pos.Symbol] = group
+			p.trackedGroups[symbol] = group
 		}
 
-		// Update total lot size
+		// Update total lot size (positions in the base direction)
 		totalSize := 0.0
-		for _, p2 := range positions {
-			if p2.Symbol == pos.Symbol {
-				totalSize += p2.Volume
+		for _, pos := range positions {
+			if pos.Symbol == symbol && (pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY) == isBuy {
+				totalSize += pos.Volume
 			}
 		}
 		group.TotalLotSize = totalSize
@@ -323,7 +435,7 @@ func (p *PositionScaler) updateTrackedGroups(positions []*pb.PositionInfo) {
 
 	// Remove groups for symbols no longer in positions
 	for symbol := range p.trackedGroups {
-		if !activeSymbols[symbol] {
+		if _, ok := bases[symbol]; !ok {
 			delete(p.trackedGroups, symbol)
 		}
 	}
@@ -336,10 +448,20 @@ func (p *PositionScaler) shouldScale(group *PositionGroup) bool {
 		return false
 	}
 
-	// Check if total position size would exceed maximum
-	nextScaleSize := p.calculateNextScaleSize(group)
-	if group.TotalLotSize+nextScaleSize > p.config.TotalMaxLotSize {
+	// Get symbol point value
+	spec, err := p.getSymbolSpec(group.Symbol)
+	if err != nil {
+		p.IncrementError(fmt.Sprintf("failed to get symbol point for %s: %v", group.Symbol, err))
 		return false
+	}
+	point := spec.Point
+
+	// Check if total position size would exceed maximum (scale-in modes)
+	if p.config.Mode != ScaleOut {
+		nextScaleSize := spec.volume(p.calculateNextScaleSize(group))
+		if nextScaleSize == 0 || group.TotalLotSize+nextScaleSize > p.config.TotalMaxLotSize+1e-9 {
+			return false
+		}
 	}
 
 	// Get current price
@@ -348,13 +470,7 @@ func (p *PositionScaler) shouldScale(group *PositionGroup) bool {
 		return false
 	}
 
-	// Get symbol point value
-	point, err := p.getSymbolPoint(group.Symbol)
-	if err != nil {
-		return false
-	}
-
-	// Calculate profit/loss in points
+	// Calculate profit/loss in points (from the base entry) and the move since the last scale
 	var profitPoints float64
 	var currentPrice float64
 
@@ -366,71 +482,35 @@ func (p *PositionScaler) shouldScale(group *PositionGroup) bool {
 		profitPoints = (group.BasePrice - currentPrice) / point
 	}
 
+	// Favourable move since the last scale (no scale yet: since the base entry)
+	moveSinceLast := profitPoints
+	if group.ScaleCount > 0 {
+		if group.IsBuy {
+			moveSinceLast = (currentPrice - group.LastScalePrice) / point
+		} else {
+			moveSinceLast = (group.LastScalePrice - currentPrice) / point
+		}
+	}
+
 	// Check scaling conditions based on mode
 	switch p.config.Mode {
 	case Pyramiding:
-		// For pyramiding: position must be in profit
-		if profitPoints < p.config.MinProfitToScale {
-			return false
-		}
-
-		// Check if price moved enough from last scale
-		if group.ScaleCount > 0 {
-			priceMove := 0.0
-			if group.IsBuy {
-				priceMove = (currentPrice - group.LastScalePrice) / point
-			} else {
-				priceMove = (group.LastScalePrice - currentPrice) / point
-			}
-
-			if priceMove < p.config.TriggerDistance {
-				return false
-			}
-		} else {
-			// First scale: check distance from base
-			if profitPoints < p.config.TriggerDistance {
-				return false
-			}
-		}
-
-		return true
+		// For pyramiding: position must be in profit and the price must have moved
+		// TriggerDistance in our favour since the last scale (first scale: since the base entry)
+		return profitPoints >= p.config.MinProfitToScale && moveSinceLast >= p.config.TriggerDistance
 
 	case AveragingDown:
 		// For averaging: position must be in loss but not too much
-		if profitPoints > 0 {
+		if profitPoints > 0 || -profitPoints > p.config.MaxLossToAverage {
 			return false
 		}
-
-		if -profitPoints > p.config.MaxLossToAverage {
-			return false
-		}
-
-		// Check if price moved enough from last average
-		if group.ScaleCount > 0 {
-			priceMove := 0.0
-			if group.IsBuy {
-				priceMove = (group.LastScalePrice - currentPrice) / point
-			} else {
-				priceMove = (currentPrice - group.LastScalePrice) / point
-			}
-
-			if priceMove < p.config.TriggerDistance {
-				return false
-			}
-		} else {
-			if -profitPoints < p.config.TriggerDistance {
-				return false
-			}
-		}
-
-		return true
+		// ... and the price must have moved TriggerDistance against us since the last average
+		return -moveSinceLast >= p.config.TriggerDistance
 
 	case ScaleOut:
-		// For scale-out: check if profit target reached
-		if profitPoints < p.config.TriggerDistance {
-			return false
-		}
-		return true
+		// For scale-out: each level is TriggerDistance beyond the previous one
+		// (first level: TriggerDistance from the base entry)
+		return moveSinceLast >= p.config.TriggerDistance
 	}
 
 	return false
@@ -438,15 +518,22 @@ func (p *PositionScaler) shouldScale(group *PositionGroup) bool {
 
 // executeScale executes a scaling operation.
 func (p *PositionScaler) executeScale(group *PositionGroup) error {
-	point, _ := p.getSymbolPoint(group.Symbol)
+	spec, err := p.getSymbolSpec(group.Symbol)
+	if err != nil {
+		return err
+	}
+	point := spec.Point
 
 	if p.config.Mode == ScaleOut {
 		// Scale out: close partial position
-		return p.executeScaleOut(group)
+		return p.executeScaleOut(group, spec)
 	}
 
 	// Scale in: open additional position
-	lotSize := p.calculateNextScaleSize(group)
+	lotSize := spec.volume(p.calculateNextScaleSize(group))
+	if lotSize == 0 {
+		return fmt.Errorf("scale size is below the symbol's minimum volume %.2f", spec.VolumeMin)
+	}
 
 	// Get current price for SL calculation
 	priceInfo, err := p.sugar.GetPriceInfo(group.Symbol)
@@ -454,10 +541,22 @@ func (p *PositionScaler) executeScale(group *PositionGroup) error {
 		return err
 	}
 
+	// SL distance: StopLossPerScale, at least the broker's stops level (0 = no SL)
+	slDistance := 0.0
+	if p.config.StopLossPerScale > 0 {
+		slDistance = p.config.StopLossPerScale
+		if float64(spec.StopLevel) > slDistance {
+			slDistance = float64(spec.StopLevel)
+		}
+	}
+
 	var ticket uint64
 	if group.IsBuy {
 		// Open additional buy position
-		sl := priceInfo.Bid - p.config.StopLossPerScale*point
+		sl := 0.0
+		if slDistance > 0 {
+			sl = spec.price(priceInfo.Bid - slDistance*point)
+		}
 		tp := 0.0 // No TP for scale-ins
 
 		ticket, err = p.sugar.BuyMarketWithSLTP(group.Symbol, lotSize, sl, tp)
@@ -465,10 +564,13 @@ func (p *PositionScaler) executeScale(group *PositionGroup) error {
 			return err
 		}
 
-		group.LastScalePrice = priceInfo.Ask
+		group.LastScalePrice = priceInfo.Bid
 	} else {
 		// Open additional sell position
-		sl := priceInfo.Ask + p.config.StopLossPerScale*point
+		sl := 0.0
+		if slDistance > 0 {
+			sl = spec.price(priceInfo.Ask + slDistance*point)
+		}
 		tp := 0.0
 
 		ticket, err = p.sugar.SellMarketWithSLTP(group.Symbol, lotSize, sl, tp)
@@ -476,7 +578,7 @@ func (p *PositionScaler) executeScale(group *PositionGroup) error {
 			return err
 		}
 
-		group.LastScalePrice = priceInfo.Bid
+		group.LastScalePrice = priceInfo.Ask
 	}
 
 	// Update group
@@ -494,27 +596,58 @@ func (p *PositionScaler) executeScale(group *PositionGroup) error {
 	return nil
 }
 
-// executeScaleOut closes a partial position.
-func (p *PositionScaler) executeScaleOut(group *PositionGroup) error {
-	// Find the largest position for this symbol
+// executeScaleOut closes ScaleOutPercent of the largest position of the group's direction.
+func (p *PositionScaler) executeScaleOut(group *PositionGroup, spec symbolSpec) error {
 	positions, err := p.sugar.GetPositionsBySymbol(group.Symbol)
 	if err != nil {
 		return err
 	}
 
-	if len(positions) == 0 {
+	// Find the largest position in the group's direction
+	var largestPos *pb.PositionInfo
+	for _, pos := range positions {
+		if (pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY) != group.IsBuy {
+			continue
+		}
+		if largestPos == nil || pos.Volume > largestPos.Volume {
+			largestPos = pos
+		}
+	}
+	if largestPos == nil {
 		return fmt.Errorf("no positions found for %s", group.Symbol)
 	}
 
-	// Close percentage of largest position
-	largestPos := positions[0]
-	closeVolume := largestPos.Volume * p.config.ScaleOutPercent
+	// Close a percentage of it (rounded down to the volume step; the whole position when
+	// the rest would be below the minimum volume)
+	closeVolume := spec.volume(largestPos.Volume * p.config.ScaleOutPercent)
+	if closeVolume == 0 || largestPos.Volume-closeVolume < spec.VolumeMin-1e-9 {
+		closeVolume = largestPos.Volume
+	}
 
-	if err := p.sugar.ClosePositionPartial(largestPos.Ticket, closeVolume); err != nil {
+	if closeVolume >= largestPos.Volume-1e-9 {
+		err = p.sugar.ClosePosition(largestPos.Ticket)
+	} else {
+		err = p.sugar.ClosePositionPartial(largestPos.Ticket, closeVolume)
+	}
+	if err != nil {
 		return err
 	}
 
+	// The next level is TriggerDistance beyond this price
+	priceInfo, err := p.sugar.GetPriceInfo(group.Symbol)
+	if err == nil {
+		if group.IsBuy {
+			group.LastScalePrice = priceInfo.Bid
+		} else {
+			group.LastScalePrice = priceInfo.Ask
+		}
+	} else {
+		group.LastScalePrice = largestPos.PriceCurrent
+	}
+
+	group.ScaleTickets = append(group.ScaleTickets, largestPos.Ticket)
 	group.ScaleCount++
+	group.LastScaleTime = time.Now()
 	group.TotalLotSize -= closeVolume
 
 	p.UpdateMetrics(func(m *OrchestratorMetrics) {
@@ -526,7 +659,7 @@ func (p *PositionScaler) executeScaleOut(group *PositionGroup) error {
 	return nil
 }
 
-// calculateNextScaleSize calculates the lot size for next scale-in.
+// calculateNextScaleSize calculates the lot size for next scale-in (before rounding to the volume step).
 func (p *PositionScaler) calculateNextScaleSize(group *PositionGroup) float64 {
 	baseSize := p.config.ScaleLotSize
 
@@ -539,17 +672,20 @@ func (p *PositionScaler) calculateNextScaleSize(group *PositionGroup) float64 {
 	return baseSize
 }
 
-// getSymbolPoint gets or caches the point value for a symbol.
-func (p *PositionScaler) getSymbolPoint(symbol string) (float64, error) {
-	if point, exists := p.symbolPoints[symbol]; exists {
-		return point, nil
+// getSymbolSpec gets (and caches) the symbol's point size, digits and volume limits
+// with sugar.GetSymbolInfo: a point is 0.00001 for EURUSD, 0.001 for USDJPY, 0.01 for XAUUSD.
+func (p *PositionScaler) getSymbolSpec(symbol string) (symbolSpec, error) {
+	if spec, exists := p.symbolSpecs[symbol]; exists {
+		return spec, nil
 	}
 
-	// Default point value
-	point := 0.00001
-	p.symbolPoints[symbol] = point
+	spec, err := loadSymbolSpec(p.sugar, symbol)
+	if err != nil {
+		return symbolSpec{}, err
+	}
+	p.symbolSpecs[symbol] = spec
 
-	return point, nil
+	return spec, nil
 }
 
 // isSymbolTracked checks if symbol is in tracked list.
@@ -566,9 +702,18 @@ func (p *PositionScaler) isSymbolTracked(symbol string) bool {
 	return false
 }
 
-// GetTrackedGroups returns all currently tracked position groups.
+// GetTrackedGroups returns a snapshot of the currently tracked position groups.
 func (p *PositionScaler) GetTrackedGroups() map[string]*PositionGroup {
-	return p.trackedGroups
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	groups := make(map[string]*PositionGroup, len(p.trackedGroups))
+	for symbol, group := range p.trackedGroups {
+		g := *group
+		g.ScaleTickets = append([]uint64(nil), group.ScaleTickets...)
+		groups[symbol] = &g
+	}
+	return groups
 }
 
 /*══════════════════════════════════════════════════════════════════════════════
@@ -600,7 +745,7 @@ func (p *PositionScaler) GetTrackedGroups() map[string]*PositionGroup {
     → Single entry point: go run main.go scaler
 
  📍 WHERE TO CONFIGURE PARAMETERS:
- main.go → func RunOrchestrator_PositionScaler() (lines 440-475)
+ main.go → func RunOrchestrator_PositionScaler() (CONFIGURATION block)
 
  CONFIGURATION CODE IN main.go:
 
@@ -614,7 +759,7 @@ func (p *PositionScaler) GetTrackedGroups() map[string]*PositionGroup {
          Mode:             orchestrators.Pyramiding, // ← Choose mode
          TriggerDistance:  200,                      // ← Scale every 200pts
          MinProfitToScale: 100,                      // ← Min profit to start
-         InitialLotSize:   0.10,                     // ← Base size
+         InitialLotSize:   0.10,                     // ← BUY base if none
          ScaleLotSize:     0.05,                     // ← Scale size
          MaxScales:        3,                        // ← Max 3 scales
          TotalMaxLotSize:  1.0,                      // ← Total max
@@ -651,8 +796,8 @@ func (p *PositionScaler) GetTrackedGroups() map[string]*PositionGroup {
 
  // Option 4: Scale Out Profit Taking (modify in main.go)
  Mode:             ScaleOut,
- TriggerDistance:  300,     // Take profits every 300pts
- ScaleOutPercent:  0.33,    // ← Close 33% each time
+ TriggerDistance:  300,     // Take profits at +300/+600/+900pts
+ ScaleOutPercent:  0.33,    // ← Close 33% of the largest position
  MaxScales:        3,       // Exit in 3 stages
 
  📝 IMPORTANT:

@@ -31,7 +31,7 @@ positionsTotalData, err := account.PositionsTotal(ctx)
 ```
 
 A gRPC request is sent to the MetaTrader server.
-In response, the gateway returns a `PositionsTotalResponse` object containing the `TotalPositions` field — the number of open positions on the account.
+In response, the method returns a `*pb.PositionsTotalData` object containing the `TotalPositions` field — the number of open positions on the account.
 
 **Note:** This method does not require any parameters — it simply returns the count of currently open positions.
 

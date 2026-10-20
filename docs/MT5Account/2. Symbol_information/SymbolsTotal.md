@@ -18,7 +18,7 @@
 
 * **What it is.** Returns the count of available symbols in MT5 terminal.
 * **Why you need it.** Iterate through all symbols, validate Market Watch setup, or build symbol lists.
-* **Selected flag.** Use `true` to count only visible symbols in Market Watch, `false` for all available symbols.
+* **Mode flag.** Use `Mode: true` to count only visible symbols in Market Watch, `false` for all available symbols.
 
 ---
 
@@ -48,7 +48,7 @@ type MT5Account struct {
 }
 
 // SymbolsTotal returns the total number of available symbols.
-// Use Selected=true to count only symbols in Market Watch, false for all symbols.
+// Use Mode=true to count only symbols in Market Watch, false for all symbols.
 func (a *MT5Account) SymbolsTotal(
     ctx context.Context,
     req *pb.SymbolsTotalRequest,
@@ -59,7 +59,7 @@ func (a *MT5Account) SymbolsTotal(
 
 ```protobuf
 SymbolsTotalRequest {
-  bool Selected = 1;  // true = Market Watch only, false = all symbols
+  bool mode = 1;  // true = Market Watch only, false = all symbols
 }
 ```
 
@@ -81,13 +81,13 @@ SymbolsTotalReply {
 | Parameter | Type                        | Description                                                     |
 | --------- | --------------------------- | --------------------------------------------------------------- |
 | `ctx`     | `context.Context`           | Context for deadline/timeout and cancellation                   |
-| `req`     | `*pb.SymbolsTotalRequest`   | Request with `Selected` flag                                    |
+| `req`     | `*pb.SymbolsTotalRequest`   | Request with `Mode` flag                                        |
 
 **Request fields:**
 
 | Field      | Type   | Description                                                     |
 | ---------- | ------ | --------------------------------------------------------------- |
-| `Selected` | `bool` | `true` = count only Market Watch symbols, `false` = all symbols |
+| `Mode`     | `bool` | `true` = count only Market Watch symbols, `false` = all symbols |
 
 ---
 
@@ -95,7 +95,7 @@ SymbolsTotalReply {
 
 | Field   | Type    | Go Type | Description                           |
 | ------- | ------- | ------- | ------------------------------------- |
-| `Total` | `int64` | `int64` | Total number of symbols available     |
+| `Total` | `int32` | `int32` | Total number of symbols available     |
 
 ---
 
@@ -103,9 +103,9 @@ SymbolsTotalReply {
 ## 🧩 Notes & Tips
 
 * **Automatic reconnection:** All `MT5Account` methods have built-in protection against transient gRPC errors with automatic reconnection via `ExecuteWithReconnect`.
-* **Default timeout:** If context has no deadline, a default `10s` timeout is applied automatically.
+* **Default timeout:** If context has no deadline, a default `3s` timeout is applied automatically.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
-* **Market Watch vs All:** Selected=true returns only symbols visible in Market Watch window, Selected=false returns all symbols available in terminal.
+* **Market Watch vs All:** Mode=true returns only symbols visible in Market Watch window, Mode=false returns all symbols available in terminal.
 
 ---
 
@@ -117,6 +117,7 @@ SymbolsTotalReply {
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -126,19 +127,24 @@ import (
 )
 
 func main() {
-    account := mt5.NewMT5Account("user", "password", "server:443")
-    err := account.Connect()
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
     if err != nil {
         panic(err)
     }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
 
     // Count only symbols in Market Watch
     data, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{
-        Selected: true,
+        Mode: true,
     })
     if err != nil {
         panic(err)
@@ -151,13 +157,13 @@ func main() {
 ### 2) Get total available symbols (all)
 
 ```go
-func GetAllSymbolsCount(account *mt5.MT5Account) (int64, error) {
+func GetAllSymbolsCount(account *mt5.MT5Account) (int32, error) {
     ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
     defer cancel()
 
     // Count all available symbols
     data, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{
-        Selected: false,
+        Mode: false,
     })
     if err != nil {
         return 0, fmt.Errorf("failed to get symbols total: %w", err)
@@ -178,14 +184,14 @@ func CompareSymbolCounts(account *mt5.MT5Account) {
     ctx := context.Background()
 
     // Get Market Watch count
-    selected, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{Selected: true})
+    selected, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{Mode: true})
     if err != nil {
         fmt.Printf("Error: %v\n", err)
         return
     }
 
     // Get all symbols count
-    all, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{Selected: false})
+    all, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{Mode: false})
     if err != nil {
         fmt.Printf("Error: %v\n", err)
         return
@@ -204,7 +210,7 @@ func ListAllSymbolNames(account *mt5.MT5Account) ([]string, error) {
     ctx := context.Background()
 
     // First, get total count
-    totalData, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{Selected: false})
+    totalData, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{Mode: false})
     if err != nil {
         return nil, err
     }
@@ -212,9 +218,9 @@ func ListAllSymbolNames(account *mt5.MT5Account) ([]string, error) {
     symbols := make([]string, 0, totalData.Total)
 
     // Iterate through all symbols
-    for i := int64(0); i < totalData.Total; i++ {
+    for i := int32(0); i < totalData.Total; i++ {
         nameData, err := account.SymbolName(ctx, &pb.SymbolNameRequest{
-            Pos:      i,
+            Index:    i,
             Selected: false,
         })
         if err != nil {
@@ -234,11 +240,11 @@ func MonitorMarketWatch(account *mt5.MT5Account, interval time.Duration) {
     ticker := time.NewTicker(interval)
     defer ticker.Stop()
 
-    var lastCount int64 = -1
+    var lastCount int32 = -1
 
     for range ticker.C {
         ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-        data, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{Selected: true})
+        data, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{Mode: true})
         cancel()
 
         if err != nil {
@@ -273,7 +279,7 @@ func GetMarketWatchSymbols(account *mt5.MT5Account) ([]string, error) {
     ctx := context.Background()
 
     // Get count first to pre-allocate
-    total, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{Selected: true})
+    total, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{Mode: true})
     if err != nil {
         return nil, err
     }
@@ -281,9 +287,9 @@ func GetMarketWatchSymbols(account *mt5.MT5Account) ([]string, error) {
     // Pre-allocate with exact capacity
     symbols := make([]string, 0, total.Total)
 
-    for i := int64(0); i < total.Total; i++ {
+    for i := int32(0); i < total.Total; i++ {
         nameData, err := account.SymbolName(ctx, &pb.SymbolNameRequest{
-            Pos:      i,
+            Index:    i,
             Selected: true,
         })
         if err != nil {
@@ -299,11 +305,11 @@ func GetMarketWatchSymbols(account *mt5.MT5Account) ([]string, error) {
 ### Validate symbol availability
 
 ```go
-func HasMinimumSymbols(account *mt5.MT5Account, minRequired int64) (bool, error) {
+func HasMinimumSymbols(account *mt5.MT5Account, minRequired int32) (bool, error) {
     ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
     defer cancel()
 
-    data, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{Selected: false})
+    data, err := account.SymbolsTotal(ctx, &pb.SymbolsTotalRequest{Mode: false})
     if err != nil {
         return false, err
     }

@@ -42,7 +42,7 @@ METHOD GROUPS:
    • SymbolInfoSessionTrade     - Get trade session times
    • SymbolParamsMany           - Get detailed parameters for multiple symbols
    • PriceHistory               - Get OHLC bars for a symbol and timeframe
-   • TickValueWithSize          - DEPRECATED - use SymbolInfoDouble instead
+   • TickValueWithSize          - Tick value, tick size and contract size of several symbols
 
 4. POSITIONS & ORDERS INFORMATION (5 methods)
    • PositionsTotal             - Count open positions
@@ -258,7 +258,7 @@ func (a *MT5Account) getHeaders() metadata.MD {
 }
 
 // DisconnectAndClose sends a Disconnect RPC to the server and closes the underlying gRPC connection.
-// If deleteOnDisconnect is true, the terminal instance will be permanently deleted instead of stopped.
+// If deleteOnDisconnect is true, the terminal instance is permanently deleted instead of stopped.
 func (a *MT5Account) DisconnectAndClose(deleteOnDisconnect ...bool) error {
 	if a == nil {
 		return nil
@@ -553,7 +553,11 @@ func (a *MT5Account) ConnectEx(ctx context.Context, req *pb.ConnectExRequest) (*
 	}
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
+		wait := uint32(120) // the server's default wait for the login (ConnectExRequest/ConnectRequest.timeout_seconds)
+		if req.TimeoutSeconds != nil {
+			wait = *req.TimeoutSeconds
+		}
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(wait+10)*time.Second)
 		defer cancel()
 	}
 
@@ -606,7 +610,11 @@ func (a *MT5Account) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.C
 	}
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
+		wait := uint32(120) // the server's default wait for the login (ConnectExRequest/ConnectRequest.timeout_seconds)
+		if req.TimeoutSeconds != nil {
+			wait = *req.TimeoutSeconds
+		}
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(wait+10)*time.Second)
 		defer cancel()
 	}
 
@@ -1608,6 +1616,43 @@ func (a *MT5Account) PriceHistory(ctx context.Context, req *pb.PriceHistoryReque
 	}
 
 	errorSelector := func(reply *pb.PriceHistoryReply) mrpcError {
+		return reply.GetError()
+	}
+
+	reply, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
+	if err != nil {
+		return nil, err
+	}
+
+	return reply.GetData(), nil
+}
+
+// TickValueWithSize returns the tick value and tick size data of several symbols (AccountHelper.TickValueWithSize):
+// TradeTickValue, TradeTickValueProfit, TradeTickValueLoss, TradeTickSize and TradeContractSize per symbol.
+// req.SymbolNames lists the symbols (at most 1000); an empty list means every symbol in Market Watch.
+func (a *MT5Account) TickValueWithSize(ctx context.Context, req *pb.TickValueWithSizeRequest) (*pb.TickValueWithSizeData, error) {
+	if !a.isConnected() {
+		return nil, ErrNotConnected
+	}
+	if req == nil {
+		return nil, fmt.Errorf("nil request")
+	}
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+	}
+
+	grpcCall := func(headers metadata.MD) (*pb.TickValueWithSizeReply, error) {
+		c := metadata.NewOutgoingContext(ctx, headers)
+		return a.AccountClient.TickValueWithSize(c, req)
+	}
+
+	errorSelector := func(reply *pb.TickValueWithSizeReply) mrpcError {
 		return reply.GetError()
 	}
 

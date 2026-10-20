@@ -266,6 +266,7 @@ OpenedOrdersReply {
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -275,8 +276,17 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()

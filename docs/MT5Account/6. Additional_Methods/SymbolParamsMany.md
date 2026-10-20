@@ -53,7 +53,10 @@ func (a *MT5Account) SymbolParamsMany(
 
 ```protobuf
 SymbolParamsManyRequest {
-  repeated string Symbols = 1;  // Array of symbol names
+  optional string symbol_name = 1;                       // One symbol; empty/unset = all symbols
+  optional AH_SYMBOL_PARAMS_MANY_SORT_TYPE sort_type = 2; // Sort order (default: by name, ascending)
+  optional int32 page_number = 3;                        // 1-based page (set together with items_per_page)
+  optional int32 items_per_page = 4;                     // Page size (set together with page_number)
 }
 ```
 
@@ -64,13 +67,18 @@ SymbolParamsManyRequest {
 | Parameter | Type                            | Description                                   |
 | --------- | ------------------------------- | --------------------------------------------- |
 | `ctx`     | `context.Context`               | Context for deadline/timeout and cancellation |
-| `req`     | `*pb.SymbolParamsManyRequest`   | Request with array of Symbols                 |
+| `req`     | `*pb.SymbolParamsManyRequest`   | Request with optional symbol filter, sort and paging |
 
 **Request fields:**
 
-| Field     | Type       | Description                        |
-| --------- | ---------- | ---------------------------------- |
-| `Symbols` | `string[]` | Array of symbol names              |
+| Field          | Type                                  | Description                                                        |
+| -------------- | ------------------------------------- | ------------------------------------------------------------------ |
+| `SymbolName`   | `*string`                             | One symbol name; nil/empty = all symbols of the terminal           |
+| `SortType`     | `*pb.AH_SYMBOL_PARAMS_MANY_SORT_TYPE` | Sort order: by name or by MQL index, ascending/descending (default: name ascending) |
+| `PageNumber`   | `*int32`                              | 1-based page number; must be set together with `ItemsPerPage`      |
+| `ItemsPerPage` | `*int32`                              | Items per page; must be set together with `PageNumber`             |
+
+There is no list-of-symbols filter: to get several specific symbols, either request all symbols (`SymbolName` unset) and filter on the client side, or call once per symbol with `SymbolName`.
 
 ---
 
@@ -85,7 +93,7 @@ SymbolParamsManyRequest {
 
 ---
 
-### 📋 `SymbolParameters` structure (112 fields)
+### 📋 `SymbolParameters` structure (116 fields)
 
 Each symbol contains comprehensive trading information organized in the following categories:
 
@@ -186,7 +194,7 @@ Each symbol contains comprehensive trading information organized in the followin
 | `SubscriptionDelay`  | `int32`   | Subscription delay in seconds        |
 | `Visible`            | `bool`    | Symbol visible in Market Watch       |
 
-#### 🔹 **Session Counters** (8 fields)
+#### 🔹 **Session Counters** (10 fields)
 | Field                | Type      | Description                          |
 | -------------------- | --------- | ------------------------------------ |
 | `SessionDeals`       | `int64`   | Number of deals in current session   |
@@ -195,10 +203,12 @@ Each symbol contains comprehensive trading information organized in the followin
 | `Volume`             | `int64`   | Volume of the last deal              |
 | `VolumeHigh`         | `int64`   | Maximum volume of the day            |
 | `VolumeLow`          | `int64`   | Minimum volume of the day            |
-| `Time`               | `timestamp` | Time of the last quote             |
-| `TimeMsc`            | `int64`   | Time of last quote in milliseconds   |
+| `Time`               | `timestamp` | Time of the last quote (broker server time) |
+| `TimeUtc`            | `timestamp` | `Time` in UTC                      |
+| `TimeMsc`            | `int64`   | Time of last quote in milliseconds (broker server time) |
+| `TimeMscUtc`         | `int64`   | `TimeMsc` in UTC                     |
 
-#### 🔹 **Trading Settings** (20 fields)
+#### 🔹 **Trading Settings** (22 fields)
 | Field                  | Type      | Description                          |
 | ---------------------- | --------- | ------------------------------------ |
 | `Digits`               | `int32`   | Number of decimal digits             |
@@ -207,8 +217,10 @@ Each symbol contains comprehensive trading information organized in the followin
 | `TicksBookDepth`       | `int32`   | Maximal number of requests in order book |
 | `TradeCalcMode`        | `enum`    | Contract price calculation mode      |
 | `TradeMode`            | `enum`    | Order execution type                 |
-| `StartTime`            | `timestamp` | Date of symbol trading start       |
-| `ExpirationTime`       | `timestamp` | Date of symbol expiration          |
+| `StartTime`            | `timestamp` | Date of symbol trading start (broker server time) |
+| `StartTimeUtc`         | `timestamp` | `StartTime` in UTC                 |
+| `ExpirationTime`       | `timestamp` | Date of symbol expiration (broker server time) |
+| `ExpirationTimeUtc`    | `timestamp` | `ExpirationTime` in UTC            |
 | `TradeStopsLevel`      | `int32`   | Minimal distance from price for stops |
 | `TradeFreezeLevel`     | `int32`   | Distance to freeze trade operations  |
 | `TradeExeMode`         | `enum`    | Deal execution mode                  |
@@ -254,11 +266,11 @@ For a detailed line-by-line explanation with examples, see:
 ## 🧩 Notes & Tips
 
 * **Automatic reconnection:** All `MT5Account` methods have built-in protection against transient gRPC errors with automatic reconnection via `ExecuteWithReconnect`.
-* **Default timeout:** If context has no deadline, a default `3s` timeout is applied automatically.
+* **Default timeout:** If context has no deadline, a default `10s` timeout is applied automatically.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
 * **Most efficient:** This is the recommended method for retrieving comprehensive symbol data.
-* **Bulk operations:** Can query 100+ symbols in single request.
-* **112+ fields:** Each SymbolParams contains over 112 different properties.
+* **Bulk operations:** One request without `SymbolName` returns every symbol (use `PageNumber`/`ItemsPerPage` to page through them).
+* **116 fields:** Each `SymbolParameters` entry contains 116 properties.
 * **Performance:** Much faster than calling individual SymbolInfo* methods repeatedly.
 
 ---
@@ -271,6 +283,7 @@ For a detailed line-by-line explanation with examples, see:
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -280,20 +293,32 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
 
-    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-    defer cancel()
-
-    data, err := account.SymbolParamsMany(ctx, &pb.SymbolParamsManyRequest{
-        Symbols: []string{"EURUSD", "GBPUSD", "USDJPY"},
-    })
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
     if err != nil {
         panic(err)
     }
 
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
+
+    // No SymbolName: all symbols in one call, then keep the ones we want
+    data, err := account.SymbolParamsMany(ctx, &pb.SymbolParamsManyRequest{})
+    if err != nil {
+        panic(err)
+    }
+
+    wanted := map[string]bool{"EURUSD": true, "GBPUSD": true, "USDJPY": true}
     for _, params := range data.SymbolInfos {
+        if !wanted[params.Name] {
+            continue
+        }
         fmt.Printf("%s:\n", params.Name)
         fmt.Printf("  Bid: %.5f, Ask: %.5f\n", params.Bid, params.Ask)
         fmt.Printf("  Digits: %d, Spread: %d\n", params.Digits, params.Spread)
@@ -310,12 +335,15 @@ func main() {
 func BuildTradingDashboard(account *mt5.MT5Account, watchlist []string) {
     ctx := context.Background()
 
-    data, err := account.SymbolParamsMany(ctx, &pb.SymbolParamsManyRequest{
-        Symbols: watchlist,
-    })
+    data, err := account.SymbolParamsMany(ctx, &pb.SymbolParamsManyRequest{}) // all symbols
     if err != nil {
         fmt.Printf("Error: %v\n", err)
         return
+    }
+
+    inWatchlist := make(map[string]bool)
+    for _, s := range watchlist {
+        inWatchlist[s] = true
     }
 
     fmt.Println("╔════════════════════════════════════════════════════════════╗")
@@ -325,6 +353,9 @@ func BuildTradingDashboard(account *mt5.MT5Account, watchlist []string) {
     fmt.Println("╠═══════════╬══════════╬══════════╬════════╬════════════════╣")
 
     for _, params := range data.SymbolInfos {
+        if !inWatchlist[params.Name] {
+            continue
+        }
         fmt.Printf("║ %-9s ║ %8.5f ║ %8.5f ║ %6d ║ %14.0f ║\n",
             params.Name, params.Bid, params.Ask, params.Spread, params.TradeContractSize)
     }
@@ -343,7 +374,7 @@ func ValidateTradingParams(account *mt5.MT5Account, symbol string, volume float6
     ctx := context.Background()
 
     data, err := account.SymbolParamsMany(ctx, &pb.SymbolParamsManyRequest{
-        Symbols: []string{symbol},
+        SymbolName: &symbol, // one symbol
     })
     if err != nil {
         return err
@@ -380,16 +411,22 @@ func ValidateTradingParams(account *mt5.MT5Account, symbol string, volume float6
 func CompareSpreads(account *mt5.MT5Account, symbols []string) {
     ctx := context.Background()
 
-    data, err := account.SymbolParamsMany(ctx, &pb.SymbolParamsManyRequest{
-        Symbols: symbols,
-    })
+    data, err := account.SymbolParamsMany(ctx, &pb.SymbolParamsManyRequest{}) // all symbols
     if err != nil {
         fmt.Printf("Error: %v\n", err)
         return
     }
 
+    wanted := make(map[string]bool)
+    for _, s := range symbols {
+        wanted[s] = true
+    }
+
     fmt.Println("Spread comparison:")
     for _, params := range data.SymbolInfos {
+        if !wanted[params.Name] {
+            continue
+        }
         spreadPips := float64(params.Spread) * params.Point * 10
         fmt.Printf("  %s: %d points (%.1f pips)\n",
             params.Name, params.Spread, spreadPips)
@@ -406,16 +443,22 @@ func CompareSpreads(account *mt5.MT5Account, symbols []string) {
 func FindLowSpreadSymbols(account *mt5.MT5Account, symbols []string, maxSpreadPips float64) []string {
     ctx := context.Background()
 
-    data, err := account.SymbolParamsMany(ctx, &pb.SymbolParamsManyRequest{
-        Symbols: symbols,
-    })
+    data, err := account.SymbolParamsMany(ctx, &pb.SymbolParamsManyRequest{}) // all symbols
     if err != nil {
         return nil
+    }
+
+    wanted := make(map[string]bool)
+    for _, s := range symbols {
+        wanted[s] = true
     }
 
     lowSpreadSymbols := []string{}
 
     for _, params := range data.SymbolInfos {
+        if !wanted[params.Name] {
+            continue
+        }
         spreadPips := float64(params.Spread) * params.Point * 10
 
         if spreadPips <= maxSpreadPips {

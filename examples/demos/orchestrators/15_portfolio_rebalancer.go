@@ -22,7 +22,8 @@
  STRATEGY:
    • Monitors actual exposure vs. target (every 30 min)
    • Rebalances when deviation exceeds threshold (>10%)
-   • Opens/closes positions to restore balance
+   • Resizes the existing positions to restore balance (it never opens
+     a symbol that has no position)
 
  HOW TO RUN (Command-Line):
    Step 1: Open terminal/command prompt
@@ -35,7 +36,7 @@
 
    What happens:
    • Connects to your MT5 account
-   • Starts monitoring portfolio balance every 30 minutes
+   • Checks the portfolio balance at once, then every 30 minutes
    • Automatically rebalances when needed
    • Runs for 1 hour (default), then stops
    • You'll see live updates in console
@@ -121,9 +122,12 @@ The orchestrator automatically:
 
   2. CALCULATES corrections:
      • EURUSD: Reduce by $700 (from $3,200 to $2,500) → SELL
+       (partial close of the long EURUSD position)
      • GBPUSD: Increase by $400 (from $2,100 to $2,500) → BUY
      • USDJPY: OK, no action needed
      • XAUUSD: Increase by $400 (from $2,100 to $2,500) → BUY
+     (all positions long in this example; for a short position an
+      increase is a SELL and a reduction a BUY)
 
   3. EXECUTES trades to restore balance
 
@@ -133,7 +137,8 @@ HOW IT WORKS IN PRACTICE:
 ──────────────────────────
   • Every 30 minutes, checks if portfolio is balanced
   • If deviation > 10%, triggers rebalancing
-  • Automatically opens/closes positions to restore target %
+  • Automatically resizes the existing positions to restore target %
+    (increase in the position's direction, or partial close)
   • Keeps running until you stop it
 
 WHEN TO USE THIS ORCHESTRATOR:
@@ -175,8 +180,11 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"sort"
+	"sync"
 	"time"
 
+	pb "github.com/MetaRPC/GoMT5/package"
 	mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
 )
 
@@ -187,21 +195,21 @@ import (
 // PortfolioRebalancerConfig holds portfolio rebalancing parameters.
 type PortfolioRebalancerConfig struct {
 	// Portfolio Definition
-	Allocations map[string]float64 // Symbol -> target allocation percentage (0.0-1.0)
+	Allocations map[string]float64 // Symbol -> target allocation (0.0-1.0, all together 1.0)
 
 	// Exposure Limits
-	TotalExposure   float64 // Total portfolio value to maintain
-	MaxDeviation    float64 // Maximum deviation from target before rebalancing
+	TotalExposure   float64 // Total notional value (account currency) the positions should add up to
+	MaxDeviation    float64 // Deviation (0.20 = 20%) that triggers a rebalance at once, between the regular checks (0 = off)
 
 	// Rebalancing Rules
-	RebalanceThreshold float64       // % deviation to trigger rebalance
-	CheckInterval      time.Duration // How often to check balance
-	MinPositionSize    float64       // Minimum lot size for positions
+	RebalanceThreshold float64       // % deviation to trigger a rebalance at the regular check (10.0 = 10%)
+	CheckInterval      time.Duration // How often to check balance (0 = 1h)
+	MinPositionSize    float64       // Trades smaller than this (lots) are skipped
 
 	// Trading Parameters
-	UseMarketOrders   bool    // Use market orders (true) or limit orders (false)
-	SlippageTolerance float64 // Maximum slippage in points for limit orders
-	MaxTradesPerCycle int     // Max trades per rebalancing cycle
+	UseMarketOrders   bool    // true: market orders; false: limit orders SlippageTolerance points better than the price
+	SlippageTolerance float64 // Points: max deviation of market orders / price improvement of limit orders
+	MaxTradesPerCycle int     // Max trades per rebalancing cycle (0 = 2 × number of symbols)
 }
 
 // DefaultPortfolioRebalancerConfig returns sensible defaults.
@@ -231,14 +239,25 @@ func DefaultPortfolioRebalancerConfig(symbols []string) PortfolioRebalancerConfi
 // ══════════════════════════════════════════════════════════════════════════════
 
 // PortfolioRebalancer maintains target allocation across symbols.
+//
+// It rebalances the positions you have: a symbol's exposure is the NET notional value of its
+// positions (BUY +, SELL -) in the account currency, and the rebalancer resizes it toward
+// TotalExposure × allocation in the direction it already has. It never opens a symbol that
+// has no position (it would have to guess the direction).
 type PortfolioRebalancer struct {
 	*BaseOrchestrator
 	sugar  *mt5.MT5Sugar
 	config PortfolioRebalancerConfig
 
-	// Portfolio State
-	currentAllocations map[string]float64 // Current exposure per symbol
-	targetValues       map[string]float64 // Target $ value per symbol
+	// Used by the monitoring goroutine only
+	targetValues    map[string]float64          // Target value per symbol
+	symbols         map[string]*rebalanceSymbol // Symbol specification and value conversion
+	accountCurrency string
+	limitOrders     []uint64 // Unfilled limit orders of the last cycle (UseMarketOrders=false)
+
+	// Shared with the getters (mu)
+	mu                 sync.Mutex
+	currentAllocations []*SymbolAllocation // Result of the last analysis
 	lastRebalance      time.Time
 	rebalanceCount     int
 }
@@ -249,12 +268,37 @@ type SymbolAllocation struct {
 	TargetPercent   float64
 	CurrentPercent  float64
 	TargetValue     float64
-	CurrentValue    float64
+	CurrentValue    float64 // |net notional value| in the account currency
 	Deviation       float64
 	DeviationPercent float64
 	NeedsAdjustment bool
 	ActionRequired  string // "BUY", "SELL", "HOLD"
 	AdjustmentValue float64
+	IsLong          bool    // Direction of the net position
+	ValuePerLot     float64 // Notional value of 1 lot in the account currency
+	Price           float64 // Price the values were computed with
+}
+
+// rebalanceSymbol is what the rebalancer needs to value and trade a symbol.
+type rebalanceSymbol struct {
+	spec         symbolSpec
+	profitIsAcct bool    // profit (quote) currency = account currency (EURUSD, XAUUSD on a USD account)
+	baseIsAcct   bool    // base currency = account currency (USDJPY on a USD account)
+	tickValue    float64 // SYMBOL_TRADE_TICK_VALUE (conversion for crosses)
+	tickSize     float64 // SYMBOL_TRADE_TICK_SIZE
+}
+
+// valuePerLot is the notional value of 1 lot at price, in the account currency.
+func (s *rebalanceSymbol) valuePerLot(price float64) float64 {
+	switch {
+	case s.profitIsAcct:
+		return s.spec.Contract * price
+	case s.baseIsAcct:
+		return s.spec.Contract
+	case s.tickSize > 0 && s.tickValue > 0:
+		return price * s.tickValue / s.tickSize // contract × price × (account per quote unit)
+	}
+	return s.spec.Contract * price // no conversion available: quote currency
 }
 
 // NewPortfolioRebalancer creates a new portfolio rebalancing orchestrator.
@@ -263,47 +307,57 @@ func NewPortfolioRebalancer(sugar *mt5.MT5Sugar, config PortfolioRebalancerConfi
 		BaseOrchestrator:   NewBaseOrchestrator("Portfolio Rebalancer"),
 		sugar:              sugar,
 		config:             config,
-		currentAllocations: make(map[string]float64),
 		targetValues:       make(map[string]float64),
-		lastRebalance:      time.Now(),
+		symbols:            make(map[string]*rebalanceSymbol),
+		currentAllocations: make([]*SymbolAllocation, 0),
 	}
 }
 
-// Start begins portfolio monitoring and rebalancing.
+// Start validates the configuration and begins portfolio monitoring and rebalancing.
+// The first check runs at once, then every CheckInterval.
 func (p *PortfolioRebalancer) Start() error {
 	if p.IsRunning() {
 		return fmt.Errorf("portfolio rebalancer already running")
 	}
 
-	// Validate configuration
+	// Validate configuration (applies the defaults)
 	if err := p.validateConfig(); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
+	// Account currency (exposure is valued in it)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	currency, err := p.sugar.GetService().GetAccountString(ctx, pb.AccountInfoStringPropertyType_ACCOUNT_CURRENCY)
+	cancel()
+	if err != nil {
+		return fmt.Errorf("failed to get account currency: %w", err)
+	}
+	p.accountCurrency = currency
+
 	// Calculate target values
 	p.calculateTargetValues()
 
-	// Create context
-	ctx, cancel := context.WithCancel(context.Background())
-	p.SetContext(ctx, cancel)
-
-	// Mark as started
-	p.MarkStarted()
+	// Create context, mark as started, stop on Ctrl+C
+	p.begin()
 
 	// Start monitoring loop
-	go p.monitorLoop()
+	p.goLoop(p.monitorLoop)
 
 	return nil
 }
 
-// Stop gracefully stops portfolio rebalancing.
+// Stop gracefully stops portfolio rebalancing and deletes its unfilled limit orders.
+// It waits until a check that is in progress has finished.
 func (p *PortfolioRebalancer) Stop() error {
 	if !p.IsRunning() {
 		return fmt.Errorf("portfolio rebalancer not running")
 	}
 
-	// Cancel context
-	p.CancelContext()
+	// Cancel context and wait for the monitoring loop
+	p.stopLoops()
+
+	// Delete limit orders that did not fill
+	p.deleteUnfilledLimitOrders()
 
 	// Mark as stopped
 	p.MarkStopped()
@@ -311,11 +365,18 @@ func (p *PortfolioRebalancer) Stop() error {
 	return nil
 }
 
-// validateConfig ensures configuration is valid.
+// validateConfig ensures configuration is valid and applies the defaults.
 func (p *PortfolioRebalancer) validateConfig() error {
+	if len(p.config.Allocations) == 0 {
+		return fmt.Errorf("no allocations")
+	}
+
 	// Check allocations sum to 100%
 	totalAllocation := 0.0
-	for _, allocation := range p.config.Allocations {
+	for symbol, allocation := range p.config.Allocations {
+		if allocation <= 0 || allocation > 1 {
+			return fmt.Errorf("allocation of %s must be in (0, 1], got %v", symbol, allocation)
+		}
 		totalAllocation += allocation
 	}
 
@@ -323,88 +384,200 @@ func (p *PortfolioRebalancer) validateConfig() error {
 		return fmt.Errorf("allocations must sum to 100%%, got %.2f%%", totalAllocation*100)
 	}
 
+	if p.config.TotalExposure <= 0 {
+		return fmt.Errorf("TotalExposure must be > 0, got %v", p.config.TotalExposure)
+	}
+	if p.config.RebalanceThreshold < 0 || p.config.MaxDeviation < 0 || p.config.MinPositionSize < 0 ||
+		p.config.SlippageTolerance < 0 || p.config.MaxTradesPerCycle < 0 {
+		return fmt.Errorf("RebalanceThreshold, MaxDeviation, MinPositionSize, SlippageTolerance and MaxTradesPerCycle must not be negative")
+	}
+	if p.config.MaxDeviation > 0 && p.config.MaxDeviation*100 < p.config.RebalanceThreshold {
+		return fmt.Errorf("MaxDeviation %.0f%% is below RebalanceThreshold %.0f%%", p.config.MaxDeviation*100, p.config.RebalanceThreshold)
+	}
+	if !p.config.UseMarketOrders && p.config.SlippageTolerance <= 0 {
+		return fmt.Errorf("limit orders (UseMarketOrders=false) need SlippageTolerance > 0 points")
+	}
+
+	// Defaults
+	if p.config.CheckInterval <= 0 {
+		p.config.CheckInterval = 1 * time.Hour
+	}
+	if p.config.MaxTradesPerCycle == 0 {
+		p.config.MaxTradesPerCycle = 2 * len(p.config.Allocations)
+	}
+
 	return nil
 }
 
-// calculateTargetValues calculates target dollar values for each symbol.
+// calculateTargetValues calculates target values (account currency) for each symbol.
 func (p *PortfolioRebalancer) calculateTargetValues() {
 	for symbol, allocation := range p.config.Allocations {
 		p.targetValues[symbol] = p.config.TotalExposure * allocation
 	}
 }
 
-// monitorLoop continuously monitors and rebalances portfolio.
+// watchInterval is how often the MaxDeviation trigger is checked between the regular checks
+// (only when CheckInterval is longer).
+const watchInterval = time.Minute
+
+// monitorLoop checks at once, then rebalances every CheckInterval; in between it rebalances
+// at once when a symbol deviates more than MaxDeviation.
 func (p *PortfolioRebalancer) monitorLoop() {
 	ticker := time.NewTicker(p.config.CheckInterval)
 	defer ticker.Stop()
+
+	var watch <-chan time.Time
+	if p.config.MaxDeviation > 0 && p.config.CheckInterval > watchInterval {
+		watchTicker := time.NewTicker(watchInterval)
+		defer watchTicker.Stop()
+		watch = watchTicker.C
+	}
+
+	p.checkAndRebalance(false)
 
 	for {
 		select {
 		case <-p.GetContext().Done():
 			return
 		case <-ticker.C:
-			p.checkAndRebalance()
+			p.checkAndRebalance(false)
+		case <-watch:
+			p.checkAndRebalance(true)
 		}
 	}
 }
 
-// checkAndRebalance analyzes portfolio and rebalances if needed.
-func (p *PortfolioRebalancer) checkAndRebalance() {
+// checkAndRebalance analyzes portfolio and rebalances if needed. A regular check rebalances when a
+// symbol deviates more than RebalanceThreshold; a watch check only when one deviates more than MaxDeviation.
+func (p *PortfolioRebalancer) checkAndRebalance(watchOnly bool) {
+	if p.GetContext().Err() != nil {
+		return
+	}
+
+	// Limit orders of the previous cycle that did not fill are replaced
+	p.deleteUnfilledLimitOrders()
+
 	// Analyze current state
-	allocations := p.analyzePortfolio()
+	allocations, err := p.analyzePortfolio()
+	if err != nil {
+		p.IncrementError(fmt.Sprintf("analysis failed: %v", err))
+		return
+	}
 
 	// Check if rebalancing is needed
 	needsRebalance := false
 	for _, alloc := range allocations {
-		if alloc.NeedsAdjustment {
+		if alloc.NeedsAdjustment && (!watchOnly || math.Abs(alloc.DeviationPercent) > p.config.MaxDeviation*100) {
 			needsRebalance = true
 			break
 		}
 	}
 
 	if !needsRebalance {
-		p.UpdateMetrics(func(m *OrchestratorMetrics) {
-			m.LastOperation = "Portfolio balanced - no action needed"
-		})
+		if !watchOnly {
+			p.UpdateMetrics(func(m *OrchestratorMetrics) {
+				m.LastOperation = "Portfolio balanced - no action needed"
+			})
+		}
 		return
+	}
+
+	if watchOnly {
+		fmt.Printf("\n  ⚠️  Deviation above MaxDeviation (%.0f%%): rebalancing now\n", p.config.MaxDeviation*100)
 	}
 
 	// Perform rebalancing
-	if err := p.executeRebalance(allocations); err != nil {
-		p.IncrementError(fmt.Sprintf("rebalance failed: %v", err))
+	trades := p.executeRebalance(allocations)
+	if trades == 0 {
 		return
 	}
 
+	p.mu.Lock()
 	p.rebalanceCount++
 	p.lastRebalance = time.Now()
+	p.mu.Unlock()
 	p.IncrementSuccess()
 }
 
-// analyzePortfolio calculates current allocations vs targets.
-func (p *PortfolioRebalancer) analyzePortfolio() []*SymbolAllocation {
-	allocations := make([]*SymbolAllocation, 0)
+// getSymbol gets (and caches) a symbol's specification and value conversion.
+func (p *PortfolioRebalancer) getSymbol(symbol string) (*rebalanceSymbol, error) {
+	if s, ok := p.symbols[symbol]; ok {
+		return s, nil
+	}
+	spec, err := loadSymbolSpec(p.sugar, symbol)
+	if err != nil {
+		return nil, err
+	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	service := p.sugar.GetService()
+	base, err := service.GetSymbolString(ctx, symbol, pb.SymbolInfoStringProperty_SYMBOL_CURRENCY_BASE)
+	if err != nil {
+		return nil, err
+	}
+	profit, err := service.GetSymbolString(ctx, symbol, pb.SymbolInfoStringProperty_SYMBOL_CURRENCY_PROFIT)
+	if err != nil {
+		return nil, err
+	}
+	tickValue, _ := service.GetSymbolDouble(ctx, symbol, pb.SymbolInfoDoubleProperty_SYMBOL_TRADE_TICK_VALUE)
+	tickSize, _ := service.GetSymbolDouble(ctx, symbol, pb.SymbolInfoDoubleProperty_SYMBOL_TRADE_TICK_SIZE)
+
+	s := &rebalanceSymbol{
+		spec:         spec,
+		profitIsAcct: profit == p.accountCurrency,
+		baseIsAcct:   base == p.accountCurrency,
+		tickValue:    tickValue,
+		tickSize:     tickSize,
+	}
+	p.symbols[symbol] = s
+	return s, nil
+}
+
+// analyzePortfolio calculates current allocations vs targets and stores the result for GetCurrentAllocations.
+func (p *PortfolioRebalancer) analyzePortfolio() ([]*SymbolAllocation, error) {
 	// Get all positions
 	positions, err := p.sugar.GetOpenPositions()
 	if err != nil {
-		p.IncrementError(fmt.Sprintf("failed to get positions: %v", err))
-		return allocations
+		return nil, fmt.Errorf("failed to get positions: %w", err)
 	}
 
-	// Calculate current exposure per symbol
-	currentExposure := make(map[string]float64)
-	totalExposure := 0.0
-
+	// Net exposure per symbol: Volume × value of 1 lot, BUY positive, SELL negative
+	netExposure := make(map[string]float64)
+	prices := make(map[string]float64)
 	for _, pos := range positions {
-		// Calculate position value (simplified - should use actual margin/value)
-		positionValue := pos.Volume * 100000 // Simplified lot value
-		currentExposure[pos.Symbol] += positionValue
-		totalExposure += positionValue
+		if _, managed := p.config.Allocations[pos.Symbol]; !managed {
+			continue
+		}
+		s, err := p.getSymbol(pos.Symbol)
+		if err != nil {
+			return nil, err
+		}
+		value := pos.Volume * s.valuePerLot(pos.PriceCurrent)
+		if pos.Type != pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
+			value = -value
+		}
+		netExposure[pos.Symbol] += value
+		prices[pos.Symbol] = pos.PriceCurrent
 	}
 
-	// Analyze each symbol
-	for symbol, targetPercent := range p.config.Allocations {
-		currentValue := currentExposure[symbol]
+	totalExposure := 0.0
+	for _, value := range netExposure {
+		totalExposure += math.Abs(value)
+	}
+
+	// Analyze each symbol (sorted for a stable order)
+	symbols := make([]string, 0, len(p.config.Allocations))
+	for symbol := range p.config.Allocations {
+		symbols = append(symbols, symbol)
+	}
+	sort.Strings(symbols)
+
+	allocations := make([]*SymbolAllocation, 0, len(symbols))
+	for _, symbol := range symbols {
+		targetPercent := p.config.Allocations[symbol]
+		net := netExposure[symbol]
+		currentValue := math.Abs(net)
 		currentPercent := 0.0
 		if totalExposure > 0 {
 			currentPercent = currentValue / totalExposure
@@ -425,30 +598,46 @@ func (p *PortfolioRebalancer) analyzePortfolio() []*SymbolAllocation {
 			CurrentValue:     currentValue,
 			Deviation:        deviation,
 			DeviationPercent: deviationPercent,
+			IsLong:           net > 0,
+			ActionRequired:   "HOLD",
+			Price:            prices[symbol],
 		}
 
-		// Determine if adjustment needed
+		// A symbol without a (net) position is not opened: the direction is unknown
+		if currentValue == 0 {
+			alloc.DeviationPercent = 0
+			allocations = append(allocations, alloc)
+			continue
+		}
+		if s, err := p.getSymbol(symbol); err == nil {
+			alloc.ValuePerLot = s.valuePerLot(alloc.Price)
+		}
+
+		// Determine if adjustment needed: increase or reduce the position in its own direction
 		if math.Abs(deviationPercent) > p.config.RebalanceThreshold {
 			alloc.NeedsAdjustment = true
 			alloc.AdjustmentValue = -deviation
 
-			if deviation < 0 {
+			increase := deviation < 0
+			if increase == alloc.IsLong {
 				alloc.ActionRequired = "BUY"
 			} else {
 				alloc.ActionRequired = "SELL"
 			}
-		} else {
-			alloc.ActionRequired = "HOLD"
 		}
 
 		allocations = append(allocations, alloc)
 	}
 
-	return allocations
+	p.mu.Lock()
+	p.currentAllocations = allocations
+	p.mu.Unlock()
+
+	return allocations, nil
 }
 
-// executeRebalance performs trades to restore target allocations.
-func (p *PortfolioRebalancer) executeRebalance(allocations []*SymbolAllocation) error {
+// executeRebalance performs trades to restore target allocations and returns how many it made.
+func (p *PortfolioRebalancer) executeRebalance(allocations []*SymbolAllocation) int {
 	tradesExecuted := 0
 
 	for _, alloc := range allocations {
@@ -464,74 +653,209 @@ func (p *PortfolioRebalancer) executeRebalance(allocations []*SymbolAllocation) 
 		}
 
 		// Execute adjustment
-		if err := p.adjustSymbolExposure(alloc); err != nil {
+		trades, err := p.adjustSymbolExposure(alloc, p.config.MaxTradesPerCycle-tradesExecuted)
+		tradesExecuted += trades
+		if err != nil {
 			p.IncrementError(fmt.Sprintf("failed to adjust %s: %v", alloc.Symbol, err))
-			continue
 		}
-
-		tradesExecuted++
 	}
 
 	p.UpdateMetrics(func(m *OrchestratorMetrics) {
 		m.LastOperation = fmt.Sprintf("Rebalanced portfolio: %d trades executed", tradesExecuted)
 		m.OperationsTotal += tradesExecuted
+		m.TotalTrades += tradesExecuted
 	})
 
-	return nil
+	return tradesExecuted
 }
 
-// adjustSymbolExposure adjusts exposure for a single symbol.
-func (p *PortfolioRebalancer) adjustSymbolExposure(alloc *SymbolAllocation) error {
-	// Calculate lot size needed
-	// Simplified calculation - should use proper contract size
-	lotSize := math.Abs(alloc.AdjustmentValue) / 100000
-
-	// Round to minimum position size
-	lotSize = math.Max(lotSize, p.config.MinPositionSize)
-
-	if alloc.ActionRequired == "BUY" {
-		// Open buy position
-		ticket, err := p.sugar.BuyMarket(alloc.Symbol, lotSize)
-		if err != nil {
-			return fmt.Errorf("buy failed: %w", err)
-		}
-
-		p.UpdateMetrics(func(m *OrchestratorMetrics) {
-			m.TotalTrades++
-		})
-
-		fmt.Printf("Opened BUY position #%d for %s: %.2f lots\n", ticket, alloc.Symbol, lotSize)
-
-	} else if alloc.ActionRequired == "SELL" {
-		// First try to close existing positions
-		positions, _ := p.sugar.GetPositionsBySymbol(alloc.Symbol)
-		if len(positions) > 0 {
-			// Close partial or full position
-			if err := p.sugar.ClosePosition(positions[0].Ticket); err != nil {
-				return fmt.Errorf("close failed: %w", err)
-			}
-
-			p.UpdateMetrics(func(m *OrchestratorMetrics) {
-				m.TotalTrades++
-			})
-		}
+// adjustSymbolExposure resizes one symbol's position toward its target and returns the number of trades.
+func (p *PortfolioRebalancer) adjustSymbolExposure(alloc *SymbolAllocation, maxTrades int) (int, error) {
+	s, err := p.getSymbol(alloc.Symbol)
+	if err != nil {
+		return 0, err
+	}
+	if alloc.ValuePerLot <= 0 {
+		return 0, fmt.Errorf("no value per lot")
 	}
 
-	return nil
+	// Lots needed for the adjustment, rounded to the NEAREST volume step (+ half a step, then down).
+	// Rounded down, a reduction could leave the symbol further from its target than one step more:
+	// EURUSD 0.10 lot ($11,225), target $2,500 → 0.0777 lots to close; 0.07 left 0.03 lot (+35%,
+	// above MaxDeviation, so the minute check fired again every minute with no trade possible),
+	// 0.08 leaves 0.02 lot (-10%).
+	step := s.spec.VolumeStep
+	if step <= 0 {
+		step = 0.01
+	}
+	lotSize := s.spec.volume(math.Abs(alloc.AdjustmentValue)/alloc.ValuePerLot + step/2)
+	if lotSize == 0 || lotSize < p.config.MinPositionSize {
+		p.UpdateMetrics(func(m *OrchestratorMetrics) {
+			m.LastOperation = fmt.Sprintf("%s: adjustment below MinPositionSize/volume step, skipped", alloc.Symbol)
+		})
+		return 0, nil
+	}
+
+	increase := alloc.Deviation < 0
+	if increase {
+		ticket, err := p.openTrade(alloc.Symbol, s, alloc.IsLong, lotSize)
+		if err != nil {
+			return 0, err
+		}
+		kind := "market"
+		if !p.config.UseMarketOrders {
+			kind = "limit order"
+		}
+		fmt.Printf("\n  [REBALANCE] %s %s %.2f lots (%s, #%d): exposure %.0f → target %.0f\n",
+			alloc.ActionRequired, alloc.Symbol, lotSize, kind, ticket, alloc.CurrentValue, alloc.TargetValue)
+		return 1, nil
+	}
+
+	return p.reducePositions(alloc, s, lotSize, maxTrades)
 }
 
-// GetCurrentAllocations returns current portfolio allocation state.
+// openTrade increases the exposure: a market order with SlippageTolerance as the maximum deviation,
+// or (UseMarketOrders=false) a limit order SlippageTolerance points better than the current price.
+func (p *PortfolioRebalancer) openTrade(symbol string, s *rebalanceSymbol, buy bool, lots float64) (uint64, error) {
+	if !p.config.UseMarketOrders {
+		priceInfo, err := p.sugar.GetPriceInfo(symbol)
+		if err != nil {
+			return 0, err
+		}
+		offset := p.config.SlippageTolerance * s.spec.Point
+		var ticket uint64
+		if buy {
+			ticket, err = p.sugar.BuyLimit(symbol, lots, s.spec.price(priceInfo.Ask-offset))
+		} else {
+			ticket, err = p.sugar.SellLimit(symbol, lots, s.spec.price(priceInfo.Bid+offset))
+		}
+		if err != nil {
+			return 0, err
+		}
+		p.limitOrders = append(p.limitOrders, ticket)
+		return ticket, nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	operation := pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_SELL
+	if buy {
+		operation = pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_BUY
+	}
+	slippage := uint64(p.config.SlippageTolerance)
+	result, err := p.sugar.GetService().PlaceOrder(ctx, &pb.OrderSendRequest{
+		Symbol:    symbol,
+		Operation: operation,
+		Volume:    lots,
+		Slippage:  &slippage,
+	})
+	if err != nil {
+		return 0, err
+	}
+	if result.ReturnedCode != 10009 {
+		return 0, fmt.Errorf("order rejected, code: %d, comment: %s", result.ReturnedCode, result.Comment)
+	}
+	return result.Order, nil
+}
+
+// reducePositions closes lots from the symbol's positions in the net direction, largest first
+// (partially where possible; a remainder below the minimum volume closes the whole position).
+func (p *PortfolioRebalancer) reducePositions(alloc *SymbolAllocation, s *rebalanceSymbol, lots float64, maxTrades int) (int, error) {
+	positions, err := p.sugar.GetPositionsBySymbol(alloc.Symbol)
+	if err != nil {
+		return 0, err
+	}
+	sameSide := make([]*pb.PositionInfo, 0, len(positions))
+	for _, pos := range positions {
+		if (pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY) == alloc.IsLong {
+			sameSide = append(sameSide, pos)
+		}
+	}
+	sort.Slice(sameSide, func(i, j int) bool { return sameSide[i].Volume > sameSide[j].Volume })
+
+	trades := 0
+	remaining := lots
+	for _, pos := range sameSide {
+		if remaining < s.spec.VolumeMin-1e-9 || trades >= maxTrades {
+			break
+		}
+		closeVolume := s.spec.volume(math.Min(remaining, pos.Volume))
+		if closeVolume == 0 {
+			break
+		}
+		if pos.Volume-closeVolume < s.spec.VolumeMin-1e-9 {
+			closeVolume = pos.Volume
+			err = p.sugar.ClosePosition(pos.Ticket)
+		} else {
+			err = p.sugar.ClosePositionPartial(pos.Ticket, closeVolume)
+		}
+		if err != nil {
+			return trades, fmt.Errorf("close #%d: %w", pos.Ticket, err)
+		}
+		trades++
+		remaining -= closeVolume
+		fmt.Printf("\n  [REBALANCE] %s %s: closed %.2f of %.2f lots of #%d: exposure %.0f → target %.0f\n",
+			alloc.ActionRequired, alloc.Symbol, closeVolume, pos.Volume, pos.Ticket, alloc.CurrentValue, alloc.TargetValue)
+	}
+
+	return trades, nil
+}
+
+// deleteUnfilledLimitOrders deletes the rebalancer's limit orders that are still pending
+// (a filled order's ticket is the position's ticket, so filled ones are left alone).
+func (p *PortfolioRebalancer) deleteUnfilledLimitOrders() {
+	if len(p.limitOrders) == 0 {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	service := p.sugar.GetService()
+	_, orderTickets, err := service.GetOpenedTickets(ctx)
+	if err != nil {
+		p.IncrementError(fmt.Sprintf("failed to get pending orders: %v", err))
+		return
+	}
+	pending := make(map[uint64]bool, len(orderTickets))
+	for _, t := range orderTickets {
+		pending[uint64(t)] = true
+	}
+	for _, ticket := range p.limitOrders {
+		if !pending[ticket] {
+			continue
+		}
+		if code, err := service.CloseOrder(ctx, &pb.OrderCloseRequest{Ticket: ticket}); err != nil || code != 10009 {
+			p.IncrementError(fmt.Sprintf("failed to delete limit order #%d: code %d %v", ticket, code, err))
+		}
+	}
+	p.limitOrders = nil
+}
+
+// GetCurrentAllocations returns the result of the last portfolio analysis
+// (empty until the first check has run).
 func (p *PortfolioRebalancer) GetCurrentAllocations() []*SymbolAllocation {
-	return p.analyzePortfolio()
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	allocations := make([]*SymbolAllocation, len(p.currentAllocations))
+	for i, alloc := range p.currentAllocations {
+		a := *alloc
+		allocations[i] = &a
+	}
+	return allocations
 }
 
 // GetRebalanceCount returns number of times portfolio was rebalanced.
 func (p *PortfolioRebalancer) GetRebalanceCount() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	return p.rebalanceCount
 }
 
-// GetLastRebalanceTime returns when portfolio was last rebalanced.
+// GetLastRebalanceTime returns when portfolio was last rebalanced (zero time: never).
 func (p *PortfolioRebalancer) GetLastRebalanceTime() time.Time {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	return p.lastRebalance
 }
 
@@ -577,7 +901,7 @@ THIS SEPARATION IS NEEDED FOR:
    → Single entry point: go run main.go rebalancer → RunOrchestrator_PortfolioRebalancer()
 
 📍 WHERE TO CONFIGURE PARAMETERS:
-main.go → func RunOrchestrator_PortfolioRebalancer() (lines 710-776)
+main.go → func RunOrchestrator_PortfolioRebalancer() (CONFIGURATION block)
 
 CONFIGURATION CODE IN main.go:
 
@@ -595,7 +919,7 @@ func RunOrchestrator_PortfolioRebalancer() error {
             "XAUUSD": 0.25,  // ← 25% XAUUSD (Gold)
         },
         TotalExposure:      10000.0,          // ← $10k total portfolio
-        MaxDeviation:       0.20,             // ← 20% max deviation allowed
+        MaxDeviation:       0.20,             // ← 20% off → rebalance at once
         RebalanceThreshold: 10.0,             // ← Rebalance at 10% off
         CheckInterval:      30 * time.Minute, // ← Check every 30 min
         MinPositionSize:    0.01,             // ← Minimum lot size
@@ -730,35 +1054,43 @@ STEP 1: INITIALIZATION (Start)
 ───────────────────────────────
 
 1. Validates configuration:
-   • Do all allocations sum to 100%?
+   • Do all allocations sum to 100%? (each in (0, 1])
    • Example: 25% + 25% + 25% + 25% = 100% ✅
+   • TotalExposure > 0, no negative values, MaxDeviation ≥ RebalanceThreshold
+   • Defaults: CheckInterval 0 → 1 hour, MaxTradesPerCycle 0 → 2 × symbols
 
-2. Calculates target dollar values:
+2. Reads the account currency (exposure is valued in it) and calculates
+   target values:
    TotalExposure = $10,000
    EURUSD: 25% → $2,500
    GBPUSD: 25% → $2,500
    USDJPY: 25% → $2,500
    XAUUSD: 25% → $2,500
 
-3. Starts monitoring loop (every 30 minutes by default)
+3. Starts monitoring loop: first check at once, then every CheckInterval;
+   in between, every minute, a rebalance when a symbol deviates more than
+   MaxDeviation
 
 
 STEP 2: MONITORING LOOP (Every CheckInterval)
 ──────────────────────────────────────────────
 
-Every 30 minutes, the orchestrator:
-
 1. Gets all open positions:
    positions, _ := sugar.GetOpenPositions()
 
-2. Calculates current exposure per symbol:
-   For each position:
-     currentExposure[symbol] += position.Volume * 100000
+2. Calculates the NET exposure per symbol in the account currency:
+   For each position (BUY +, SELL −):
+     value = Volume × value of 1 lot
+     value of 1 lot = ContractSize × price            (EURUSD, XAUUSD on USD)
+                    = ContractSize                    (USDJPY on USD)
+                    = price × TickValue / TickSize    (crosses)
 
 3. Analyzes each symbol (analyzePortfolio):
-   • Current value vs. target value
+   • |net exposure| vs. target value
    • Deviation percentage
-   • Action needed: BUY / SELL / HOLD
+   • A symbol WITHOUT a position is not opened (direction unknown)
+   • Action: increase or reduce the position in its own direction
+     (BUY / SELL), or HOLD
 
 4. Checks if rebalancing needed:
    If ANY symbol deviation > RebalanceThreshold:
@@ -771,14 +1103,17 @@ STEP 3: REBALANCING EXECUTION (executeRebalance)
 For each symbol that needs adjustment:
 
 1. Calculate lot size needed:
-   lotSize = AdjustmentValue / 100000
+   lotSize = |AdjustmentValue| / value of 1 lot,
+   rounded to the nearest volume step (skipped if below MinPositionSize)
 
 2. Execute trade:
-   • If ActionRequired == "BUY":
-     → sugar.BuyMarket(symbol, lotSize)
+   • Increase: market order in the position's direction with
+     SlippageTolerance as max deviation (UseMarketOrders = false: a limit
+     order SlippageTolerance points better than the price, deleted at the
+     next check if unfilled)
 
-   • If ActionRequired == "SELL":
-     → sugar.ClosePosition(ticket)
+   • Reduce: partial close of the positions in that direction, largest
+     first (sugar.ClosePositionPartial / ClosePosition)
 
 3. Limit: MaxTradesPerCycle = 10 trades per rebalance
 
@@ -790,7 +1125,7 @@ For each symbol that needs adjustment:
 STEP 4: REPEAT
 ───────────────
 
-Loop continues every CheckInterval (30 min) until Stop() is called.
+Loop continues every CheckInterval (30 min) until Stop() or Ctrl+C.
 
 
 ══════════════════════════════════════════════════════════════════════════════
@@ -804,49 +1139,51 @@ Loop continues every CheckInterval (30 min) until Stop() is called.
   Tip: Use equal weights (1.0 / number of symbols) for simplicity
 
 • TotalExposure (float64)
-  Total portfolio value to maintain across all symbols
+  Total notional value (account currency) the positions should add up to
   Example: 10000.0 = $10,000 total exposure
   Calculation: Each symbol gets TotalExposure × Allocation%
-  Tip: Set based on account size (e.g., 50% of balance)
+  Tip: 1 lot EURUSD ≈ $110,000 notional - $2,500 is about 0.02 lots
 
 • MaxDeviation (float64)
-  Maximum allowed deviation from target (as decimal)
-  Example: 0.20 = allow up to 20% deviation before intervention
-  Currently logged only (future: emergency rebalance trigger)
-  Tip: 0.20 (20%) is reasonable, 0.10 (10%) is stricter
+  Deviation (as decimal) that triggers a rebalance AT ONCE, without waiting
+  for the next CheckInterval (checked every minute)
+  Example: 0.20 = rebalance immediately when a symbol is 20% off target
+  0 = off; must not be below RebalanceThreshold
+  Tip: 0.20 (20%) is reasonable
 
 • RebalanceThreshold (float64)
-  Percentage deviation that triggers rebalancing
+  Percentage deviation that triggers rebalancing at the regular check
   Example: 10.0 = rebalance when symbol is 10% off target
   Trigger: If symbol deviates >10% from target → rebalance
   Tip: Lower = more frequent rebalancing (5-10%), higher = less frequent (15-20%)
 
 • CheckInterval (time.Duration)
-  How often to check portfolio balance
+  How often to check portfolio balance (0 = 1 hour)
   Example: 30 * time.Minute = check every 30 minutes
   Range: 10m = very active, 1h = relaxed, 24h = daily
   Tip: Match to trading style (day trading = 10-30m, swing = 1-4h)
 
 • MinPositionSize (float64)
-  Minimum lot size for any position
+  Smallest trade (lots) the rebalancer makes
   Example: 0.01 = 1 micro lot minimum
-  Prevents tiny rebalancing trades
+  Smaller adjustments are skipped (prevents tiny rebalancing trades)
   Tip: 0.01 for most brokers, 0.1 for larger accounts
 
 • UseMarketOrders (bool)
-  Whether to use market orders (true) or limit orders (false)
-  true = immediate execution at market price
-  false = limit orders with SlippageTolerance (not yet implemented)
-  Tip: Use true for simplicity, false for tighter control
+  true = market orders (immediate execution, max deviation SlippageTolerance)
+  false = limit orders SlippageTolerance points better than the current
+          price; unfilled ones are deleted at the next check
+  Reductions are always partial closes at market
+  Tip: Use true for simplicity, false to avoid paying the spread at once
 
 • SlippageTolerance (float64)
-  Maximum slippage in points for limit orders
-  Example: 50 = allow 50 points (5 pips) slippage
-  Currently unused (UseMarketOrders is always true in current implementation)
-  Future feature for limit order placement
+  Points: the maximum deviation of market orders (OrderSendRequest.Slippage),
+  or how much better than the price a limit order is placed
+  Example: 50 = 50 points (5 pips on EURUSD)
+  Must be > 0 for limit orders
 
 • MaxTradesPerCycle (int)
-  Maximum trades to execute in one rebalancing cycle
+  Maximum trades to execute in one rebalancing cycle (0 = 2 × symbols)
   Example: 10 = max 10 trades per rebalance
   Prevents excessive trading costs
   Tip: Set to 2× number of symbols (e.g., 4 symbols → 8 trades)
@@ -1001,10 +1338,11 @@ EXPECTED BEHAVIOR:
    → In strong trends, this can reduce profits
    → Consider wider RebalanceThreshold (15-20%) in trending markets
 
-4. EXPOSURE CALCULATION IS SIMPLIFIED
-   → Current implementation: pos.Volume × 100000
-   → Doesn't account for leverage, margin, or contract size differences
-   → Test on DEMO first to verify calculations for your symbols
+4. EXPOSURE IS NOTIONAL VALUE
+   → Volume × contract size × price, converted to the account currency
+   → Leverage and margin are not part of it
+   → The rebalancer never opens a symbol without a position: open the
+     initial positions yourself (their direction is kept)
 
 5. MARKET HOURS MATTER
    → Rebalancing during low liquidity = wider spreads
@@ -1131,11 +1469,11 @@ EXPECTED BEHAVIOR:
    • Increase threshold from 10% to 15-20%
    • Increase CheckInterval (30min → 1 hour)
 
-❌ PROBLEM: Exposure calculations seem wrong
-✅ SOLUTION: Verify symbol contract sizes
-   • Current calculation: Volume × 100000 (assumes forex)
-   • Gold (XAUUSD) may need different calculation
-   • Test on demo, verify with manual calculations
+❌ PROBLEM: A symbol is never traded
+✅ SOLUTION: Open its initial position yourself
+   • The rebalancer only resizes existing positions (it keeps their
+     direction) - a symbol without a position stays at HOLD
+   • Exposure = Volume × contract size × price in the account currency
 
 ❌ PROBLEM: MaxTradesPerCycle reached too often
 ✅ SOLUTION: Increase MaxTradesPerCycle

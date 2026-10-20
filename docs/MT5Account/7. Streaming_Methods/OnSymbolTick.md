@@ -1,12 +1,12 @@
 # ✅ Stream Real-Time Symbol Ticks
 
-> **Request:** subscribe to real-time tick updates for a symbol. Receive Bid/Ask price updates through Go channels.
+> **Request:** subscribe to real-time tick updates for one or more symbols. Receive Bid/Ask price updates through Go channels.
 
 **API Information:**
 
 * **Low-level API:** `MT5Account.OnSymbolTick(...)` (from Go package `github.com/MetaRPC/GoMT5/package/Helpers`)
 * **gRPC service:** `mt5_term_api.SubscriptionService`
-* **Proto definition:** `OnSymbolTick` (defined in `mt5-term-api-subscription.proto`)
+* **Proto definition:** `OnSymbolTick` (defined in `mt5-term-api-subscriptions.proto`)
 
 ### RPC
 
@@ -57,14 +57,26 @@ OnSymbolTickRequest {
 
 **OnSymbolTickData fields:**
 
-| Field    | Type                        | Go Type                  | Description                        |
-| -------- | --------------------------- | ------------------------ | ---------------------------------- |
-| `Bid`    | `double`                    | `float64`                | Current bid price                  |
-| `Ask`    | `double`                    | `float64`                | Current ask price                  |
-| `Last`   | `double`                    | `float64`                | Last deal price                    |
-| `Volume` | `uint64`                    | `uint64`                 | Volume                             |
-| `Time`   | `google.protobuf.Timestamp` | `*timestamppb.Timestamp` | Tick timestamp                     |
-| `Flags`  | `uint32`                    | `uint32`                 | Tick flags (see MT5 documentation) |
+| Field                    | Type                        | Go Type                       | Description                        |
+| ------------------------ | --------------------------- | ----------------------------- | ---------------------------------- |
+| `SymbolTick`             | `MrpcSubscriptionMqlTick`   | `*pb.MrpcSubscriptionMqlTick` | The tick (fields below)            |
+| `TerminalInstanceGuidId` | `string`                    | `string`                      | Terminal instance that sent the tick |
+
+**`SymbolTick` (MrpcSubscriptionMqlTick) fields** — read them as `tick.SymbolTick.Bid` etc.:
+
+| Field        | Type                        | Go Type                  | Description                        |
+| ------------ | --------------------------- | ------------------------ | ---------------------------------- |
+| `Symbol`     | `string`                    | `string`                 | Symbol of this tick                |
+| `Bid`        | `double`                    | `float64`                | Current bid price                  |
+| `Ask`        | `double`                    | `float64`                | Current ask price                  |
+| `Last`       | `double`                    | `float64`                | Last deal price                    |
+| `Volume`     | `uint64`                    | `uint64`                 | Volume                             |
+| `VolumeReal` | `double`                    | `float64`                | Volume with extended accuracy      |
+| `Time`       | `google.protobuf.Timestamp` | `*timestamppb.Timestamp` | Tick time (broker server time)     |
+| `TimeUtc`    | `google.protobuf.Timestamp` | `*timestamppb.Timestamp` | Tick time in UTC                   |
+| `TimeMsc`    | `int64`                     | `int64`                  | Tick time in milliseconds (broker server time) |
+| `TimeMscUtc` | `int64`                     | `int64`                  | `TimeMsc` in UTC                   |
+| `Flags`      | `uint32`                    | `uint32`                 | Tick flags (see MT5 documentation) |
 
 ---
 
@@ -98,7 +110,7 @@ For a detailed line-by-line explanation with examples, see:
 
 ## 🧩 Notes & Tips
 
-* **Automatic reconnection:** All `MT5Account` methods have built-in protection against transient gRPC errors with automatic reconnection via `ExecuteWithReconnect`.
+* **Automatic reconnection:** Streaming methods restart the stream automatically on transient errors (Unavailable, terminal not found) via `ExecuteStreamWithReconnect`.
 * **Default timeout:** If context has no deadline, streams run indefinitely until cancelled.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
 * **Channel buffering:** Data channel is unbuffered, error channel is buffered (size 1).
@@ -117,6 +129,7 @@ For a detailed line-by-line explanation with examples, see:
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -126,8 +139,17 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
     defer cancel()
@@ -146,7 +168,7 @@ func main() {
                 }
                 fmt.Printf("[%s] EURUSD: Bid=%.5f, Ask=%.5f, Spread=%.5f\n",
                     time.Now().Format("15:04:05"),
-                    tick.Bid, tick.Ask, tick.Ask-tick.Bid)
+                    tick.SymbolTick.Bid, tick.SymbolTick.Ask, tick.SymbolTick.Ask-tick.SymbolTick.Bid)
 
             case err := <-errChan:
                 if err != nil {
@@ -182,7 +204,7 @@ func StreamWithCancellation(account *mt5.MT5Account) {
                     fmt.Println("Data channel closed")
                     return
                 }
-                fmt.Printf("Tick: Bid=%.5f, Ask=%.5f\n", tick.Bid, tick.Ask)
+                fmt.Printf("Tick: Bid=%.5f, Ask=%.5f\n", tick.SymbolTick.Bid, tick.SymbolTick.Ask)
 
             case err := <-errChan:
                 if err != nil {
@@ -213,7 +235,7 @@ func StreamMultipleSymbols(account *mt5.MT5Account, symbols []string) {
 
     for _, symbol := range symbols {
         dataChan, errChan := account.OnSymbolTick(ctx, &pb.OnSymbolTickRequest{
-            Symbol: symbol,
+            SymbolNames: []string{symbol},
         })
 
         // Launch goroutine for each symbol
@@ -224,7 +246,7 @@ func StreamMultipleSymbols(account *mt5.MT5Account, symbols []string) {
                     if tick == nil {
                         return
                     }
-                    fmt.Printf("[%s] Bid=%.5f, Ask=%.5f\n", sym, tick.Bid, tick.Ask)
+                    fmt.Printf("[%s] Bid=%.5f, Ask=%.5f\n", sym, tick.SymbolTick.Bid, tick.SymbolTick.Ask)
 
                 case err := <-errs:
                     if err != nil {
@@ -269,7 +291,7 @@ func AggregateTickStats(account *mt5.MT5Account, symbol string, duration time.Du
     }
 
     dataChan, errChan := account.OnSymbolTick(ctx, &pb.OnSymbolTickRequest{
-        Symbol: symbol,
+        SymbolNames: []string{symbol},
     })
 
     for {
@@ -279,14 +301,14 @@ func AggregateTickStats(account *mt5.MT5Account, symbol string, duration time.Du
                 break
             }
             stats.Count++
-            stats.LastBid = tick.Bid
-            stats.LastAsk = tick.Ask
+            stats.LastBid = tick.SymbolTick.Bid
+            stats.LastAsk = tick.SymbolTick.Ask
 
-            if tick.Bid < stats.MinBid {
-                stats.MinBid = tick.Bid
+            if tick.SymbolTick.Bid < stats.MinBid {
+                stats.MinBid = tick.SymbolTick.Bid
             }
-            if tick.Bid > stats.MaxBid {
-                stats.MaxBid = tick.Bid
+            if tick.SymbolTick.Bid > stats.MaxBid {
+                stats.MaxBid = tick.SymbolTick.Bid
             }
 
         case err := <-errChan:
@@ -316,7 +338,7 @@ func PriceAlertMonitor(account *mt5.MT5Account, symbol string, targetPrice float
     defer cancel()
 
     dataChan, errChan := account.OnSymbolTick(ctx, &pb.OnSymbolTickRequest{
-        Symbol: symbol,
+        SymbolNames: []string{symbol},
     })
 
     fmt.Printf("Monitoring %s for price %s %.5f\n",
@@ -333,15 +355,15 @@ func PriceAlertMonitor(account *mt5.MT5Account, symbol string, targetPrice float
                 }
 
                 triggered := false
-                if above && tick.Ask >= targetPrice {
+                if above && tick.SymbolTick.Ask >= targetPrice {
                     triggered = true
-                } else if !above && tick.Bid <= targetPrice {
+                } else if !above && tick.SymbolTick.Bid <= targetPrice {
                     triggered = true
                 }
 
                 if triggered {
                     fmt.Printf("\n🔔 ALERT: %s price reached %.5f (Bid=%.5f, Ask=%.5f)\n",
-                        symbol, targetPrice, tick.Bid, tick.Ask)
+                        symbol, targetPrice, tick.SymbolTick.Bid, tick.SymbolTick.Ask)
                     cancel() // Stop monitoring
                     return
                 }
@@ -373,7 +395,7 @@ func MonitorSpread(account *mt5.MT5Account, symbol string, maxSpreadPips float64
     defer cancel()
 
     dataChan, errChan := account.OnSymbolTick(ctx, &pb.OnSymbolTickRequest{
-        Symbol: symbol,
+        SymbolNames: []string{symbol},
     })
 
     go func() {
@@ -384,12 +406,12 @@ func MonitorSpread(account *mt5.MT5Account, symbol string, maxSpreadPips float64
                     return
                 }
 
-                spread := tick.Ask - tick.Bid
+                spread := tick.SymbolTick.Ask - tick.SymbolTick.Bid
                 spreadPips := spread * 10000 // For 5-digit quotes
 
                 if spreadPips > maxSpreadPips {
                     fmt.Printf("⚠️  High spread alert: %.1f pips (Bid=%.5f, Ask=%.5f)\n",
-                        spreadPips, tick.Bid, tick.Ask)
+                        spreadPips, tick.SymbolTick.Bid, tick.SymbolTick.Ask)
                 } else {
                     fmt.Printf("[%s] Spread: %.1f pips\n",
                         time.Now().Format("15:04:05"), spreadPips)
@@ -426,7 +448,7 @@ func StreamWithShutdown(account *mt5.MT5Account, symbol string) {
     ctx, cancel := context.WithCancel(context.Background())
 
     dataChan, errChan := account.OnSymbolTick(ctx, &pb.OnSymbolTickRequest{
-        Symbol: symbol,
+        SymbolNames: []string{symbol},
     })
 
     done := make(chan struct{})

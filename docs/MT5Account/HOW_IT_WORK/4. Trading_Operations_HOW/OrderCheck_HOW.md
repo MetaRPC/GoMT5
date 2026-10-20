@@ -11,6 +11,21 @@
 ```go
 fmt.Println("\n3.1. OrderCheck() - Validate order parameters")
 
+// The filling mode must be one the symbol allows (SYMBOL_FILLING_MODE flags: 1 = FOK, 2 = IOC);
+// with a mode the symbol does not allow, the check fails.
+typeFilling := pb.MRPC_ENUM_ORDER_TYPE_FILLING_ORDER_FILLING_RETURN
+fillingData, err := account.SymbolInfoInteger(ctx, &pb.SymbolInfoIntegerRequest{
+    Symbol: cfg.TestSymbol,
+    Type:   pb.SymbolInfoIntegerProperty_SYMBOL_FILLING_MODE,
+})
+if err == nil {
+    if fillingData.Value&1 != 0 {
+        typeFilling = pb.MRPC_ENUM_ORDER_TYPE_FILLING_ORDER_FILLING_FOK
+    } else if fillingData.Value&2 != 0 {
+        typeFilling = pb.MRPC_ENUM_ORDER_TYPE_FILLING_ORDER_FILLING_IOC
+    }
+}
+
 orderCheckReq := &pb.OrderCheckRequest{
     MqlTradeRequest: &pb.MrpcMqlTradeRequest{
         Action:      pb.MRPC_ENUM_TRADE_REQUEST_ACTIONS_TRADE_ACTION_DEAL,
@@ -21,7 +36,7 @@ orderCheckReq := &pb.OrderCheckRequest{
         StopLoss:    0.0,
         TakeProfit:  0.0,
         Deviation:   10,
-        TypeFilling: pb.MRPC_ENUM_ORDER_TYPE_FILLING_ORDER_FILLING_IOC, // Immediate-Or-Cancel
+        TypeFilling: typeFilling, // a filling mode the symbol allows
         TypeTime:    pb.MRPC_ENUM_ORDER_TYPE_TIME_ORDER_TIME_GTC,
         Comment:     "OrderCheck validation",
     },
@@ -74,7 +89,9 @@ Key fields:
 * `OrderType` – direction (`BUY` or `SELL`);
 * `Price` – opening price;
 * `Deviation` – allowable price deviation in points;
-* `TypeFilling` – execution mode (`IOC` – Immediate-Or-Cancel);
+* `TypeFilling` – execution mode. It must be one the symbol allows: the demo reads `SYMBOL_FILLING_MODE`
+  (flags 1 = `FOK` Fill-Or-Kill, 2 = `IOC` Immediate-Or-Cancel) and picks an allowed one. A mode the symbol does not
+  allow makes the check fail (e.g. `IOC` on a FOK-only symbol: `ERR_TRADE_SEND_FAILED`);
 * `TypeTime` – order lifetime (`GTC` – Good Till Cancelled).
 
 ---
@@ -91,7 +108,7 @@ The gateway passes the request to MetaTrader, which validates the order for corr
 
 ### 3️. Process the Result
 
-If there is an error (`err != nil`) — this means the broker or server does not support `OrderCheck` (common on demo accounts).
+If there is an error (`err != nil`), the check did not pass (MetaTrader's OrderCheck failed, e.g. not enough money or invalid stops) or the call itself failed; the error (`*mt5.ApiError`) carries the trade return code and its description.
 If a result is received, the validation fields are displayed:
 
 ```go
@@ -149,13 +166,14 @@ message OrderCheckData {
 }
 
 message MrpcMqlTradeCheckResult {
-  int32 ReturnedCode = 1;
-  string Comment = 2;
-  double Margin = 3;
-  double BalanceAfterDeal = 4;
-  double EquityAfterDeal = 5;
+  uint32 ReturnedCode = 1;
+  double BalanceAfterDeal = 2;
+  double EquityAfterDeal = 3;
+  double Profit = 4;
+  double Margin = 5;
   double FreeMargin = 6;
   double MarginLevel = 7;
+  string Comment = 8;
 }
 ```
 
@@ -166,7 +184,7 @@ message MrpcMqlTradeCheckResult {
 ```
 ✅ OrderCheck SUCCESS!
      Return Code:        0
-     Comment:            Request verified successfully
+     Comment:            Done
      Required Margin:    120.50
      Balance After:      9879.50
      Equity After:       9879.50

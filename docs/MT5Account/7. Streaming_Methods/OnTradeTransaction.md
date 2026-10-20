@@ -6,7 +6,7 @@
 
 * **Low-level API:** `MT5Account.OnTradeTransaction(...)` (from Go package `github.com/MetaRPC/GoMT5/package/Helpers`)
 * **gRPC service:** `mt5_term_api.SubscriptionService`
-* **Proto definition:** `OnTradeTransaction` (defined in `mt5-term-api-subscription.proto`)
+* **Proto definition:** `OnTradeTransaction` (defined in `mt5-term-api-subscriptions.proto`)
 
 ### RPC
 
@@ -51,7 +51,7 @@ func (a *MT5Account) OnTradeTransaction(
 
 | Field                   | Type                             | Description                                    |
 | ----------------------- | -------------------------------- | ---------------------------------------------- |
-| `Type`                  | `MT5_SUB_ENUM_EVENT_GROUP_TYPE`  | Event group type (always TradeTransaction)     |
+| `Type`                  | `MT5_SUB_ENUM_EVENT_GROUP_TYPE`  | Event group type (always `OrderUpdate` = 1 for transaction events) |
 | `TradeTransaction`      | `*MqlTradeTransaction`           | Transaction details (order, deal info)         |
 | `TradeRequest`          | `*MqlTradeRequest`               | Original trade request (may be nil)            |
 | `TradeResult`           | `*MqlTradeResult`                | Trade operation result (may be nil)            |
@@ -132,7 +132,7 @@ For a detailed line-by-line explanation with examples, see:
 
 ## 🧩 Notes & Tips
 
-* **Automatic reconnection:** All `MT5Account` methods have built-in protection against transient gRPC errors with automatic reconnection via `ExecuteWithReconnect`.
+* **Automatic reconnection:** Streaming methods restart the stream automatically on transient errors (Unavailable, terminal not found) via `ExecuteStreamWithReconnect`.
 * **Default timeout:** If context has no deadline, streams run indefinitely until cancelled.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
 * **Channel buffering:** Data channel is unbuffered, error channel is buffered (size 1).
@@ -151,6 +151,7 @@ For a detailed line-by-line explanation with examples, see:
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -160,8 +161,17 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithCancel(context.Background())
     defer cancel()
@@ -177,7 +187,7 @@ func main() {
                 }
 
                 // Check event type (MT5_SUB_ENUM_EVENT_GROUP_TYPE)
-                if event.Type == pb.MT5_SUB_ENUM_EVENT_GROUP_TYPE_TradeTransaction {
+                if event.Type == pb.MT5_SUB_ENUM_EVENT_GROUP_TYPE_OrderUpdate {
                     if tx := event.TradeTransaction; tx != nil {
                         // Check transaction type (SUB_ENUM_TRADE_TRANSACTION_TYPE)
                         var txType string
@@ -242,12 +252,12 @@ func TransactionLogger(account *mt5.MT5Account, logFile string) {
 
                 logEntry := fmt.Sprintf("[%s] Type=%d Order=%d Deal=%d Symbol=%s Price=%.5f Vol=%.2f\n",
                     time.Now().Format("2006-01-02 15:04:05"),
-                    event.Transaction.Type,
-                    event.Transaction.OrderTicket,
-                    event.Transaction.DealTicket,
-                    event.Transaction.Symbol,
-                    event.Transaction.Price,
-                    event.Transaction.Volume)
+                    event.TradeTransaction.Type,
+                    event.TradeTransaction.OrderTicket,
+                    event.TradeTransaction.DealTicket,
+                    event.TradeTransaction.Symbol,
+                    event.TradeTransaction.Price,
+                    event.TradeTransaction.Volume)
 
                 file.WriteString(logEntry)
                 fmt.Print(logEntry)
@@ -384,15 +394,15 @@ func TrackTransactionStats(account *mt5.MT5Account, duration time.Duration) {
 
             stats.TotalTransactions++
 
-            if event.Transaction.DealTicket > 0 {
+            if event.TradeTransaction.DealTicket > 0 {
                 stats.DealCount++
             }
-            if event.Transaction.OrderTicket > 0 {
+            if event.TradeTransaction.OrderTicket > 0 {
                 stats.OrderCount++
             }
 
-            if event.Transaction.Symbol != "" {
-                stats.SymbolCounts[event.Transaction.Symbol]++
+            if event.TradeTransaction.Symbol != "" {
+                stats.SymbolCounts[event.TradeTransaction.Symbol]++
             }
 
         case err := <-errChan:

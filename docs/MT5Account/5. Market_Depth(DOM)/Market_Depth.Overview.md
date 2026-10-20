@@ -44,7 +44,7 @@ Want detailed explanations with line-by-line code breakdown? Check these guides:
 
 * **Subscription required** - Must call MarketBookAdd before MarketBookGet.
 * **Not all brokers support DOM** - Check if your broker provides Level II data.
-* **BookStruct** - Contains Type (BUY/SELL), Price, Volume, VolumeDouble.
+* **MrpcMqlBookInfo** - Each `MqlBookInfos` entry contains Type (BUY/SELL), Price, Volume, VolumeReal.
 * **Order book depth** - Broker-dependent, usually 5-10 levels per side.
 * **Real-time updates** - DOM updates in real-time after subscription.
 * **Clean up** - Always call MarketBookRelease when done to free resources.
@@ -63,7 +63,7 @@ if err != nil {
     log.Fatalf("Failed: %v", err)
 }
 
-if result.Success {
+if result.OpenedSuccessfully {
     fmt.Println("✅ Subscribed to EURUSD DOM")
 } else {
     fmt.Println("❌ DOM subscription failed (broker may not support it)")
@@ -81,16 +81,16 @@ if err != nil {
 
 fmt.Println("EURUSD Order Book:")
 fmt.Println("BUY SIDE:")
-for _, item := range book.Book {
+for _, item := range book.MqlBookInfos {
     if item.Type == pb.BookType_BOOK_TYPE_BUY {
-        fmt.Printf("  %.5f: %.2f lots\n", item.Price, item.VolumeDouble)
+        fmt.Printf("  %.5f: %.2f lots\n", item.Price, item.VolumeReal)
     }
 }
 
 fmt.Println("\nSELL SIDE:")
-for _, item := range book.Book {
+for _, item := range book.MqlBookInfos {
     if item.Type == pb.BookType_BOOK_TYPE_SELL {
-        fmt.Printf("  %.5f: %.2f lots\n", item.Price, item.VolumeDouble)
+        fmt.Printf("  %.5f: %.2f lots\n", item.Price, item.VolumeReal)
     }
 }
 ```
@@ -101,7 +101,7 @@ result, _ := account.MarketBookRelease(ctx, &pb.MarketBookReleaseRequest{
     Symbol: "EURUSD",
 })
 
-if result.Success {
+if result.ClosedSuccessfully {
     fmt.Println("✅ Unsubscribed from EURUSD DOM")
 }
 ```
@@ -113,7 +113,7 @@ symbol := "EURUSD"
 // Step 1: Subscribe
 if result, _ := account.MarketBookAdd(ctx, &pb.MarketBookAddRequest{
     Symbol: symbol,
-}); !result.Success {
+}); !result.OpenedSuccessfully {
     log.Fatal("Failed to subscribe to DOM")
 }
 
@@ -133,11 +133,11 @@ book, _ := account.MarketBookGet(ctx, &pb.MarketBookGetRequest{
 totalBuyVolume := 0.0
 totalSellVolume := 0.0
 
-for _, item := range book.Book {
+for _, item := range book.MqlBookInfos {
     if item.Type == pb.BookType_BOOK_TYPE_BUY {
-        totalBuyVolume += item.VolumeDouble
+        totalBuyVolume += item.VolumeReal
     } else {
-        totalSellVolume += item.VolumeDouble
+        totalSellVolume += item.VolumeReal
     }
 }
 
@@ -168,12 +168,12 @@ for range ticker.C {
         Symbol: symbol,
     })
 
-    if len(book.Book) > 0 {
+    if len(book.MqlBookInfos) > 0 {
         // Get best bid and ask from DOM
         bestBid := 0.0
         bestAsk := 999999.0
 
-        for _, item := range book.Book {
+        for _, item := range book.MqlBookInfos {
             if item.Type == pb.BookType_BOOK_TYPE_BUY && item.Price > bestBid {
                 bestBid = item.Price
             }

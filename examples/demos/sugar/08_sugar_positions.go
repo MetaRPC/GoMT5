@@ -43,7 +43,7 @@
    go run main.go 8    (or select [8] from menu)
 
  ⚠️  WARNING: This demo OPENS and CLOSES test positions!
-   • Opens 2 test positions (BUY/SELL)
+   • Opens 2 test positions (BUY 0.02 / SELL 0.01) and one more BUY 0.01 later
    • Demonstrates modification operations
    • Closes all positions at the end
    • Recommended to run on DEMO account first
@@ -53,6 +53,7 @@ package sugar
 
 import (
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -78,10 +79,11 @@ func RunSugarPositionsDemo() {
 	sugar, err := mt5.NewMT5Sugar(cfg.User, cfg.Password, cfg.GrpcServer)
 	helpers.Fatal(err, "Failed to create Sugar instance")
 	sugar.GetAccount().ApiKey = cfg.ApiKey
+	// Disconnect however the demo ends (normal end, Fatal, panic, Ctrl+C)
+	defer helpers.DisconnectOnExit(sugar)()
 
 	err = sugar.QuickConnect(cfg.MtCluster)
 	helpers.Fatal(err, "Connection failed")
-	defer sugar.Disconnect()
 	fmt.Println("  ✓ Connected!")
 
 	testSymbol := cfg.TestSymbol
@@ -94,21 +96,48 @@ func RunSugarPositionsDemo() {
 	fmt.Println("PREPARATION: Opening test positions")
 	fmt.Println(strings.Repeat("-", 80))
 
-	bid, _ := sugar.GetBid(testSymbol)
-	ask, _ := sugar.GetAsk(testSymbol)
+	// BID and ASK from ONE tick: two calls (GetBid, then GetAsk) can read two different ticks
+	quote, err := sugar.GetPriceInfo(testSymbol)
+	helpers.Fatal(err, "GetPriceInfo failed")
+	bid, ask := quote.Bid, quote.Ask
+	symbolInfo, err := sugar.GetSymbolInfo(testSymbol)
+	helpers.Fatal(err, "GetSymbolInfo failed")
+	point := symbolInfo.Point // SL/TP distances below are in points (200 points = 20 pips on 5-digit EURUSD)
+	scale := math.Pow(10, float64(symbolInfo.Digits))
+	price := func(p float64) float64 { return math.Round(p*scale) / scale } // round to the symbol's digits
 
-	// Open 2 positions for testing
-	ticket1, err1 := sugar.BuyMarket(testSymbol, minVolume)
+	// failed prints an error like helpers.PrintShortError and counts it for the summary
+	failures := 0
+	failed := func(err error, context string) bool {
+		if helpers.PrintShortError(err, context) {
+			failures++
+			return true
+		}
+		return false
+	}
+
+	// Open 2 positions for testing (the BUY with 2x the minimum volume, so that half of it
+	// can be closed in 3.1 - a partial close must itself be a valid volume)
+	ticket1, err1 := sugar.BuyMarket(testSymbol, 2*minVolume)
 	ticket2, err2 := sugar.SellMarket(testSymbol, minVolume)
 
 	if err1 != nil || err2 != nil {
 		fmt.Println("  ⚠️  Failed to open test positions")
-		helpers.PrintShortError(err1, "BUY error")
-		helpers.PrintShortError(err2, "SELL error")
+		failed(err1, "BUY error")
+		failed(err2, "SELL error")
+		// Do not leave the one that did open behind
+		for _, opened := range []struct {
+			ticket uint64
+			err    error
+		}{{ticket1, err1}, {ticket2, err2}} {
+			if opened.err == nil {
+				failed(sugar.ClosePosition(opened.ticket), "Failed to close position")
+			}
+		}
 		return
 	}
 
-	fmt.Printf("  ✓ Opened BUY position: #%d\n", ticket1)
+	fmt.Printf("  ✓ Opened BUY position: #%d (%.2f lots)\n", ticket1, 2*minVolume)
 	fmt.Printf("  ✓ Opened SELL position: #%d\n", ticket2)
 	time.Sleep(1 * time.Second) // Let positions register
 
@@ -125,27 +154,27 @@ func RunSugarPositionsDemo() {
 	//      Chain: Sugar → Service.GetOpenedOrders() → Account → gRPC
 	//      Returns: bool - true if positions exist.
 	//      SAFE operation - read-only query.
-	//      Timeout: 5 seconds
+	//      Timeout: 10 seconds
 	// ══════════════════════════════════════════════════════════════
 	fmt.Printf("\n1.1. HasOpenPosition() - Check if %s positions exist\n", testSymbol)
 
 	hasPos, err := sugar.HasOpenPosition(testSymbol)
-	if !helpers.PrintShortError(err, "HasOpenPosition failed") {
+	if !failed(err, "HasOpenPosition failed") {
 		fmt.Printf("  Has open %s positions: %v\n", testSymbol, hasPos)
 	}
 
 	// ══════════════════════════════════════════════════════════════
 	// 1.2. CountOpenPositions()
 	//      Count total number of open positions.
-	//      Chain: Sugar → Service.GetOpenedOrders() → Account → gRPC
+	//      Chain: Sugar → Service.GetPositionsTotal() → Account.PositionsTotal() → gRPC
 	//      Returns: int - total count of open positions.
 	//      SAFE operation - read-only query.
-	//      Timeout: 5 seconds
+	//      Timeout: 3 seconds
 	// ══════════════════════════════════════════════════════════════
 	fmt.Println("\n1.2. CountOpenPositions() - Count total open positions")
 
 	count, err := sugar.CountOpenPositions()
-	if !helpers.PrintShortError(err, "CountOpenPositions failed") {
+	if !failed(err, "CountOpenPositions failed") {
 		fmt.Printf("  Total open positions: %d\n", count)
 	}
 
@@ -153,14 +182,14 @@ func RunSugarPositionsDemo() {
 	// 1.3. GetOpenPositions()
 	//      Get all open positions with full details.
 	//      Chain: Sugar → Service.GetOpenedOrders() → Account → gRPC
-	//      Returns: []*Position - slice of all open positions.
+	//      Returns: []*pb.PositionInfo - slice of all open positions.
 	//      SAFE operation - read-only query.
-	//      Timeout: 5 seconds
+	//      Timeout: 10 seconds
 	// ══════════════════════════════════════════════════════════════
 	fmt.Println("\n1.3. GetOpenPositions() - Get all open positions")
 
 	positions, err := sugar.GetOpenPositions()
-	if !helpers.PrintShortError(err, "GetOpenPositions failed") {
+	if !failed(err, "GetOpenPositions failed") {
 		fmt.Printf("  Found %d position(s):\n", len(positions))
 		for i, pos := range positions {
 			posType := "BUY"
@@ -176,14 +205,14 @@ func RunSugarPositionsDemo() {
 	// 1.4. GetPositionByTicket()
 	//      Get specific position by ticket number.
 	//      Chain: Sugar → Service.GetOpenedOrders() → Account → gRPC
-	//      Returns: *Position - position details or nil if not found.
+	//      Returns: *pb.PositionInfo, or an error if no open position has that ticket.
 	//      SAFE operation - read-only query.
-	//      Timeout: 5 seconds
+	//      Timeout: 10 seconds
 	// ══════════════════════════════════════════════════════════════
 	fmt.Printf("\n1.4. GetPositionByTicket() - Get specific position #%d\n", ticket1)
 
 	pos, err := sugar.GetPositionByTicket(ticket1)
-	if helpers.PrintShortError(err, "GetPositionByTicket failed") {
+	if failed(err, "GetPositionByTicket failed") {
 		// Error already printed
 	} else if pos == nil {
 		fmt.Println("  ⚠️  Position not found")
@@ -199,14 +228,14 @@ func RunSugarPositionsDemo() {
 	// 1.5. GetPositionsBySymbol()
 	//      Get all positions for specific symbol.
 	//      Chain: Sugar → Service.GetOpenedOrders() → Account → gRPC
-	//      Returns: []*Position - positions for the symbol.
+	//      Returns: []*pb.PositionInfo - positions for the symbol.
 	//      SAFE operation - read-only query.
-	//      Timeout: 5 seconds
+	//      Timeout: 10 seconds
 	// ══════════════════════════════════════════════════════════════
 	fmt.Printf("\n1.5. GetPositionsBySymbol() - Get positions for %s\n", testSymbol)
 
 	symbolPositions, err := sugar.GetPositionsBySymbol(testSymbol)
-	if !helpers.PrintShortError(err, "GetPositionsBySymbol failed") {
+	if !failed(err, "GetPositionsBySymbol failed") {
 		fmt.Printf("  Found %d position(s) for %s\n", len(symbolPositions), testSymbol)
 	}
 
@@ -216,12 +245,12 @@ func RunSugarPositionsDemo() {
 	//      Chain: Sugar → Service.GetOpenedOrders() → Account → gRPC
 	//      Returns: float64 - sum of all position profits.
 	//      SAFE operation - read-only query.
-	//      Timeout: 5 seconds
+	//      Timeout: 10 seconds
 	// ══════════════════════════════════════════════════════════════
 	fmt.Println("\n1.6. GetTotalProfit() - Total floating P&L")
 
 	totalProfit, err := sugar.GetTotalProfit()
-	if !helpers.PrintShortError(err, "GetTotalProfit failed") {
+	if !failed(err, "GetTotalProfit failed") {
 		if totalProfit >= 0 {
 			fmt.Printf("  Total profit: +%.2f\n", totalProfit)
 		} else {
@@ -235,12 +264,12 @@ func RunSugarPositionsDemo() {
 	//      Chain: Sugar → Service.GetOpenedOrders() → Account → gRPC
 	//      Returns: float64 - sum of profits for the symbol.
 	//      SAFE operation - read-only query.
-	//      Timeout: 5 seconds
+	//      Timeout: 10 seconds
 	// ══════════════════════════════════════════════════════════════
 	fmt.Printf("\n1.7. GetProfitBySymbol() - Profit for %s\n", testSymbol)
 
 	symbolProfit, err := sugar.GetProfitBySymbol(testSymbol)
-	if !helpers.PrintShortError(err, "GetProfitBySymbol failed") {
+	if !failed(err, "GetProfitBySymbol failed") {
 		if symbolProfit >= 0 {
 			fmt.Printf("  %s profit: +%.2f\n", testSymbol, symbolProfit)
 		} else {
@@ -257,17 +286,17 @@ func RunSugarPositionsDemo() {
 
 	// ══════════════════════════════════════════════════════════════
 	// 2.1. ModifyPositionSL()
-	//      Modify Stop Loss level for existing position.
-	//      Chain: Sugar → Service.ModifyOrder() → Account.OrderSend() → gRPC
+	//      Modify Stop Loss level for existing position (the Take Profit is not sent and stays).
+	//      Chain: Sugar → Service.ModifyOrder() → Account.OrderModify() → gRPC
 	//      Returns: error if modification fails.
 	//      DANGEROUS operation - modifies real position!
-	//      Timeout: 10 seconds
+	//      Timeout: 30 seconds
 	// ══════════════════════════════════════════════════════════════
-	newSL := bid - 0.0030 // 30 pips below
-	fmt.Printf("\n2.1. ModifyPositionSL() - Set Stop Loss to %.5f\n", newSL)
+	newSL := price(bid - 300*point) // 300 points below BID
+	fmt.Printf("\n2.1. ModifyPositionSL() - Set Stop Loss to %.5f (BID -300 points)\n", newSL)
 
 	err = sugar.ModifyPositionSL(ticket1, newSL)
-	if !helpers.PrintShortError(err, "ModifyPositionSL failed") {
+	if !failed(err, "ModifyPositionSL failed") {
 		fmt.Printf("  ✓ Stop Loss updated for position #%d\n", ticket1)
 	}
 
@@ -275,18 +304,21 @@ func RunSugarPositionsDemo() {
 
 	// ══════════════════════════════════════════════════════════════
 	// 2.2. ModifyPositionTP()
-	//      Modify Take Profit level for existing position.
-	//      Chain: Sugar → Service.ModifyOrder() → Account.OrderSend() → gRPC
+	//      Modify Take Profit level for existing position (the Stop Loss is not sent and stays).
+	//      Chain: Sugar → Service.ModifyOrder() → Account.OrderModify() → gRPC
 	//      Returns: error if modification fails.
 	//      DANGEROUS operation - modifies real position!
-	//      Timeout: 10 seconds
+	//      Timeout: 30 seconds
 	// ══════════════════════════════════════════════════════════════
-	newTP := bid + 0.0050 // 50 pips above
-	fmt.Printf("\n2.2. ModifyPositionTP() - Set Take Profit to %.5f\n", newTP)
+	newTP := price(bid + 500*point) // 500 points above BID
+	fmt.Printf("\n2.2. ModifyPositionTP() - Set Take Profit to %.5f (BID +500 points)\n", newTP)
 
 	err = sugar.ModifyPositionTP(ticket1, newTP)
-	if !helpers.PrintShortError(err, "ModifyPositionTP failed") {
+	if !failed(err, "ModifyPositionTP failed") {
 		fmt.Printf("  ✓ Take Profit updated for position #%d\n", ticket1)
+		if p, err := sugar.GetPositionByTicket(ticket1); !failed(err, "GetPositionByTicket failed") {
+			fmt.Printf("    Position #%d now: SL %.5f, TP %.5f\n", ticket1, p.StopLoss, p.TakeProfit)
+		}
 	}
 
 	time.Sleep(500 * time.Millisecond)
@@ -294,17 +326,17 @@ func RunSugarPositionsDemo() {
 	// ══════════════════════════════════════════════════════════════
 	// 2.3. ModifyPositionSLTP()
 	//      Modify both Stop Loss and Take Profit in one call.
-	//      Chain: Sugar → Service.ModifyOrder() → Account.OrderSend() → gRPC
+	//      Chain: Sugar → Service.ModifyOrder() → Account.OrderModify() → gRPC
 	//      Returns: error if modification fails.
 	//      DANGEROUS operation - modifies real position!
-	//      Timeout: 10 seconds
+	//      Timeout: 30 seconds
 	// ══════════════════════════════════════════════════════════════
-	newSL2 := ask + 0.0030  // For SELL position
-	newTP2 := ask - 0.0050
+	newSL2 := price(ask + 300*point) // For SELL position: SL 300 points above ASK
+	newTP2 := price(ask - 500*point) // TP 500 points below ASK
 	fmt.Printf("\n2.3. ModifyPositionSLTP() - Set both SL and TP\n")
 	fmt.Printf("  SL: %.5f, TP: %.5f\n", newSL2, newTP2)
 	err = sugar.ModifyPositionSLTP(ticket2, newSL2, newTP2)
-	if !helpers.PrintShortError(err, "ModifyPositionSLTP failed") {
+	if !failed(err, "ModifyPositionSLTP failed") {
 		fmt.Printf("  ✓ SL/TP updated for position #%d\n", ticket2)
 	}
 
@@ -319,20 +351,21 @@ func RunSugarPositionsDemo() {
 
 	// ══════════════════════════════════════════════════════════════
 	// 3.1. ClosePositionPartial()
-	//      Close part of position volume (partial close).
-	//      Chain: Sugar → Service.CloseOrder() → Account.OrderSend() → gRPC
+	//      Close part of position volume (partial close). The closed volume must be
+	//      a valid volume itself (>= minimum, multiple of the volume step).
+	//      Chain: Sugar → Service.CloseOrder() → Account.OrderClose() → gRPC
 	//      Returns: error if close fails.
 	//      DANGEROUS operation - closes real position partially!
-	//      Timeout: 10 seconds
+	//      Timeout: 30 seconds
 	// ══════════════════════════════════════════════════════════════
 	fmt.Printf("\n3.1. ClosePositionPartial() - Close 50%% of position #%d\n", ticket1)
 
-	partialVolume := minVolume / 2
+	partialVolume := minVolume // half of the 2x minimum volume opened above
 	err = sugar.ClosePositionPartial(ticket1, partialVolume)
-	if helpers.PrintShortError(err, "ClosePositionPartial failed") {
+	if failed(err, "ClosePositionPartial failed") {
 		fmt.Println("  ℹ️  Partial close may not be supported on all brokers")
 	} else {
-		fmt.Printf("  ✓ Closed %.3f lots from position #%d\n", partialVolume, ticket1)
+		fmt.Printf("  ✓ Closed %.2f lots from position #%d\n", partialVolume, ticket1)
 	}
 
 	time.Sleep(1 * time.Second)
@@ -340,15 +373,15 @@ func RunSugarPositionsDemo() {
 	// ══════════════════════════════════════════════════════════════
 	// 3.2. ClosePosition()
 	//      Close entire position completely.
-	//      Chain: Sugar → Service.CloseOrder() → Account.OrderSend() → gRPC
+	//      Chain: Sugar → Service.CloseOrder() → Account.OrderClose() → gRPC
 	//      Returns: error if close fails.
 	//      DANGEROUS operation - closes real position!
-	//      Timeout: 10 seconds
+	//      Timeout: 30 seconds
 	// ══════════════════════════════════════════════════════════════
 	fmt.Printf("\n3.2. ClosePosition() - Close entire position #%d\n", ticket1)
 
 	err = sugar.ClosePosition(ticket1)
-	if !helpers.PrintShortError(err, "ClosePosition failed") {
+	if !failed(err, "ClosePosition failed") {
 		fmt.Printf("  ✓ Position #%d closed completely\n", ticket1)
 	}
 
@@ -356,7 +389,7 @@ func RunSugarPositionsDemo() {
 
 	// Open a new position for symbol-specific close test
 	ticket3, err := sugar.BuyMarket(testSymbol, minVolume)
-	if err == nil {
+	if !failed(err, "BuyMarket for the CloseAllBySymbol demo failed") {
 		fmt.Printf("\n  Opened test position #%d for CloseAllBySymbol demo\n", ticket3)
 		time.Sleep(1 * time.Second)
 
@@ -364,14 +397,15 @@ func RunSugarPositionsDemo() {
 		// 3.3. CloseAllBySymbol()
 		//      Close all positions for specific symbol.
 		//      Chain: Sugar → Service (GetOpenedOrders + CloseOrder loop) → Account
-		//      Returns: int - number of closed positions.
+		//      Returns: int - number of closed positions, and an error naming
+		//      every position that could not be closed.
 		//      DANGEROUS operation - closes all symbol positions!
-		//      Timeout: 30 seconds
+		//      Timeout: 10 s to list, 30 s per close
 		// ══════════════════════════════════════════════════════════════
 		fmt.Printf("\n3.3. CloseAllBySymbol() - Close all %s positions\n", testSymbol)
 		
 		closedCount, err := sugar.CloseAllBySymbol(testSymbol)
-		if !helpers.PrintShortError(err, "CloseAllBySymbol failed") {
+		if !failed(err, "CloseAllBySymbol failed") {
 			fmt.Printf("  ✓ Closed %d position(s) for %s\n", closedCount, testSymbol)
 		}
 	}
@@ -382,16 +416,18 @@ func RunSugarPositionsDemo() {
 	// 3.4. CloseAllPositions()
 	//      Close ALL open positions (all symbols).
 	//      Chain: Sugar → Service (GetOpenedOrders + CloseOrder loop) → Account
-	//      Returns: int - number of closed positions.
+	//      Returns: int - number of closed positions, and an error naming
+	//      every position that could not be closed.
 	//      DANGEROUS operation - closes ALL positions!
-	//      Timeout: 30 seconds
+	//      Timeout: 10 s to list, 30 s per close
 	// ══════════════════════════════════════════════════════════════
 	// First, check if any positions remain
-	remainingCount, _ := sugar.CountOpenPositions()
-	if remainingCount > 0 {
+	remainingCount, err := sugar.CountOpenPositions()
+	failed(err, "CountOpenPositions failed")
+	if err != nil || remainingCount > 0 {
 		fmt.Printf("\n3.4. CloseAllPositions() - Close all remaining positions\n")
 		closedTotal, err := sugar.CloseAllPositions()
-		if !helpers.PrintShortError(err, "CloseAllPositions failed") {
+		if !failed(err, "CloseAllPositions failed") {
 			fmt.Printf("  ✓ Closed %d position(s)\n", closedTotal)
 		}
 	} else {
@@ -407,12 +443,16 @@ func RunSugarPositionsDemo() {
 	fmt.Println(strings.Repeat("-", 80))
 
 	time.Sleep(1 * time.Second)
-	finalCount, _ := sugar.CountOpenPositions()
-	fmt.Printf("\nFinal open positions count: %d\n", finalCount)
+	finalCount, err := sugar.CountOpenPositions()
+	if failed(err, "CountOpenPositions failed") {
+		finalCount = -1
+	} else {
+		fmt.Printf("\nFinal open positions count: %d\n", finalCount)
+	}
 
 	if finalCount == 0 {
 		fmt.Println("✅ All test positions successfully closed!")
-	} else {
+	} else if finalCount > 0 {
 		fmt.Printf("⚠️  %d position(s) still open\n", finalCount)
 	}
 
@@ -420,7 +460,11 @@ func RunSugarPositionsDemo() {
 	// SUMMARY
 	// =============================
 	fmt.Println("\n" + strings.Repeat("=", 80))
-	fmt.Println("DEMO COMPLETED SUCCESSFULLY!")
+	if failures == 0 {
+		fmt.Println("DEMO COMPLETED SUCCESSFULLY!")
+	} else {
+		fmt.Printf("DEMO FINISHED - %d operation(s) failed (see the errors above)\n", failures)
+	}
 	fmt.Println(strings.Repeat("=", 80))
 	fmt.Println("\nℹ️  MT5Sugar Position Management Features:")
 	fmt.Println("  • Position info: GetOpenPositions, GetPositionByTicket, CountOpenPositions")

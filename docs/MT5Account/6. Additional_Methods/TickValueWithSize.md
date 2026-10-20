@@ -71,7 +71,7 @@ TickValueWithSizeRequest {
 
 | Field         | Type       | Description                                   |
 | ------------- | ---------- | --------------------------------------------- |
-| `SymbolNames` | `[]string` | Array of trading symbols (e.g., ["EURUSD", "GBPUSD"]) |
+| `SymbolNames` | `[]string` | Array of trading symbols (e.g., ["EURUSD", "GBPUSD"]); at most 1000, an empty list means every symbol in Market Watch |
 
 ---
 
@@ -106,7 +106,7 @@ For a detailed line-by-line explanation with examples, see:
 ## 🧩 Notes & Tips
 
 * **Automatic reconnection:** All `MT5Account` methods have built-in protection against transient gRPC errors with automatic reconnection via `ExecuteWithReconnect`.
-* **Default timeout:** If context has no deadline, a default `5s` timeout is applied automatically.
+* **Default timeout:** If context has no deadline, a default `10s` timeout is applied automatically.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
 * **Multiple symbols:** Request can include multiple symbols in a single call for efficiency.
 * **Account currency:** All tick values are returned in your account currency.
@@ -134,8 +134,17 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()

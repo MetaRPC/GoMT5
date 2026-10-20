@@ -5,7 +5,7 @@
 **API Information:**
 
 * **Method:** `sugar.GetAllSymbols()`
-* **Timeout:** 5 seconds
+* **Timeout:** 60 seconds (for all pages together)
 * **Returns:** Slice of symbol names
 
 ---
@@ -27,7 +27,7 @@ func (s *MT5Sugar) GetAllSymbols() ([]string, error)
 | Output | Type | Description |
 |--------|------|-------------|
 | `[]string` | slice | List of all symbol names |
-| `error` | `error` | Error if query failed |
+| `error` | `error` | `"GetAllSymbols failed (page N): ..."` if a page query failed |
 
 ---
 
@@ -36,6 +36,32 @@ func (s *MT5Sugar) GetAllSymbols() ([]string, error)
 * **What it is:** Get a complete list of all symbols available on your broker.
 * **Why you need it:** Symbol discovery, building watchlists, symbol validation.
 * **Sanity check:** Returns symbol names only (not full info). Use GetSymbolInfo() for details.
+* **How it works:** `SymbolParamsMany` answers one page at a time - a request without paging returns only the **first page** (50 names on the MetaQuotes-Demo test server). So the method reads pages of 1000 (`PageNumber` / `ItemsPerPage`) until it has `SymbolsTotal` names (or a page comes back empty); only the `Name` of each entry is kept. One 60-second timeout covers all pages (12,293 symbols on MetaQuotes-Demo took about 10 s).
+
+```go
+func (s *MT5Sugar) GetAllSymbols() ([]string, error) {
+    ctx, cancel := context.WithTimeout(s.ctx, 60*time.Second)
+    defer cancel()
+
+    const perPage = int32(1000)
+    var symbols []string
+    for page := int32(1); ; page++ {
+        pageNumber, itemsPerPage := page, perPage
+        params, total, err := s.service.GetSymbolParamsMany(ctx, nil, nil, &pageNumber, &itemsPerPage)
+        if err != nil {
+            return nil, fmt.Errorf("GetAllSymbols failed (page %d): %w", page, err)
+        }
+        for _, p := range params {
+            symbols = append(symbols, p.Name)
+        }
+        if len(params) == 0 || int32(len(symbols)) >= total {
+            break
+        }
+    }
+
+    return symbols, nil
+}
+```
 
 ---
 
@@ -480,7 +506,7 @@ if manager.Exists("BTCUSD") {
 **🍬 Symbol details:**
 
 * `GetSymbolInfo()` - Get full symbol information
-* `IsSymbolAvailable()` - Check if specific symbol is tradeable
+* `IsSymbolAvailable()` - Check if specific symbol exists and is synchronized
 
 **🍬 Symbol properties:**
 
@@ -498,11 +524,12 @@ if manager.Exists("BTCUSD") {
 symbols, _ := sugar.GetAllSymbols()
 // Some might be for display only!
 
-// ✅ CORRECT - verify tradeable status
+// ✅ BETTER - at least verify the symbol exists and is synchronized
+// (IsSymbolAvailable does NOT check the symbol's trade mode / trading permissions)
 for _, symbol := range symbols {
     available, _ := sugar.IsSymbolAvailable(symbol)
     if available {
-        // Now safe to trade
+        // Symbol exists and has synchronized data
     }
 }
 ```
@@ -510,7 +537,7 @@ for _, symbol := range symbols {
 ### 2) Not handling large lists
 
 ```go
-// ❌ WRONG - might be hundreds of symbols
+// ❌ WRONG - might be thousands of symbols (12,000+ on brokers with stocks)
 symbols, _ := sugar.GetAllSymbols()
 for _, symbol := range symbols {
     // Doing expensive operation per symbol
@@ -519,8 +546,13 @@ for _, symbol := range symbols {
 
 // ✅ CORRECT - filter first, then get details
 symbols, _ := sugar.GetAllSymbols()
-forexPairs := FilterForexPairs(symbols)
-for _, symbol := range forexPairs {
+usdPairs := []string{}
+for _, s := range symbols {
+    if strings.HasSuffix(s, "USD") {
+        usdPairs = append(usdPairs, s)
+    }
+}
+for _, symbol := range usdPairs {
     info, _ := sugar.GetSymbolInfo(symbol)
 }
 ```
@@ -547,7 +579,7 @@ if strings.EqualFold(symbol, "eurusd") {
 
 4. **Availability** - Symbol in list doesn't guarantee tradeability
 
-5. **Large lists** - Brokers may have 100+ symbols, handle efficiently
+5. **Large lists** - Brokers may have thousands of symbols (all pages are read, 1000 per request), handle efficiently
 
 ---
 

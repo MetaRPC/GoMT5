@@ -8,7 +8,6 @@ MT5Account represents a low-level gRPC client for MetaTrader 5 terminal. All met
 
 ### 🏗️ Constructor & Connection
 - [NewMT5Account](#newmt5account)
-- [NewMT5AccountAuto](#newmt5accountauto)
 - [Connect](#connect)
 - [ConnectEx](#connectex)
 - [ConnectProxy](#connectproxy)
@@ -16,6 +15,7 @@ MT5Account represents a low-level gRPC client for MetaTrader 5 terminal. All met
 - [Reconnect](#reconnect)
 - [CheckConnect](#checkconnect)
 - [IsConnected](#isconnected)
+- [DisconnectAndClose](#disconnectandclose)
 - [Close](#close)
 
 ### 💰 Account Information
@@ -93,39 +93,28 @@ func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID
 
 **Returns**
 
-Returns `*MT5Account` instance with established gRPC connection, or error if connection fails.
-
----
-
-## NewMT5AccountAuto
-
-Creates a new MT5Account instance with gRPC connection and auto-generated UUID. This is a convenience wrapper around NewMT5Account that automatically generates a random UUID for the session. Default grpcServer is "mt5.mrpc.pro:443" if empty string is provided. The connection is established with TLS, keepalive, and automatic reconnect configured.
-
-**Signature**
-```go
-func NewMT5AccountAuto(user uint64, password string, grpcServer string) (*MT5Account, error)
-```
-
-**Parameters**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| user | uint64 | MT5 account login number |
-| password | string | MT5 account password |
-| grpcServer | string | gRPC server address (e.g., "mt5.mrpc.pro:443", empty for default) |
-
-**Returns**
-
-Returns `*MT5Account` instance with established gRPC connection and auto-generated UUID, or error if connection fails.
+Returns `*MT5Account` instance with established gRPC connection, or error if connection fails. The MT5 terminal itself is not connected yet - call `ConnectEx` (or `Connect`) next.
 
 **Example**
 ```go
-// Create account with auto-generated UUID
-account, err := mt5.NewMT5AccountAuto(12345678, "password", "")
+import (
+    pb "github.com/MetaRPC/GoMT5/package"
+    helpers "github.com/MetaRPC/GoMT5/package/Helpers"
+    "github.com/google/uuid"
+)
+
+// Create account with a random UUID (the package name is mt5, imported here as helpers)
+account, err := helpers.NewMT5Account(12345678, "password", "", uuid.New())
 if err != nil {
     log.Fatal(err)
 }
 defer account.Close()
+
+_, err = account.ConnectEx(ctx, &pb.ConnectExRequest{
+    User:          12345678,
+    Password:      "password",
+    MtClusterName: "YourBroker-MT5 Demo",
+})
 ```
 
 ---
@@ -144,17 +133,17 @@ func (a *MT5Account) Connect(ctx context.Context, req *pb.ConnectRequest) (*pb.C
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.ConnectRequest | Request with User, Password, and optional ServerName |
+| req | *pb.ConnectRequest | Request with User, Password, Host, Port, and optional ExpertsToAdd, TimeoutSeconds, Name, Expiration |
 
 **Returns**
 
-Returns `*pb.ConnectData` with session UUID and connection status, or error on failure.
+Returns `*pb.ConnectData` with TerminalInstanceGuid and TerminalType, or error on failure.
 
 ---
 
 ## ConnectEx
 
-Establishes connection to MT5 terminal with extended parameters. This method provides full control over connection settings including MT5 cluster name for connection, connection timeout settings, base chart symbol selection, and Expert Advisors to add.
+Establishes connection to MT5 terminal with extended parameters: the MT5 cluster (broker server) name, connection timeout, terminal name/expiration and Expert Advisors to add.
 
 **Signature**
 ```go
@@ -166,11 +155,11 @@ func (a *MT5Account) ConnectEx(ctx context.Context, req *pb.ConnectExRequest) (*
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.ConnectExRequest | Request with User, Password, MtClusterName, BaseChartSymbol, TerminalReadinessWaitingTimeoutSeconds, ExpertsToAdd |
+| req | *pb.ConnectExRequest | Request with User, Password, MtClusterName, and optional ExpertsToAdd, TimeoutSeconds, Name, Expiration |
 
 **Returns**
 
-Returns `*pb.ConnectData` with session UUID and connection status, or error on failure.
+Returns `*pb.ConnectData` with TerminalInstanceGuid and TerminalType, or error on failure.
 
 ---
 
@@ -188,11 +177,11 @@ func (a *MT5Account) ConnectProxy(ctx context.Context, req *pb.ConnectProxyReque
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.ConnectProxyRequest | Request with proxy host, port, type, credentials and MT5 account credentials |
+| req | *pb.ConnectProxyRequest | Request with User, Password, Host, Port, ProxyUser, ProxyPassword, ProxyHost, ProxyPort, ProxyType, and optional ExpertsToAdd, TimeoutSeconds, Name, Expiration |
 
 **Returns**
 
-Returns `*pb.ConnectProxyData` with session UUID and connection status, or error on failure.
+Returns `*pb.ConnectProxyData` with UniqueIdentifier and TerminalType, or error on failure.
 
 ---
 
@@ -210,17 +199,17 @@ func (a *MT5Account) Disconnect(ctx context.Context, req *pb.DisconnectRequest) 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.DisconnectRequest | Empty request structure |
+| req | *pb.DisconnectRequest | Request with optional Reason and Delete (true = delete the terminal instance instead of stopping it) |
 
 **Returns**
 
-Returns `*pb.DisconnectData` with disconnection status, or error on failure.
+Returns `*pb.DisconnectData` with UniqueIdentifier and FullLifeTimeSeconds, or error on failure.
 
 ---
 
 ## Reconnect
 
-Re-establishes connection to MT5 terminal. This method recreates the terminal session without changing connection parameters. Used internally by ExecuteWithReconnect on TERMINAL_INSTANCE_NOT_FOUND errors.
+Re-establishes connection to MT5 terminal. This method recreates the terminal session without changing connection parameters. (It is not called automatically: on TERMINAL_INSTANCE_NOT_FOUND / network errors ExecuteWithReconnect only retries the original call after a backoff delay.)
 
 **Signature**
 ```go
@@ -232,11 +221,11 @@ func (a *MT5Account) Reconnect(ctx context.Context, req *pb.ReconnectRequest) (*
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.ReconnectRequest | Empty request structure |
+| req | *pb.ReconnectRequest | Request with optional ForceReconnection |
 
 **Returns**
 
-Returns `*pb.ReconnectData` with new session UUID, or error on failure.
+Returns `*pb.ReconnectData` with TerminalWasRecreated, TerminalType, TerminalInstanceGuid, OldTerminalFullLiveTimeSeconds and OldLogFiles, or error on failure.
 
 ---
 
@@ -258,13 +247,13 @@ func (a *MT5Account) CheckConnect(ctx context.Context, req *pb.CheckConnectReque
 
 **Returns**
 
-Returns `*pb.CheckConnectData` with connection status flag, or error on failure.
+Returns `*pb.CheckConnectData` with UniqueIdentifier and HealthCheck (`HealthCheck.IsAlive` is the connection status flag), or error on failure.
 
 ---
 
 ## IsConnected
 
-Returns true if the account has an active gRPC connection.
+Returns true if the account has an active gRPC connection and a session id (TerminalInstanceGuid or Id). It is a local check - it does not call the server (use CheckConnect for that).
 
 **Signature**
 ```go
@@ -274,6 +263,21 @@ func (a *MT5Account) IsConnected() bool
 **Returns**
 
 Returns true if gRPC connection is active, false otherwise.
+
+---
+
+## DisconnectAndClose
+
+Sends a Disconnect RPC (5-second timeout) and then closes the gRPC connection. If `deleteOnDisconnect` is true, the terminal instance is deleted instead of stopped.
+
+**Signature**
+```go
+func (a *MT5Account) DisconnectAndClose(deleteOnDisconnect ...bool) error
+```
+
+**Returns**
+
+Returns the Disconnect error if any, otherwise the Close error; nil on success.
 
 ---
 
@@ -312,7 +316,7 @@ func (a *MT5Account) AccountSummary(ctx context.Context, req *pb.AccountSummaryR
 
 **Returns**
 
-Returns `*pb.AccountSummaryData` with Login, Balance, Equity, UserName, Leverage, TradeMode, CompanyName, Currency, ServerTime, UtcTimezoneShift, and Credit.
+Returns `*pb.AccountSummaryData` with AccountLogin, AccountBalance, AccountEquity, AccountUserName, AccountLeverage, AccountTradeMode, AccountCompanyName, AccountCurrency, ServerTime (+ ServerTimeUtc), UtcTimezoneServerTimeShiftMinutes, AccountCredit and ServerUtcOffsetSeconds.
 
 ---
 
@@ -330,7 +334,7 @@ func (a *MT5Account) AccountInfoDouble(ctx context.Context, req *pb.AccountInfoD
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.AccountInfoDoubleRequest | Request with property_id (ACCOUNT_BALANCE, ACCOUNT_EQUITY, ACCOUNT_MARGIN, ACCOUNT_MARGIN_FREE, ACCOUNT_PROFIT, etc) |
+| req | *pb.AccountInfoDoubleRequest | Request with PropertyId (ACCOUNT_BALANCE, ACCOUNT_EQUITY, ACCOUNT_MARGIN, ACCOUNT_MARGIN_FREE, ACCOUNT_PROFIT, etc) |
 
 **Returns**
 
@@ -352,7 +356,7 @@ func (a *MT5Account) AccountInfoInteger(ctx context.Context, req *pb.AccountInfo
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.AccountInfoIntegerRequest | Request with property_id (ACCOUNT_LOGIN, ACCOUNT_LEVERAGE, ACCOUNT_LIMIT_ORDERS, ACCOUNT_TRADE_MODE, ACCOUNT_MARGIN_SO_MODE, etc) |
+| req | *pb.AccountInfoIntegerRequest | Request with PropertyId (ACCOUNT_LOGIN, ACCOUNT_LEVERAGE, ACCOUNT_LIMIT_ORDERS, ACCOUNT_TRADE_MODE, ACCOUNT_MARGIN_SO_MODE, etc) |
 
 **Returns**
 
@@ -374,7 +378,7 @@ func (a *MT5Account) AccountInfoString(ctx context.Context, req *pb.AccountInfoS
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.AccountInfoStringRequest | Request with property_id (ACCOUNT_NAME, ACCOUNT_SERVER, ACCOUNT_CURRENCY, ACCOUNT_COMPANY) |
+| req | *pb.AccountInfoStringRequest | Request with PropertyId (ACCOUNT_NAME, ACCOUNT_SERVER, ACCOUNT_CURRENCY, ACCOUNT_COMPANY) |
 
 **Returns**
 
@@ -398,7 +402,7 @@ func (a *MT5Account) SymbolsTotal(ctx context.Context, req *pb.SymbolsTotalReque
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.SymbolsTotalRequest | Request with Selected flag (true for Market Watch symbols only, false for all symbols) |
+| req | *pb.SymbolsTotalRequest | Request with Mode flag (true for Market Watch symbols only, false for all symbols) |
 
 **Returns**
 
@@ -420,7 +424,7 @@ func (a *MT5Account) SymbolName(ctx context.Context, req *pb.SymbolNameRequest) 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.SymbolNameRequest | Request with Pos (zero-based index) and Selected flag (true for Market Watch, false for all symbols) |
+| req | *pb.SymbolNameRequest | Request with Index (zero-based) and Selected flag (true for Market Watch, false for all symbols) |
 
 **Returns**
 
@@ -464,11 +468,11 @@ func (a *MT5Account) SymbolExist(ctx context.Context, req *pb.SymbolExistRequest
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.SymbolExistRequest | Request with Symbol name |
+| req | *pb.SymbolExistRequest | Request with Name (symbol name) |
 
 **Returns**
 
-Returns `*pb.SymbolExistData` with Exist flag and IsCustom flag indicating if it's a custom symbol.
+Returns `*pb.SymbolExistData` with Exists flag and IsCustom flag indicating if it's a custom symbol.
 
 ---
 
@@ -490,7 +494,7 @@ func (a *MT5Account) SymbolIsSynchronized(ctx context.Context, req *pb.SymbolIsS
 
 **Returns**
 
-Returns `*pb.SymbolIsSynchronizedData` with IsSynchronized flag.
+Returns `*pb.SymbolIsSynchronizedData` with Synchronized flag.
 
 ---
 
@@ -512,7 +516,7 @@ func (a *MT5Account) SymbolInfoTick(ctx context.Context, req *pb.SymbolInfoTickR
 
 **Returns**
 
-Returns `*pb.MrpcMqlTick` with Bid, Ask, Last, Volume, Time, TimeMS, Flags, VolumReal and spread values.
+Returns `*pb.MrpcMqlTick` with Time (Unix seconds), Bid, Ask, Last, Volume, TimeMsc, Flags and VolumeReal (plus TimeUtc / TimeMscUtc).
 
 ---
 
@@ -530,7 +534,7 @@ func (a *MT5Account) SymbolInfoDouble(ctx context.Context, req *pb.SymbolInfoDou
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.SymbolInfoDoubleRequest | Request with Symbol name and PropertyId (BID, ASK, POINT, VOLUME_MIN, VOLUME_MAX, VOLUME_STEP, TRADE_TICK_SIZE, etc) |
+| req | *pb.SymbolInfoDoubleRequest | Request with Symbol name and Type (SYMBOL_BID, SYMBOL_ASK, SYMBOL_POINT, SYMBOL_VOLUME_MIN, SYMBOL_VOLUME_MAX, SYMBOL_VOLUME_STEP, SYMBOL_TRADE_TICK_SIZE, etc) |
 
 **Returns**
 
@@ -552,7 +556,7 @@ func (a *MT5Account) SymbolInfoInteger(ctx context.Context, req *pb.SymbolInfoIn
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.SymbolInfoIntegerRequest | Request with Symbol name and PropertyId (DIGITS, SPREAD, STOPS_LEVEL, FREEZE_LEVEL, TRADE_MODE, TRADE_EXECUTION_MODE, etc) |
+| req | *pb.SymbolInfoIntegerRequest | Request with Symbol name and Type (SYMBOL_DIGITS, SYMBOL_SPREAD, SYMBOL_TRADE_STOPS_LEVEL, SYMBOL_TRADE_FREEZE_LEVEL, SYMBOL_TRADE_MODE, SYMBOL_TRADE_EXEMODE, etc) |
 
 **Returns**
 
@@ -574,7 +578,7 @@ func (a *MT5Account) SymbolInfoString(ctx context.Context, req *pb.SymbolInfoStr
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.SymbolInfoStringRequest | Request with Symbol name and PropertyId (DESCRIPTION, CURRENCY_BASE, CURRENCY_PROFIT, CURRENCY_MARGIN, PATH, etc) |
+| req | *pb.SymbolInfoStringRequest | Request with Symbol name and Type (SYMBOL_DESCRIPTION, SYMBOL_CURRENCY_BASE, SYMBOL_CURRENCY_PROFIT, SYMBOL_CURRENCY_MARGIN, SYMBOL_PATH, etc) |
 
 **Returns**
 
@@ -622,7 +626,7 @@ func (a *MT5Account) SymbolInfoSessionQuote(ctx context.Context, req *pb.SymbolI
 
 **Returns**
 
-Returns `*pb.SymbolInfoSessionQuoteData` with session From and To times in seconds from day start.
+Returns `*pb.SymbolInfoSessionQuoteData` with session From and To (Timestamps; only the time of day is meaningful, the date part should be ignored).
 
 ---
 
@@ -644,7 +648,7 @@ func (a *MT5Account) SymbolInfoSessionTrade(ctx context.Context, req *pb.SymbolI
 
 **Returns**
 
-Returns `*pb.SymbolInfoSessionTradeData` with session From and To times in seconds from day start.
+Returns `*pb.SymbolInfoSessionTradeData` with session From and To (Timestamps; only the time of day is meaningful, the date part should be ignored).
 
 ---
 
@@ -662,11 +666,11 @@ func (a *MT5Account) SymbolParamsMany(ctx context.Context, req *pb.SymbolParamsM
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.SymbolParamsManyRequest | Request with array of Symbol names |
+| req | *pb.SymbolParamsManyRequest | Request with optional SymbolName filter, SortType, PageNumber and ItemsPerPage (nil SymbolName = all symbols) |
 
 **Returns**
 
-Returns `*pb.SymbolParamsManyData` with array of SymbolParams containing Bid, Ask, Digits, Spread, VolumeMin, VolumeMax, VolumeStep, ContractSize, Point, margins, and other trading parameters for each symbol.
+Returns `*pb.SymbolParamsManyData` with SymbolInfos (array of `*pb.SymbolParameters` containing Bid, Ask, Digits, Spread, VolumeMin, VolumeMax, VolumeStep, TradeContractSize, Point, margins, and other trading parameters for each symbol), SymbolsTotal, PageNumber and ItemsPerPage.
 
 ---
 
@@ -688,7 +692,7 @@ func (a *MT5Account) TickValueWithSize(ctx context.Context, req *pb.TickValueWit
 
 **Returns**
 
-Returns `*pb.TickValueWithSizeData` with array of TickSizeSymbol containing tick values, tick size, and contract size for each symbol.
+Returns `*pb.TickValueWithSizeData` with SymbolTickSizeInfos (array of TickSizeSymbol) containing tick values, tick size, and contract size for each symbol.
 
 ---
 
@@ -711,7 +715,7 @@ func (a *MT5Account) PositionsTotal(ctx context.Context) (*pb.PositionsTotalData
 
 **Returns**
 
-Returns `*pb.PositionsTotalData` with Total count of open positions.
+Returns `*pb.PositionsTotalData` with TotalPositions count of open positions.
 
 ---
 
@@ -729,11 +733,11 @@ func (a *MT5Account) OpenedOrders(ctx context.Context, req *pb.OpenedOrdersReque
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.OpenedOrdersRequest | Request with InputSortMode (sort type: by open time, close time, or ticket ID) |
+| req | *pb.OpenedOrdersRequest | Request with InputSortMode (sort type: by open time or by ticket ID, ascending or descending) |
 
 **Returns**
 
-Returns `*pb.OpenedOrdersData` with arrays of opened_orders (pending orders) and position_infos (open positions) containing full details.
+Returns `*pb.OpenedOrdersData` with arrays OpenedOrders (pending orders, `*pb.OpenedOrderInfo`) and PositionInfos (open positions, `*pb.PositionInfo`) containing full details.
 
 ---
 
@@ -755,7 +759,7 @@ func (a *MT5Account) OpenedOrdersTickets(ctx context.Context, req *pb.OpenedOrde
 
 **Returns**
 
-Returns `*pb.OpenedOrdersTicketsData` with arrays of opened_orders_tickets and opened_position_tickets.
+Returns `*pb.OpenedOrdersTicketsData` with arrays OpenedOrdersTickets and OpenedPositionTickets ([]int64).
 
 ---
 
@@ -817,11 +821,11 @@ func (a *MT5Account) OrderCheck(ctx context.Context, req *pb.OrderCheckRequest) 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.OrderCheckRequest | Request with Action, Symbol, Volume, Price, OrderType, StopLoss, TakeProfit and other order parameters |
+| req | *pb.OrderCheckRequest | Request with MqlTradeRequest (`*pb.MrpcMqlTradeRequest`: Action, Symbol, Volume, Price, OrderType, StopLoss, TakeProfit and other order parameters) |
 
 **Returns**
 
-Returns `*pb.OrderCheckData` with validation result including margin requirements, estimated profit, and MqlTradeCheckResult structure with validation status and possible error codes.
+Returns `*pb.OrderCheckData` with MqlTradeCheckResult (`*pb.MrpcMqlTradeCheckResult`: ReturnedCode, BalanceAfterDeal, EquityAfterDeal, Profit, Margin, FreeMargin, MarginLevel, Comment).
 
 ---
 
@@ -829,7 +833,7 @@ Returns `*pb.OrderCheckData` with validation result including margin requirement
 
 ## OrderHistory
 
-Retrieves historical orders within a specified time range. Use this method to analyze past order activity with pagination support for large datasets.
+Retrieves historical orders and deals within a specified time range. Use this method to analyze past order activity with pagination support for large datasets.
 
 **Signature**
 ```go
@@ -841,11 +845,11 @@ func (a *MT5Account) OrderHistory(ctx context.Context, req *pb.OrderHistoryReque
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.OrderHistoryRequest | Request with FromDate, ToDate (unix timestamps), optional Symbol filter, Offset and Limit for pagination |
+| req | *pb.OrderHistoryRequest | Request with InputFrom, InputTo (Timestamps in broker server time, or InputFromUtc / InputToUtc), InputSortMode, and paging: PageNumber + ItemsPerPage, or PageToken + PageSize |
 
 **Returns**
 
-Returns `*pb.OrdersHistoryData` with array of historical Order objects including execution details, prices, volumes, and final status.
+Returns `*pb.OrdersHistoryData` with HistoryData (rows holding HistoryOrder and/or HistoryDeal), ArrayTotal, PageNumber, ItemsPerPage and NextPageToken.
 
 ---
 
@@ -863,11 +867,11 @@ func (a *MT5Account) PositionsHistory(ctx context.Context, req *pb.PositionsHist
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.PositionsHistoryRequest | Request with FromDate, ToDate (unix timestamps), optional Symbol filter, Offset and Limit for pagination |
+| req | *pb.PositionsHistoryRequest | Request with SortType, optional PositionOpenTimeFrom / PositionOpenTimeTo (Timestamps; the filter is on the position OPEN time; *Utc variants available), and paging: PageNumber + ItemsPerPage, or PageToken + PageSize |
 
 **Returns**
 
-Returns `*pb.PositionsHistoryData` with array of closed Position objects including entry/exit prices, volumes, swap, commission, net profit, and close timestamps.
+Returns `*pb.PositionsHistoryData` with HistoryPositions (array of `*pb.PositionHistoryInfo`: PositionTicket, Symbol, OrderType, OpenTime, CloseTime, Volume, OpenPrice, ClosePrice, StopLoss, TakeProfit, Commission, Fee, Swap, Profit, ...), TotalCount and NextPageToken.
 
 ---
 
@@ -891,7 +895,7 @@ func (a *MT5Account) MarketBookAdd(ctx context.Context, req *pb.MarketBookAddReq
 
 **Returns**
 
-Returns `*pb.MarketBookAddData` with subscription status.
+Returns `*pb.MarketBookAddData` with OpenedSuccessfully flag.
 
 ---
 
@@ -913,7 +917,7 @@ func (a *MT5Account) MarketBookGet(ctx context.Context, req *pb.MarketBookGetReq
 
 **Returns**
 
-Returns `*pb.MarketBookGetData` with array of BookStruct entries containing Type (buy/sell), Price, Volume, and VolumeDouble for each price level in the order book.
+Returns `*pb.MarketBookGetData` with MqlBookInfos (array of `*pb.MrpcMqlBookInfo` entries containing Type, Price, Volume, and VolumeReal for each price level in the order book).
 
 ---
 
@@ -935,7 +939,7 @@ func (a *MT5Account) MarketBookRelease(ctx context.Context, req *pb.MarketBookRe
 
 **Returns**
 
-Returns `*pb.MarketBookReleaseData` with unsubscription status.
+Returns `*pb.MarketBookReleaseData` with ClosedSuccessfully flag.
 
 ---
 
@@ -959,7 +963,7 @@ func (a *MT5Account) OrderSend(ctx context.Context, req *pb.OrderSendRequest) (*
 
 **Returns**
 
-Returns `*pb.OrderSendData` with returned code, deal ticket, order ticket, execution price, volume, bid/ask prices, comment, and request ID.
+Returns `*pb.OrderSendData` with ReturnedCode (+ ReturnedStringCode, ReturnedCodeDescription), Deal, Order, Volume, Price, Bid, Ask, Comment, RequestId and RetCodeExternal.
 
 ---
 
@@ -977,11 +981,11 @@ func (a *MT5Account) OrderModify(ctx context.Context, req *pb.OrderModifyRequest
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control |
-| req | *pb.OrderModifyRequest | Request with Ticket, Price (for pending orders), StopLoss, TakeProfit, and optional Expiration |
+| req | *pb.OrderModifyRequest | Request with Ticket, and optional (pointer) StopLoss, TakeProfit, Price and StopLimit (pending orders only), ExpirationTimeType / ExpirationTime |
 
 **Returns**
 
-Returns `*pb.OrderModifyData` with modification status and MqlTradeResult structure.
+Returns `*pb.OrderModifyData` with ReturnedCode (+ ReturnedStringCode, ReturnedCodeDescription), Deal, Order, Volume, Price, Bid, Ask, Comment, RequestId and RetCodeExternal.
 
 ---
 
@@ -1011,7 +1015,7 @@ Returns `*pb.OrderCloseData` with ReturnedCode, ReturnedStringCode, ReturnedCode
 
 ## OnSymbolTick
 
-Streams real-time tick data for a symbol. This method provides continuous price updates (Bid/Ask) as they arrive from the server. The stream automatically reconnects on connection loss.
+Streams real-time tick data for one or more symbols. This method provides continuous price updates (Bid/Ask) as they arrive from the server. The stream automatically reconnects on connection loss.
 
 **Signature**
 ```go
@@ -1023,11 +1027,11 @@ func (a *MT5Account) OnSymbolTick(ctx context.Context, req *pb.OnSymbolTickReque
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control (cancel to stop streaming) |
-| req | *pb.OnSymbolTickRequest | Request with Symbol name |
+| req | *pb.OnSymbolTickRequest | Request with SymbolNames ([]string) |
 
 **Returns**
 
-Returns two channels: data channel receives `*pb.OnSymbolTickData` with Bid, Ask, Last, Volume, Time for each tick; error channel receives errors if stream fails (both channels closed on context cancellation).
+Returns two channels: data channel receives `*pb.OnSymbolTickData` whose SymbolTick (`*pb.MrpcSubscriptionMqlTick`) has Symbol, Time, Bid, Ask, Last, Volume, TimeMsc, Flags and VolumeReal for each tick; error channel receives errors if stream fails (both channels closed on context cancellation).
 
 ---
 
@@ -1045,11 +1049,11 @@ func (a *MT5Account) OnPositionProfit(ctx context.Context, req *pb.OnPositionPro
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control (cancel to stop streaming) |
-| req | *pb.OnPositionProfitRequest | Request with optional Symbol filter |
+| req | *pb.OnPositionProfitRequest | Request with TimerPeriodMilliseconds and IgnoreEmptyData |
 
 **Returns**
 
-Returns two channels: data channel receives `*pb.OnPositionProfitData` with Ticket, Symbol, Profit, and current price; error channel receives errors if stream fails (both channels closed on context cancellation).
+Returns two channels: data channel receives `*pb.OnPositionProfitData` with NewPositions, UpdatedPositions and DeletedPositions (each entry: Ticket, Profit, PositionSymbol) plus AccountInfo; error channel receives errors if stream fails (both channels closed on context cancellation).
 
 ---
 
@@ -1067,7 +1071,7 @@ func (a *MT5Account) OnPositionsAndPendingOrdersTickets(ctx context.Context, req
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | ctx | context.Context | Context for timeout and cancellation control (cancel to stop streaming) |
-| req | *pb.OnPositionsAndPendingOrdersTicketsRequest | Empty request structure |
+| req | *pb.OnPositionsAndPendingOrdersTicketsRequest | Request with TimerPeriodMilliseconds |
 
 **Returns**
 
@@ -1093,7 +1097,7 @@ func (a *MT5Account) OnTrade(ctx context.Context, req *pb.OnTradeRequest) (<-cha
 
 **Returns**
 
-Returns two channels: data channel receives `*pb.OnTradeData` with trade event details; error channel receives errors if stream fails (both channels closed on context cancellation).
+Returns two channels: data channel receives `*pb.OnTradeData` with EventData (new/disappeared/updated orders, history orders, deals and positions) and AccountInfo; error channel receives errors if stream fails (both channels closed on context cancellation).
 
 ---
 

@@ -30,7 +30,7 @@
    3. PRICES & QUOTES (5 methods)
       • GetBid() - Current BID price
       • GetAsk() - Current ASK price
-      • GetSpread() - Spread in pips
+      • GetSpread() - Spread in points
       • GetPriceInfo() - Complete price info
       • WaitForPrice() - Wait for price update
 
@@ -49,6 +49,8 @@
 package sugar
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -85,6 +87,9 @@ func RunSugarBasicsDemo() {
 	sugar, err := mt5.NewMT5Sugar(cfg.User, cfg.Password, cfg.GrpcServer)
 	helpers.Fatal(err, "NewMT5Sugar failed")
 	sugar.GetAccount().ApiKey = cfg.ApiKey
+	// Disconnect however the demo ends (normal end, Fatal, panic, Ctrl+C) - registered before connecting,
+	// because a failed connect may still have started the terminal on the server.
+	defer helpers.DisconnectOnExit(sugar)()
 	fmt.Println("  ✓ Sugar instance created!")
 
 	// ══════════════════════════════════════════════════════════════
@@ -92,7 +97,6 @@ func RunSugarBasicsDemo() {
 
 	err = sugar.QuickConnect(cfg.MtCluster)
 	helpers.Fatal(err, "QuickConnect failed")
-	defer sugar.Disconnect()
 	fmt.Println("  ✓ Connected to MT5!")
 
 
@@ -275,7 +279,8 @@ func RunSugarBasicsDemo() {
 
 	// ══════════════════════════════════════════════════════════════
 	// 3.4. GetPriceInfo()
-	//      Get complete price information (BID, ASK, spread, time).
+	//      Get complete price information (BID, ASK, spread in points, tick time
+	//      in broker server time and in UTC).
 	//      Chain: Sugar → Service (GetSymbolTick + GetSymbolInteger) → Account
 	//      Returns: *PriceInfo struct with all price data.
 	//      SAFE operation - read-only query.
@@ -289,23 +294,27 @@ func RunSugarBasicsDemo() {
 		fmt.Printf("  BID:        %.5f\n", priceInfo.Bid)
 		fmt.Printf("  ASK:        %.5f\n", priceInfo.Ask)
 		fmt.Printf("  Spread:     %.0f points\n", priceInfo.SpreadPips)
-		fmt.Printf("  Time:       %s\n", priceInfo.Time.Format("2006-01-02 15:04:05"))
+		fmt.Printf("  Time:       %s (broker server time)\n", priceInfo.Time.Format("2006-01-02 15:04:05"))
+		fmt.Printf("  Time UTC:   %s\n", priceInfo.TimeUtc.Format("2006-01-02 15:04:05"))
 	}
 
 	// ══════════════════════════════════════════════════════════════
 	// 3.5. WaitForPrice()
-	//      Wait for valid price update (BID > 0 and ASK > 0).
+	//      Wait until the symbol has a valid price (BID > 0 and ASK > 0).
+	//      Returns at once if it already has one - it does not wait for a change.
 	//      Chain: Sugar → Service.GetSymbolTick() (polling) → Account → gRPC
 	//      Returns: *PriceInfo when valid price received.
 	//      SAFE operation - read-only query with polling.
 	//      Timeout: Custom (here 3 seconds)
 	// ══════════════════════════════════════════════════════════════
-	fmt.Printf("\n3.5. WaitForPrice() - Wait for price update (3 sec timeout)\n")
+	fmt.Printf("\n3.5. WaitForPrice() - Wait for a valid price (3 sec timeout)\n")
 
-	fmt.Printf("  Waiting for %s price change...\n", testSymbol)
+	fmt.Printf("  Waiting for a valid %s price (BID and ASK > 0)...\n", testSymbol)
 	tick, err := sugar.WaitForPrice(testSymbol, 3*time.Second)
 	if helpers.PrintShortError(err, "WaitForPrice timeout or error") {
-		fmt.Println("  ℹ️  This is normal if price doesn't change within timeout")
+		if errors.Is(err, context.DeadlineExceeded) {
+			fmt.Println("  ℹ️  The symbol had no quote within the timeout")
+		}
 	} else {
 		fmt.Printf("  ✓ Price received!\n")
 		fmt.Printf("    BID: %.5f, ASK: %.5f\n", tick.Bid, tick.Ask)
@@ -328,8 +337,8 @@ func RunSugarBasicsDemo() {
 	fmt.Println("   ✓ One-liner operations:   sugar.GetBalance() - simple!")
 	fmt.Println("   ✓ Direct value returns:   float64, not wrapped in structs")
 	fmt.Println("   ✓ No protobuf knowledge:  All native Go types")
-	fmt.Println("   ✓ Auto timeouts:          3-30 seconds built-in")
-	fmt.Println("   ✓ Smart defaults:         EURUSD base symbol, standard parameters")
+	fmt.Println("   ✓ Auto timeouts:          3-130 seconds built-in")
+	fmt.Println("   ✓ Smart defaults:         standard parameters, 120 s connect wait")
 
 	fmt.Println("\n📚 WHAT'S NEXT:")
 	fmt.Println("   • Trading operations:     Run demo 07 - sugar_trading.go")

@@ -53,10 +53,10 @@ TRADING:
 
 STREAMING:
 - StreamTicks() - tick stream
-- StreamTrades() - trade stream
+- StreamTradeUpdates() - trade stream
 - StreamPositionProfits() - position profit stream
-- StreamTicketChanges() - ticket change stream
-- StreamTradeTransactions() - trade transaction stream
+- StreamOpenedTickets() - ticket change stream
+- StreamTransactions() - trade transaction stream
 */
 
 import (
@@ -96,12 +96,30 @@ func (s *MT5Service) GetAccount() *helpers.MT5Account {
 	return s.account
 }
 
-// Disconnect gracefully disconnects from the MT5 terminal and closes resources.
+// Disconnect stops the MT5 terminal on the server (Disconnect RPC) and closes the gRPC connection.
+// With deleteOnDisconnect=true the terminal instance is deleted instead of stopped.
+// The server is given up to 30 seconds to stop the terminal; a disconnect error is returned, not hidden.
+// Calling it again after the connection is closed is a no-op.
 func (s *MT5Service) Disconnect(deleteOnDisconnect ...bool) error {
 	if s == nil || s.account == nil {
 		return nil
 	}
-	return s.account.DisconnectAndClose(deleteOnDisconnect...)
+	if !s.account.IsConnected() {
+		return s.account.Close()
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	req := &pb.DisconnectRequest{}
+	if len(deleteOnDisconnect) > 0 && deleteOnDisconnect[0] {
+		del := true
+		req.Delete = &del
+	}
+	_, disconnectErr := s.account.Disconnect(ctx, req)
+	closeErr := s.account.Close()
+	if disconnectErr != nil {
+		return fmt.Errorf("Disconnect failed: %w", disconnectErr)
+	}
+	return closeErr
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -124,7 +142,8 @@ type AccountSummary struct {
 	TradeMode               pb.MrpcEnumAccountTradeMode  // Account trade mode (demo/real/contest)
 	CompanyName             string                       // Broker company name
 	Currency                string                       // Deposit currency (USD, EUR, etc.)
-	ServerTime              *time.Time                   // Server time (already converted from protobuf)
+	ServerTime              *time.Time                   // Trade server time: the broker's wall clock, carried in a UTC time.Time
+	ServerTimeUtc           *time.Time                   // The same moment in UTC
 	UtcTimezoneShiftMinutes int64                        // UTC timezone shift in minutes
 	Credit                  float64                      // Credit facility amount
 }
@@ -139,15 +158,19 @@ type SymbolMarginRate struct {
 
 // SymbolTick holds current tick information for a symbol.
 //
-// ADVANTAGE: Clean Go struct with time.Time instead of protobuf SymbolInfoTickData.
-// Time is already converted from Unix timestamp to time.Time.
+// ADVANTAGE: Clean Go struct with time.Time instead of protobuf MrpcMqlTick / MrpcSubscriptionMqlTick.
+// Time is the broker's wall clock (as MT5 reports it) carried in a UTC time.Time, so Time.Format shows the
+// broker time; TimeUtc is the real moment. GetSymbolTick and StreamTicks fill the fields the same way.
 type SymbolTick struct {
-	Time       time.Time // Tick time (converted from Unix timestamp)
+	Symbol     string    // Symbol of the tick
+	Time       time.Time // Tick time in the broker server's time zone (as MT5 reports it)
+	TimeUtc    time.Time // The same moment in UTC
 	Bid        float64   // Current Bid price
 	Ask        float64   // Current Ask price
 	Last       float64   // Last deal price
 	Volume     uint64    // Tick volume
-	TimeMS     int64     // Tick time in milliseconds
+	TimeMS     int64     // Tick time in milliseconds (broker server time)
+	TimeMSUtc  int64     // Tick time in milliseconds (UTC)
 	Flags      uint32    // Tick flags
 	VolumeReal float64   // Tick volume with decimal precision
 }
@@ -255,10 +278,14 @@ func (s *MT5Service) GetAccountSummary(ctx context.Context) (*AccountSummary, er
 		return nil, fmt.Errorf("GetAccountSummary failed: %w", err)
 	}
 
-	var serverTime *time.Time
+	var serverTime, serverTimeUtc *time.Time
 	if data.ServerTime != nil {
 		t := data.ServerTime.AsTime()
 		serverTime = &t
+	}
+	if data.ServerTimeUtc != nil {
+		t := data.ServerTimeUtc.AsTime()
+		serverTimeUtc = &t
 	}
 
 	return &AccountSummary{
@@ -271,6 +298,7 @@ func (s *MT5Service) GetAccountSummary(ctx context.Context) (*AccountSummary, er
 		CompanyName:             data.AccountCompanyName,
 		Currency:                data.AccountCurrency,
 		ServerTime:              serverTime,
+		ServerTimeUtc:           serverTimeUtc,
 		UtcTimezoneShiftMinutes: data.UtcTimezoneServerTimeShiftMinutes,
 		Credit:                  data.AccountCredit,
 	}, nil
@@ -556,13 +584,18 @@ func (s *MT5Service) GetSymbolTick(ctx context.Context, symbol string) (*SymbolT
 		return nil, fmt.Errorf("GetSymbolTick failed: %w", err)
 	}
 
+	// Time/TimeMsc are the broker's wall clock written as Unix seconds/milliseconds; .UTC() keeps that wall clock
+	// as it is instead of shifting it into the local time zone.
 	return &SymbolTick{
-		Time:       time.Unix(data.Time, 0),
+		Symbol:     symbol,
+		Time:       time.Unix(data.Time, 0).UTC(),
+		TimeUtc:    time.Unix(data.TimeUtc, 0).UTC(),
 		Bid:        data.Bid,
 		Ask:        data.Ask,
 		Last:       data.Last,
 		Volume:     data.Volume,
 		TimeMS:     data.TimeMsc,
+		TimeMSUtc:  data.TimeMscUtc,
 		Flags:      data.Flags,
 		VolumeReal: data.VolumeReal,
 	}, nil
@@ -636,11 +669,13 @@ func (s *MT5Service) GetSymbolSessionTrade(ctx context.Context, symbol string, d
 //   - symbolName: Optional filter by symbol name (nil for all symbols)
 //   - sortType: Optional sort type (nil for default sorting)
 //   - pageNumber: Optional page number for pagination (nil for page 1)
-//   - itemsPerPage: Optional items per page (nil for all items)
+//   - itemsPerPage: Optional items per page. nil = the server's default page size - NOT all symbols
+//     (staging returned 50 of 12293). To get every symbol, request pages 1, 2, ... until you have
+//     the returned total (MT5Sugar.GetAllSymbols does that).
 //
 // Returns:
-//   - Slice of SymbolParams structs
-//   - Total number of symbols matching the filter
+//   - Slice of SymbolParams structs (one page)
+//   - Total number of symbols matching the filter (over all pages)
 //   - Error if request failed
 func (s *MT5Service) GetSymbolParamsMany(ctx context.Context, symbolName *string, sortType *pb.AH_SYMBOL_PARAMS_MANY_SORT_TYPE, pageNumber *int32, itemsPerPage *int32) ([]SymbolParams, int32, error) {
 	req := &pb.SymbolParamsManyRequest{
@@ -752,19 +787,21 @@ func (s *MT5Service) GetOpenedTickets(ctx context.Context) ([]int64, []int64, er
 //
 // Parameters:
 //   - ctx: Context for timeout and cancellation
-//   - from: Start time of history range
-//   - to: End time of history range
+//   - from: Start of the history range - a real moment (time.Now(), time.Date(..., time.Local), ...);
+//     it is sent as inputFromUtc, so the server converts it to broker time itself
+//   - to: End of the history range (a real moment, sent as inputToUtc)
 //   - sortMode: Sort mode from BMT5_ENUM_ORDER_HISTORY_SORT_TYPE enum
-//   - pageNumber: Page number for pagination (1-based)
+//   - pageNumber: Page number for pagination (1-based); 0 together with itemsPerPage 0 = no paging
 //   - itemsPerPage: Number of items per page
 //
 // Returns:
 //   - OrdersHistoryData containing orders and deals
 //   - Error if request failed
 func (s *MT5Service) GetOrderHistory(ctx context.Context, from time.Time, to time.Time, sortMode pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE, pageNumber int32, itemsPerPage int32) (*pb.OrdersHistoryData, error) {
+	// A Go time.Time is a moment, not a broker wall-clock time: send it in the *Utc fields.
 	req := &pb.OrderHistoryRequest{
-		InputFrom:     timestamppb.New(from),
-		InputTo:       timestamppb.New(to),
+		InputFromUtc:  timestamppb.New(from),
+		InputToUtc:    timestamppb.New(to),
 		InputSortMode: sortMode,
 		PageNumber:    pageNumber,
 		ItemsPerPage:  itemsPerPage,
@@ -785,28 +822,31 @@ func (s *MT5Service) GetOrderHistory(ctx context.Context, from time.Time, to tim
 // Parameters:
 //   - ctx: Context for timeout and cancellation
 //   - sortType: Sort type from AH_ENUM_POSITIONS_HISTORY_SORT_TYPE enum
-//   - from: Optional start time for position open time filter (nil for no filter)
-//   - to: Optional end time for position open time filter (nil for no filter)
-//   - pageNumber: Optional page number for pagination (nil for page 1)
-//   - itemsPerPage: Optional items per page (nil for all items)
+//   - from: Optional start of the position OPEN time filter (nil for no filter). A real moment
+//     (time.Now(), time.Date(..., time.Local), ...): it is sent as position_open_time_from_utc
+//   - to: Optional end of the position OPEN time filter (nil for no filter), sent as position_open_time_to_utc
+//   - pageNumber: Optional page number for page-number paging (nil = no paging)
+//   - itemsPerPage: Optional items per page (nil = no paging; staging then answered all positions of the
+//     range, 19 of TotalCount 19). Compare len(HistoryPositions) with TotalCount. For long histories prefer
+//     cursor paging (PageToken/PageSize of pb.PositionsHistoryRequest via GetAccount().PositionsHistory) -
+//     MT5Sugar's history methods do that.
 //
 // Returns:
 //   - PositionsHistoryData containing closed positions
 //   - Error if request failed
 func (s *MT5Service) GetPositionsHistory(ctx context.Context, sortType pb.AH_ENUM_POSITIONS_HISTORY_SORT_TYPE, from *time.Time, to *time.Time, pageNumber *int32, itemsPerPage *int32) (*pb.PositionsHistoryData, error) {
 	req := &pb.PositionsHistoryRequest{
-		SortType:               sortType,
-		PositionOpenTimeFrom:   nil,
-		PositionOpenTimeTo:     nil,
-		PageNumber:             pageNumber,
-		ItemsPerPage:           itemsPerPage,
+		SortType:     sortType,
+		PageNumber:   pageNumber,
+		ItemsPerPage: itemsPerPage,
 	}
 
+	// A Go time.Time is a moment, not a broker wall-clock time: send it in the *Utc fields.
 	if from != nil {
-		req.PositionOpenTimeFrom = timestamppb.New(*from)
+		req.PositionOpenTimeFromUtc = timestamppb.New(*from)
 	}
 	if to != nil {
-		req.PositionOpenTimeTo = timestamppb.New(*to)
+		req.PositionOpenTimeToUtc = timestamppb.New(*to)
 	}
 
 	data, err := s.account.PositionsHistory(ctx, req)
@@ -970,7 +1010,10 @@ func (s *MT5Service) CheckOrder(ctx context.Context, req *pb.OrderCheckRequest) 
 		return nil, fmt.Errorf("CheckOrder failed: %w", err)
 	}
 
-	result := data.MqlTradeCheckResult
+	result := data.GetMqlTradeCheckResult()
+	if result == nil {
+		return nil, fmt.Errorf("CheckOrder failed: the reply has no check result")
+	}
 	return &OrderCheckResult{
 		ReturnedCode: result.ReturnedCode,
 		Balance:      result.BalanceAfterDeal,
@@ -1048,16 +1091,29 @@ func (s *MT5Service) StreamTicks(ctx context.Context, symbols []string) (<-chan 
 				if !ok {
 					return
 				}
-				tick := data.SymbolTick
-				tickCh <- &SymbolTick{
+				tick := data.GetSymbolTick()
+				if tick == nil {
+					continue // a message without a tick
+				}
+				out := &SymbolTick{
+					Symbol:     tick.Symbol,
 					Time:       tick.Time.AsTime(),
+					TimeUtc:    tick.TimeUtc.AsTime(),
 					Bid:        tick.Bid,
 					Ask:        tick.Ask,
 					Last:       tick.Last,
 					Volume:     tick.Volume,
 					TimeMS:     tick.TimeMsc,
+					TimeMSUtc:  tick.TimeMscUtc,
 					Flags:      tick.Flags,
 					VolumeReal: tick.VolumeReal,
+				}
+				// A consumer that stopped reading must not keep this goroutine (and the stream) alive.
+				select {
+				case tickCh <- out:
+				case <-ctx.Done():
+					outErrCh <- ctx.Err()
+					return
 				}
 			case err, ok := <-errCh:
 				if !ok {

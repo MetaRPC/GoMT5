@@ -74,8 +74,8 @@ After the call, the method returns a protobuf structure:
 
 ```protobuf
 message SymbolInfoMarginRateData {
-  double InitialMarginRate = 1;      // Initial margin for opening a position
-  double MaintenanceMarginRate = 2;  // Maintenance margin for holding a position
+  double MaintenanceMarginRate = 1;  // Maintenance margin for holding a position
+  double InitialMarginRate = 2;      // Initial margin for opening a position
 }
 ```
 

@@ -72,7 +72,9 @@ OrderSendRequest {
   optional uint64 expert_id = 9;                                // Expert Advisor ID (magic number)
   optional double stop_limit_price = 10;                        // StopLimit level of the order
   optional TMT5_ENUM_ORDER_TYPE_TIME expiration_time_type = 11; // Order expiration type
-  optional google.protobuf.Timestamp expiration_time = 12;      // Order expiration time (for ORDER_TIME_SPECIFIED type)
+  optional google.protobuf.Timestamp expiration_time = 12;      // Order expiration time (for ORDER_TIME_SPECIFIED type), broker server time
+  optional google.protobuf.Timestamp expiration_time_utc = 14;  // expiration_time in UTC: send either expiration_time or expiration_time_utc, not both
+  optional int32 quotes_wait_ms = 13;                           // How long OrderSend waits for the symbol's first quote, ms (default 5000, max 60000)
 }
 ```
 
@@ -103,15 +105,19 @@ OrderSendReply {
 | `Symbol`              | `string`                            | ✅       | Trading symbol (e.g., "EURUSD")                      |
 | `Operation`           | `TMT5_ENUM_ORDER_TYPE`              | ✅       | Order type (BUY=0, SELL=1, BUY_LIMIT=2, etc)         |
 | `Volume`              | `double`                            | ✅       | Order volume in lots                                 |
-| `Price`               | `double`                            | optional | Order price (required for pending orders)            |
-| `Slippage`            | `uint64`                            | optional | Maximum price deviation (slippage) in points         |
-| `StopLoss`            | `double`                            | optional | Stop loss price level                                |
-| `TakeProfit`          | `double`                            | optional | Take profit price level                              |
-| `Comment`             | `string`                            | optional | Order comment                                        |
-| `ExpertId`            | `uint64`                            | optional | Expert Advisor ID (magic number)                     |
-| `StopLimitPrice`      | `double`                            | optional | StopLimit level (for STOP_LIMIT orders)              |
-| `ExpirationTimeType`  | `TMT5_ENUM_ORDER_TYPE_TIME`         | optional | Order expiration type (GTC, DAY, SPECIFIED, etc)     |
-| `ExpirationTime`      | `google.protobuf.Timestamp`         | optional | Expiration time (for SPECIFIED type)                 |
+| `Price`               | `*float64`                          | optional | Order price (required for pending orders)            |
+| `Slippage`            | `*uint64`                           | optional | Maximum price deviation (slippage) in points         |
+| `StopLoss`            | `*float64`                          | optional | Stop loss price level                                |
+| `TakeProfit`          | `*float64`                          | optional | Take profit price level                              |
+| `Comment`             | `*string`                           | optional | Order comment                                        |
+| `ExpertId`            | `*uint64`                           | optional | Expert Advisor ID (magic number)                     |
+| `StopLimitPrice`      | `*float64`                          | optional | StopLimit level (for STOP_LIMIT orders)              |
+| `ExpirationTimeType`  | `*TMT5_ENUM_ORDER_TYPE_TIME`        | optional | Order expiration type (GTC, DAY, SPECIFIED, etc)     |
+| `ExpirationTime`      | `*timestamppb.Timestamp`            | optional | Expiration time (for SPECIFIED type), broker server time |
+| `ExpirationTimeUtc`   | `*timestamppb.Timestamp`            | optional | Expiration time in UTC (send this or `ExpirationTime`, not both) |
+| `QuotesWaitMs`        | `*int32`                            | optional | How long to wait for the symbol's first quote, ms (default 5000, max 60000) |
+
+Optional fields are pointers in Go: take the address of a variable (`Price: &price`).
 
 ---
 
@@ -172,7 +178,7 @@ OrderSendReply {
 * **Default timeout:** If context has no deadline, a default `30s` timeout is applied automatically.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
 * **Use OrderCheck:** Validate orders before sending with OrderCheck method.
-* **Slippage:** Deviation parameter controls maximum acceptable slippage.
+* **Slippage:** The `Slippage` parameter (points) controls maximum acceptable price deviation.
 
 ---
 
@@ -184,6 +190,7 @@ OrderSendReply {
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -193,8 +200,17 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
     defer cancel()

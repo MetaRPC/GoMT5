@@ -14,7 +14,7 @@
 
    STEP 1: CREATE MT5ACCOUNT & CONNECT
       • NewMT5Account() - Initialize account
-      • Connect() - Connect to MT5 terminal
+      • ConnectEx() - Connect to MT5 cluster
 
    STEP 2: ORDER CALCULATIONS (SAFE - READ-ONLY)
       • OrderCalcMargin() - Calculate required margin for order
@@ -33,13 +33,13 @@
 
  ⚠️  SAFETY WARNINGS:
    • ALWAYS use DEMO accounts for testing
-   • Check account type before running (use capabilities check)
+   • Check account type before running (AccountSummary().AccountTradeMode, printed by demo 1)
    • Understand each operation before executing
    • Real money accounts require additional safeguards
    • This demo is for EDUCATIONAL purposes only
 
  💡 RECOMMENDED WORKFLOW:
-   1. Verify you're on DEMO account: go run main.go capabilities
+   1. Verify you're on DEMO account: go run main.go 1 (Trade Mode: MRPC_ACCOUNT_TRADE_MODE_DEMO)
    2. Understand calculations and validation (STEP 2-3)
    3. Only then proceed to trading operations (STEP 4)
 
@@ -90,6 +90,8 @@ func RunTrading02() error {
 	if cfg.ApiKey != "" {
 		account.ApiKey = cfg.ApiKey
 	}
+	// Runs however the demo ends: the terminal is disconnected (stopped) and the gRPC connection closed.
+	// Errors after the connection below are returned (not helpers.Fatal, which exits at once and skips this).
 	defer account.DisconnectAndClose()
 	fmt.Printf("✓ MT5Account created (UUID: %s)\n", account.Id)
 
@@ -104,16 +106,17 @@ func RunTrading02() error {
 		MtClusterName: cfg.MtCluster,
 	}
 
-	// Use context timeout for ConnectEx (replaces old TerminalReadinessWaitingTimeoutSeconds)
+	// The server waits up to ConnectExRequest.TimeoutSeconds (default 120 s) for the terminal to log in;
+	// the call's own deadline must be longer than that.
 	connectCtx, connectCancel := context.WithTimeout(ctx, 180*time.Second)
 	defer connectCancel()
 
 	connectData, err := account.ConnectEx(connectCtx, connectExReq)
-	helpers.Fatal(err, "ConnectEx failed")
+	if err != nil {
+		return fmt.Errorf("ConnectEx failed: %w", err)
+	}
 
-	// CRITICAL: Update account GUID with the one returned by server
-	account.TerminalInstanceGuid = connectData.TerminalInstanceGuid
-	account.Id = mt5.ParseGuidSafe(connectData.TerminalInstanceGuid)
+	// ConnectEx has stored the terminal GUID in the account (account.TerminalInstanceGuid / account.Id)
 	fmt.Printf("✓ Connected (Terminal GUID: %s)\n", connectData.TerminalInstanceGuid)
 
 	// ═══════════════════════════════════════════════════════════════════════
@@ -135,7 +138,9 @@ func RunTrading02() error {
 		Symbol: cfg.TestSymbol,
 	}
 	tickData, err := account.SymbolInfoTick(ctx, tickReq)
-	helpers.Fatal(err, "SymbolInfoTick failed")
+	if err != nil {
+		return fmt.Errorf("SymbolInfoTick failed: %w", err)
+	}
 
 	// Calculate margin for a BUY order
 	marginReq := &pb.OrderCalcMarginRequest{
@@ -181,8 +186,27 @@ func RunTrading02() error {
 		fmt.Printf("  Potential Profit/Loss:         %.2f (spread loss)\n", profitData.Profit)
 	}
 
-	// Calculate profit with 10 pips profit target
-	pipSize := 0.0001 // For EURUSD, 1 pip = 0.0001
+	// Calculate profit with 10 pips profit target.
+	// A pip is 10 points on 5- and 3-digit symbols (EURUSD: point 0.00001, pip 0.0001; USDJPY: pip 0.01),
+	// otherwise 1 point: read the symbol's point and digits instead of assuming EURUSD.
+	pointData, err := account.SymbolInfoDouble(ctx, &pb.SymbolInfoDoubleRequest{
+		Symbol: cfg.TestSymbol,
+		Type:   pb.SymbolInfoDoubleProperty_SYMBOL_POINT,
+	})
+	if err != nil {
+		return fmt.Errorf("SymbolInfoDouble(POINT) failed: %w", err)
+	}
+	digitsData, err := account.SymbolInfoInteger(ctx, &pb.SymbolInfoIntegerRequest{
+		Symbol: cfg.TestSymbol,
+		Type:   pb.SymbolInfoIntegerProperty_SYMBOL_DIGITS,
+	})
+	if err != nil {
+		return fmt.Errorf("SymbolInfoInteger(DIGITS) failed: %w", err)
+	}
+	pipSize := pointData.Value
+	if digitsData.Value == 3 || digitsData.Value == 5 {
+		pipSize *= 10
+	}
 	targetPrice := tickData.Ask + (10 * pipSize)
 	profitTargetReq := &pb.OrderCalcProfitRequest{
 		OrderType:  pb.ENUM_ORDER_TYPE_TF_ORDER_TYPE_TF_BUY,
@@ -208,11 +232,25 @@ func RunTrading02() error {
 	//      Validate order parameters BEFORE sending to broker.
 	//      Returns: Simulated balance/equity/margin after deal.
 	//      SAFE operation - no trades executed (dry-run).
-	//      ⚠️  NOTE: Often fails on DEMO accounts (broker limitation)
+	//      ⚠️  NOTE: The filling mode must be one the symbol allows
 	// ══════════════════════════════════════════════════════════════
 	fmt.Println("\n3.1. OrderCheck() - Validate order parameters")
 
-	// Create order check request with IOC filling (most compatible)
+	// The filling mode must be one the symbol allows (SYMBOL_FILLING_MODE flags: 1 = FOK, 2 = IOC);
+	// with a mode the symbol does not allow, the check fails.
+	typeFilling := pb.MRPC_ENUM_ORDER_TYPE_FILLING_ORDER_FILLING_RETURN
+	fillingData, err := account.SymbolInfoInteger(ctx, &pb.SymbolInfoIntegerRequest{
+		Symbol: cfg.TestSymbol,
+		Type:   pb.SymbolInfoIntegerProperty_SYMBOL_FILLING_MODE,
+	})
+	if err == nil {
+		if fillingData.Value&1 != 0 {
+			typeFilling = pb.MRPC_ENUM_ORDER_TYPE_FILLING_ORDER_FILLING_FOK
+		} else if fillingData.Value&2 != 0 {
+			typeFilling = pb.MRPC_ENUM_ORDER_TYPE_FILLING_ORDER_FILLING_IOC
+		}
+	}
+
 	orderCheckReq := &pb.OrderCheckRequest{
 		MqlTradeRequest: &pb.MrpcMqlTradeRequest{
 			Action:      pb.MRPC_ENUM_TRADE_REQUEST_ACTIONS_TRADE_ACTION_DEAL,
@@ -223,7 +261,7 @@ func RunTrading02() error {
 			StopLoss:    0.0,
 			TakeProfit:  0.0,
 			Deviation:   10,
-			TypeFilling: pb.MRPC_ENUM_ORDER_TYPE_FILLING_ORDER_FILLING_IOC, // IOC - most compatible
+			TypeFilling: typeFilling, // a filling mode the symbol allows
 			TypeTime:    pb.MRPC_ENUM_ORDER_TYPE_TIME_ORDER_TIME_GTC,
 			Comment:     "OrderCheck validation",
 		},
@@ -231,18 +269,9 @@ func RunTrading02() error {
 
 	checkData, err := account.OrderCheck(ctx, orderCheckReq)
 	if err != nil {
-		// OrderCheck failed - this is EXPECTED on demo accounts
-		fmt.Println("  ❌ OrderCheck FAILED (expected on demo accounts)")
+		fmt.Println("  ❌ OrderCheck FAILED")
 		fmt.Printf("     Error: %v\n", err)
-
-		fmt.Println("\n  ℹ️  This is a known limitation:")
-		fmt.Println("     • DEMO accounts: OrderCheck often not supported by broker")
-		fmt.Println("     • gRPC gateway: May have null-check issues with Timestamp")
-		fmt.Println("     • Workaround: Use OrderCalcMargin() for validation (step 2.1)")
-		fmt.Println("     • OrderSend() will work despite OrderCheck failure")
-		fmt.Println()
 	} else if checkData != nil && checkData.MqlTradeCheckResult != nil {
-		// OrderCheck succeeded!
 		result := checkData.MqlTradeCheckResult
 		fmt.Println("  ✅ OrderCheck SUCCESS!")
 		fmt.Printf("     Return Code:        %d\n", result.ReturnedCode)
@@ -253,10 +282,14 @@ func RunTrading02() error {
 		fmt.Printf("     Free Margin After:  %.2f\n", result.FreeMargin)
 		fmt.Printf("     Margin Level:       %.2f%%\n\n", result.MarginLevel)
 
+		// OrderCheck returns 0 on successful validation (unlike OrderSend which returns 10009)
 		if result.ReturnedCode == 0 {
-			fmt.Println("  ✓ Order validation PASSED - safe to proceed with OrderSend()")
+			fmt.Println("  ✓ Order validation PASSED – safe to proceed with OrderSend()")
 		} else {
-			fmt.Printf("  ⚠️  Validation returned code %d - check before trading\n", result.ReturnedCode)
+			// Use helper from errors.go to get human-readable error description
+			fmt.Printf("  ⚠️  Validation failed: %s (code: %d)\n",
+				mt5.GetRetCodeMessage(uint32(result.ReturnedCode)),
+				result.ReturnedCode)
 		}
 	}
 
@@ -302,9 +335,10 @@ func RunTrading02() error {
 		}
 		fmt.Printf("    Comment:                     %s\n", sendData.Comment)
 
-		// Check if order executed successfully using helper
-		// This demonstrates proper ReturnedCode validation
-		if helpers.CheckRetCode(sendData.ReturnedCode, "Order execution") {
+		// Check if order executed successfully using helper from errors.go
+		if mt5.IsRetCodeSuccess(sendData.ReturnedCode) {
+			fmt.Printf("    ✓ Order EXECUTED successfully!\n")
+			// The position opened by a market order has the ticket of that order
 			orderTicket := sendData.Order
 
 			// ══════════════════════════════════════════════════════════════
@@ -334,8 +368,14 @@ func RunTrading02() error {
 				fmt.Printf("    Take Profit:                 %.5f\n", takeProfit)
 				fmt.Printf("    Comment:                     %s\n", modifyData.Comment)
 
-				// Check modification result using helper
-				helpers.CheckRetCode(modifyData.ReturnedCode, "Position modification")
+				// Check if modification was successful using helper from errors.go
+				if mt5.IsRetCodeSuccess(modifyData.ReturnedCode) {
+					fmt.Printf("    ✓ Position MODIFIED successfully!\n")
+				} else {
+					fmt.Printf("    ❌ Modification failed: %s (code: %d)\n",
+						mt5.GetRetCodeMessage(modifyData.ReturnedCode),
+						modifyData.ReturnedCode)
+				}
 			}
 
 			// ══════════════════════════════════════════════════════════════
@@ -359,11 +399,19 @@ func RunTrading02() error {
 				fmt.Printf("    Description:                 %s\n", closeData.ReturnedCodeDescription)
 				fmt.Printf("    Close Mode:                  %v\n", closeData.CloseMode)
 
-				// Check close result using helper
-				helpers.CheckRetCode(closeData.ReturnedCode, "Position close")
+				// Check if position closed successfully using helper from errors.go
+				if mt5.IsRetCodeSuccess(closeData.ReturnedCode) {
+					fmt.Printf("    ✓ Position CLOSED successfully!\n")
+				} else {
+					fmt.Printf("    ❌ Close failed: %s (code: %d)\n",
+						mt5.GetRetCodeMessage(closeData.ReturnedCode),
+						closeData.ReturnedCode)
+				}
 			}
 		} else {
-			fmt.Printf("    ✗ Order execution FAILED - check return code and comment\n")
+			fmt.Printf("    ❌ Order failed: %s (code: %d)\n",
+				mt5.GetRetCodeMessage(sendData.ReturnedCode),
+				sendData.ReturnedCode)
 		}
 	}
 
@@ -373,12 +421,12 @@ func RunTrading02() error {
 	fmt.Println("\n\nFinal: Disconnecting...")
 	fmt.Println("───────────────────────────────────────────────────────────")
 
-	// Disconnect and close connection
-	disconnectCtx, disconnectCancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer disconnectCancel()
-	account.Disconnect(disconnectCtx, &pb.DisconnectRequest{})
-	account.Close()
-	fmt.Println("✓ Connection closed")
+	// Disconnect (stops the terminal) and close the gRPC connection
+	if err := account.DisconnectAndClose(); err != nil {
+		helpers.PrintShortError(err, "Disconnect failed")
+	} else {
+		fmt.Println("✓ Disconnected, connection closed")
+	}
 
 	fmt.Println("\n═══════════════════════════════════════════════════════════")
 	fmt.Println("✓ DEMO COMPLETED SUCCESSFULLY")

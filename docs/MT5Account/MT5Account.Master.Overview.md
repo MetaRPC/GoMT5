@@ -47,25 +47,34 @@
 
 ## 🔌 Usage pattern (gRPC protocol)
 
-Every method follows gRPC client-server pattern:
+Every method is called on an `MT5Account` (package `github.com/MetaRPC/GoMT5/package/Helpers`, imported as `mt5`), which wraps the gRPC connection, sends the terminal id and API key as metadata and unwraps the reply:
 
 ```go
-// Create client connection
-conn, err := grpc.Dial("mt5.mrpc.pro:443", grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
+// Create the account (opens the gRPC connection)
+account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
 if err != nil {
     log.Fatal(err)
 }
-defer conn.Close()
+defer account.Close()
 
-// Create MT5Account client
-client := pb.NewAccountHelperClient(conn)
+// account.ApiKey is sent as "apikey" metadata (MRPC_API_KEY env var, otherwise TRIAL)
+
+// Connect the terminal
+_, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{
+    User:          591129415,
+    Password:      "password",
+    MtClusterName: "MetaQuotes-Demo",
+})
+if err != nil {
+    log.Fatal(err)
+}
 
 // Make request with context
 ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 defer cancel()
 
-// Call method
-result, err := client.AccountSummary(ctx, &pb.AccountSummaryRequest{})
+// Call method: returns the Data payload, or an error
+result, err := account.AccountSummary(ctx, &pb.AccountSummaryRequest{})
 if err != nil {
     log.Fatalf("Failed: %v", err)
 }
@@ -79,13 +88,13 @@ fmt.Printf("Balance: $%.2f\n", result.AccountBalance)
 Every method follows the same shape:
 
 * **Proto Service/Method:** `Service.Method(Request) → Reply`
-* **Go client:** `client.Method(ctx, &Request{...})`
-* **Reply structure:** Contains either `Data` payload or `Error`
+* **Go call:** `account.Method(ctx, &pb.Request{...})` returns `(*pb.MethodData, error)`
+* **Reply structure:** The gRPC reply contains either `Data` payload or `Error`; `MT5Account` returns the `Data` and turns `Error` into a Go error (`*mt5.ApiError`)
 * **Return codes:** Trading operations return status codes (10009 = success)
 
 **Timestamps:** Use `google.protobuf.Timestamp` (convert with `timestamppb.New(time)` and `.AsTime()`).
 
-**Streaming methods:** Return `stream` object, use `stream.Recv()` in loop to receive updates.
+**Streaming methods:** Return two channels (`<-chan *pb.XxxData`, `<-chan error`); read them in a loop / goroutine and cancel the context to stop the stream.
 
 ---
 
@@ -189,7 +198,7 @@ Every method follows the same shape:
 * [SymbolInfoMarginRate.md](./6.%20Additional_Methods/SymbolInfoMarginRate.md) - Margin rates for symbol and order type
 * [SymbolInfoSessionQuote.md](./6.%20Additional_Methods/SymbolInfoSessionQuote.md) - Quote session times
 * [SymbolInfoSessionTrade.md](./6.%20Additional_Methods/SymbolInfoSessionTrade.md) - Trade session times
-* [SymbolParamsMany.md](./6.%20Additional_Methods/SymbolParamsMany.md) - Detailed parameters for multiple symbols (112 fields!)
+* [SymbolParamsMany.md](./6.%20Additional_Methods/SymbolParamsMany.md) - Detailed parameters for multiple symbols (116 fields!)
 * [TickValueWithSize.md](./6.%20Additional_Methods/TickValueWithSize.md) - Tick value and size information for symbols
 
 ---
@@ -280,7 +289,7 @@ Every method follows the same shape:
 - Complete access to all MT5 functions
 - Highest complexity
 
-**Location:** Core gRPC client (generated from proto files)
+**Location:** `package/Helpers/MT5Account.go` (on top of the gRPC clients generated from the proto files in `package/`)
 
 **Documentation:** This folder (you are here!)
 
@@ -303,7 +312,7 @@ Every method follows the same shape:
 
 **Location:** `examples/mt5/MT5Service.go`
 
-**Documentation:** [MT5Service.Overview.md](../API_Reference/MT5Service.md) *(if exists)*
+**Documentation:** [MT5Service.Overview.md](../MT5Service/MT5Service.Overview.md) *(if exists)*
 
 ---
 
@@ -325,7 +334,7 @@ Every method follows the same shape:
 
 **Location:** `examples/mt5/MT5Sugar.go`
 
-**Documentation:** [MT5Sugar.API_Overview.md](../API_Reference/MT5Sugar.md)
+**Documentation:** [MT5Sugar.API_Overview.md](../MT5Sugar/MT5Sugar.API_Overview.md)
 
 ---
 
@@ -379,7 +388,7 @@ Every method follows the same shape:
 
 **Goal:** Rapid strategy development with production-ready convenience methods.
 
-**Documentation:** [MT5Sugar.API_Overview.md](../API_Reference/MT5Sugar.md)
+**Documentation:** [MT5Sugar.API_Overview.md](../MT5Sugar/MT5Sugar.API_Overview.md)
 
 ---
 
@@ -416,7 +425,7 @@ Always check `ReturnedCode` field in trading operations.
 * **Handle errors:** Network/protocol errors can occur.
 * **Context management:** Always use context with timeout for requests.
 * **Stream cleanup:** Cancel context to stop streams properly.
-* **UTC timestamps:** All times are in UTC, not local time.
+* **Time zones:** Time fields are in the broker server's time zone; most of them have a `*Utc` sibling (e.g. `ServerTime` / `ServerTimeUtc`), and time inputs accept either the plain or the `*Utc` field.
 * **Broker limitations:** Not all brokers support all features (DOM, hedging, etc.).
 
 

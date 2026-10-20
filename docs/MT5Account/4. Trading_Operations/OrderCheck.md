@@ -77,7 +77,8 @@ MrpcMqlTradeRequest {
   ENUM_ORDER_TYPE_TF order_type = 11;                   // Type of order
   MRPC_ENUM_ORDER_TYPE_FILLING type_filling = 12;       // Order execution type (FOK, IOC, RETURN)
   MRPC_ENUM_ORDER_TYPE_TIME type_time = 13;             // Order expiration type
-  google.protobuf.Timestamp expiration = 14;            // Order expiration time
+  google.protobuf.Timestamp expiration = 14;            // Order expiration time (broker server time)
+  google.protobuf.Timestamp expiration_utc = 18;        // expiration in UTC: send either expiration or expiration_utc, not both
   string comment = 15;                                  // Order comment
   uint64 position = 16;                                 // Position ticket
   uint64 position_by = 17;                              // Ticket of an opposite position
@@ -110,7 +111,8 @@ MrpcMqlTradeRequest {
 | `OrderType`                   | `ENUM_ORDER_TYPE_TF`                 | ✅       | Order type: BUY (0), SELL (1), BUY_LIMIT (2), etc     |
 | `TypeFilling`                 | `MRPC_ENUM_ORDER_TYPE_FILLING`       | optional | Filling type: FOK (0), IOC (1), RETURN (2), BOC (3)   |
 | `TypeTime`                    | `MRPC_ENUM_ORDER_TYPE_TIME`          | optional | Time type: GTC (0), DAY (1), SPECIFIED (2)            |
-| `Expiration`                  | `google.protobuf.Timestamp`          | optional | Expiration time                                       |
+| `Expiration`                  | `*timestamppb.Timestamp`             | optional | Expiration time (broker server time)                  |
+| `ExpirationUtc`               | `*timestamppb.Timestamp`             | optional | Expiration time in UTC (send this or `Expiration`, not both) |
 | `Comment`                     | `string`                             | optional | Order comment                                         |
 | `Position`                    | `uint64`                             | optional | Position ticket                                       |
 | `PositionBy`                  | `uint64`                             | optional | Opposite position ticket                              |
@@ -127,7 +129,7 @@ MrpcMqlTradeRequest {
 
 | Field              | Type     | Description                                           |
 | ------------------ | -------- | ----------------------------------------------------- |
-| `ReturnedCode`     | `uint32` | Return code (10009 = valid, other = error)            |
+| `ReturnedCode`     | `uint32` | Return code (0 = check passed; unlike OrderSend, which uses 10009) |
 | `BalanceAfterDeal` | `double` | Balance after the execution of the deal               |
 | `EquityAfterDeal`  | `double` | Equity after the execution of the deal                |
 | `Profit`           | `double` | Floating profit                                       |
@@ -197,7 +199,7 @@ MrpcMqlTradeRequest {
 * **Default timeout:** If context has no deadline, a default `10s` timeout is applied automatically.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
 * **No actual trade:** OrderCheck does NOT place real orders.
-* **Return codes:** ReturnedCode 10009 = valid order, other values indicate errors.
+* **Return codes:** `MqlTradeCheckResult.ReturnedCode` 0 = check passed (OrderSend uses 10009 for success). A check that fails is usually returned as an error (`err != nil`, an `*mt5.ApiError` with the trade code and description).
 * **Nested structure:** Request requires wrapping order parameters in MqlTradeRequest field.
 
 ---
@@ -210,6 +212,7 @@ MrpcMqlTradeRequest {
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -219,8 +222,17 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
@@ -246,7 +258,7 @@ func main() {
     }
 
     result := data.MqlTradeCheckResult
-    if result.ReturnedCode == 10009 {
+    if result.ReturnedCode == 0 {
         fmt.Println("Order is valid!")
         fmt.Printf("Required margin: %.2f\n", result.Margin)
         fmt.Printf("Free margin after: %.2f\n", result.FreeMargin)
@@ -278,7 +290,7 @@ func CheckMarginBeforeTrade(account *mt5.MT5Account, symbol string, volume float
     }
 
     result := data.MqlTradeCheckResult
-    if result.ReturnedCode != 10009 {
+    if result.ReturnedCode != 0 {
         return false, fmt.Errorf("order invalid: %s", result.Comment)
     }
 
@@ -318,7 +330,7 @@ func FindMaxLotSize(account *mt5.MT5Account, symbol string) (float64, error) {
         }
 
         result := data.MqlTradeCheckResult
-        if result.ReturnedCode == 10009 && result.FreeMargin > 0 {
+        if result.ReturnedCode == 0 && result.FreeMargin > 0 {
             fmt.Printf("Max lot size: %.2f (Required margin: %.2f)\n",
                 volume, result.Margin)
             return volume, nil
@@ -372,7 +384,7 @@ func ValidateAndSend(account *mt5.MT5Account, symbol string, volume float64, isB
     }
 
     result := checkData.MqlTradeCheckResult
-    if result.ReturnedCode != 10009 {
+    if result.ReturnedCode != 0 {
         return 0, fmt.Errorf("order invalid: %s", result.Comment)
     }
 
@@ -422,7 +434,7 @@ func ValidateStopLevels(account *mt5.MT5Account, symbol string, price, sl, tp fl
     }
 
     result := data.MqlTradeCheckResult
-    if result.ReturnedCode != 10009 {
+    if result.ReturnedCode != 0 {
         return fmt.Errorf("invalid SL/TP levels: %s", result.Comment)
     }
 
@@ -479,7 +491,7 @@ func SafeOrderSend(account *mt5.MT5Account, symbol string, operation pb.TMT5_ENU
     }
 
     result := checkData.MqlTradeCheckResult
-    if result.ReturnedCode != 10009 {
+    if result.ReturnedCode != 0 {
         return 0, fmt.Errorf("invalid order: %s", result.Comment)
     }
 

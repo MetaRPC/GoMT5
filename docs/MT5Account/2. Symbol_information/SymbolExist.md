@@ -20,7 +20,7 @@
 
 * **What it is.** Checks if a trading symbol exists in the MT5 terminal.
 * **Why you need it.** Validate symbol names before requesting data or placing orders.
-* **Custom symbols.** IsCustom flag indicates whether the symbol is user-created or standard broker symbol.
+* **Custom symbols.** `IsCustom` flag indicates whether the symbol is user-created or standard broker symbol.
 
 ---
 
@@ -50,7 +50,7 @@ type MT5Account struct {
 }
 
 // SymbolExist checks if a symbol with specified name exists.
-// Returns Exist flag and IsCustom flag indicating if it's a custom symbol.
+// Returns Exists flag and IsCustom flag indicating if it's a custom symbol.
 func (a *MT5Account) SymbolExist(
     ctx context.Context,
     req *pb.SymbolExistRequest,
@@ -61,7 +61,7 @@ func (a *MT5Account) SymbolExist(
 
 ```protobuf
 SymbolExistRequest {
-  string Symbol = 1;  // Symbol name to check (e.g., "EURUSD")
+  string name = 1;  // Symbol name to check (e.g., "EURUSD")
 }
 ```
 
@@ -83,13 +83,13 @@ SymbolExistReply {
 | Parameter | Type                        | Description                                   |
 | --------- | --------------------------- | --------------------------------------------- |
 | `ctx`     | `context.Context`           | Context for deadline/timeout and cancellation |
-| `req`     | `*pb.SymbolExistRequest`    | Request with Symbol name                      |
+| `req`     | `*pb.SymbolExistRequest`    | Request with `Name` (symbol name)             |
 
 **Request fields:**
 
 | Field    | Type     | Description                               |
 | -------- | -------- | ----------------------------------------- |
-| `Symbol` | `string` | Symbol name to check (e.g., "EURUSD")     |
+| `Name`   | `string` | Symbol name to check (e.g., "EURUSD")     |
 
 ---
 
@@ -120,6 +120,7 @@ SymbolExistReply {
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -129,14 +130,23 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
 
     data, err := account.SymbolExist(ctx, &pb.SymbolExistRequest{
-        Symbol: "EURUSD",
+        Name: "EURUSD",
     })
     if err != nil {
         panic(err)
@@ -158,7 +168,7 @@ func ValidateAndTrade(account *mt5.MT5Account, symbol string, volume float64) er
 
     // First, check if symbol exists
     existData, err := account.SymbolExist(ctx, &pb.SymbolExistRequest{
-        Symbol: symbol,
+        Name: symbol,
     })
     if err != nil {
         return fmt.Errorf("failed to check symbol: %w", err)
@@ -183,7 +193,7 @@ func CheckSymbols(account *mt5.MT5Account, symbols []string) map[string]bool {
 
     for _, symbol := range symbols {
         data, err := account.SymbolExist(ctx, &pb.SymbolExistRequest{
-            Symbol: symbol,
+            Name: symbol,
         })
         if err != nil {
             results[symbol] = false
@@ -212,7 +222,7 @@ func GetCustomSymbols(account *mt5.MT5Account, symbols []string) []string {
 
     for _, symbol := range symbols {
         data, err := account.SymbolExist(ctx, &pb.SymbolExistRequest{
-            Symbol: symbol,
+            Name: symbol,
         })
         if err != nil || !data.Exists {
             continue
@@ -246,7 +256,7 @@ func (v *SymbolValidator) IsValid(symbol string) (bool, error) {
     defer cancel()
 
     data, err := v.account.SymbolExist(ctx, &pb.SymbolExistRequest{
-        Symbol: symbol,
+        Name: symbol,
     })
     if err != nil {
         return false, err
@@ -270,7 +280,7 @@ func SafeSymbolOperation(account *mt5.MT5Account, symbol string) error {
 
     // Validate symbol exists
     existData, err := account.SymbolExist(ctx, &pb.SymbolExistRequest{
-        Symbol: symbol,
+        Name: symbol,
     })
     if err != nil {
         return fmt.Errorf("validation error: %w", err)
@@ -294,7 +304,7 @@ func QuickSymbolCheck(account *mt5.MT5Account, symbol string) bool {
     defer cancel()
 
     data, err := account.SymbolExist(ctx, &pb.SymbolExistRequest{
-        Symbol: symbol,
+        Name: symbol,
     })
 
     return err == nil && data.Exists

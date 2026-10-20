@@ -13,6 +13,7 @@ MT5Sugar is the high-level API wrapper providing ultra-simple one-liner methods 
 - [Ping](#ping)
 - [GetAccount](#getaccount)
 - [GetService](#getservice)
+- [Disconnect](#disconnect)
 
 ### 💰 Account Information
 - [GetAccountInfo](#getaccountinfo)
@@ -67,6 +68,9 @@ MT5Sugar is the high-level API wrapper providing ultra-simple one-liner methods 
 - [ClosePosition](#closeposition)
 - [ClosePositionPartial](#closepositionpartial)
 - [CloseAllPositions](#closeallpositions)
+- [CloseAllBySymbol](#closeallbysymbol)
+- [ModifyPositionSL](#modifypositionsl)
+- [ModifyPositionTP](#modifypositiontp)
 - [ModifyPositionSLTP](#modifypositionsltp)
 
 ### 📜 History & Statistics
@@ -105,7 +109,7 @@ func NewMT5Sugar(user uint64, password string, grpcServer string) (*MT5Sugar, er
 |-----------|------|-------------|
 | user | uint64 | MT5 account login number |
 | password | string | MT5 account password |
-| grpcServer | string | gRPC server address (host:port, e.g., "mt5.server.com:443") |
+| grpcServer | string | gRPC server address (host:port, e.g., "mt5.mrpc.pro:443"; empty string = "mt5.mrpc.pro:443") |
 
 **Returns**
 
@@ -115,7 +119,7 @@ Returns `*MT5Sugar` instance ready for connection, or error if initialization fa
 
 ## QuickConnect
 
-Connects to MT5 terminal using cluster name (RECOMMENDED). This is the easiest connection method - just provide your broker's cluster name. Automatically sets up EURUSD as base chart symbol and uses 30-second timeout.
+Connects to MT5 terminal using cluster name (RECOMMENDED). This is the easiest connection method - just provide your broker's cluster name. Sends `ConnectEx` with the login and password given to NewMT5Sugar and `MtClusterName: clusterName` (nothing else), with a 30-second timeout.
 
 **Signature**
 ```go
@@ -166,16 +170,16 @@ Returns error with details if ping fails or connection is dead, nil if healthy.
 
 ## GetAccount
 
-Returns the underlying MT5Account instance for low-level operations. Use this when you need direct access to protobuf structures or maximum control over request parameters. Required for closing the gRPC connection.
+Returns the underlying MT5Account instance for low-level operations. Use this when you need direct access to protobuf structures or maximum control over request parameters. (To close the connection you can also call `Disconnect()` on the Sugar.)
 
 **Signature**
 ```go
-func (s *MT5Sugar) GetAccount() *MT5Account
+func (s *MT5Sugar) GetAccount() *helpers.MT5Account
 ```
 
 **Returns**
 
-Returns `*MT5Account` instance used by the underlying Service layer.
+Returns `*helpers.MT5Account` (package `github.com/MetaRPC/GoMT5/package/Helpers`) instance used by the underlying Service layer.
 
 ---
 
@@ -191,6 +195,21 @@ func (s *MT5Sugar) GetService() *MT5Service
 **Returns**
 
 Returns `*MT5Service` instance used by this Sugar wrapper.
+
+---
+
+## Disconnect
+
+Gracefully disconnects from the MT5 terminal and closes the gRPC connection (via `MT5Service.Disconnect` -> `MT5Account.DisconnectAndClose`). If `deleteOnDisconnect` is true, the terminal instance is deleted instead of stopped.
+
+**Signature**
+```go
+func (s *MT5Sugar) Disconnect(deleteOnDisconnect ...bool) error
+```
+
+**Returns**
+
+Returns error if the Disconnect RPC or closing the connection fails, nil on success (also nil for a nil Sugar).
 
 ---
 
@@ -320,7 +339,7 @@ Returns slice of `*pb.PositionInfo` with all open positions, or error if query f
 
 ## GetPositionByTicket
 
-Finds and returns a specific position by its ticket number. This is useful when you need detailed information about a position you opened earlier. Returns nil if position not found (may have been closed). Uses 5-second timeout.
+Finds and returns a specific position by its ticket number. This is useful when you need detailed information about a position you opened earlier. If no open position has this ticket (e.g. it was closed) it returns an error "position with ticket N not found". Uses 5-second timeout.
 
 **Signature**
 ```go
@@ -341,7 +360,7 @@ Returns `*pb.PositionInfo` for the position, or error if not found or query fail
 
 ## GetPositionsBySymbol
 
-Returns all open positions for a specific trading symbol. Filters positions by symbol name. Useful for monitoring exposure to a single currency pair or asset. Returns empty slice if no positions found. Uses 5-second timeout.
+Returns all open positions for a specific trading symbol. Filters positions by symbol name. Useful for monitoring exposure to a single currency pair or asset. Returns an empty (nil) slice if no positions found. Uses 5-second timeout.
 
 **Signature**
 ```go
@@ -377,7 +396,7 @@ Returns total number of open positions (int), or error if query fails.
 
 ## HasOpenPosition
 
-Checks if there are any open positions for a specific symbol. This is a quick boolean check - more efficient than GetPositionsBySymbol when you only need to know if positions exist. Uses 5-second timeout.
+Checks if there are any open positions for a specific symbol. This is a quick boolean wrapper around GetPositionsBySymbol (same request) for when you only need to know if positions exist. Uses 5-second timeout.
 
 **Signature**
 ```go
@@ -622,7 +641,7 @@ Returns minimum stop level in points (int64), or error if symbol not found.
 
 ## IsSymbolAvailable
 
-Checks if a symbol exists and is available for trading. This verifies both existence and trading permissions. More comprehensive than just checking if symbol name is valid. Uses 3-second timeout.
+Checks if a symbol exists and its data is synchronized: returns true only if SymbolExist reports it exists and IsSymbolSynchronized reports it synchronized. It does not check the symbol's trade mode or trading permissions. Uses 3-second timeout.
 
 **Signature**
 ```go
@@ -637,7 +656,7 @@ func (s *MT5Sugar) IsSymbolAvailable(symbol string) (bool, error)
 
 **Returns**
 
-Returns true if symbol exists and is tradeable, false otherwise, or error if query fails.
+Returns true if symbol exists and is synchronized, false otherwise, or error if query fails.
 
 ---
 
@@ -691,7 +710,7 @@ Returns position ticket number (uint64), or error if order rejected.
 
 ## BuyMarketWithPips
 
-Opens a BUY position with SL/TP specified in pips (not price!). This is more intuitive than BuyMarketWithSLTP - you specify risk/reward in pips and the method calculates exact prices automatically. Uses 10-second timeout.
+Opens a BUY position with SL/TP specified as distances (not prices). It calls `CalculateSLTP(symbol, "BUY", 0, stopLossPips, takeProfitPips)` (distances multiplied by the symbol's Point, from the current Ask) and then BuyMarketWithSLTP (10-second timeout).
 
 **Signature**
 ```go
@@ -704,8 +723,8 @@ func (s *MT5Sugar) BuyMarketWithPips(symbol string, volume, stopLossPips, takePr
 |-----------|------|-------------|
 | symbol | string | Trading symbol (e.g., "EURUSD") |
 | volume | float64 | Lot size (e.g., 0.1) |
-| stopLossPips | float64 | Stop Loss distance in pips from entry (e.g., 50) |
-| takeProfitPips | float64 | Take Profit distance in pips from entry (e.g., 100) |
+| stopLossPips | float64 | Stop Loss distance from entry in points (× Point; e.g., 50) |
+| takeProfitPips | float64 | Take Profit distance from entry in points (× Point; e.g., 100) |
 
 **Returns**
 
@@ -761,7 +780,7 @@ Returns position ticket number (uint64), or error if order rejected.
 
 ## SellMarketWithPips
 
-Opens a SELL position with SL/TP specified in pips (not price!). This is more intuitive than SellMarketWithSLTP - you specify risk/reward in pips and the method calculates exact prices automatically. Uses 10-second timeout.
+Opens a SELL position with SL/TP specified as distances (not prices). It calls `CalculateSLTP(symbol, "SELL", 0, stopLossPips, takeProfitPips)` (distances multiplied by the symbol's Point, from the current Bid) and then SellMarketWithSLTP (10-second timeout).
 
 **Signature**
 ```go
@@ -774,8 +793,8 @@ func (s *MT5Sugar) SellMarketWithPips(symbol string, volume, stopLossPips, takeP
 |-----------|------|-------------|
 | symbol | string | Trading symbol (e.g., "EURUSD") |
 | volume | float64 | Lot size (e.g., 0.1) |
-| stopLossPips | float64 | Stop Loss distance in pips from entry (e.g., 50) |
-| takeProfitPips | float64 | Take Profit distance in pips from entry (e.g., 100) |
+| stopLossPips | float64 | Stop Loss distance from entry in points (× Point; e.g., 50) |
+| takeProfitPips | float64 | Take Profit distance from entry in points (× Point; e.g., 100) |
 
 **Returns**
 
@@ -974,7 +993,7 @@ Returns error if close fails, volume invalid, or broker doesn't support partial 
 
 ## CloseAllPositions
 
-Closes all currently open positions across all symbols. Iterates through all positions and attempts to close each one. Continues even if some closes fail. Returns count of successfully closed positions. Uses 30-second timeout.
+Closes all currently open positions across all symbols (pending orders are not touched). Iterates through all positions and attempts to close each one. Continues even if some closes fail (failures are not reported). Returns count of successfully closed positions. Uses 30-second timeout for the whole loop.
 
 **Signature**
 ```go
@@ -983,7 +1002,58 @@ func (s *MT5Sugar) CloseAllPositions() (int, error)
 
 **Returns**
 
-Returns number of positions successfully closed (int), and error if operation fails.
+Returns number of positions successfully closed (int); error only if the position list cannot be read.
+
+---
+
+## CloseAllBySymbol
+
+Closes all open positions of one symbol. Same behaviour as CloseAllPositions, filtered by `symbol`. Uses 30-second timeout for the whole loop.
+
+**Signature**
+```go
+func (s *MT5Sugar) CloseAllBySymbol(symbol string) (int, error)
+```
+
+**Parameters**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| symbol | string | Trading symbol to close all positions for (e.g., "EURUSD") |
+
+**Returns**
+
+Returns number of positions successfully closed (int); error only if the position list cannot be read.
+
+---
+
+## ModifyPositionSL
+
+Modifies only the Stop Loss of an open position (sends `OrderModify` with Ticket and StopLoss). Use 0 to remove the Stop Loss (if the broker allows). Uses 10-second timeout.
+
+**Signature**
+```go
+func (s *MT5Sugar) ModifyPositionSL(ticket uint64, sl float64) error
+```
+
+**Returns**
+
+Returns error if modification rejected (return code other than 10009) or fails, nil on success.
+
+---
+
+## ModifyPositionTP
+
+Modifies only the Take Profit of an open position (sends `OrderModify` with Ticket and TakeProfit). Use 0 to remove the Take Profit (if the broker allows). Uses 10-second timeout.
+
+**Signature**
+```go
+func (s *MT5Sugar) ModifyPositionTP(ticket uint64, tp float64) error
+```
+
+**Returns**
+
+Returns error if modification rejected (return code other than 10009) or fails, nil on success.
 
 ---
 
@@ -1014,7 +1084,7 @@ Returns error if modification rejected or fails, nil on success.
 
 ## GetDealsToday
 
-Returns all closed positions (deals) from today (00:00 to now). Automatically calculates today's date range. Each deal contains full information: ticket, symbol, volume, profit, open/close times, etc. Uses 5-second timeout.
+Returns closed positions (deals) whose open time is today (00:00 to now, local clock; the request filters on position open time). Automatically calculates today's date range. Each deal contains full information: ticket, symbol, volume, profit, open/close times, etc. Uses 5-second timeout.
 
 **Signature**
 ```go
@@ -1029,7 +1099,7 @@ Returns slice of `*pb.PositionHistoryInfo` with today's deals, or error if query
 
 ## GetDealsYesterday
 
-Returns all closed positions (deals) from yesterday (full day). Automatically calculates yesterday's date range (00:00 to 23:59:59). Useful for analyzing previous day's performance. Uses 5-second timeout.
+Returns closed positions (deals) whose open time is yesterday (full day; filter on position open time). Automatically calculates yesterday's date range (00:00 to 23:59:59). Useful for analyzing previous day's performance. Uses 5-second timeout.
 
 **Signature**
 ```go
@@ -1044,7 +1114,7 @@ Returns slice of `*pb.PositionHistoryInfo` with yesterday's deals, or error if q
 
 ## GetDealsThisWeek
 
-Returns all closed positions (deals) from this week. Week starts on Monday. Automatically calculates start of week (Monday 00:00) to current time. Useful for weekly performance tracking. Uses 5-second timeout.
+Returns closed positions (deals) whose open time is in this week (filter on position open time). Week starts on Monday. Automatically calculates start of week (Monday 00:00) to current time. Useful for weekly performance tracking. Uses 5-second timeout.
 
 **Signature**
 ```go
@@ -1059,7 +1129,7 @@ Returns slice of `*pb.PositionHistoryInfo` with this week's deals, or error if q
 
 ## GetDealsThisMonth
 
-Returns all closed positions (deals) from this month. Automatically calculates start of month (1st day 00:00) to current time. Useful for monthly performance tracking and reports. Uses 30-second timeout (longer than day/week queries due to potentially large data volume).
+Returns closed positions (deals) whose open time is in this month (filter on position open time). Automatically calculates start of month (1st day 00:00) to current time. Useful for monthly performance tracking and reports. Uses 30-second timeout (longer than day/week queries due to potentially large data volume).
 
 **Signature**
 ```go
@@ -1074,7 +1144,7 @@ Returns slice of `*pb.PositionHistoryInfo` with this month's deals, or error if 
 
 ## GetDealsDateRange
 
-Returns all closed positions (deals) within a custom date range. You specify exact start and end times. Useful for custom period analysis, backtesting, or generating reports for specific time frames. Uses 30-second timeout (longer to accommodate large date ranges with many deals).
+Returns closed positions (deals) whose open time is within a custom date range. You specify exact start and end times. Useful for custom period analysis, backtesting, or generating reports for specific time frames. Uses 30-second timeout (longer to accommodate large date ranges with many deals).
 
 **Signature**
 ```go
@@ -1096,7 +1166,7 @@ Returns slice of `*pb.PositionHistoryInfo` with deals in range, or error if quer
 
 ## GetProfitToday
 
-Calculates and returns total realized profit/loss from today's closed positions. This sums up the profit from all deals closed today (00:00 to now). Positive means net profit, negative means net loss. Returns 0 if no deals today. Uses 5-second timeout.
+Calculates and returns total realized profit/loss from today's closed positions. This sums the Profit field of GetDealsToday() (swap and commission are not included). Positive means net profit, negative means net loss. Returns 0 if no deals today. Uses 5-second timeout.
 
 **Signature**
 ```go
@@ -1111,7 +1181,7 @@ Returns total profit/loss from today's deals as float64, or error if query fails
 
 ## GetProfitThisWeek
 
-Calculates and returns total realized profit/loss from this week's deals. This sums up profit from all deals closed this week (Monday to now). Positive means net profit, negative means net loss. Returns 0 if no deals this week. Uses 5-second timeout.
+Calculates and returns total realized profit/loss from this week's deals. This sums the Profit field of GetDealsThisWeek() (swap and commission are not included). Positive means net profit, negative means net loss. Returns 0 if no deals this week. Uses 5-second timeout.
 
 **Signature**
 ```go
@@ -1126,7 +1196,7 @@ Returns total profit/loss from this week's deals as float64, or error if query f
 
 ## GetProfitThisMonth
 
-Calculates and returns total realized profit/loss from this month's deals. This sums up profit from all deals closed this month (1st to now). Positive means net profit, negative means net loss. Returns 0 if no deals this month. Uses 5-second timeout.
+Calculates and returns total realized profit/loss from this month's deals. This sums the Profit field of GetDealsThisMonth() (swap and commission are not included). Positive means net profit, negative means net loss. Returns 0 if no deals this month. Uses 30-second timeout (via GetDealsThisMonth).
 
 **Signature**
 ```go
@@ -1161,9 +1231,9 @@ Returns `*DailyStats` structure with today's performance, or error if query fail
 Calculates the optimal lot size based on risk percentage with automatic margin limit protection. This is THE MOST IMPORTANT risk management tool - automatically calculates position size considering BOTH risk and margin limits.
 
 **Algorithm:**
-1. Calculate size based on risk: (Balance * RiskPercent / 100) / (StopLossPips * PipValue)
-2. Calculate max size based on free margin (with 80% safety buffer)
-3. Return MINIMUM of the two - prevents margin calls!
+1. Calculate size based on risk: (Balance * RiskPercent / 100) / (StopLossPips * PointValue), where PointValue = SYMBOL_TRADE_TICK_VALUE * SYMBOL_POINT / SYMBOL_TRADE_TICK_SIZE (value of a 1-point move of 1 lot in the account currency; `StopLossPips` is in points); rounded down to VolumeStep and capped at VolumeMax. A size below VolumeMin is an error (never raised to VolumeMin)
+2. Calculate max size based on free margin: the largest volume whose margin (OrderCalcMargin for a BUY at Ask, checked for that volume itself - brokers can charge a higher rate for larger volumes) fits in 80% of the free margin
+3. Return MINIMUM of the two; error if the result is below VolumeMin. Uses 10-second timeout.
 
 **Signature**
 ```go
@@ -1186,7 +1256,7 @@ Returns recommended lot size (float64), or error if calculation fails or insuffi
 
 ## CalculateRequiredMargin
 
-Calculates how much margin is required to open a position. This helps you plan your trades and manage account exposure. Considers leverage and symbol specifications. Uses 5-second timeout.
+Calculates how much margin is required to open a position. Calls OrderCalcMargin for a BUY of `volume` at the current Ask (always BUY). This helps you plan your trades and manage account exposure. Uses 5-second timeout.
 
 **Signature**
 ```go
@@ -1208,7 +1278,7 @@ Returns required margin amount (float64), or error if calculation fails.
 
 ## CalculateSLTP
 
-Calculates Stop Loss and Take Profit prices from entry price and pip distances. This converts pip distances to actual prices based on symbol specifications. Handles both BUY and SELL directions correctly. Uses 3-second timeout.
+Calculates Stop Loss and Take Profit prices from entry price and pip distances. This converts pip distances to actual prices based on symbol specifications. Distances are multiplied by the symbol's Point; the results are not rounded. No own timeout: it uses GetSymbolInfo (5 s) and, when entryPrice is 0, GetAsk/GetBid (3 s).
 
 **Signature**
 ```go
@@ -1220,8 +1290,8 @@ func (s *MT5Sugar) CalculateSLTP(symbol, direction string, entryPrice, stopLossP
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | symbol | string | Trading symbol (e.g., "EURUSD") |
-| direction | string | "BUY" or "SELL" |
-| entryPrice | float64 | Entry price (use 0 for current market price) |
+| direction | string | "BUY" (exact, case-sensitive); any other value is treated as SELL |
+| entryPrice | float64 | Entry price (use 0 for current market price: Ask for BUY, Bid otherwise) |
 | stopLossPips | float64 | Distance to SL in points (e.g., 50) |
 | takeProfitPips | float64 | Distance to TP in points (e.g., 100) |
 
@@ -1233,7 +1303,7 @@ Returns `sl` (Stop Loss price), `tp` (Take Profit price), and error if calculati
 
 ## CanOpenPosition
 
-Checks if it's possible to open a position with specified volume. This performs comprehensive validation: margin check, volume limits, symbol availability. Always call this before PlaceOrder to prevent rejections. Uses 5-second timeout.
+Checks if it's possible to open a position with specified volume. Checks, in order: IsSymbolAvailable, volume min/max, volume step, and required margin (OrderCalcMargin for a BUY at Ask) against free margin. Call this before placing an order to catch these rejections early. Uses 5-second timeout.
 
 **Signature**
 ```go
@@ -1255,7 +1325,7 @@ Returns `can` (true if position can be opened), `reason` (explanation if can't o
 
 ## GetMaxLotSize
 
-Calculates the maximum lot size you can open with current free margin. This helps prevent margin calls by showing your maximum trading capacity. Uses conservative estimate with safety buffer. Uses 5-second timeout.
+Calculates the maximum lot size you can open with current free margin. This helps prevent margin calls by showing your maximum trading capacity. Computed as the largest volume whose margin (OrderCalcMargin for a BUY at Ask, checked for that volume itself - brokers can charge a higher rate for larger volumes, so 80% of free margin / margin for 1 lot is only the first guess) fits in 80% of free margin, rounded down to VolumeStep and capped at VolumeMax. Uses 5-second timeout.
 
 **Signature**
 ```go
@@ -1270,6 +1340,6 @@ func (s *MT5Sugar) GetMaxLotSize(symbol string) (float64, error)
 
 **Returns**
 
-Returns maximum safe lot size (float64), or error if calculation fails.
+Returns maximum safe lot size (float64); 0 with nil error if the free margin is not enough for VolumeMin; error if calculation fails.
 
 ---

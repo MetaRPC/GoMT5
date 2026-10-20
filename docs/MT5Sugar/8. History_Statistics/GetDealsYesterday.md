@@ -1,12 +1,12 @@
 # 📅📋 Get Deals Yesterday (`GetDealsYesterday`)
 
-> **Sugar method:** Returns all closed positions (deals) from yesterday (full day 00:00 to 23:59:59).
+> **Sugar method:** Returns closed positions ("deals") that were **opened** yesterday (the whole previous local calendar day, 00:00:00 to 23:59:59.999999999).
 
 **API Information:**
 
 * **Method:** `sugar.GetDealsYesterday()`
-* **Timeout:** 5 seconds
-* **Returns:** Slice of position history info
+* **Timeout:** 15 seconds
+* **Returns:** Slice of position history info (one entry per closed position; a position closed in parts has one entry per partial close), sorted by open time (oldest first)
 
 ---
 
@@ -15,6 +15,26 @@
 ```go
 func (s *MT5Sugar) GetDealsYesterday() ([]*pb.PositionHistoryInfo, error)
 ```
+
+How it works:
+
+```go
+func (s *MT5Sugar) GetDealsYesterday() ([]*pb.PositionHistoryInfo, error) {
+    startOfToday := startOfLocalDay(time.Now())
+    startOfYesterday := startOfLocalDay(startOfToday.AddDate(0, 0, -1))
+    return s.positionsOpenedBetween(startOfYesterday, startOfToday.Add(-time.Nanosecond), 15*time.Second)
+}
+```
+
+`positionsOpenedBetween` reads `PositionsHistory` (sorted by open time) with **cursor paging** - page size
+1000, `PageToken` = the previous `NextPageToken` - until the last page, so long ranges are complete. The range filters by the position's **open** time:
+a position opened the day before yesterday and closed yesterday is not included, a position opened yesterday and closed
+today is. Still-open positions are not in the list. The timeout covers all pages together.
+
+**Time zone note:** "yesterday" is the previous calendar day of the computer running the program (`time.Local`).
+The window is sent in the request's UTC fields (`PositionOpenTimeFromUtc` /
+`PositionOpenTimeToUtc`), so the broker's time zone does not shift it. If you want the broker's trading day instead, run
+the program with `TZ` set to the broker's time zone or pass explicit boundaries to `GetDealsDateRange()`.
 
 ---
 
@@ -26,16 +46,16 @@ func (s *MT5Sugar) GetDealsYesterday() ([]*pb.PositionHistoryInfo, error)
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `[]*pb.PositionHistoryInfo` | slice | All closed positions from yesterday |
-| `error` | `error` | Error if retrieval failed |
+| `[]*pb.PositionHistoryInfo` | slice | Closed positions opened yesterday |
+| `error` | `error` | `"PositionsHistory failed: ..."` if a page query failed (or the timeout expired) |
 
 ---
 
 ## 💬 Just the Essentials
 
-* **What it is:** Get all closed trades from yesterday's full trading day.
+* **What it is:** Get closed trades that were opened during yesterday (local calendar day).
 * **Why you need it:** Historical analysis, compare with today, daily reports.
-* **Sanity check:** Returns empty slice if no deals yesterday. Auto-calculates full day range.
+* **Sanity check:** Returns an empty (possibly `nil`) slice if there are no deals - check `len(deals)`. Auto-calculates full day range.
 
 ---
 
@@ -72,7 +92,7 @@ fmt.Printf("Yesterday's deals: %d\n\n", len(deals))
 totalProfit := 0.0
 for i, deal := range deals {
     fmt.Printf("%d. #%d %s: $%.2f\n",
-        i+1, deal.Ticket, deal.Symbol, deal.Profit)
+        i+1, deal.PositionTicket, deal.Symbol, deal.Profit)
     totalProfit += deal.Profit
 }
 
@@ -226,10 +246,10 @@ fmt.Println("Yesterday's Best & Worst:")
 fmt.Println("─────────────────────────────────────────")
 
 fmt.Printf("🏆 Best:  #%d %s: $%.2f\n",
-    bestTrade.Ticket, bestTrade.Symbol, bestTrade.Profit)
+    bestTrade.PositionTicket, bestTrade.Symbol, bestTrade.Profit)
 
 fmt.Printf("💔 Worst: #%d %s: $%.2f\n",
-    worstTrade.Ticket, worstTrade.Symbol, worstTrade.Profit)
+    worstTrade.PositionTicket, worstTrade.Symbol, worstTrade.Profit)
 
 diff := bestTrade.Profit - worstTrade.Profit
 fmt.Printf("\nRange: $%.2f\n", diff)
@@ -247,12 +267,12 @@ if len(deals) == 0 {
     return
 }
 
-// Analyze when most trades closed
+// Analyze when most trades closed (CloseTime is broker server time)
 hourlyCount := make(map[int]int)
 hourlyProfit := make(map[int]float64)
 
 for _, deal := range deals {
-    hour := deal.TimeClose.Hour()
+    hour := deal.CloseTime.AsTime().Hour()
     hourlyCount[hour]++
     hourlyProfit[hour] += deal.Profit
 }
@@ -508,30 +528,32 @@ perf.Print()
 
 ## ⚠️ Common Pitfalls
 
-### 1) Calling too early in the day
+### 1) Expecting every trade closed yesterday
 
 ```go
-// ❌ WRONG - calling at 00:01 AM
-// Yesterday's data might not be finalized yet
+// ❌ WRONG - the range filters on OPEN time
+// A position opened two days ago and closed yesterday is missing,
+// and positions opened yesterday but still open are missing too (closed positions only)
 deals, _ := sugar.GetDealsYesterday()
 
-// ✅ CORRECT - call after market has been open for a while
-// Or in morning report after server has processed
-time.Sleep(1 * time.Hour) // Wait until reasonable hour
-deals, _ := sugar.GetDealsYesterday()
+// ✅ CORRECT - widen the range and filter on CloseTime yourself
+from := time.Now().AddDate(0, 0, -7)
+deals, _ := sugar.GetDealsDateRange(from, time.Now())
 ```
 
 ### 2) Timezone confusion
 
 ```go
-// ❌ WRONG - "yesterday" is server timezone
-// Your local "yesterday" might be different
+// ❌ WRONG - assuming "yesterday" is the broker's yesterday
+// The range is the previous calendar day of YOUR computer (time.Local)
 deals, _ := sugar.GetDealsYesterday()
 
-// ✅ CORRECT - aware of timezone
-// Yesterday = server's yesterday (full 24h period)
-deals, _ := sugar.GetDealsYesterday()
-fmt.Println("Server's yesterday (full day)")
+// ✅ CORRECT - pass explicit boundaries in the broker's time zone when the day must match the broker's day
+// (the times are real moments: they are sent as UTC, so any time zone works)
+broker := time.FixedZone("broker", 3*60*60) // e.g. a broker at UTC+3
+from := time.Date(2026, 10, 15, 0, 0, 0, 0, broker)
+to := from.AddDate(0, 0, 1).Add(-time.Nanosecond)
+deals, _ := sugar.GetDealsDateRange(from, to)
 ```
 
 ### 3) Not handling empty result
@@ -551,7 +573,7 @@ if len(deals) > 0 {
 
 ## 💎 Pro Tips
 
-1. **Full day** - Returns complete 24-hour period (00:00 to 23:59:59)
+1. **Full day** - Covers 00:00:00 to 23:59:59.999999999 of yesterday (local calendar), matched against open time
 
 2. **Morning reports** - Perfect for generating morning summary reports
 
@@ -559,20 +581,22 @@ if len(deals) > 0 {
 
 4. **Empty OK** - Returns empty slice if no trading (not an error)
 
-5. **Performance** - 5-second timeout, suitable for frequent calls
+5. **Performance** - 15-second timeout
+
+6. **Profit field only** - `Profit` does not include commission, swap or fee
 
 ---
 
 ## 📊 Yesterday's Date Range
 
 ```
-Yesterday's range calculation:
-now = time.Now()
-yesterday = now.AddDate(0, 0, -1)
-startOfYesterday = yesterday at 00:00:00
-endOfYesterday = yesterday at 23:59:59
+Yesterday's range calculation (MT5Sugar.go):
+startOfToday     = startOfLocalDay(time.Now())                      // local 00:00 today (time.Local)
+startOfYesterday = startOfLocalDay(startOfToday.AddDate(0, 0, -1))  // local 00:00 yesterday
+endOfYesterday   = startOfToday.Add(-time.Nanosecond)               // local 23:59:59.999999999 yesterday
 
-Returns all deals in this complete 24-hour window
+Returns closed positions whose OPEN time is in this window
+(sent as PositionOpenTimeFromUtc / PositionOpenTimeToUtc), sorted by open time ascending
 ```
 
 ---

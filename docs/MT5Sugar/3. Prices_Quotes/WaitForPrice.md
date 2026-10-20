@@ -5,8 +5,9 @@
 **API Information:**
 
 * **Method:** `sugar.WaitForPrice(symbol, timeout)`
-* **Timeout:** Custom (you specify)
+* **Timeout:** Custom (you specify) - one context for the whole wait
 * **Returns:** `*PriceInfo` when valid price received
+* **Underlying call:** `service.GetSymbolTick(ctx, symbol)`, polled every 100 ms
 
 ---
 
@@ -21,8 +22,51 @@ func (s *MT5Sugar) WaitForPrice(symbol string, timeout time.Duration) (*PriceInf
 ## 💬 Just the Essentials
 
 * **What it is:** Blocks until symbol has valid price (BID > 0 and ASK > 0) or timeout expires.
-* **Why you need it:** After connection or during market open, prices might not be available yet.
-* **Sanity check:** Returns first valid PriceInfo or error on timeout.
+* **Why you need it:** Right after connection or after selecting a symbol, the terminal may not have a quote yet.
+* **Sanity check:** Returns first valid PriceInfo, a server error at once, or an error on timeout.
+
+**How it works (from the source):**
+
+* A symbol that already has a price returns **at once** - it does NOT wait for the next price change.
+* Otherwise polls `GetSymbolTick` every 100 ms until a tick has `Bid > 0 && Ask > 0`.
+* An API error from the server (e.g. `ERR_MARKET_UNKNOWN_SYMBOL` for an unknown symbol) is returned **immediately** -
+  waiting does not make it go away. Other request errors (transport, deadline) are retried until the timeout; then
+  the error is `"timeout waiting for price: ..."` (with `"(last error: ...)"` when a request had failed).
+* "Valid" only means non-zero prices. On a **closed market** the terminal still holds the last quote, so
+  `WaitForPrice` returns at once with that old quote - it does not wait for the market to open.
+* The returned `PriceInfo` is built exactly like `GetPriceInfo()`: `SpreadPips` is in **points** (rounded to 0.1),
+  `Time` is broker server time and `TimeUtc` the same moment in UTC (see [`GetPriceInfo.md`](GetPriceInfo.md)).
+
+**Under the hood:**
+
+```go
+func (s *MT5Sugar) WaitForPrice(symbol string, timeout time.Duration) (*PriceInfo, error) {
+    ctx, cancel := context.WithTimeout(s.ctx, timeout)
+    defer cancel()
+
+    for {
+        tick, err := s.service.GetSymbolTick(ctx, symbol)
+        if err != nil {
+            // An error from the server (unknown symbol, ...) does not go away by waiting: return it.
+            var apiErr *helpers.ApiError
+            if errors.As(err, &apiErr) {
+                return nil, err
+            }
+        } else if tick.Bid > 0 && tick.Ask > 0 {
+            return s.priceInfoFromTick(ctx, symbol, tick)
+        }
+
+        select {
+        case <-ctx.Done():
+            if err != nil {
+                return nil, fmt.Errorf("timeout waiting for price (last error: %v): %w", err, ctx.Err())
+            }
+            return nil, fmt.Errorf("timeout waiting for price: %w", ctx.Err())
+        case <-time.After(100 * time.Millisecond):
+        }
+    }
+}
+```
 
 ---
 
@@ -30,11 +74,10 @@ func (s *MT5Sugar) WaitForPrice(symbol string, timeout time.Duration) (*PriceInf
 
 ✅ **After connection** - Wait for first tick after connecting
 
-✅ **Market open** - Wait for market to start publishing prices
-
 ✅ **Symbol switch** - Ensure new symbol is ready
 
-✅ **Weekend/gap handling** - Wait for market to resume
+❌ **Not a market-open detector** - a closed market still returns its last quote (see examples 4 and 6 for
+waiting for a *new* tick instead)
 
 ---
 
@@ -44,7 +87,11 @@ func (s *MT5Sugar) WaitForPrice(symbol string, timeout time.Duration) (*PriceInf
 
 ```go
 sugar, _ := mt5.NewMT5Sugar(591129415, "password", "mt5.mrpc.pro:443")
-sugar.QuickConnect("FxPro-MT5 Demo")
+defer sugar.Disconnect()
+if err := sugar.QuickConnect("FxPro-MT5 Demo"); err != nil {
+    fmt.Printf("Connection failed: %v\n", err)
+    return
+}
 
 // Wait for price to be available
 symbol := "EURUSD"
@@ -70,6 +117,7 @@ func ConnectAndWaitForPrice(login uint64, password, server, cluster, symbol stri
     if err != nil {
         return fmt.Errorf("failed to create Sugar: %w", err)
     }
+    defer sugar.Disconnect() // also after a failed connect
 
     // Step 2: Connect
     fmt.Println("🔌 Connecting to MT5...")
@@ -132,19 +180,31 @@ func WaitForMarketOpen(sugar *mt5.MT5Sugar, symbol string) {
 
     startTime := time.Now()
 
-    priceInfo, err := sugar.WaitForPrice(symbol, 2*time.Hour)
+    // WaitForPrice returns the last known quote at once, even on a closed market...
+    last, err := sugar.WaitForPrice(symbol, 10*time.Second)
     if err != nil {
-        fmt.Printf("❌ Market didn't open within 2 hours\n")
+        fmt.Printf("❌ No quote for %s: %v\n", symbol, err)
         return
     }
 
-    elapsed := time.Since(startTime)
+    // ...so wait for a tick NEWER than that quote
+    deadline := startTime.Add(2 * time.Hour)
+    for time.Now().Before(deadline) {
+        priceInfo, err := sugar.GetPriceInfo(symbol)
+        if err == nil && priceInfo.Time.After(last.Time) {
+            elapsed := time.Since(startTime)
 
-    fmt.Printf("✅ Market OPEN!\n")
-    fmt.Printf("   Waited: %v\n", elapsed.Round(time.Second))
-    fmt.Printf("   First price: BID=%.5f ASK=%.5f\n",
-        priceInfo.Bid, priceInfo.Ask)
-    fmt.Printf("   Server time: %s\n", priceInfo.Time.Format("15:04:05"))
+            fmt.Printf("✅ Market OPEN!\n")
+            fmt.Printf("   Waited: %v\n", elapsed.Round(time.Second))
+            fmt.Printf("   First price: BID=%.5f ASK=%.5f\n",
+                priceInfo.Bid, priceInfo.Ask)
+            fmt.Printf("   Server time: %s\n", priceInfo.Time.Format("15:04:05"))
+            return
+        }
+        time.Sleep(5 * time.Second)
+    }
+
+    fmt.Printf("❌ Market didn't open within 2 hours\n")
 }
 
 // Usage on Monday morning
@@ -156,7 +216,7 @@ WaitForMarketOpen(sugar, "EURUSD")
 ### 5) Retry with increasing timeout
 
 ```go
-func WaitForPriceWithRetry(sugar *mt5.MT5Sugar, symbol string, maxAttempts int) (*PriceInfo, error) {
+func WaitForPriceWithRetry(sugar *mt5.MT5Sugar, symbol string, maxAttempts int) (*mt5.PriceInfo, error) {
     for attempt := 1; attempt <= maxAttempts; attempt++ {
         timeout := time.Duration(attempt) * 5 * time.Second
 
@@ -192,20 +252,29 @@ priceInfo, err := WaitForPriceWithRetry(sugar, "EURUSD", 3)
 func HandleWeekendGap(sugar *mt5.MT5Sugar, symbol string) {
     fmt.Printf("📅 Weekend ended - waiting for %s to resume...\n", symbol)
 
-    // Long timeout for weekend → Monday transition
-    priceInfo, err := sugar.WaitForPrice(symbol, 30*time.Minute)
+    // Before the open, WaitForPrice returns Friday's last quote immediately
+    friday, err := sugar.WaitForPrice(symbol, 10*time.Second)
     if err != nil {
-        fmt.Printf("❌ Market didn't resume: %v\n", err)
+        fmt.Printf("❌ No quote: %v\n", err)
         return
     }
 
-    // Check for gap
-    // You'd need to compare with Friday's close price
-    fmt.Printf("✅ Market resumed!\n")
-    fmt.Printf("   Monday open: BID=%.5f\n", priceInfo.Bid)
-    fmt.Printf("   Server time: %s\n", priceInfo.Time.Format("Mon 15:04:05"))
+    // Wait (up to 30 minutes) for the first tick after it
+    deadline := time.Now().Add(30 * time.Minute)
+    for time.Now().Before(deadline) {
+        priceInfo, err := sugar.GetPriceInfo(symbol)
+        if err == nil && priceInfo.Time.After(friday.Time) {
+            fmt.Printf("✅ Market resumed!\n")
+            fmt.Printf("   Friday last: BID=%.5f\n", friday.Bid)
+            fmt.Printf("   Monday open: BID=%.5f\n", priceInfo.Bid)
+            fmt.Printf("   Gap:         %+.5f\n", priceInfo.Bid-friday.Bid)
+            fmt.Printf("   Server time: %s\n", priceInfo.Time.Format("Mon 15:04:05"))
+            return
+        }
+        time.Sleep(10 * time.Second)
+    }
 
-    // Could add gap detection logic here
+    fmt.Println("❌ Market didn't resume within 30 minutes")
 }
 ```
 
@@ -278,8 +347,10 @@ func ValidatePriceFeed(sugar *mt5.MT5Sugar, symbol string) bool {
         return false
     }
 
-    // Check timestamp freshness
-    age := time.Since(priceInfo.Time)
+    // Check timestamp freshness. priceInfo.Time is broker server time, so
+    // time.Since(priceInfo.Time) would be off by the broker's UTC offset -
+    // use TimeUtc instead.
+    age := time.Since(priceInfo.TimeUtc)
     if age > 10*time.Second {
         fmt.Printf("❌ Price feed STALE: %v old\n", age)
         return false
@@ -342,6 +413,7 @@ func CheckSymbolAvailability(sugar *mt5.MT5Sugar, symbols []string) {
     for _, symbol := range symbols {
         fmt.Printf("%-10s ... ", symbol)
 
+        // an unknown symbol fails at once (server error), not after the 3 s
         priceInfo, err := sugar.WaitForPrice(symbol, 3*time.Second)
         if err != nil {
             fmt.Println("❌ NOT AVAILABLE")
@@ -374,7 +446,7 @@ CheckSymbolAvailability(sugar, symbols)
 ## 🔗 Related Methods
 
 * `GetPriceInfo()` - Get price immediately (no waiting)
-* `IsSymbolAvailable()` - Check if symbol exists
+* `IsSymbolAvailable()` - Check if symbol exists and is synchronized
 * `QuickConnect()` - Connect to MT5
 
 ---
@@ -384,7 +456,7 @@ CheckSymbolAvailability(sugar, symbols)
 ### 1) Timeout too short
 
 ```go
-// ❌ WRONG - might timeout during slow connection
+// ❌ WRONG - might time out while the first quote is still arriving
 priceInfo, _ := sugar.WaitForPrice("EURUSD", 1*time.Second)
 
 // ✅ CORRECT - reasonable timeout
@@ -413,7 +485,7 @@ if err != nil {
 1. **Use after connection** - Always wait for price before trading
 2. **Reasonable timeout** - 10-15 seconds is usually enough
 3. **Multiple symbols** - Check all symbols before starting bot
-4. **Weekend handling** - Use longer timeout (30min) on Monday
+4. **Weekend handling** - A longer timeout does not help: a closed market returns its last quote at once; wait for a newer tick (example 6)
 5. **Fallback plan** - Have reconnection logic if timeout occurs
 
 ---

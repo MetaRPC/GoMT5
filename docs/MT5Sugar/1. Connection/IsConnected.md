@@ -6,7 +6,7 @@
 
 * **Method:** `sugar.IsConnected()`
 * **Package:** `mt5` (MT5Sugar)
-* **Underlying calls:** `account.Ping()` with health check
+* **Underlying calls:** `account.CheckConnect()` - reads `HealthCheck.IsAlive` from the reply
 * **Timeout:** 3 seconds
 
 ---
@@ -57,7 +57,7 @@ Use it to monitor connection health:
 * **Fast check** - 3-second timeout
 * **True = ready** - Safe to call trading methods
 * **False = disconnected** - Need to reconnect
-* **Non-blocking** - Quick operation
+* **Blocking call** - One `CheckConnect` round trip, waits at most 3 seconds; any error or timeout gives `false`
 * **Use before trading** - Good practice to verify connection
 * **Periodic checks** - Monitor in long-running bots
 
@@ -70,19 +70,18 @@ func (s *MT5Sugar) IsConnected() bool {
     ctx, cancel := context.WithTimeout(s.ctx, 3*time.Second)
     defer cancel()
 
-    // Ping server to check if connection is alive
-    err := s.account.Ping(ctx)
+    data, err := s.GetAccount().CheckConnect(ctx, &pb.CheckConnectRequest{})
     if err != nil {
-        return false // Connection lost
+        return false
     }
 
-    return true // Connected and healthy
+    return data.HealthCheck != nil && data.HealthCheck.IsAlive
 }
 ```
 
 **What it does:**
 
-* ✅ **Pings the server** - Verifies communication
+* ✅ **Asks the server** - `CheckConnect` returns the terminal's health check, `true` only when `IsAlive`
 * ✅ **Quick timeout** - 3 seconds max
 * ✅ **Clean result** - True/false, easy to use
 
@@ -95,9 +94,12 @@ func (s *MT5Sugar) IsConnected() bool {
 ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 defer cancel()
 
-err := account.Ping(ctx)
-connected := (err == nil)
+data, err := account.CheckConnect(ctx, &pb.CheckConnectRequest{})
+connected := err == nil && data.HealthCheck != nil && data.HealthCheck.IsAlive
 ```
+
+(`account.IsConnected()` on `MT5Account` is a different, local check: it only tells whether the gRPC connection
+and a terminal id exist, without asking the server.)
 
 **WITH sugar:**
 ```go
@@ -353,6 +355,7 @@ func StartTradingBot(login uint64, password, server, cluster string) error {
     if err != nil {
         return fmt.Errorf("failed to create Sugar: %w", err)
     }
+    defer sugar.Disconnect() // stops the terminal on every path, also after a failed connect
 
     // Connect
     fmt.Println("🔌 Connecting to MT5...")

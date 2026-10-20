@@ -16,7 +16,9 @@ tickReq := &pb.SymbolInfoTickRequest{
     Symbol: cfg.TestSymbol,
 }
 tickData, err := account.SymbolInfoTick(ctx, tickReq)
-helpers.Fatal(err, "SymbolInfoTick failed")
+if err != nil {
+    return fmt.Errorf("SymbolInfoTick failed: %w", err)
+}
 
 // Form a margin calculation request for BUY
 marginReq := &pb.OrderCalcMarginRequest{

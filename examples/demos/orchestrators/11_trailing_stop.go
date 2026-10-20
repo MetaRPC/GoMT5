@@ -50,8 +50,12 @@
    • ActivationProfit:  Profit in points needed to activate trailing (default: 300)
    • UpdateInterval:    How often to check and update stops (default: 2s)
    • Symbols:           Which symbols to manage (empty = all symbols)
-   • MinDistance:       Minimum distance from current price (default: 100)
+   • MinDistance:       The SL is never placed closer than this to the price
+                        (default: 100; the broker's stops level is respected too)
    • StepSize:          Minimum step size for SL adjustments (default: 50)
+
+   Distances are in POINTS of each position's symbol: the point size is read
+   from the symbol (0.00001 EURUSD, 0.001 USDJPY, 0.01 XAUUSD).
 
  USE CASE:
    Best for trending markets where you want to:
@@ -72,7 +76,7 @@
    ⚙️ PARAMETER CONFIGURATION IS LOCATED IN main.go
 
    WHY THIS SEPARATION EXISTS:
-   • 10_trailing_stop.go = STRATEGY ENGINE (orchestrator logic, algorithm)
+   • 11_trailing_stop.go = STRATEGY ENGINE (orchestrator logic, algorithm)
    • main.go → RunOrchestrator_TrailingStop() = RUNTIME CONFIGURATION (parameters)
 
    THIS SEPARATION IS NEEDED FOR:
@@ -95,7 +99,7 @@
 
    📝 IMPORTANT:
    • To change parameters → edit main.go, NOT this file
-   • This file (10_trailing_stop.go) contains only ORCHESTRATOR LOGIC
+   • This file (11_trailing_stop.go) contains only ORCHESTRATOR LOGIC
    • main.go contains CONFIGURATION for specific runs
    • Look for the section: ORCHESTRATOR RUNNERS
 
@@ -104,8 +108,8 @@
 package orchestrators
 
 import (
-	"context"
 	"fmt"
+	"math"
 	"time"
 
 	pb "github.com/MetaRPC/GoMT5/package"
@@ -117,13 +121,28 @@ import (
 // ══════════════════════════════════════════════════════════════════════════════
 
 // TrailingStopConfig holds configuration for trailing stop management.
+// Distances are in points of each position's symbol.
 type TrailingStopConfig struct {
-	TrailingDistance float64       // Distance in points to trail behind price
-	ActivationProfit float64       // Profit in points to activate trailing
-	UpdateInterval   time.Duration // How often to check positions
+	TrailingDistance float64       // Distance in points to trail behind price (> 0)
+	ActivationProfit float64       // Profit in points to activate trailing (0 = trail at once)
+	UpdateInterval   time.Duration // How often to check positions (0 = 2s)
 	Symbols          []string      // Symbols to manage (empty = all)
-	MinDistance      float64       // Minimum distance from current price
-	StepSize         float64       // Minimum step size for SL adjustments
+	MinDistance      float64       // The SL is never closer than this to the price (also >= the broker's stops level)
+	StepSize         float64       // Minimum step size for SL adjustments (0 = every improvement)
+}
+
+// validate applies the default UpdateInterval and rejects values that cannot work.
+func (c *TrailingStopConfig) validate() error {
+	if c.UpdateInterval <= 0 {
+		c.UpdateInterval = 2 * time.Second
+	}
+	if c.TrailingDistance <= 0 {
+		return fmt.Errorf("TrailingDistance must be > 0 points, got %v", c.TrailingDistance)
+	}
+	if c.ActivationProfit < 0 || c.MinDistance < 0 || c.StepSize < 0 {
+		return fmt.Errorf("ActivationProfit, MinDistance and StepSize must not be negative")
+	}
+	return nil
 }
 
 // DefaultTrailingStopConfig returns sensible defaults.
@@ -148,10 +167,9 @@ type TrailingStopManager struct {
 	sugar  *mt5.MT5Sugar
 	config TrailingStopConfig
 
-	// Tracking
+	// Tracking (used by the monitoring goroutine only)
 	trackedPositions map[uint64]*positionTracker
-	symbolDigits     map[string]int
-	symbolPoints     map[string]float64
+	symbolSpecs      map[string]symbolSpec // point, digits, stops level per symbol
 }
 
 // positionTracker tracks trailing stop state for a position.
@@ -173,38 +191,39 @@ func NewTrailingStopManager(sugar *mt5.MT5Sugar, config TrailingStopConfig) *Tra
 		sugar:            sugar,
 		config:           config,
 		trackedPositions: make(map[uint64]*positionTracker),
-		symbolDigits:     make(map[string]int),
-		symbolPoints:     make(map[string]float64),
+		symbolSpecs:      make(map[string]symbolSpec),
 	}
 }
 
-// Start begins trailing stop management.
+// Start validates the configuration and begins trailing stop management.
 func (t *TrailingStopManager) Start() error {
 	if t.IsRunning() {
 		return fmt.Errorf("trailing stop manager already running")
 	}
 
-	// Create context
-	ctx, cancel := context.WithCancel(context.Background())
-	t.SetContext(ctx, cancel)
+	// Validate configuration (applies the default UpdateInterval)
+	if err := t.config.validate(); err != nil {
+		return fmt.Errorf("invalid configuration: %w", err)
+	}
 
-	// Mark as started
-	t.MarkStarted()
+	// Create context, mark as started, stop on Ctrl+C
+	t.begin()
 
 	// Start monitoring loop
-	go t.monitorLoop()
+	t.goLoop(t.monitorLoop)
 
 	return nil
 }
 
 // Stop gracefully stops the trailing stop manager.
+// It waits until a check that is in progress has finished.
 func (t *TrailingStopManager) Stop() error {
 	if !t.IsRunning() {
 		return fmt.Errorf("trailing stop manager not running")
 	}
 
-	// Cancel context
-	t.CancelContext()
+	// Cancel context and wait for the monitoring loop
+	t.stopLoops()
 
 	// Clear tracked positions
 	t.trackedPositions = make(map[uint64]*positionTracker)
@@ -289,12 +308,16 @@ func (t *TrailingStopManager) updatePositionTrailingStop(pos *pb.PositionInfo) b
 		t.trackedPositions[pos.Ticket] = tracker
 	}
 
-	// Get symbol parameters
-	point, err := t.getSymbolPoint(pos.Symbol)
+	// The SL on the server is the reference (it may have been moved by someone else)
+	tracker.currentSL = pos.StopLoss
+
+	// Get symbol parameters (point size, digits, stops level)
+	spec, err := t.getSymbolSpec(pos.Symbol)
 	if err != nil {
 		t.IncrementError(fmt.Sprintf("failed to get symbol point: %v", err))
 		return false
 	}
+	point := spec.Point
 
 	// Get current price
 	priceInfo, err := t.sugar.GetPriceInfo(pos.Symbol)
@@ -314,6 +337,10 @@ func (t *TrailingStopManager) updatePositionTrailingStop(pos *pb.PositionInfo) b
 		currentPrice = priceInfo.Ask
 		profitPoints = (tracker.openPrice - currentPrice) / point
 	}
+
+	// Distance of the SL from the price: TrailingDistance, but never closer than
+	// MinDistance or the broker's stops level
+	distance := math.Max(t.config.TrailingDistance, math.Max(t.config.MinDistance, float64(spec.StopLevel)))
 
 	// Update highest profit
 	if profitPoints > tracker.highestProfit {
@@ -336,7 +363,7 @@ func (t *TrailingStopManager) updatePositionTrailingStop(pos *pb.PositionInfo) b
 	// Calculate new stop loss
 	var newSL float64
 	if tracker.isBuy {
-		newSL = currentPrice - t.config.TrailingDistance*point
+		newSL = spec.price(currentPrice - distance*point)
 		// Only move SL up, never down
 		if tracker.currentSL == 0 || newSL > tracker.currentSL {
 			// Check minimum step
@@ -346,7 +373,7 @@ func (t *TrailingStopManager) updatePositionTrailingStop(pos *pb.PositionInfo) b
 			return t.modifyStopLoss(pos.Ticket, newSL, tracker)
 		}
 	} else {
-		newSL = currentPrice + t.config.TrailingDistance*point
+		newSL = spec.price(currentPrice + distance*point)
 		// Only move SL down, never up
 		if tracker.currentSL == 0 || newSL < tracker.currentSL {
 			// Check minimum step
@@ -379,20 +406,21 @@ func (t *TrailingStopManager) modifyStopLoss(ticket uint64, newSL float64, track
 	return true
 }
 
-// getSymbolPoint gets or caches the point value for a symbol.
-func (t *TrailingStopManager) getSymbolPoint(symbol string) (float64, error) {
+// getSymbolSpec gets (and caches) the symbol's point size, digits and stops level
+// with sugar.GetSymbolInfo: a point is 0.00001 for EURUSD, 0.001 for USDJPY, 0.01 for XAUUSD.
+func (t *TrailingStopManager) getSymbolSpec(symbol string) (symbolSpec, error) {
 	// Check cache
-	if point, exists := t.symbolPoints[symbol]; exists {
-		return point, nil
+	if spec, exists := t.symbolSpecs[symbol]; exists {
+		return spec, nil
 	}
 
-	// Calculate from price info
-	// Default: EURUSD-like symbols with 5 digits
-	point := 0.00001
-	t.symbolPoints[symbol] = point
-	t.symbolDigits[symbol] = 5
+	spec, err := loadSymbolSpec(t.sugar, symbol)
+	if err != nil {
+		return symbolSpec{}, err
+	}
+	t.symbolSpecs[symbol] = spec
 
-	return point, nil
+	return spec, nil
 }
 
 // isSymbolTracked checks if symbol is in tracked list.
@@ -423,7 +451,7 @@ func (t *TrailingStopManager) cleanupClosedPositions(openPositions []*pb.Positio
 
 /* ══════════════════════════════════════════════════════════════════════════════
    📍 WHERE TO CONFIGURE PARAMETERS:
-   main.go → func RunOrchestrator_TrailingStop() (lines 353-360)
+   main.go → func RunOrchestrator_TrailingStop() (CONFIGURATION block)
 
    CONFIGURATION CODE IN main.go:
 
@@ -438,7 +466,7 @@ func (t *TrailingStopManager) cleanupClosedPositions(openPositions []*pb.Positio
            ActivationProfit: 300,             // ← Activate after 300 points profit
            UpdateInterval:   2 * time.Second, // ← Check every 2 seconds
            Symbols:          []string{},      // ← All symbols (empty = all)
-           MinDistance:      100,             // ← Min 100 points from price
+           MinDistance:      100,             // ← SL never closer than 100 points
            StepSize:         50,              // ← Adjust in 50 point steps
        }
 

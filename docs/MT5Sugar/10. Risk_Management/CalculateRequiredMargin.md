@@ -9,6 +9,7 @@
 * **Underlying calls:** `service.GetSymbolTick()`, `service.CalculateMargin()`
 * **Timeout:** 5 seconds
 * **Considers:** Leverage, symbol specifications, current price
+* **Order type:** Always calculated for a **BUY** (`ORDER_TYPE_TF_BUY`) at the current **Ask** (`OrderCalcMargin`) - there is no direction parameter and no SELL variant; a SELL's margin may differ slightly
 
 ---
 
@@ -441,7 +442,7 @@ lotSize, err := CalculatePositionSizeWithMarginCheck(
     sugar,
     "EURUSD",
     2.0,  // 2% risk
-    50.0, // 50 pip stop
+    500.0, // 500-point stop (50 pips on 5-digit EURUSD)
 )
 
 if err != nil {
@@ -658,7 +659,7 @@ for symbol, margin := range breakdown {
 **Recommended workflow:**
 ```go
 // 1. Calculate position size
-lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 50)
+lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 500) // 500-point SL
 
 // 2. Check margin requirement
 margin, _ := sugar.CalculateRequiredMargin("EURUSD", lotSize)
@@ -774,7 +775,7 @@ if !canOpen {
 This method:
 ✅ Calculates margin requirement
 ✅ Considers leverage
-✅ Uses current price
+✅ Uses current price (BUY at Ask)
 ❌ Doesn't check free margin
 ❌ Doesn't validate volume limits
 ❌ Doesn't check symbol availability

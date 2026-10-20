@@ -394,6 +394,7 @@ func (spm *SymbolPrecisionManager) CalculatePipValue(
     pipSize := pointSize * 10
 
     // Pip value = pip size × contract size × volume
+    // (in the QUOTE currency - USD for EURUSD - not necessarily the account currency)
     pipValue := pipSize * info.ContractSize * volume
 
     return pipValue, nil
@@ -481,14 +482,15 @@ pointSize := math.Pow(10, -float64(digits)) // 0.00001
 ### 2) Not rounding prices
 
 ```go
-// ❌ WRONG - using raw float
+// ❌ WRONG - using raw float (MT5Sugar sends prices exactly as given, it does not round them)
 price := 1.1050033333
-sugar.BuyMarket("EURUSD", 0.1) // Might fail!
+sugar.BuyLimit("EURUSD", 0.1, price) // Might be rejected!
 
-// ✅ CORRECT - round to valid precision
+// ✅ CORRECT - round to valid precision yourself
 digits, _ := sugar.GetSymbolDigits("EURUSD")
 multiplier := math.Pow(10, float64(digits))
 price = math.Round(price*multiplier) / multiplier
+sugar.BuyLimit("EURUSD", 0.1, price)
 ```
 
 ### 3) Hardcoding precision

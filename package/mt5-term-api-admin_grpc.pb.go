@@ -81,6 +81,16 @@ type AdminApiClient interface {
 	KillAllTrialTerminals(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*KillAllTrialTerminalsReply, error)
 	// Kills all active trial terminals on THIS pod.
 	KillAllTrialTerminalsLocal(ctx context.Context, in *ActiveTerminalsRequest, opts ...grpc.CallOption) (*KillAllTrialTerminalsReply, error)
+	// Puts THIS pod into the draining state ahead of shutdown (StatefulSet preStop hook). While draining the
+	// pod stops renewing its terminal ownership leases, suppresses crash persistence for terminals ending with
+	// the VM, and starts no new work; peers restore its terminals once the leases expire. One-way for the
+	// lifetime of the process; calling it again reports already_draining.
+	Drain(ctx context.Context, in *DrainRequest, opts ...grpc.CallOption) (*DrainReply, error)
+	// Stops THIS pod's local copy of one terminal (pod-to-pod: user-stop fan-out, duplicate prune, rebalance
+	// migration). Local only: never forwarded to another pod and never persisted to UserTerminals (the caller
+	// records any stop intent). cause is a StopCause name; only customer/API/admin/delete/test stops and
+	// InternalReap are accepted. Callers must check reply.error.
+	StopTerminalLocal(ctx context.Context, in *StopTerminalLocalRequest, opts ...grpc.CallOption) (*StopTerminalLocalReply, error)
 }
 
 type adminApiClient struct {
@@ -235,6 +245,24 @@ func (c *adminApiClient) KillAllTrialTerminalsLocal(ctx context.Context, in *Act
 	return out, nil
 }
 
+func (c *adminApiClient) Drain(ctx context.Context, in *DrainRequest, opts ...grpc.CallOption) (*DrainReply, error) {
+	out := new(DrainReply)
+	err := c.cc.Invoke(ctx, "/mrpc_admin.AdminApi/Drain", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminApiClient) StopTerminalLocal(ctx context.Context, in *StopTerminalLocalRequest, opts ...grpc.CallOption) (*StopTerminalLocalReply, error) {
+	out := new(StopTerminalLocalReply)
+	err := c.cc.Invoke(ctx, "/mrpc_admin.AdminApi/StopTerminalLocal", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminApiServer is the server API for AdminApi service.
 // All implementations should embed UnimplementedAdminApiServer
 // for forward compatibility
@@ -298,6 +326,16 @@ type AdminApiServer interface {
 	KillAllTrialTerminals(context.Context, *ActiveTerminalsRequest) (*KillAllTrialTerminalsReply, error)
 	// Kills all active trial terminals on THIS pod.
 	KillAllTrialTerminalsLocal(context.Context, *ActiveTerminalsRequest) (*KillAllTrialTerminalsReply, error)
+	// Puts THIS pod into the draining state ahead of shutdown (StatefulSet preStop hook). While draining the
+	// pod stops renewing its terminal ownership leases, suppresses crash persistence for terminals ending with
+	// the VM, and starts no new work; peers restore its terminals once the leases expire. One-way for the
+	// lifetime of the process; calling it again reports already_draining.
+	Drain(context.Context, *DrainRequest) (*DrainReply, error)
+	// Stops THIS pod's local copy of one terminal (pod-to-pod: user-stop fan-out, duplicate prune, rebalance
+	// migration). Local only: never forwarded to another pod and never persisted to UserTerminals (the caller
+	// records any stop intent). cause is a StopCause name; only customer/API/admin/delete/test stops and
+	// InternalReap are accepted. Callers must check reply.error.
+	StopTerminalLocal(context.Context, *StopTerminalLocalRequest) (*StopTerminalLocalReply, error)
 }
 
 // UnimplementedAdminApiServer should be embedded to have forward compatible implementations.
@@ -351,6 +389,12 @@ func (UnimplementedAdminApiServer) KillAllTrialTerminals(context.Context, *Activ
 }
 func (UnimplementedAdminApiServer) KillAllTrialTerminalsLocal(context.Context, *ActiveTerminalsRequest) (*KillAllTrialTerminalsReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method KillAllTrialTerminalsLocal not implemented")
+}
+func (UnimplementedAdminApiServer) Drain(context.Context, *DrainRequest) (*DrainReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Drain not implemented")
+}
+func (UnimplementedAdminApiServer) StopTerminalLocal(context.Context, *StopTerminalLocalRequest) (*StopTerminalLocalReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StopTerminalLocal not implemented")
 }
 
 // UnsafeAdminApiServer may be embedded to opt out of forward compatibility for this service.
@@ -652,6 +696,42 @@ func _AdminApi_KillAllTrialTerminalsLocal_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminApi_Drain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DrainRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminApiServer).Drain(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mrpc_admin.AdminApi/Drain",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminApiServer).Drain(ctx, req.(*DrainRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminApi_StopTerminalLocal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StopTerminalLocalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminApiServer).StopTerminalLocal(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mrpc_admin.AdminApi/StopTerminalLocal",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminApiServer).StopTerminalLocal(ctx, req.(*StopTerminalLocalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminApi_ServiceDesc is the grpc.ServiceDesc for AdminApi service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -722,6 +802,14 @@ var AdminApi_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "KillAllTrialTerminalsLocal",
 			Handler:    _AdminApi_KillAllTrialTerminalsLocal_Handler,
+		},
+		{
+			MethodName: "Drain",
+			Handler:    _AdminApi_Drain_Handler,
+		},
+		{
+			MethodName: "StopTerminalLocal",
+			Handler:    _AdminApi_StopTerminalLocal_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

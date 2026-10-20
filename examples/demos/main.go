@@ -40,7 +40,7 @@
     → Entry → Monitor → Exit logic
 
  5️⃣ PRESETS (Ready-to-Use Systems)
-    → examples/demos/Presets/
+    → examples/demos/presets/
     → Full trading systems
     → Adaptive market analysis
     → Multiple orchestrators combined
@@ -59,10 +59,10 @@
    go run main.go grid           → Grid Trading orchestrator
    go run main.go adaptive       → Adaptive Market Preset
 
- Available Commands:
+ Available Commands (or the numbers 1-18):
    lowlevel01, lowlevel02, lowlevel03, service, service05,
-   sugar06, sugar07, sugar08, sugar09,
-   grid, trailing, scaler, risk, rebalancer, adaptive
+   sugar06, sugar07, sugar08, sugar09, sugar10,
+   trailing, scaler, grid, risk, rebalancer, adaptive, inspect, usercode
 
  ╔═══════════════════════════════════════════════════════════════════════════╗
  ║                         PROJECT STRUCTURE                                 ║
@@ -74,10 +74,11 @@
  ├── helpers/                  ← Connection helper
  ├── lowlevel/                 ← Direct gRPC examples [1-3]
  ├── service/                  ← MT5Service examples [4-5]
- ├── sugar/                    ← Sugar API examples [6-9]
- ├── orchestrators/            ← Trading strategies [10-14]
- ├── Presets/                  ← Complete systems [15]
- └── errors/                   ← Error handling utilities
+ ├── sugar/                    ← Sugar API examples [6-10]
+ ├── orchestrators/            ← Trading strategies [11-15]
+ ├── presets/                  ← Complete systems [16]
+ └── usercode/                 ← Your sandbox [18]
+   (helpers/ also holds the Protobuf Inspector [17] and the error helpers)
 
 ══════════════════════════════════════════════════════════════════════════════*/
 
@@ -232,10 +233,10 @@ func showMenu() string {
 	fmt.Println("│  [16] Adaptive Preset      → go run main.go adaptive             │")
 	fmt.Println("│  [17] Protobuf Inspector   → go run main.go inspect              │")
 	fmt.Println("├──────────────────────────────────────────────────────────────────┤")
-	fmt.Println("│  USER CODE SANDBOX (Uncomment in main.go to enable)              │")
+	fmt.Println("│  USER CODE SANDBOX                                               │")
 	fmt.Println("├──────────────────────────────────────────────────────────────────┤")
-	fmt.Println("│  [18] User Code Sandbox    → go run main.go 18       (DISABLED)  │")
-	fmt.Println("│      See examples/demos/usercode/README.md to enable             │")
+	fmt.Println("│  [18] User Code Sandbox    → go run main.go usercode             │")
+	fmt.Println("│      Write your code in usercode/18_usercode.go                  │")
 	fmt.Println("├──────────────────────────────────────────────────────────────────┤")
 	fmt.Println("│  [0]  EXIT                                                       │")
 	fmt.Println("└──────────────────────────────────────────────────────────────────┘")
@@ -331,28 +332,18 @@ func executeCommand(command string) (exitRequested bool, err error) {
 		return false, nil
 
 	// ═════════════════════════════════════════════════════════════
-	// USER CODE SANDBOX (DISABLED BY DEFAULT)
+	// USER CODE SANDBOX
 	// ═════════════════════════════════════════════════════════════
 	// 🎓 YOUR PERSONAL SANDBOX FOR LEARNING & TESTING MT5 CODE
 	//
-	// INSTRUCTIONS TO ENABLE:
-	//   1. Uncomment line ~100 in this file:
-	//      // "github.com/MetaRPC/GoMT5/examples/demos/usercode"
-	//
-	//   2. Uncomment the case block below (lines ~326-328):
-	//      // case "18", "usercode", "user", "sandbox", "custom":
-	//      // 	usercode.RunUserCode()
-	//      // 	return false, nil
-	//
-	//   3. Run: go run main.go 18
-	//
-	//   4. Edit your code in: examples/demos/usercode/18_usercode.go
-	//      (File has educational examples showing all 3 API levels!)
+	//   Run: go run main.go 18   (or usercode, user, sandbox, custom)
+	//   Edit your code in: examples/demos/usercode/18_usercode.go
+	//   (File has educational examples showing all 3 API levels!)
 	//
 	// WHAT YOU'LL LEARN:
 	//   • MT5Account (low-level) - Raw gRPC protocol
 	//   • MT5Service (mid-level) - Native Go types
-	//   • MT5Sugar (high-level)  - 62+ convenience methods
+	//   • MT5Sugar (high-level)  - 60+ convenience methods
 	//   • How to mix all 3 levels for maximum power!
 	// ═════════════════════════════════════════════════════════════
 
@@ -371,13 +362,14 @@ func executeCommand(command string) (exitRequested bool, err error) {
 	// ═════════════════════════════════════════════════════════════
 	default:
 		fmt.Printf("\n❌ Invalid command: %s\n", command)
-		fmt.Println("Valid commands: 1-15, 0 (exit)")
+		fmt.Println("Valid commands: 1-18, 0 (exit)")
 		fmt.Println("Or use keywords:")
 		fmt.Println("  Low-level:      lowlevel01, lowlevel02, lowlevel03")
 		fmt.Println("  Service:        service, service05")
-		fmt.Println("  Sugar:          sugar06, sugar07, sugar08, sugar09")
+		fmt.Println("  Sugar:          sugar06, sugar07, sugar08, sugar09, sugar10")
 		fmt.Println("  Orchestrators:  trailing, scaler, grid, risk, rebalancer")
-		fmt.Println("  Presets:        adaptive")
+		fmt.Println("  Presets/tools:  adaptive, inspect")
+		fmt.Println("  Sandbox:        usercode")
 		return false, nil
 	}
 }
@@ -407,12 +399,14 @@ func RunOrchestrator_TrailingStop() error {
 	if err != nil {
 		return fmt.Errorf("failed to create MT5Sugar: %w", err)
 	}
+	sugar.GetAccount().ApiKey = cfg.ApiKey
+	// Disconnect however the run ends (also when the connect fails: the server may have started the terminal)
+	defer helpers.DisconnectOnExit(sugar)()
 
 	err = sugar.QuickConnect(cfg.MtCluster)
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	defer sugar.Disconnect()
 
 	// ╔════════════════════════════════════════════════════════════╗
 	// ║  CONFIGURATION - MODIFY THESE SETTINGS                     ║
@@ -437,6 +431,9 @@ func RunOrchestrator_TrailingStop() error {
 	if err := tsManager.Start(); err != nil {
 		return fmt.Errorf("failed to start: %w", err)
 	}
+	// It stops by itself on Ctrl+C (deleting its orders, ...): the first Ctrl+C is left to it, the
+	// disconnect follows when this function returns
+	defer helpers.LetCallerHandleInterrupt()()
 
 	// Run for 3 minutes with live progress bar and metrics
 	fmt.Println("  ✓ Starting monitoring...")
@@ -453,8 +450,8 @@ func RunOrchestrator_TrailingStop() error {
 
 			fmt.Printf("\r  📊 Positions: %d | SL Updates: %d | Success: %d | Errors: %d        ",
 				metrics.CurrentPositions,
-				status.SuccessCount,
-				status.SuccessCount,
+				metrics.OperationsTotal, // one per SL modification
+				status.SuccessCount,     // one per check that moved at least one SL
 				status.ErrorCount)
 
 			return true // Continue monitoring
@@ -487,12 +484,14 @@ func RunOrchestrator_PositionScaler() error {
 	if err != nil {
 		return fmt.Errorf("failed to create MT5Sugar: %w", err)
 	}
+	sugar.GetAccount().ApiKey = cfg.ApiKey
+	// Disconnect however the run ends (also when the connect fails: the server may have started the terminal)
+	defer helpers.DisconnectOnExit(sugar)()
 
 	err = sugar.QuickConnect(cfg.MtCluster)
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	defer sugar.Disconnect()
 
 	// ╔════════════════════════════════════════════════════════════╗
 	// ║  CONFIGURATION - MODIFY THESE SETTINGS                     ║
@@ -524,6 +523,9 @@ func RunOrchestrator_PositionScaler() error {
 	if err := scaler.Start(); err != nil {
 		return fmt.Errorf("failed to start: %w", err)
 	}
+	// It stops by itself on Ctrl+C (deleting its orders, ...): the first Ctrl+C is left to it, the
+	// disconnect follows when this function returns
+	defer helpers.LetCallerHandleInterrupt()()
 
 	// Run for 5 minutes with live progress bar and metrics
 	fmt.Println("  ✓ Starting monitoring...")
@@ -537,10 +539,14 @@ func RunOrchestrator_PositionScaler() error {
 			// Display live metrics during operation
 			status := scaler.GetStatus()
 			metrics := scaler.GetMetrics()
+			scales := 0 // scale-ins of the tracked groups (SuccessCount also counts the base position)
+			for _, group := range scaler.GetTrackedGroups() {
+				scales += group.ScaleCount
+			}
 
 			fmt.Printf("\r  📊 Groups: %d | Scales: %d | Trades: %d | Errors: %d        ",
 				metrics.CurrentPositions,
-				status.SuccessCount,
+				scales,
 				metrics.TotalTrades,
 				status.ErrorCount)
 
@@ -574,12 +580,14 @@ func RunOrchestrator_Grid() error {
 	if err != nil {
 		return fmt.Errorf("failed to create MT5Sugar: %w", err)
 	}
+	sugar.GetAccount().ApiKey = cfg.ApiKey
+	// Disconnect however the run ends (also when the connect fails: the server may have started the terminal)
+	defer helpers.DisconnectOnExit(sugar)()
 
 	err = sugar.QuickConnect(cfg.MtCluster)
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	defer sugar.Disconnect()
 
 	// ╔════════════════════════════════════════════════════════════╗
 	// ║  CONFIGURATION - MODIFY THESE SETTINGS                     ║
@@ -609,6 +617,9 @@ func RunOrchestrator_Grid() error {
 	if err := gridTrader.Start(); err != nil {
 		return fmt.Errorf("failed to start: %w", err)
 	}
+	// It stops by itself on Ctrl+C (deleting its orders, ...): the first Ctrl+C is left to it, the
+	// disconnect follows when this function returns
+	defer helpers.LetCallerHandleInterrupt()()
 
 	// Run for 10 minutes with live progress bar and metrics
 	fmt.Println("  ✓ Starting monitoring...")
@@ -659,12 +670,14 @@ func RunOrchestrator_RiskManager() error {
 	if err != nil {
 		return fmt.Errorf("failed to create MT5Sugar: %w", err)
 	}
+	sugar.GetAccount().ApiKey = cfg.ApiKey
+	// Disconnect however the run ends (also when the connect fails: the server may have started the terminal)
+	defer helpers.DisconnectOnExit(sugar)()
 
 	err = sugar.QuickConnect(cfg.MtCluster)
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	defer sugar.Disconnect()
 
 	// ╔════════════════════════════════════════════════════════════╗
 	// ║  CONFIGURATION - MODIFY THESE SETTINGS                     ║
@@ -697,6 +710,9 @@ func RunOrchestrator_RiskManager() error {
 	if err := riskManager.Start(); err != nil {
 		return fmt.Errorf("failed to start: %w", err)
 	}
+	// It stops by itself on Ctrl+C (deleting its orders, ...): the first Ctrl+C is left to it, the
+	// disconnect follows when this function returns
+	defer helpers.LetCallerHandleInterrupt()()
 
 	// Run for 15 minutes with live progress bar and risk metrics
 	fmt.Println("  ✓ Starting monitoring...")
@@ -760,12 +776,14 @@ func RunOrchestrator_PortfolioRebalancer() error {
 	if err != nil {
 		return fmt.Errorf("failed to create MT5Sugar: %w", err)
 	}
+	sugar.GetAccount().ApiKey = cfg.ApiKey
+	// Disconnect however the run ends (also when the connect fails: the server may have started the terminal)
+	defer helpers.DisconnectOnExit(sugar)()
 
 	err = sugar.QuickConnect(cfg.MtCluster)
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	defer sugar.Disconnect()
 
 	// ╔════════════════════════════════════════════════════════════╗
 	// ║  CONFIGURATION - MODIFY THESE SETTINGS                     ║
@@ -801,6 +819,9 @@ func RunOrchestrator_PortfolioRebalancer() error {
 	if err := rebalancer.Start(); err != nil {
 		return fmt.Errorf("failed to start: %w", err)
 	}
+	// It stops by itself on Ctrl+C (deleting its orders, ...): the first Ctrl+C is left to it, the
+	// disconnect follows when this function returns
+	defer helpers.LetCallerHandleInterrupt()()
 
 	// Run for 1 hour with progress bar
 	fmt.Println("  ✓ Starting monitoring...")
@@ -868,19 +889,26 @@ func RunOrchestrator_AdaptivePreset() error {
 	if err != nil {
 		return fmt.Errorf("failed to create MT5Sugar: %w", err)
 	}
+	sugar.GetAccount().ApiKey = cfg.ApiKey
+	// Disconnect however the run ends (also when the connect fails: the server may have started the terminal)
+	defer helpers.DisconnectOnExit(sugar)()
 
 	err = sugar.QuickConnect(cfg.MtCluster)
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	defer sugar.Disconnect()
 
 	// Create and execute preset
 	preset := presets.NewAdaptiveOrchestratorPreset(sugar)
+	// Two cycles (about 11 minutes), then the preset stops by itself like the other runners -
+	// also when nobody can press Ctrl+C (stdin closed, CI). 0 = run until Ctrl+C or a safety stop.
+	preset.MaxCycles = 2
 
 	fmt.Println("\n🚀 Starting Adaptive Preset...")
-	fmt.Println("  ✓ Press Ctrl+C to stop")
+	fmt.Printf("  ✓ %d cycles of %v; press Ctrl+C to stop earlier\n", preset.MaxCycles, preset.CycleDuration)
 
+	// The preset stops by itself on Ctrl+C: the first Ctrl+C is left to it, the disconnect follows on return
+	defer helpers.LetCallerHandleInterrupt()()
 	totalProfit, err := preset.Execute()
 	if err != nil {
 		return fmt.Errorf("preset execution failed: %w", err)

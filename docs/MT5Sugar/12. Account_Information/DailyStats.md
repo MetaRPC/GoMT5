@@ -6,13 +6,13 @@
 
 ```go
 type DailyStats struct {
-    TotalDeals   int       // Total closed deals today
-    WinningDeals int       // Number of profitable deals
-    LosingDeals  int       // Number of losing deals
-    WinRate      float64   // Win rate % (0-100)
-    TotalProfit  float64   // Total realized profit/loss today
-    BestDeal     float64   // Largest profitable deal
-    WorstDeal    float64   // Largest losing deal
+    TotalDeals   int       // Number of today's closed positions (opened since local midnight, as GetDealsToday() returns them)
+    WinningDeals int       // Number with Profit > 0
+    LosingDeals  int       // Number with Profit < 0
+    WinRate      float64   // WinningDeals / TotalDeals * 100 (0-100)
+    TotalProfit  float64   // Sum of their Profit (commission, swap and fee not included)
+    BestDeal     float64   // Largest Profit (0 if none was profitable)
+    WorstDeal    float64   // Smallest (most negative) Profit (0 if none lost)
 }
 ```
 
@@ -20,7 +20,7 @@ type DailyStats struct {
 
 ### TotalDeals (int)
 
-- **What:** Total number of closed positions today (00:00 to now)
+- **What:** Number of closed positions returned by `GetDealsToday()` - positions whose OPEN time is between local midnight and now (calendar of the computer running the program, sent to the server as UTC). A position opened yesterday and closed today is not counted
 - **Example:** `15`
 - **Includes:** Both winning and losing trades
 - **Excludes:** Open positions (not yet closed)
@@ -42,7 +42,7 @@ type DailyStats struct {
 ### WinRate (float64)
 
 - **What:** Percentage of winning trades
-- **Formula:** (WinningDeals / TotalDeals) × 100
+- **Formula:** (WinningDeals / TotalDeals) × 100 (zero-profit positions count in TotalDeals)
 - **Range:** 0.0 to 100.0
 - **Example:** `60.0` (means 60% win rate)
 - **Important:**
@@ -52,42 +52,49 @@ type DailyStats struct {
 
 ### TotalProfit (float64)
 
-- **What:** Sum of all realized profits/losses today
-- **Formula:** Sum of all deal profits
+- **What:** Sum of the realized profits/losses of today's closed positions
+- **Formula:** Sum of the `Profit` field of each closed position (commission, swap and fee are NOT included)
 - **Example:** `350.75` (positive = profit, negative = loss)
-- **Currency:** Account base currency
+- **Currency:** Account (deposit) currency
 - **Excludes:** Floating P/L from open positions
 
 ### BestDeal (float64)
 
-- **What:** Largest single profitable trade today
+- **What:** Largest single `Profit` today
 - **Example:** `125.50`
 - **Use:** Track maximum gain, outlier detection
 - **Note:** Always positive (or 0 if no winners)
 
 ### WorstDeal (float64)
 
-- **What:** Largest single losing trade today
+- **What:** Smallest (most negative) single `Profit` today
 - **Example:** `-87.25`
 - **Use:** Risk management, maximum loss tracking
 - **Note:** Always negative (or 0 if no losers)
 
 ## 🎯 Common Calculations
 
-### Average Win
+### Average Win / Average Loss
 ```go
+// DailyStats has no sums of wins and losses - take them from the same positions
+deals, _ := sugar.GetDealsToday()
+totalWins, totalLosses := 0.0, 0.0
+for _, d := range deals {
+    if d.Profit > 0 {
+        totalWins += d.Profit
+    } else if d.Profit < 0 {
+        totalLosses += d.Profit
+    }
+}
+
 avgWin := 0.0
 if stats.WinningDeals > 0 {
-    // Approximation (need deal details for exact)
-    avgWin = stats.BestDeal / float64(stats.WinningDeals)
+    avgWin = totalWins / float64(stats.WinningDeals)
 }
-```
 
-### Average Loss
-```go
 avgLoss := 0.0
 if stats.LosingDeals > 0 {
-    avgLoss = stats.WorstDeal / float64(stats.LosingDeals)
+    avgLoss = totalLosses / float64(stats.LosingDeals)
 }
 ```
 
@@ -115,7 +122,7 @@ lossRate := 100.0 - stats.WinRate
 
 ### Profit Factor
 ```go
-// Requires individual deal data
+// Requires individual deal data (totalWins / totalLosses from GetDealsToday, as above)
 profitFactor := totalWins / -totalLosses
 // Above 2.0 = excellent, 1.5-2.0 = good, below 1.0 = losing
 ```
@@ -420,15 +427,17 @@ func recordDailyStats(stats *mt5.DailyStats) {
 
 ## ⚠️ Important Notes
 
-1. **Today's range** - 00:00 to current time (server time, not local)
+1. **Today's range** - local midnight to now on the computer running the program (`time.Local`, not the broker's trading day), sent to the server as UTC; positions are selected by their OPEN time. `GetDailyStats()` has a 15-second timeout
 
 2. **Closed positions only** - Open positions not included
 
 3. **Win rate** - Based on closed deals, not tick-by-tick P/L
 
-4. **Best/Worst** - Absolute values, not averages
+4. **Best/Worst** - Single-position extremes (signed `Profit` values), not averages
 
-5. **Zero-profit deals** - Excluded from win rate calculation
+5. **Zero-profit deals** - Counted in `TotalDeals` (so they lower `WinRate`) but neither in `WinningDeals` nor `LosingDeals`
+
+6. **Profit only** - `TotalProfit`, `BestDeal`, `WorstDeal` use the `Profit` field only (no commission / swap / fee)
 
 ## 💡 Quick Reference
 

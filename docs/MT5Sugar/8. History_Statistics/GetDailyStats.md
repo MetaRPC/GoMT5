@@ -5,7 +5,7 @@
 **API Information:**
 
 * **Method:** `sugar.GetDailyStats()`
-* **Timeout:** 5 seconds
+* **Timeout:** 15 seconds (the `GetDealsToday()` call)
 * **Returns:** DailyStats structure with complete statistics
 
 ---
@@ -15,6 +15,52 @@
 ```go
 func (s *MT5Sugar) GetDailyStats() (*DailyStats, error)
 ```
+
+Implementation:
+
+```go
+func (s *MT5Sugar) GetDailyStats() (*DailyStats, error) {
+    deals, err := s.GetDealsToday()
+    if err != nil {
+        return nil, err
+    }
+
+    stats := &DailyStats{
+        TotalDeals: len(deals),
+    }
+
+    if len(deals) == 0 {
+        return stats, nil
+    }
+
+    for _, deal := range deals {
+        stats.TotalProfit += deal.Profit
+
+        if deal.Profit > 0 {
+            stats.WinningDeals++
+            if deal.Profit > stats.BestDeal {
+                stats.BestDeal = deal.Profit
+            }
+        } else if deal.Profit < 0 {
+            stats.LosingDeals++
+            if deal.Profit < stats.WorstDeal {
+                stats.WorstDeal = deal.Profit
+            }
+        }
+    }
+
+    if stats.TotalDeals > 0 {
+        stats.WinRate = float64(stats.WinningDeals) / float64(stats.TotalDeals) * 100.0
+    }
+
+    return stats, nil
+}
+```
+
+`GetDealsToday()` returns the closed positions **opened** today (local midnight to now on the computer running the
+program, sent to the server as UTC; a position opened yesterday and closed today is not counted). The statistics use each
+position's `Profit` (swap, commission and fee are not included).
+`DailyStats` is declared in package `mt5` - outside that package write `*mt5.DailyStats`.
 
 ---
 
@@ -26,8 +72,8 @@ func (s *MT5Sugar) GetDailyStats() (*DailyStats, error)
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `*DailyStats` | struct | Complete daily statistics structure |
-| `error` | `error` | Error if calculation failed |
+| `*mt5.DailyStats` | struct | Complete daily statistics structure |
+| `error` | `error` | The `GetDealsToday()` error if retrieval failed (stats is `nil` then) |
 
 ---
 
@@ -35,13 +81,13 @@ func (s *MT5Sugar) GetDailyStats() (*DailyStats, error)
 
 ```go
 type DailyStats struct {
-    TotalDeals   int     // Total closed deals today
-    WinningDeals int     // Number of profitable deals
-    LosingDeals  int     // Number of losing deals
-    WinRate      float64 // Win rate percentage (0-100)
-    TotalProfit  float64 // Total realized P/L today
-    BestDeal     float64 // Largest profitable deal
-    WorstDeal    float64 // Largest losing deal
+    TotalDeals   int     // Number of today's closed positions (opened since local midnight, as GetDealsToday() returns them)
+    WinningDeals int     // Positions with Profit > 0
+    LosingDeals  int     // Positions with Profit < 0 (Profit == 0 counts as neither)
+    WinRate      float64 // WinningDeals / TotalDeals * 100 (0-100)
+    TotalProfit  float64 // Sum of Profit (commission, swap and fee not included)
+    BestDeal     float64 // Largest positive Profit (0 if no winning deal)
+    WorstDeal    float64 // Most negative Profit (0 if no losing deal)
 }
 ```
 
@@ -51,7 +97,7 @@ type DailyStats struct {
 
 * **What it is:** Get complete trading statistics for today in one convenient structure.
 * **Why you need it:** Daily performance reports, dashboard displays, comprehensive analysis.
-* **Sanity check:** Returns empty stats if no deals today (not error). All metrics calculated automatically.
+* **Sanity check:** With no deals today it returns a `DailyStats` with all fields zero (not an error). All metrics calculated automatically.
 
 ---
 
@@ -230,18 +276,24 @@ if stats.TotalDeals == 0 {
     return
 }
 
-// Calculate average win/loss
+// DailyStats has no sums of wins/losses - take them from the same positions
+deals, _ := sugar.GetDealsToday()
+totalWins, totalLosses := 0.0, 0.0
+for _, deal := range deals {
+    if deal.Profit > 0 {
+        totalWins += deal.Profit
+    } else if deal.Profit < 0 {
+        totalLosses += deal.Profit
+    }
+}
+
 avgWin := 0.0
 if stats.WinningDeals > 0 {
-    // Estimate avg win
-    totalWins := stats.TotalProfit - (stats.WorstDeal * float64(stats.LosingDeals))
     avgWin = totalWins / float64(stats.WinningDeals)
 }
 
 avgLoss := 0.0
 if stats.LosingDeals > 0 {
-    // Estimate avg loss
-    totalLosses := stats.WorstDeal * float64(stats.LosingDeals)
     avgLoss = totalLosses / float64(stats.LosingDeals)
 }
 
@@ -274,7 +326,7 @@ if riskRewardRatio >= 2.0 {
 ### 6) Performance grade calculator
 
 ```go
-func GradeDailyPerformance(stats *DailyStats) string {
+func GradeDailyPerformance(stats *mt5.DailyStats) string {
     if stats.TotalDeals == 0 {
         return "N/A - No trades"
     }
@@ -446,7 +498,7 @@ type StreakTracker struct {
     LossStreak int
 }
 
-func (st *StreakTracker) Update(stats *DailyStats) {
+func (st *StreakTracker) Update(stats *mt5.DailyStats) {
     if stats.TotalProfit > 0 {
         st.WinStreak++
         st.LossStreak = 0
@@ -487,8 +539,8 @@ tracker.Show()
 
 ```go
 type DailyStatsAnalyzer struct {
-    Stats       *DailyStats
-    TargetStats *DailyStats
+    Stats       *mt5.DailyStats
+    TargetStats *mt5.DailyStats
 }
 
 func NewDailyStatsAnalyzer(sugar *mt5.MT5Sugar, targetProfit float64, targetWinRate float64) (*DailyStatsAnalyzer, error) {
@@ -499,7 +551,7 @@ func NewDailyStatsAnalyzer(sugar *mt5.MT5Sugar, targetProfit float64, targetWinR
 
     return &DailyStatsAnalyzer{
         Stats: stats,
-        TargetStats: &DailyStats{
+        TargetStats: &mt5.DailyStats{
             TotalProfit: targetProfit,
             WinRate:     targetWinRate,
         },
@@ -601,9 +653,9 @@ analyzer.GenerateReport()
 ### 1) Not checking for zero trades
 
 ```go
-// ❌ WRONG - division by zero!
+// ❌ WRONG - division by zero (NaN) when there are no deals!
 stats, _ := sugar.GetDailyStats()
-avgProfit := stats.TotalProfit / stats.TotalDeals
+avgProfit := stats.TotalProfit / float64(stats.TotalDeals)
 
 // ✅ CORRECT - check first
 if stats.TotalDeals > 0 {
@@ -626,9 +678,9 @@ totalProfit := stats.TotalProfit + floatingProfit
 ### 3) Assuming BestDeal/WorstDeal are set
 
 ```go
-// ❌ WRONG - might be zero if no wins/losses
+// ❌ WRONG - BestDeal/WorstDeal are 0 when there were no wins/losses
 stats, _ := sugar.GetDailyStats()
-ratio := stats.BestDeal / stats.WorstDeal // Panic if WorstDeal = 0!
+ratio := stats.BestDeal / stats.WorstDeal // ±Inf or NaN if WorstDeal == 0!
 
 // ✅ CORRECT - check first
 if stats.BestDeal > 0 && stats.WorstDeal < 0 {
@@ -644,11 +696,11 @@ if stats.BestDeal > 0 && stats.WorstDeal < 0 {
 
 2. **Calculated fields** - Win rate automatically calculated
 
-3. **Empty OK** - Returns empty stats if no trades (not error)
+3. **Empty OK** - Returns zero-valued stats if no trades (not error)
 
-4. **Today only** - Stats from 00:00 server time to now
+4. **Today only** - Closed positions opened from local 00:00 (calendar of the computer running the program) to now; 15-second timeout
 
-5. **Efficient** - More efficient than manually calculating from deals
+5. **Convenient** - Same single `GetDealsToday()` call you would make yourself, aggregated for you
 
 ---
 
@@ -656,9 +708,9 @@ if stats.BestDeal > 0 && stats.WorstDeal < 0 {
 
 ```
 Total relationships:
-- TotalDeals = WinningDeals + LosingDeals + BreakevenDeals
+- TotalDeals = WinningDeals + LosingDeals + (deals with Profit == 0, not counted separately)
 - WinRate = (WinningDeals / TotalDeals) * 100
-- TotalProfit = Sum of all deal profits
+- TotalProfit = Sum of all deal Profit fields (no commission/swap/fee)
 
 Quality checks:
 - If WinRate > 50% but TotalProfit < 0: Wins too small

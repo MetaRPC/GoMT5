@@ -113,12 +113,16 @@ func RunStreaming03() error {
 	if cfg.ApiKey != "" {
 		account.ApiKey = cfg.ApiKey
 	}
+	// Runs however the demo ends: the terminal is disconnected (stopped) and the gRPC connection closed.
+	// Errors after the connection below are returned (not helpers.Fatal, which exits at once and skips this).
 	defer account.DisconnectAndClose()
 	fmt.Printf("✓ MT5Account created (UUID: %s)\n", account.Id)
 
 	// Create cancellable context for proper stream cleanup
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel() // Ensures all streams are properly closed
+	// Each stream below also gets its own context, cancelled as soon as its loop ends: that closes the stream on
+	// the server at once (otherwise every stream would stay open, unread, until the demo ends).
 
 	// ConnectEx - Connect to MT5 cluster
 	connectExReq := &pb.ConnectExRequest{
@@ -127,15 +131,17 @@ func RunStreaming03() error {
 		MtClusterName: cfg.MtCluster,
 	}
 
-	// Use context timeout for ConnectEx (replaces old TerminalReadinessWaitingTimeoutSeconds)
+	// The server waits up to ConnectExRequest.TimeoutSeconds (default 120 s) for the terminal to log in;
+	// the call's own deadline must be longer than that.
 	connectCtx, connectCancel := context.WithTimeout(ctx, 180*time.Second)
 	defer connectCancel()
 
 	connectData, err := account.ConnectEx(connectCtx, connectExReq)
-	helpers.Fatal(err, "ConnectEx failed")
+	if err != nil {
+		return fmt.Errorf("ConnectEx failed: %w", err)
+	}
 
-	account.TerminalInstanceGuid = connectData.TerminalInstanceGuid
-	account.Id = mt5.ParseGuidSafe(connectData.TerminalInstanceGuid)
+	// ConnectEx has stored the terminal GUID in the account (account.TerminalInstanceGuid / account.Id)
 	fmt.Printf("✓ Connected (Terminal GUID: %s)\n", connectData.TerminalInstanceGuid)
 
 	// ═══════════════════════════════════════════════════════════════════════
@@ -147,16 +153,17 @@ func RunStreaming03() error {
 	// ══════════════════════════════════════════════════════════════
 	// 2.1. ON SYMBOL TICK
 	//      Subscribe to real-time tick data for specified symbols.
-	//      Returns: Bid, Ask, Spread, Volume, Time for each tick.
+	//      Returns: Symbol, Bid, Ask, Last, Volume, Time (broker) / TimeUtc for each tick (spread = Ask - Bid).
 	//      HIGH FREQUENCY: Multiple events per second.
 	//      Use cases: Price monitoring, tick charts, HFT strategies.
 	// ══════════════════════════════════════════════════════════════
 
 	tickReq := &pb.OnSymbolTickRequest{
-		SymbolNames: []string{cfg.TestSymbol}, // Can subscribe to multiple symbols
+		SymbolNames: []string{cfg.TestSymbol}, // Symbols to stream (one or more)
 	}
 
-	tickChan, tickErrChan := account.OnSymbolTick(ctx, tickReq)
+	tickCtx, tickCancel := context.WithCancel(ctx)
+	tickChan, tickErrChan := account.OnSymbolTick(tickCtx, tickReq)
 
 	fmt.Printf("Streaming %s tick data (max %d events or %d seconds)...\n", cfg.TestSymbol, MAX_EVENTS, MAX_SECONDS)
 
@@ -172,7 +179,7 @@ streamTick:
 				break streamTick
 			}
 			eventCount++
-			// Direct field access to nested SymbolTick structure
+			// The tick itself is nested: SymbolTick (nil in a message without a tick)
 			if tickData.SymbolTick != nil {
 				tick := tickData.SymbolTick
 				fmt.Printf("  Event #%d: Symbol=%s Bid=%.5f Ask=%.5f Spread=%.5f\n",
@@ -199,6 +206,7 @@ streamTick:
 			break streamTick
 		}
 	}
+	tickCancel() // closes this stream on the server
 
 	// ═══════════════════════════════════════════════════════════════════════
 	// STEP 3: STREAM 2 - OnTrade (Trade events stream)
@@ -216,7 +224,8 @@ streamTick:
 
 	tradeReq := &pb.OnTradeRequest{}
 
-	tradeChan, tradeErrChan := account.OnTrade(ctx, tradeReq)
+	tradeCtx, tradeCancel := context.WithCancel(ctx)
+	tradeChan, tradeErrChan := account.OnTrade(tradeCtx, tradeReq)
 
 	fmt.Printf("Streaming trade events (max %d events or %d seconds)...\n", MAX_EVENTS, MAX_SECONDS)
 	fmt.Println("  NOTE: This stream sends events only when trades occur")
@@ -261,6 +270,7 @@ streamTrade:
 			break streamTrade
 		}
 	}
+	tradeCancel() // closes this stream on the server
 
 	// ═══════════════════════════════════════════════════════════════════════
 	// STEP 4: STREAM 3 - OnPositionProfit (Position P&L stream)
@@ -272,16 +282,21 @@ streamTrade:
 	// 4.1. ON POSITION PROFIT
 	//      Subscribe to real-time P&L changes for open positions.
 	//      Returns: Profit/loss as market prices change.
-	//      CONDITIONAL: Fires only when positions exist and prices move.
+	//      PERIODIC: One update every TimerPeriodMilliseconds (empty without open positions).
 	//      Use cases: Real-time P&L monitoring, risk management.
 	// ══════════════════════════════════════════════════════════════
 
-	profitReq := &pb.OnPositionProfitRequest{}
+	profitReq := &pb.OnPositionProfitRequest{
+		TimerPeriodMilliseconds: 1000,  // one update per second (0 = the default, 1000 ms)
+		IgnoreEmptyData:         false, // false = also send updates with no position in them
+	}
 
-	profitChan, profitErrChan := account.OnPositionProfit(ctx, profitReq)
+	profitCtx, profitCancel := context.WithCancel(ctx)
+	profitChan, profitErrChan := account.OnPositionProfit(profitCtx, profitReq)
 
 	fmt.Printf("Streaming position P&L updates (max %d events or %d seconds)...\n", MAX_EVENTS, MAX_SECONDS)
-	fmt.Println("  NOTE: This stream sends events only when positions exist and prices change")
+	fmt.Println("  NOTE: This stream sends an update every TimerPeriodMilliseconds; with no open position the")
+	fmt.Println("        update is empty (set IgnoreEmptyData: true to skip empty updates)")
 
 	eventCount = 0
 	timeout = time.After(MAX_SECONDS * time.Second)
@@ -334,6 +349,7 @@ streamProfit:
 			break streamProfit
 		}
 	}
+	profitCancel() // closes this stream on the server
 
 	// ═══════════════════════════════════════════════════════════════════════
 	// STEP 5: STREAM 4 - OnPositionsAndPendingOrdersTickets (Tickets stream)
@@ -349,12 +365,16 @@ streamProfit:
 	//      Use cases: Quick "what's open?" check, ticket tracking.
 	// ══════════════════════════════════════════════════════════════
 
-	ticketsReq := &pb.OnPositionsAndPendingOrdersTicketsRequest{}
+	ticketsReq := &pb.OnPositionsAndPendingOrdersTicketsRequest{
+		TimerPeriodMilliseconds: 1000, // one snapshot per second (0 = the default, 1000 ms)
+	}
 
-	ticketsChan, ticketsErrChan := account.OnPositionsAndPendingOrdersTickets(ctx, ticketsReq)
+	ticketsCtx, ticketsCancel := context.WithCancel(ctx)
+	ticketsChan, ticketsErrChan := account.OnPositionsAndPendingOrdersTickets(ticketsCtx, ticketsReq)
 
 	fmt.Printf("Streaming ticket changes (max %d events or %d seconds)...\n", MAX_EVENTS, MAX_SECONDS)
-	fmt.Println("  NOTE: This stream sends events when orders/positions open or close")
+	fmt.Println("  NOTE: This stream sends the current ticket lists every TimerPeriodMilliseconds,")
+	fmt.Println("        whether they changed or not: compare them to the previous ones to see changes")
 
 	eventCount = 0
 	timeout = time.After(MAX_SECONDS * time.Second)
@@ -392,6 +412,7 @@ streamTickets:
 			break streamTickets
 		}
 	}
+	ticketsCancel() // closes this stream on the server
 
 	// ═══════════════════════════════════════════════════════════════════════
 	// STEP 6: STREAM 5 - OnTradeTransaction (Trade transaction events)
@@ -409,7 +430,8 @@ streamTickets:
 
 	transactionReq := &pb.OnTradeTransactionRequest{}
 
-	transactionChan, transactionErrChan := account.OnTradeTransaction(ctx, transactionReq)
+	transactionCtx, transactionCancel := context.WithCancel(ctx)
+	transactionChan, transactionErrChan := account.OnTradeTransaction(transactionCtx, transactionReq)
 
 	fmt.Printf("Streaming trade transactions (max %d events or %d seconds)...\n", MAX_EVENTS, MAX_SECONDS)
 	fmt.Println("  NOTE: This stream sends events for all trade-related transactions")
@@ -460,6 +482,7 @@ streamTransaction:
 			break streamTransaction
 		}
 	}
+	transactionCancel() // closes this stream on the server
 
 	// ═══════════════════════════════════════════════════════════════════════
 	// FINAL: DISCONNECT
@@ -467,12 +490,12 @@ streamTransaction:
 	fmt.Println("\n\nFinal: Disconnecting...")
 	fmt.Println("───────────────────────────────────────────────────────────")
 
-	// Disconnect and close connection
-	disconnectCtx, disconnectCancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer disconnectCancel()
-	account.Disconnect(disconnectCtx, &pb.DisconnectRequest{})
-	account.Close()
-	fmt.Println("✓ Connection closed")
+	// Disconnect (stops the terminal) and close the gRPC connection
+	if err := account.DisconnectAndClose(); err != nil {
+		helpers.PrintShortError(err, "Disconnect failed")
+	} else {
+		fmt.Println("✓ Disconnected, connection closed")
+	}
 
 	fmt.Println("\n═══════════════════════════════════════════════════════════")
 	fmt.Println("✓ DEMO COMPLETED SUCCESSFULLY")
@@ -482,7 +505,8 @@ streamTransaction:
 	fmt.Println("      Some streams may not receive events if there's no activity.")
 	fmt.Println("      For example:")
 	fmt.Println("      - OnTrade sends events only when trades occur")
-	fmt.Println("      - OnPositionProfit requires open positions")
+	fmt.Println("      - OnPositionProfit / OnPositionsAndPendingOrdersTickets send a snapshot every timer period")
+	fmt.Println("        (empty without open positions/orders)")
 	fmt.Println("      - OnTradeTransaction fires on any trading activity")
 
 	return nil

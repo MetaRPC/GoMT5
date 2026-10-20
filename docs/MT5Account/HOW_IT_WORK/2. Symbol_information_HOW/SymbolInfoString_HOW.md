@@ -97,7 +97,7 @@ The `Value` field contains the text value corresponding to the selected `Type`.
 
 Below is a list of the most commonly used properties that can be requested via `SymbolInfoString()`:
 
-### 📘 All PropertyId enum values (SymbolInfoStringProperty)
+### 📘 All Type enum values (SymbolInfoStringProperty)
 
 | Constant | Value | Description |
 |----------|-------|-------------|

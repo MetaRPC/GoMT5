@@ -43,7 +43,8 @@
    • Start streams BEFORE triggering events you want to catch
    • Streams capture real-time events only (not historical)
    • Add small delay after starting stream (500ms recommended)
-   • This demo opens positions AFTER starting streams to demonstrate this
+   • This demo opens ONE real test position (use a DEMO account!) AFTER starting the
+     streams to demonstrate this, then modifies and closes that position only
 
  ⚠️  IMPORTANT - General:
    • Streams are high-frequency (especially ticks)
@@ -98,12 +99,21 @@ func RunServiceStreaming05() error {
 		return fmt.Errorf("failed to create MT5Account: %w", err)
 	}
 	account.ApiKey = cfg.ApiKey
+	// Runs however the demo ends (every error below is returned): the terminal is disconnected (stopped) and the
+	// gRPC connection closed.
+	defer func() {
+		fmt.Println("\n📴 Disconnecting...")
+		if err := account.DisconnectAndClose(); err != nil {
+			fmt.Printf("  ⚠️  Disconnect failed: %v\n", err)
+		}
+	}()
 
 	service := mt5.NewMT5Service(account)
 
 	// Connect
 	fmt.Println("\n📡 Connecting to MT5...")
-	// Use context timeout for ConnectEx (replaces old TerminalReadinessWaitingTimeoutSeconds)
+	// The server waits up to ConnectExRequest.TimeoutSeconds (default 120 s) for the terminal to log in;
+	// the call's own deadline must be longer than that.
 	connCtx, connCancel := context.WithTimeout(ctx, 180*time.Second)
 	defer connCancel()
 
@@ -116,16 +126,9 @@ func RunServiceStreaming05() error {
 		return fmt.Errorf("connection failed: %w", err)
 	}
 
-	account.TerminalInstanceGuid = data.TerminalInstanceGuid
-	account.Id = helpers_mt5.ParseGuidSafe(data.TerminalInstanceGuid)
+	// ConnectEx has stored the terminal GUID in the account (account.TerminalInstanceGuid / account.Id)
 	fmt.Printf("  ✓ Connected successfully (Terminal GUID: %s)\n", data.TerminalInstanceGuid)
 	fmt.Printf("  Account: %d | Server: %s\n", cfg.User, cfg.MtCluster)
-
-	defer func() {
-		fmt.Println("\n📴 Disconnecting...")
-		account.Disconnect(context.Background(), &pb.DisconnectRequest{})
-		account.Close()
-	}()
 
 	fmt.Println("\n" + repeatString("-", 80))
 	fmt.Println("STREAM 1: StreamTicks() - Real-time Bid/Ask price updates")
@@ -133,7 +136,7 @@ func RunServiceStreaming05() error {
 	// ══════════════════════════════════════════════════════════════
 	// STREAM 1: StreamTicks()
 	//      Streams real-time Bid/Ask price updates for symbols.
-	//      Returns: (<-chan *OnSymbolTickData, <-chan error)
+	//      Returns: (<-chan *SymbolTick, <-chan error) - Symbol, Bid/Ask, Time (broker) and TimeUtc
 	//      Use for: Price monitoring, tick charts, HFT strategies
 	// ══════════════════════════════════════════════════════════════
 
@@ -154,9 +157,9 @@ func RunServiceStreaming05() error {
 				goto stream2
 			}
 			eventCount++
-			fmt.Printf("  Tick #%d: BID=%.5f ASK=%.5f Spread=%.5f Time=%s\n",
-				eventCount, tick.Bid, tick.Ask, tick.Ask-tick.Bid,
-				tick.Time.Format("15:04:05"))
+			fmt.Printf("  Tick #%d: %s BID=%.5f ASK=%.5f Spread=%.5f Time=%s (broker) / %s UTC\n",
+				eventCount, tick.Symbol, tick.Bid, tick.Ask, tick.Ask-tick.Bid,
+				tick.Time.Format("15:04:05"), tick.TimeUtc.Format("15:04:05"))
 
 		case err := <-tickErrCh:
 			fmt.Printf("  ❌ Stream error: %v\n", err)
@@ -198,9 +201,11 @@ stream2:
 	placeReq := &pb.OrderSendRequest{
 		Symbol:    cfg.TestSymbol,
 		Operation: pb.TMT5_ENUM_ORDER_TYPE_TMT5_ORDER_TYPE_BUY,
-		Volume:    0.01,
+		Volume:    cfg.TestVolume,
 	}
 
+	// The position opened by a market order has the ticket of that order. The demo modifies and closes only
+	// this position, never other positions of the account.
 	var testTicket uint64
 	placeResult, err := service.PlaceOrder(ctx, placeReq)
 	if helpers.PrintShortError(err, "Failed to place test order") {
@@ -208,6 +213,8 @@ stream2:
 	} else if placeResult.ReturnedCode == 10009 {
 		testTicket = placeResult.Order
 		fmt.Printf("  ✓ Test position opened: #%d\n", testTicket)
+	} else {
+		fmt.Printf("  ⚠️  Test order returned code %d - %s\n", placeResult.ReturnedCode, placeResult.Comment)
 	}
 
 	eventCount = 0
@@ -256,7 +263,7 @@ stream3:
 
 	fmt.Printf("\nStreaming position profit updates (max %d events or %d seconds)...\n",
 		MAX_STREAM_EVENTS, MAX_STREAM_SECONDS)
-	fmt.Println("  ℹ️  Profit updates appear when prices change or positions open/close")
+	fmt.Println("  ℹ️  One update per second; without open positions the updates are empty")
 
 	eventCount = 0
 	for eventCount < MAX_STREAM_EVENTS {
@@ -325,7 +332,7 @@ stream4:
 
 	fmt.Printf("\nStreaming opened tickets (max %d events or %d seconds)...\n",
 		MAX_STREAM_EVENTS, MAX_STREAM_SECONDS)
-	fmt.Println("  ℹ️  Lightweight stream - only ticket IDs, not full data")
+	fmt.Println("  ℹ️  Lightweight stream - only ticket IDs: the current lists, once per second")
 
 	eventCount = 0
 	for eventCount < MAX_STREAM_EVENTS {
@@ -375,32 +382,42 @@ stream5:
 	// Give stream time to establish connection
 	time.Sleep(500 * time.Millisecond)
 
-	// Modify an existing position to generate transaction events
-	openedData2, err := service.GetOpenedOrders(ctx,
-		pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC)
-	if err == nil && len(openedData2.PositionInfos) > 0 {
-		pos := openedData2.PositionInfos[0]
-		fmt.Printf("  📤 Modifying position #%d to trigger transaction events...\n", pos.Ticket)
+	// Modify the demo's own test position (opened in STREAM 2) to generate transaction events
+	if testTicket != 0 {
+		fmt.Printf("  📤 Modifying position #%d to trigger transaction events...\n", testTicket)
 
-		// Get current price to calculate SL/TP
-		tick2, _ := service.GetSymbolTick(ctx, cfg.TestSymbol)
-		newSL := tick2.Bid - 0.001
-		newTP := tick2.Bid + 0.002
-
-		modifyReq := &pb.OrderModifyRequest{
-			Ticket:     pos.Ticket,
-			StopLoss:   &newSL,
-			TakeProfit: &newTP,
-		}
-
-		_, modifyErr := service.ModifyOrder(ctx, modifyReq)
-		if modifyErr == nil {
-			fmt.Printf("  ✓ Position modified (SL/TP updated)\n")
+		// SL 10 pips below / TP 20 pips above the current Bid. A pip is 10 points on 5- and 3-digit symbols
+		// (EURUSD: 0.0001), otherwise 1 point.
+		tick2, tickErr := service.GetSymbolTick(ctx, cfg.TestSymbol)
+		point, pointErr := service.GetSymbolDouble(ctx, cfg.TestSymbol, pb.SymbolInfoDoubleProperty_SYMBOL_POINT)
+		digits, digitsErr := service.GetSymbolInteger(ctx, cfg.TestSymbol, pb.SymbolInfoIntegerProperty_SYMBOL_DIGITS)
+		if tickErr != nil || pointErr != nil || digitsErr != nil {
+			fmt.Printf("  ⚠️  Cannot compute SL/TP: %v %v %v\n", tickErr, pointErr, digitsErr)
 		} else {
-			fmt.Printf("  ⚠️  Modification may have failed: %v\n", modifyErr)
+			pipSize := point
+			if digits == 3 || digits == 5 {
+				pipSize *= 10
+			}
+			newSL := tick2.Bid - 10*pipSize
+			newTP := tick2.Bid + 20*pipSize
+
+			modifyReq := &pb.OrderModifyRequest{
+				Ticket:     testTicket,
+				StopLoss:   &newSL,
+				TakeProfit: &newTP,
+			}
+
+			modifyResult, modifyErr := service.ModifyOrder(ctx, modifyReq)
+			if modifyErr != nil {
+				fmt.Printf("  ⚠️  Modification failed: %v\n", modifyErr)
+			} else if modifyResult.ReturnedCode == 10009 {
+				fmt.Printf("  ✓ Position modified (SL/TP updated)\n")
+			} else {
+				fmt.Printf("  ⚠️  Modify returned code %d - %s\n", modifyResult.ReturnedCode, modifyResult.Comment)
+			}
 		}
 	} else {
-		fmt.Println("  ℹ️  No open positions to modify, events may be limited")
+		fmt.Println("  ℹ️  No test position (the order in STREAM 2 was not executed): no events to trigger")
 	}
 
 	eventCount = 0
@@ -439,33 +456,29 @@ stream5:
 
 cleanup:
 	fmt.Println("\n" + repeatString("-", 80))
-	fmt.Println("CLEANUP: Closing any test positions")
+	fmt.Println("CLEANUP: Closing the test position")
 	fmt.Println(repeatString("-", 80))
 	// ══════════════════════════════════════════════════════════════
 	// CLEANUP
-	//      Close any test positions opened during demo.
-	//      Ensures account is in clean state after demo.
+	//      Close the test position opened during the demo (only that one:
+	//      other positions of the account are left alone).
 	// ══════════════════════════════════════════════════════════════
 
-	openedData, err := service.GetOpenedOrders(ctx,
-		pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC)
-	if err == nil && len(openedData.PositionInfos) > 0 {
-		for _, pos := range openedData.PositionInfos {
-			fmt.Printf("\n  Closing position #%d...\n", pos.Ticket)
-			closeReq := &pb.OrderCloseRequest{
-				Ticket: pos.Ticket,
-			}
-			retCode, closeErr := service.CloseOrder(ctx, closeReq)
-			if helpers.PrintShortError(closeErr, "Failed to close") {
-				// Error already printed
-			} else if retCode == 10009 {
-				fmt.Println("    ✓ Closed successfully")
-			} else {
-				fmt.Printf("    ⚠️  Return code: %d\n", retCode)
-			}
+	if testTicket != 0 {
+		fmt.Printf("\n  Closing position #%d...\n", testTicket)
+		closeReq := &pb.OrderCloseRequest{
+			Ticket: testTicket, // Volume 0 = close the whole position
+		}
+		retCode, closeErr := service.CloseOrder(ctx, closeReq)
+		if helpers.PrintShortError(closeErr, "Failed to close") {
+			// Error already printed
+		} else if retCode == 10009 {
+			fmt.Println("    ✓ Closed successfully")
+		} else {
+			fmt.Printf("    ⚠️  Return code: %d\n", retCode)
 		}
 	} else {
-		fmt.Println("\n  No open positions to close")
+		fmt.Println("\n  No test position to close")
 	}
 
 	fmt.Println("\n" + repeatString("=", 80))
@@ -487,11 +500,11 @@ cleanup:
 
 	fmt.Println("\n  3️⃣  StreamPositionProfits() - Real-time P&L tracking")
 	fmt.Println("     Use for: Live profit monitoring, risk management")
-	fmt.Println("     Frequency: When prices change or positions update")
+	fmt.Println("     Frequency: Once per second (empty without open positions)")
 
 	fmt.Println("\n  4️⃣  StreamOpenedTickets() - Lightweight ticket tracking")
 	fmt.Println("     Use for: Quick overview of open positions/orders")
-	fmt.Println("     Frequency: When tickets are added/removed")
+	fmt.Println("     Frequency: Once per second (the current ticket lists)")
 
 	fmt.Println("\n  5️⃣  StreamTransactions() - Comprehensive transaction log")
 	fmt.Println("     Use for: Detailed trade analysis, audit trails")

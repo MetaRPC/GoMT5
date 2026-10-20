@@ -50,6 +50,7 @@ package sugar
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -75,10 +76,11 @@ func RunSugarTradingDemo() {
 	sugar, err := mt5.NewMT5Sugar(cfg.User, cfg.Password, cfg.GrpcServer)
 	helpers.Fatal(err, "Failed to create Sugar instance")
 	sugar.GetAccount().ApiKey = cfg.ApiKey
+	// Disconnect however the demo ends (normal end, Fatal, panic, Ctrl+C)
+	defer helpers.DisconnectOnExit(sugar)()
 
 	err = sugar.QuickConnect(cfg.MtCluster)
 	helpers.Fatal(err, "Connection failed")
-	defer sugar.Disconnect()
 	fmt.Println("  ✓ Connected!")
 
 	ctx := context.Background()
@@ -86,10 +88,31 @@ func RunSugarTradingDemo() {
 	testSymbol := cfg.TestSymbol
 	minVolume := 0.01 // Minimum lot size
 
-	// Get current price
-	bid, _ := sugar.GetBid(testSymbol)
-	ask, _ := sugar.GetAsk(testSymbol)
-	fmt.Printf("\nℹ️  Current %s prices: BID=%.5f, ASK=%.5f\n", testSymbol, bid, ask)
+	// Get current price and the symbol's point size (distances below are in points:
+	// 1 point = 0.00001 on 5-digit EURUSD, so 200 points = 20 pips)
+	// BID and ASK from ONE tick: two calls (GetBid, then GetAsk) can read two different ticks,
+	// so on a moving market they could even show BID > ASK.
+	quote, err := sugar.GetPriceInfo(testSymbol)
+	helpers.Fatal(err, "GetPriceInfo failed")
+	bid, ask := quote.Bid, quote.Ask
+	symbolInfo, err := sugar.GetSymbolInfo(testSymbol)
+	helpers.Fatal(err, "GetSymbolInfo failed")
+	point := symbolInfo.Point
+	scale := math.Pow(10, float64(symbolInfo.Digits))
+	price := func(p float64) float64 { return math.Round(p*scale) / scale } // round to the symbol's digits
+	fmt.Printf("\nℹ️  Current %s prices: BID=%.5f, ASK=%.5f (point %g)\n", testSymbol, bid, ask, point)
+
+	// failed prints an error like helpers.PrintShortError and counts it for the summary
+	failures := 0
+	failed := func(err error, context string) bool {
+		if helpers.PrintShortError(err, context) {
+			failures++
+			return true
+		}
+		return false
+	}
+
+	var pendingTickets []uint64 // pending orders this demo placed - cancelled at the end
 
 	// ══════════════════════════════════════════════════════════════════════════════
 	// 1. SIMPLE MARKET TRADING
@@ -104,19 +127,19 @@ func RunSugarTradingDemo() {
 	//      Chain: Sugar → Service.PlaceOrder() → Account.OrderSend() → gRPC
 	//      Returns: ticket number (uint64) of opened position.
 	//      DANGEROUS operation - executes real trade!
-	//      Timeout: 10 seconds
+	//      Timeout: 30 seconds
 	// ══════════════════════════════════════════════════════════════
 	fmt.Printf("\n1.1. BuyMarket() - Open BUY position %.2f lots on %s\n", minVolume, testSymbol)
 
 	buyTicket, err := sugar.BuyMarket(testSymbol, minVolume)
-	if !helpers.PrintShortError(err, "BuyMarket failed") {
+	if !failed(err, "BuyMarket failed") {
 		fmt.Printf("  ✓ BUY order opened! Ticket: %d\n", buyTicket)
 
 		// Close immediately
 		time.Sleep(1 * time.Second)
 		fmt.Printf("  Closing position #%d...\n", buyTicket)
 		closeErr := sugar.ClosePosition(buyTicket)
-		if !helpers.PrintShortError(closeErr, "Failed to close position") {
+		if !failed(closeErr, "Failed to close position") {
 			fmt.Println("  ✓ Position closed")
 		}
 	}
@@ -130,19 +153,19 @@ func RunSugarTradingDemo() {
 	//      Chain: Sugar → Service.PlaceOrder() → Account.OrderSend() → gRPC
 	//      Returns: ticket number (uint64) of opened position.
 	//      DANGEROUS operation - executes real trade!
-	//      Timeout: 10 seconds
+	//      Timeout: 30 seconds
 	// ══════════════════════════════════════════════════════════════
 	fmt.Printf("\n1.2. SellMarket() - Open SELL position %.2f lots on %s\n", minVolume, testSymbol)
 	
 	sellTicket, err := sugar.SellMarket(testSymbol, minVolume)
-	if !helpers.PrintShortError(err, "SellMarket failed") {
+	if !failed(err, "SellMarket failed") {
 		fmt.Printf("  ✓ SELL order opened! Ticket: %d\n", sellTicket)
 
 		// Close immediately
 		time.Sleep(1 * time.Second)
 		fmt.Printf("  Closing position #%d...\n", sellTicket)
 		closeErr := sugar.ClosePosition(sellTicket)
-		if !helpers.PrintShortError(closeErr, "Failed to close position") {
+		if !failed(closeErr, "Failed to close position") {
 			fmt.Println("  ✓ Position closed")
 		}
 	}
@@ -163,12 +186,13 @@ func RunSugarTradingDemo() {
 	//      Chain: Sugar → Service.PlaceOrder() → Account.OrderSend() → gRPC
 	//      Returns: ticket number (uint64) of pending order.
 	//      DANGEROUS operation - places real pending order!
-	//      Timeout: 10 seconds
+	//      Timeout: 30 seconds
 	// ══════════════════════════════════════════════════════════════
-	buyLimitPrice := bid - 0.0020 // 20 pips below current bid
-	fmt.Printf("\n2.1. BuyLimit() - Place BUY LIMIT at %.5f\n", buyLimitPrice)
+	buyLimitPrice := price(bid - 200*point) // 200 points below current bid
+	fmt.Printf("\n2.1. BuyLimit() - Place BUY LIMIT at %.5f (200 points below BID)\n", buyLimitPrice)
 	buyLimitTicket, err := sugar.BuyLimit(testSymbol, minVolume, buyLimitPrice)
-	if !helpers.PrintShortError(err, "BuyLimit failed") {
+	if !failed(err, "BuyLimit failed") {
+		pendingTickets = append(pendingTickets, buyLimitTicket)
 		fmt.Printf("  ✓ BUY LIMIT placed! Ticket: %d\n", buyLimitTicket)
 		fmt.Printf("  Will execute if price drops to %.5f\n", buyLimitPrice)
 	}
@@ -182,12 +206,13 @@ func RunSugarTradingDemo() {
 	//      Chain: Sugar → Service.PlaceOrder() → Account.OrderSend() → gRPC
 	//      Returns: ticket number (uint64) of pending order.
 	//      DANGEROUS operation - places real pending order!
-	//      Timeout: 10 seconds
+	//      Timeout: 30 seconds
 	// ══════════════════════════════════════════════════════════════
-	sellLimitPrice := ask + 0.0020 // 20 pips above current ask
-	fmt.Printf("\n2.2. SellLimit() - Place SELL LIMIT at %.5f\n", sellLimitPrice)
+	sellLimitPrice := price(ask + 200*point) // 200 points above current ask
+	fmt.Printf("\n2.2. SellLimit() - Place SELL LIMIT at %.5f (200 points above ASK)\n", sellLimitPrice)
 	sellLimitTicket, err := sugar.SellLimit(testSymbol, minVolume, sellLimitPrice)
-	if !helpers.PrintShortError(err, "SellLimit failed") {
+	if !failed(err, "SellLimit failed") {
+		pendingTickets = append(pendingTickets, sellLimitTicket)
 		fmt.Printf("  ✓ SELL LIMIT placed! Ticket: %d\n", sellLimitTicket)
 		fmt.Printf("  Will execute if price rises to %.5f\n", sellLimitPrice)
 	}
@@ -201,12 +226,13 @@ func RunSugarTradingDemo() {
 	//      Chain: Sugar → Service.PlaceOrder() → Account.OrderSend() → gRPC
 	//      Returns: ticket number (uint64) of pending order.
 	//      DANGEROUS operation - places real pending order!
-	//      Timeout: 10 seconds
+	//      Timeout: 30 seconds
 	// ══════════════════════════════════════════════════════════════
-	buyStopPrice := ask + 0.0020 // 20 pips above current ask
-	fmt.Printf("\n2.3. BuyStop() - Place BUY STOP at %.5f\n", buyStopPrice)
+	buyStopPrice := price(ask + 200*point) // 200 points above current ask
+	fmt.Printf("\n2.3. BuyStop() - Place BUY STOP at %.5f (200 points above ASK)\n", buyStopPrice)
 	buyStopTicket, err := sugar.BuyStop(testSymbol, minVolume, buyStopPrice)
-	if !helpers.PrintShortError(err, "BuyStop failed") {
+	if !failed(err, "BuyStop failed") {
+		pendingTickets = append(pendingTickets, buyStopTicket)
 		fmt.Printf("  ✓ BUY STOP placed! Ticket: %d\n", buyStopTicket)
 		fmt.Printf("  Will execute if price rises to %.5f\n", buyStopPrice)
 	}
@@ -220,12 +246,13 @@ func RunSugarTradingDemo() {
 	//      Chain: Sugar → Service.PlaceOrder() → Account.OrderSend() → gRPC
 	//      Returns: ticket number (uint64) of pending order.
 	//      DANGEROUS operation - places real pending order!
-	//      Timeout: 10 seconds
+	//      Timeout: 30 seconds
 	// ══════════════════════════════════════════════════════════════
-	sellStopPrice := bid - 0.0020 // 20 pips below current bid
-	fmt.Printf("\n2.4. SellStop() - Place SELL STOP at %.5f\n", sellStopPrice)
+	sellStopPrice := price(bid - 200*point) // 200 points below current bid
+	fmt.Printf("\n2.4. SellStop() - Place SELL STOP at %.5f (200 points below BID)\n", sellStopPrice)
 	sellStopTicket, err := sugar.SellStop(testSymbol, minVolume, sellStopPrice)
-	if !helpers.PrintShortError(err, "SellStop failed") {
+	if !failed(err, "SellStop failed") {
+		pendingTickets = append(pendingTickets, sellStopTicket)
 		fmt.Printf("  ✓ SELL STOP placed! Ticket: %d\n", sellStopTicket)
 		fmt.Printf("  Will execute if price drops to %.5f\n", sellStopPrice)
 	}
@@ -246,21 +273,21 @@ func RunSugarTradingDemo() {
 	//      Chain: Sugar → Service.PlaceOrder() → Account.OrderSend() → gRPC
 	//      Returns: ticket number (uint64) of opened position.
 	//      DANGEROUS operation - executes real trade with SL/TP!
-	//      Timeout: 10 seconds
+	//      Timeout: 30 seconds
 	// ══════════════════════════════════════════════════════════════
-	stopLoss := bid - 0.0030    // 30 pips SL
-	takeProfit := bid + 0.0050  // 50 pips TP
+	stopLoss := price(bid - 300*point)   // SL 300 points below BID (a BUY closes at BID)
+	takeProfit := price(bid + 500*point) // TP 500 points above BID
 	fmt.Printf("\n3.1. BuyMarketWithSLTP() - BUY with SL/TP\n")
-	fmt.Printf("  Entry: %.5f, SL: %.5f (-30 pips), TP: %.5f (+50 pips)\n", ask, stopLoss, takeProfit)
+	fmt.Printf("  Entry: ~%.5f (ASK), SL: %.5f (BID -300 points), TP: %.5f (BID +500 points)\n", ask, stopLoss, takeProfit)
 	buySlTpTicket, err := sugar.BuyMarketWithSLTP(testSymbol, minVolume, stopLoss, takeProfit)
-	if !helpers.PrintShortError(err, "BuyMarketWithSLTP failed") {
+	if !failed(err, "BuyMarketWithSLTP failed") {
 		fmt.Printf("  ✓ BUY with SL/TP opened! Ticket: %d\n", buySlTpTicket)
 
 		// Close immediately
 		time.Sleep(1 * time.Second)
 		fmt.Printf("  Closing position #%d...\n", buySlTpTicket)
 		closeErr := sugar.ClosePosition(buySlTpTicket)
-		if !helpers.PrintShortError(closeErr, "Failed to close position") {
+		if !failed(closeErr, "Failed to close position") {
 			fmt.Println("  ✓ Position closed")
 		}
 	}
@@ -274,21 +301,21 @@ func RunSugarTradingDemo() {
 	//      Chain: Sugar → Service.PlaceOrder() → Account.OrderSend() → gRPC
 	//      Returns: ticket number (uint64) of opened position.
 	//      DANGEROUS operation - executes real trade with SL/TP!
-	//      Timeout: 10 seconds
+	//      Timeout: 30 seconds
 	// ══════════════════════════════════════════════════════════════
-	stopLossSell := ask + 0.0030    // 30 pips SL
-	takeProfitSell := ask - 0.0050  // 50 pips TP
+	stopLossSell := price(ask + 300*point)   // SL 300 points above ASK (a SELL closes at ASK)
+	takeProfitSell := price(ask - 500*point) // TP 500 points below ASK
 	fmt.Printf("\n3.2. SellMarketWithSLTP() - SELL with SL/TP\n")
-	fmt.Printf("  Entry: %.5f, SL: %.5f (+30 pips), TP: %.5f (-50 pips)\n", bid, stopLossSell, takeProfitSell)
+	fmt.Printf("  Entry: ~%.5f (BID), SL: %.5f (ASK +300 points), TP: %.5f (ASK -500 points)\n", bid, stopLossSell, takeProfitSell)
 	sellSlTpTicket, err := sugar.SellMarketWithSLTP(testSymbol, minVolume, stopLossSell, takeProfitSell)
-	if !helpers.PrintShortError(err, "SellMarketWithSLTP failed") {
+	if !failed(err, "SellMarketWithSLTP failed") {
 		fmt.Printf("  ✓ SELL with SL/TP opened! Ticket: %d\n", sellSlTpTicket)
 
 		// Close immediately
 		time.Sleep(1 * time.Second)
 		fmt.Printf("  Closing position #%d...\n", sellSlTpTicket)
 		closeErr := sugar.ClosePosition(sellSlTpTicket)
-		if !helpers.PrintShortError(closeErr, "Failed to close position") {
+		if !failed(closeErr, "Failed to close position") {
 			fmt.Println("  ✓ Position closed")
 		}
 	}
@@ -302,15 +329,16 @@ func RunSugarTradingDemo() {
 	//      Chain: Sugar → Service.PlaceOrder() → Account.OrderSend() → gRPC
 	//      Returns: ticket number (uint64) of pending order.
 	//      DANGEROUS operation - places real pending order with SL/TP!
-	//      Timeout: 10 seconds
+	//      Timeout: 30 seconds
 	// ══════════════════════════════════════════════════════════════
-	buyLimitSlTpPrice := bid - 0.0020
-	stopLossBuyLimit := buyLimitSlTpPrice - 0.0030
-	takeProfitBuyLimit := buyLimitSlTpPrice + 0.0050
+	buyLimitSlTpPrice := price(bid - 200*point)
+	stopLossBuyLimit := price(buyLimitSlTpPrice - 300*point)
+	takeProfitBuyLimit := price(buyLimitSlTpPrice + 500*point)
 	fmt.Printf("\n3.3. BuyLimitWithSLTP() - BUY LIMIT with SL/TP\n")
 	fmt.Printf("  Entry: %.5f, SL: %.5f, TP: %.5f\n", buyLimitSlTpPrice, stopLossBuyLimit, takeProfitBuyLimit)
 	buyLimitSlTpTicket, err := sugar.BuyLimitWithSLTP(testSymbol, minVolume, buyLimitSlTpPrice, stopLossBuyLimit, takeProfitBuyLimit)
-	if !helpers.PrintShortError(err, "BuyLimitWithSLTP failed") {
+	if !failed(err, "BuyLimitWithSLTP failed") {
+		pendingTickets = append(pendingTickets, buyLimitSlTpTicket)
 		fmt.Printf("  ✓ BUY LIMIT with SL/TP placed! Ticket: %d\n", buyLimitSlTpTicket)
 	}
 
@@ -323,15 +351,16 @@ func RunSugarTradingDemo() {
 	//      Chain: Sugar → Service.PlaceOrder() → Account.OrderSend() → gRPC
 	//      Returns: ticket number (uint64) of pending order.
 	//      DANGEROUS operation - places real pending order with SL/TP!
-	//      Timeout: 10 seconds
+	//      Timeout: 30 seconds
 	// ══════════════════════════════════════════════════════════════
-	sellLimitSlTpPrice := ask + 0.0020
-	stopLossSellLimit := sellLimitSlTpPrice + 0.0030
-	takeProfitSellLimit := sellLimitSlTpPrice - 0.0050
+	sellLimitSlTpPrice := price(ask + 200*point)
+	stopLossSellLimit := price(sellLimitSlTpPrice + 300*point)
+	takeProfitSellLimit := price(sellLimitSlTpPrice - 500*point)
 	fmt.Printf("\n3.4. SellLimitWithSLTP() - SELL LIMIT with SL/TP\n")
 	fmt.Printf("  Entry: %.5f, SL: %.5f, TP: %.5f\n", sellLimitSlTpPrice, stopLossSellLimit, takeProfitSellLimit)
 	sellLimitSlTpTicket, err := sugar.SellLimitWithSLTP(testSymbol, minVolume, sellLimitSlTpPrice, stopLossSellLimit, takeProfitSellLimit)
-	if !helpers.PrintShortError(err, "SellLimitWithSLTP failed") {
+	if !failed(err, "SellLimitWithSLTP failed") {
+		pendingTickets = append(pendingTickets, sellLimitSlTpTicket)
 		fmt.Printf("  ✓ SELL LIMIT with SL/TP placed! Ticket: %d\n", sellLimitSlTpTicket)
 	}
 
@@ -342,16 +371,24 @@ func RunSugarTradingDemo() {
 	// 4. CLEANUP PENDING ORDERS
 	// =============================
 	fmt.Println("\n" + strings.Repeat("-", 80))
-	fmt.Println("4. CLEANUP - Canceling all pending orders")
+	fmt.Println("4. CLEANUP - Canceling the pending orders this demo placed")
 	fmt.Println(strings.Repeat("-", 80))
 
-	// Get all opened orders (positions + pending)
+	// Get all opened orders (positions + pending); cancel only this demo's pending orders
+	// that are still pending (other pending orders of the account are left alone)
+	ours := map[uint64]bool{}
+	for _, t := range pendingTickets {
+		ours[t] = true
+	}
 	openedData, err := sugar.GetService().GetOpenedOrders(ctx, pb.BMT5_ENUM_OPENED_ORDER_SORT_TYPE_BMT5_OPENED_ORDER_SORT_BY_OPEN_TIME_ASC)
-	if !helpers.PrintShortError(err, "Failed to get opened orders") {
+	if !failed(err, "Failed to get opened orders") {
 		// Cancel pending orders
 		cancelCount := 0
 		for _, pending := range openedData.OpenedOrders {
 			ticket := pending.Ticket
+			if !ours[ticket] {
+				continue
+			}
 			fmt.Printf("  Canceling pending order #%d...\n", ticket)
 
 			// Use Service's CloseOrder to delete pending order
@@ -359,7 +396,7 @@ func RunSugarTradingDemo() {
 				Ticket: ticket,
 			}
 			retCode, closeErr := sugar.GetService().CloseOrder(ctx, closeReq)
-			if !helpers.PrintShortError(closeErr, "Failed to cancel order") {
+			if !failed(closeErr, "Failed to cancel order") {
 				if retCode == 10009 {
 					fmt.Printf("    ✓ Canceled\n")
 					cancelCount++
@@ -380,7 +417,11 @@ func RunSugarTradingDemo() {
 	// SUMMARY
 	// =============================
 	fmt.Println("\n" + strings.Repeat("=", 80))
-	fmt.Println("DEMO COMPLETED SUCCESSFULLY!")
+	if failures == 0 {
+		fmt.Println("DEMO COMPLETED SUCCESSFULLY!")
+	} else {
+		fmt.Printf("DEMO FINISHED - %d operation(s) failed (see the errors above)\n", failures)
+	}
 	fmt.Println(strings.Repeat("=", 80))
 	fmt.Println("\nℹ️  MT5Sugar Trading Features:")
 	fmt.Println("  • Simple market orders: BuyMarket/SellMarket (3 params)")

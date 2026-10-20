@@ -12,6 +12,7 @@
 fmt.Println("\n6.2. MarketBookGet() - Get DOM snapshot")
 fmt.Println("    Testing if data is actually available...")
 
+// Short timeout: the call should not hang the demo
 bookGetCtx, bookGetCancel := context.WithTimeout(context.Background(), 3*time.Second)
 defer bookGetCancel()
 
@@ -20,27 +21,26 @@ marketBookGetReq := &pb.MarketBookGetRequest{
 }
 marketBookGetData, err := account.MarketBookGet(bookGetCtx, marketBookGetReq)
 if err != nil {
-    fmt.Println("  ❌ No data available (timeout)")
-    fmt.Println("     → This is EXPECTED for forex pairs on demo accounts")
-    fmt.Println("     → Not an error - just a limitation of forex market structure")
+    fmt.Printf("  ❌ No data available: %v\n", err)
+    fmt.Println("     → Usual when the broker publishes no book for this symbol (e.g. forex)")
 } else {
-    if len(marketBookGetData.Book) > 0 {
-        fmt.Printf("  ✅ SUCCESS! Received %d price levels\n", len(marketBookGetData.Book))
+    if len(marketBookGetData.MqlBookInfos) > 0 {
+        fmt.Printf("  ✅ SUCCESS! Received %d price levels\n", len(marketBookGetData.MqlBookInfos))
         fmt.Println("     → This is UNUSUAL for forex - broker provides limited DOM")
         fmt.Println()
 
         maxShow := 5
-        if len(marketBookGetData.Book) < maxShow {
-            maxShow = len(marketBookGetData.Book)
+        if len(marketBookGetData.MqlBookInfos) < maxShow {
+            maxShow = len(marketBookGetData.MqlBookInfos)
         }
         fmt.Println("  First few levels:")
         for i := 0; i < maxShow; i++ {
-            level := marketBookGetData.Book[i]
+            level := marketBookGetData.MqlBookInfos[i]
             bookType := "SELL"
-            if level.Type == pb.BookType_BOOK_TYPE_BUY {
+            if level.Type == pb.BookType_BOOK_TYPE_BUY || level.Type == pb.BookType_BOOK_TYPE_BUY_MARKET {
                 bookType = "BUY"
             }
-            fmt.Printf("    [%d] %s  Price: %.5f  Volume: %.2f\n", i+1, bookType, level.Price, level.VolumeDouble)
+            fmt.Printf("    [%d] %s  Price: %.5f  Volume: %.2f\n", i+1, bookType, level.Price, level.VolumeReal)
         }
     } else {
         fmt.Println("  ⚠️  Call succeeded but no data returned")
@@ -60,7 +60,7 @@ if err != nil {
   defer bookGetCancel()
   ```
 
-  A 3-second timeout is needed to avoid hanging if the server doesn't provide data.
+  A 3-second timeout keeps the demo from hanging if the server does not answer.
 
 * **Form the request:**
 
@@ -82,17 +82,18 @@ if err != nil {
 
   ```go
   if err != nil {
-      fmt.Println("  ❌ No data available (timeout)")
+      fmt.Printf("  ❌ No data available: %v\n", err)
   }
   ```
 
-  Means the broker doesn't provide DOM (common on demo or forex pairs).
+  Prints the error itself (a timeout, or an error from the terminal). The usual cause is a broker that publishes no
+  book for this symbol.
 
 * **Data available:**
 
   ```go
-  if len(marketBookGetData.Book) > 0 {
-      fmt.Printf("  ✅ SUCCESS! Received %d price levels\n", len(marketBookGetData.Book))
+  if len(marketBookGetData.MqlBookInfos) > 0 {
+      fmt.Printf("  ✅ SUCCESS! Received %d price levels\n", len(marketBookGetData.MqlBookInfos))
   }
   ```
 
@@ -102,12 +103,13 @@ if err != nil {
 
   ```go
   for i := 0; i < maxShow; i++ {
-      level := marketBookGetData.Book[i]
-      fmt.Printf("[%d] %s Price: %.5f Volume: %.2f\n", i+1, bookType, level.Price, level.VolumeDouble)
+      level := marketBookGetData.MqlBookInfos[i]
+      fmt.Printf("[%d] %s Price: %.5f Volume: %.2f\n", i+1, bookType, level.Price, level.VolumeReal)
   }
   ```
 
-  Shows the type (`BUY` or `SELL`), price, and volume for the first 5 levels.
+  Shows the type (`BUY` for `BOOK_TYPE_BUY`/`BOOK_TYPE_BUY_MARKET`, otherwise `SELL`), price, and volume
+  (`VolumeReal`, the volume with extended precision) for the first 5 levels.
 
 ---
 
@@ -115,14 +117,14 @@ if err != nil {
 
 ```protobuf
 message MarketBookGetData {
-  repeated BookStruct Book = 1;
+  repeated MrpcMqlBookInfo mql_book_infos = 1;
 }
 
-message BookStruct {
-  BookType Type = 1;      // BUY or SELL
-  double Price = 2;       // price level
-  int64 Volume = 3;       // volume at level (deprecated)
-  double VolumeDouble = 4; // volume at level with extended precision
+message MrpcMqlBookInfo {
+  BookType type = 1;       // BUY or SELL
+  double price = 2;        // price level
+  int64 volume = 3;        // volume at level
+  double volume_real = 4;  // volume at level with extended precision
 }
 ```
 
@@ -145,12 +147,19 @@ message BookStruct {
 
 ##  If No Data Available
 
+A broker that publishes no book (usual for forex) answers with an empty list, for example EURUSD on MetaQuotes-Demo:
+
 ```
-❌ No data available (timeout)
-     → This is EXPECTED for forex pairs on demo accounts
+⚠️  Call succeeded but no data returned
+     → Broker has no DOM data to show
 ```
 
-This is normal: on forex and demo accounts, brokers usually don't form an order book.
+If the call itself fails (for example the 3-second timeout), the error is printed:
+
+```
+❌ No data available: <the error>
+     → Usual when the broker publishes no book for this symbol (e.g. forex)
+```
 
 ---
 

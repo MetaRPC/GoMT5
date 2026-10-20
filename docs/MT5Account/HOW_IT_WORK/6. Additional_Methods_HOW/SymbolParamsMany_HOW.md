@@ -1,10 +1,10 @@
 ### Example from file: `examples/demos/lowlevel/01_general_operations.go`
 
-> The **`SymbolParamsMany()`** method is used to retrieve **detailed parameters for multiple symbols at once**.
+> The **`SymbolParamsMany()`** method is used to retrieve **detailed parameters for one symbol or for all symbols at once**.
 > It allows you to get a wide set of properties — prices, volumes, steps, spread, number of digits, and much more — in a single request.
 >
 > Unlike the `SymbolInfoDouble`, `SymbolInfoInteger`, and `SymbolInfoString` methods, which return a single value,
-> `SymbolParamsMany()` makes a bulk request and returns a full list of `SymbolInfo` structures.
+> `SymbolParamsMany()` makes a bulk request and returns a list of `SymbolParameters` structures (`SymbolInfos`).
 
 
 ---
@@ -12,23 +12,27 @@
 ## 🧩 Code example
 
 ```go
-// SymbolParamsMany accepts an array of symbol names
+// SymbolParamsMany has no array of symbol names: SymbolName filters one symbol (nil = all symbols)
+symbolFilter := cfg.TestSymbol
 paramsManyReq := &pb.SymbolParamsManyRequest{
-    Symbols: []string{cfg.TestSymbol}, // Array of symbol names
+    SymbolName:   &symbolFilter, // Filter by symbol name (optional pointer to string)
+    SortType:     nil,           // Optional sort type
+    PageNumber:   nil,           // Optional page number
+    ItemsPerPage: nil,           // Optional items per page
 }
 paramsManyData, err := account.SymbolParamsMany(ctx, paramsManyReq)
 if err != nil {
     helpers.PrintShortError(err, "SymbolParamsMany failed")
 } else {
-    fmt.Printf("  Retrieved parameters for %d symbols:\n", len(paramsManyData.Params))
+    fmt.Printf("  Retrieved parameters for %d symbols:\n", len(paramsManyData.SymbolInfos))
     // Show only first 3 symbols
     maxShow := 3
-    if len(paramsManyData.Params) < maxShow {
-        maxShow = len(paramsManyData.Params)
+    if len(paramsManyData.SymbolInfos) < maxShow {
+        maxShow = len(paramsManyData.SymbolInfos)
     }
     for i := 0; i < maxShow; i++ {
-        params := paramsManyData.Params[i]
-        fmt.Printf("\n  Symbol #%d: %s\n", i+1, params.Symbol)
+        params := paramsManyData.SymbolInfos[i]
+        fmt.Printf("\n  Symbol #%d: %s\n", i+1, params.Name)
         fmt.Printf("    Bid:                         %.5f\n", params.Bid)
         fmt.Printf("    Ask:                         %.5f\n", params.Ask)
         fmt.Printf("    Digits:                      %d\n", params.Digits)
@@ -36,7 +40,7 @@ if err != nil {
         fmt.Printf("    Volume Min:                  %.2f\n", params.VolumeMin)
         fmt.Printf("    Volume Max:                  %.2f\n", params.VolumeMax)
         fmt.Printf("    Volume Step:                 %.2f\n", params.VolumeStep)
-        fmt.Printf("    Contract Size:               %.2f\n", params.ContractSize)
+        fmt.Printf("    Contract Size:               %.2f\n", params.TradeContractSize)
         fmt.Printf("    Point:                       %.5f\n", params.Point)
     }
 }
@@ -47,13 +51,14 @@ if err != nil {
 ### 🟢 Detailed Code Explanation
 
 ```go
+symbolFilter := cfg.TestSymbol
 paramsManyReq := &pb.SymbolParamsManyRequest{
-    Symbols: []string{cfg.TestSymbol},
+    SymbolName: &symbolFilter,
 }
 ```
 
 A `SymbolParamsManyRequest` request structure is created.
-The `Symbols` field contains an array of symbol names you want to retrieve parameters for (e.g., `[]string{"EURUSD", "GBPUSD", "USDJPY"}`).
+The optional `SymbolName` field (a `*string`) limits the result to one symbol; leave it `nil` to get all symbols. There is no list-of-symbols field: to get several specific symbols, request all and filter on the client side. `SortType`, `PageNumber` and `ItemsPerPage` (all optional pointers) control sorting and paging.
 
 ---
 
@@ -62,12 +67,12 @@ paramsManyData, err := account.SymbolParamsMany(ctx, paramsManyReq)
 ```
 
 A gRPC request is sent to the MetaTrader server.
-The response contains a `Params` list — an array of structures, where each describes one symbol with a complete set of parameters.
+The response contains a `SymbolInfos` list — an array of `SymbolParameters` structures, where each describes one symbol with a complete set of parameters.
 
 ---
 
 ```go
-fmt.Printf("  Retrieved parameters for %d symbols:\n", len(paramsManyData.Params))
+fmt.Printf("  Retrieved parameters for %d symbols:\n", len(paramsManyData.SymbolInfos))
 ```
 
 Displays the number of symbols returned.
@@ -76,8 +81,8 @@ Displays the number of symbols returned.
 
 ```go
 maxShow := 3
-if len(paramsManyData.Params) < maxShow {
-    maxShow = len(paramsManyData.Params)
+if len(paramsManyData.SymbolInfos) < maxShow {
+    maxShow = len(paramsManyData.SymbolInfos)
 }
 ```
 
@@ -87,8 +92,8 @@ Limits the number of displayed results to 3 — for clarity in the example.
 
 ```go
 for i := 0; i < maxShow; i++ {
-    params := paramsManyData.Params[i]
-    fmt.Printf("\n  Symbol #%d: %s\n", i+1, params.Symbol)
+    params := paramsManyData.SymbolInfos[i]
+    fmt.Printf("\n  Symbol #%d: %s\n", i+1, params.Name)
 ```
 
 The loop goes through each symbol, displaying its name and characteristics.
@@ -103,7 +108,7 @@ fmt.Printf("    Spread:                      %d points\n", params.Spread)
 fmt.Printf("    Volume Min:                  %.2f\n", params.VolumeMin)
 fmt.Printf("    Volume Max:                  %.2f\n", params.VolumeMax)
 fmt.Printf("    Volume Step:                 %.2f\n", params.VolumeStep)
-fmt.Printf("    Contract Size:               %.2f\n", params.ContractSize)
+fmt.Printf("    Contract Size:               %.2f\n", params.TradeContractSize)
 fmt.Printf("    Point:                       %.5f\n", params.Point)
 ```
 
@@ -122,21 +127,24 @@ These lines sequentially display the main symbol parameters:
 
 ```protobuf
 message SymbolParamsManyData {
-  repeated SymbolParams Params = 1; // List of symbol parameters
+  repeated SymbolParameters symbol_infos = 1; // List of symbol parameters
+  int32 symbols_total = 2;
+  optional int32 page_number = 3;
+  optional int32 items_per_page = 4;
 }
 
-message SymbolParams {
-  string Symbol = 1;
-  double Bid = 2;
-  double Ask = 3;
-  int32 Digits = 4;
-  int32 Spread = 5;
-  double VolumeMin = 6;
-  double VolumeMax = 7;
-  double VolumeStep = 8;
-  double ContractSize = 9;
-  double Point = 10;
-  // ... over 112 other fields (currency, description, trading status, margins, etc)
+message SymbolParameters {
+  string name = 1;
+  double bid = 2;
+  double ask = 5;
+  double point = 15;
+  double trade_contract_size = 20;
+  double volume_min = 24;
+  double volume_max = 25;
+  double volume_step = 26;
+  int32 digits = 78;
+  int32 spread = 80;
+  // ... 116 fields in total (currency, description, trading status, margins, etc)
 }
 ```
 
@@ -174,5 +182,5 @@ The `SymbolParamsMany()` method is used:
 
 ### 💬 In Simple Terms
 
-> `SymbolParamsMany()` allows you to get **all main parameters of multiple symbols in one request**.
+> `SymbolParamsMany()` allows you to get **all main parameters of one symbol or of all symbols in one request**.
 > Convenient for loading market data, filtering, and analyzing a large number of instruments.

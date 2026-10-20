@@ -33,7 +33,7 @@ func (a *MT5Account) MarketBookGet(
 
 ```protobuf
 MarketBookGetRequest {
-  string Symbol = 1;  // Symbol name
+  string symbol = 1;  // Symbol name
 }
 ```
 
@@ -50,18 +50,18 @@ MarketBookGetRequest {
 
 ## ⬆️ Output — `MarketBookGetData`
 
-| Field  | Type           | Go Type            | Description                     |
-| ------ | -------------- | ------------------ | ------------------------------- |
-| `Book` | `BookStruct[]` | `[]*pb.BookStruct` | Array of order book entries     |
+| Field          | Type                | Go Type                 | Description                     |
+| -------------- | ------------------- | ----------------------- | ------------------------------- |
+| `MqlBookInfos` | `MrpcMqlBookInfo[]` | `[]*pb.MrpcMqlBookInfo` | Array of order book entries     |
 
-**BookStruct contains:**
+**MrpcMqlBookInfo contains:**
 
 | Field          | Type       | Description                                  |
 | -------------- | ---------- | -------------------------------------------- |
 | `Type`         | `BookType` | Order type (see enum below)                  |
 | `Price`        | `double`   | Price level                                  |
-| `Volume`       | `int64`    | Volume at this level (deprecated)            |
-| `VolumeDouble` | `double`   | Volume at this level with extended precision |
+| `Volume`       | `int64`    | Volume at this level (integer)               |
+| `VolumeReal`   | `double`   | Volume at this level with extended precision |
 
 ---
 
@@ -129,6 +129,7 @@ For a detailed line-by-line explanation with examples, see:
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -138,10 +139,20 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
 
-    ctx := context.Background()
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
+
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
 
     // Subscribe first
     account.MarketBookAdd(ctx, &pb.MarketBookAddRequest{Symbol: "EURUSD"})
@@ -155,15 +166,15 @@ func main() {
         panic(err)
     }
 
-    fmt.Printf("Market depth for EURUSD: %d levels\n", len(data.Book))
+    fmt.Printf("Market depth for EURUSD: %d levels\n", len(data.MqlBookInfos))
 
-    for i, entry := range data.Book {
+    for i, entry := range data.MqlBookInfos {
         typeStr := "SELL"
         if entry.Type == pb.BookType_BOOK_TYPE_BUY {
             typeStr = "BUY"
         }
         fmt.Printf("  [%d] %s: Price=%.5f, Volume=%.2f\n",
-            i, typeStr, entry.Price, entry.VolumeDouble)
+            i, typeStr, entry.Price, entry.VolumeReal)
     }
 }
 ```
@@ -189,12 +200,12 @@ func AnalyzeOrderBook(account *mt5.MT5Account, symbol string) {
     buyLevels := 0
     sellLevels := 0
 
-    for _, entry := range data.Book {
+    for _, entry := range data.MqlBookInfos {
         if entry.Type == pb.BookType_BOOK_TYPE_BUY { // BUY
-            buyVolume += entry.VolumeDouble
+            buyVolume += entry.VolumeReal
             buyLevels++
         } else { // SELL
-            sellVolume += entry.VolumeDouble
+            sellVolume += entry.VolumeReal
             sellLevels++
         }
     }
@@ -220,7 +231,7 @@ func GetBestBidAsk(account *mt5.MT5Account, symbol string) (bestBid, bestAsk flo
         return 0, 0, err
     }
 
-    for _, entry := range data.Book {
+    for _, entry := range data.MqlBookInfos {
         if entry.Type == pb.BookType_BOOK_TYPE_BUY { // BUY (bid)
             if bestBid == 0 || entry.Price > bestBid {
                 bestBid = entry.Price

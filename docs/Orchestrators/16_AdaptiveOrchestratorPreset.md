@@ -13,11 +13,11 @@ Continuously analyzes market conditions and adapts the trading approach:
 
 * **Market Analysis** — calculates volatility, detects trends, and counts active positions
 * **Strategy Selection** — chooses the best orchestrator for current conditions
-* **Dynamic Execution** — runs the selected orchestrator in 5-minute cycles
+* **Dynamic Execution** — runs the selected orchestrator in 5-minute cycles (plus a 30-second pause between cycles)
 * **Continuous Adaptation** — repeats analysis and switches strategies as markets change
-* **Safety Controls** — built-in stop-loss, daily limits, and risk management
+* **Safety Controls** — total-loss limit and daily loss/profit limits checked after every cycle
 
-**File:** `examples/demos/pesets/16_AdaptiveOrchestratorPreset.go`
+**File:** `examples/demos/presets/16_AdaptiveOrchestratorPreset.go` (package `presets`, import `"github.com/MetaRPC/GoMT5/examples/demos/presets"` — part of the repository's `examples` module, available by cloning the repository)
 
 > **IMPORTANT DISCLAIMER — EDUCATIONAL EXAMPLE ONLY**
 >
@@ -33,7 +33,7 @@ Continuously analyzes market conditions and adapts the trading approach:
 
 Instead of running one fixed strategy, the **Adaptive Orchestrator Preset** acts like an intelligent trading manager that:
 
-1. Looks at the market every 5 minutes
+1. Looks at the market at the start of every cycle (5-minute cycle + 30-second pause)
 2. Decides which strategy fits best (grid, trailing, risk protection, etc.)
 3. Runs that strategy for one cycle
 4. Repeats with continuous market analysis
@@ -49,9 +49,9 @@ Instead of running one fixed strategy, the **Adaptive Orchestrator Preset** acts
 
 ### Dependencies
 
-* **MT5 Suga** — high-level convenience API
-* **All 5 Orchestrators** — GridTrade, TrailingStopManage, PositionScale, RiskManage, PortfolioRebalance
-* **Helpers** — progress bar and utility helpers
+* **MT5Sugar** — high-level convenience API (`GetBalance`, `GetPriceInfo`, `GetOpenPositions`)
+* **All 5 Orchestrators** — GridTrader, TrailingStopManager, PositionScaler, RiskManager, PortfolioRebalancer (package `orchestrators`)
+* **Helpers** — `helpers.WaitWithProgressBarAndCallback` progress bar (package `examples/demos/helpers`)
 
 ---
 
@@ -59,144 +59,138 @@ Instead of running one fixed strategy, the **Adaptive Orchestrator Preset** acts
 
 ### Mode 1: Grid Mode (Low Volatility)
 
-**Condition:** Volatility < 25 points
+**Condition:** Volatility < `LowVolatilityThreshold` (25 points)
 
 **Why:** Range-bound markets are perfect for grid strategies.
 
-**Orchestrator Used:** GridTrade
+**Orchestrator Used:** GridTrader
 
-**Configuration:**
+**Configuration** (from `executeGridMode`):
 
 ```go
-GridTradeConfig{
-    Symbol:        "EURUSD",
-    GridSize:      5,      // 5 grid levels
-    GridStep:      100,    // 100 points spacing
-    LotSize:       0.01,   // Micro-lots
+config := orchestrators.GridTraderConfig{
+    Symbol:        p.Symbol, // "EURUSD" by default
+    GridSize:      5,        // 5 grid levels each side
+    GridStep:      100,      // 100 points spacing
+    LotSize:       0.01,     // Micro-lots
     MaxPositions:  10,
+    TakeProfit:    0,
+    StopLoss:      0,
     CheckInterval: 5 * time.Second,
+    RebuildOnFill: false,
 }
 ```
 
 **Expected Behavior:**
 
-* Places a grid of buy/sell orders
-* Profits from small price oscillations
+* Places 5 BUY LIMIT and 5 SELL LIMIT pending orders around the mid price
+* With `TakeProfit: 0` each order's TP is one grid step away; `StopLoss: 0` = no SL (see [GridTrader](13_Grid_trader.md))
 * Works best in sideways markets
+* When the cycle ends, `Stop()` deletes the grid's pending orders; filled positions stay open
 
 ---
 
 ### Mode 2: Managed Mode (Medium Volatility)
 
-**Condition:** 25–50 points volatility
+**Condition:** 25–50 points volatility and no strong trend (|TrendStrength| ≤ 0.7)
 
 **Why:** Normal conditions suit position management with scaling.
 
 **Orchestrators Used:**
 
-1. TrailingStopManage (profit protection)
-2. PositionScale (pyramiding)
+1. TrailingStopManager (profit protection)
+2. PositionScaler (pyramiding)
 
-**Configuration:**
+**Configuration** (from `executeManagedMode`):
 
 ```go
-// Trailing Stop
-TrailingStopConfig{
-    TrailingDistance: 200, // 200 points trail
-    ActivationProfit: 300, // Activate at 300 points profit
-    UpdateInterval:   2 * time.Second,
-}
+// Trailing Stop: defaults (TrailingDistance 200, ActivationProfit 300, UpdateInterval 2s, all symbols)
+tsConfig := orchestrators.DefaultTrailingStopConfig()
+tsManager := orchestrators.NewTrailingStopManager(p.sugar, tsConfig)
 
-// Position Scaling
-PositionScaleConfig{
-    Mode:            Pyramiding, // Add to winners
-    TriggerDistance: 200,        // 200 points trigger
-    MaxScales:       3,          // Max 3 additions
-}
+// Position Scaler: defaults for the symbol (TriggerDistance 200, MinProfitToScale 100,
+// InitialLotSize 0.10, ScaleLotSize 0.05, MaxScales 3, TotalMaxLotSize 1.0, StopLossPerScale 150, CheckInterval 5s)
+scalerConfig := orchestrators.DefaultPositionScalerConfig(p.Symbol)
+scalerConfig.Mode = orchestrators.Pyramiding
+scaler := orchestrators.NewPositionScaler(p.sugar, scalerConfig)
 ```
 
 **Expected Behavior:**
 
 * Protects profits with trailing stops
-* Scales into winning positions
+* Opens a 0.10-lot BUY base position on the symbol if it has none (`InitialLotSize`, once per scaler run) and scales into it once it is in profit
 * Balanced approach for normal markets
 
 ---
 
 ### Mode 3: Protection Mode (High Volatility)
 
-**Condition:** Volatility > 50 points
+**Condition:** Volatility > `HighVolatilityThreshold` (50 points)
 
 **Why:** Volatile markets require strict risk control.
 
-**Orchestrator Used:** RiskManage
+**Orchestrator Used:** RiskManager
 
-**Configuration:**
+**Configuration** (from `executeProtectionMode`):
 
 ```go
-RiskManageConfig{
-    MaxDrawdownPercent: 5.0,  // 5% max drawdown
-    EnableAutoClose:    true, // Auto-close on breach
-    CheckInterval:      5 * time.Second,
-}
+config := orchestrators.DefaultRiskManagerConfig() // CheckInterval 5s, $1000 abs. drawdown, $500 daily loss, ...
+config.MaxDrawdownPercent = 5.0                    // 5% max drawdown
+config.EnableAutoClose = true                      // Auto-close on breach
 ```
 
 **Expected Behavior:**
 
-* Continuously monitors risk limits
-* Closes positions if drawdown exceeds 5%
+* Monitors risk limits every 5 seconds during the cycle
+* Closes ALL positions if drawdown reaches 5% (or $1000) from the peak, or the daily loss reaches $500; closes the most losing position while the margin level is below 150%
+* The peak/daily baseline is the equity when this cycle's RiskManager starts
 * Defensive mode to prevent blow-ups
 
 ---
 
 ### Mode 4: Portfolio Mode (Multi-Symbol)
 
-**Condition:** Two or more different symbols have open positions
+**Condition:** `EnablePortfolioMode` is true (default `false`) **and** two or more different symbols have open positions
 
 **Why:** Multiple symbols require balanced exposure.
 
-**Orchestrator Used:** PortfolioRebalance
+**Orchestrator Used:** PortfolioRebalancer
 
-**Configuration:**
+**Configuration** (from `executePortfolioMode`):
 
 ```go
-PortfolioRebalanceConfig{
-    Allocations: map[string]float64{
-        "EURUSD": 0.25,
-        "GBPUSD": 0.25,
-        "USDJPY": 0.25,
-        "XAUUSD": 0.25,
-    },
-    TotalExposure:     10000.0,
-    RebalanceThreshold: 10.0,
-}
+// PortfolioSymbols defaults to EURUSD, GBPUSD, USDJPY, XAUUSD -> 0.25 each,
+// TotalExposure 10000, RebalanceThreshold 10, MaxDeviation 0.20
+config := orchestrators.DefaultPortfolioRebalancerConfig(p.PortfolioSymbols)
+// The default 1-hour check interval would never come round in a cycle: the rebalancer checks
+// when it starts and then every fifth of the cycle.
+config.CheckInterval = p.CycleDuration / 5
+rebalancer := orchestrators.NewPortfolioRebalancer(p.sugar, config)
 ```
 
 
 **Expected Behavior**:
 
-* Maintains balanced allocation
-* Rebalances when deviation > 10%
-* Diversification management
+* Checks when it starts and then every minute (`CycleDuration / 5`), and rebalances the open positions when a symbol deviates more than 10% from its target
+* Resizes existing positions only: symbols of `PortfolioSymbols` without a position are left alone (see [PortfolioRebalancer](15_Portfolio_rebalancer.md))
 
 ---
 
 ### Mode 5: TRENDING MODE (Strong Directional Movement)
 
-**Condition**: Trend strength > 70%
+**Condition**: Volatility between the thresholds and |TrendStrength| > 0.7 (the "trend" is a placeholder derived from the spread, see Critical Warnings)
 
 **Why**: Strong trends are perfect for pyramiding strategies
 
-**Orchestrator Used**: PositionScale (pyramiding mode)
+**Orchestrator Used**: PositionScaler (pyramiding mode)
 
-**Configuration**:
+**Configuration** (from `executeTrendingMode`):
 
 ```go
-PositionScaleConfig{
-    Mode:            Pyramiding, // Add to winners
-    TriggerDistance: 200,        // 200 points trigger
-    MaxScales:       3,          // Max 3 scales
-}
+config := orchestrators.DefaultPositionScalerConfig(p.Symbol)
+config.Mode = orchestrators.Pyramiding
+config.TriggerDistance = 200 // 200 points trigger
+config.MaxScales = 3         // Max 3 scales
 ```
 
 **Expected Behavior**:
@@ -212,20 +206,34 @@ PositionScaleConfig{
 | Parameter                    | Type          | Default    | Description                    |
 | ---------------------------- | ------------- | ---------- | ------------------------------ |
 | `Symbol`                     | string        | `"EURUSD"` | Primary trading symbol         |
-| `BaseRiskAmount`             | float64       | `20.0`     | Risk per trade in dollars      |
+| `BaseRiskAmount`             | float64       | `20.0`     | Only used for the total-loss stop: stop when total P/L < −5 × BaseRiskAmount |
 | `LowVolatilityThreshold`     | float64       | `25.0`     | Max points for grid mode       |
 | `HighVolatilityThreshold`    | float64       | `50.0`     | Min points for protection mode |
-| `CycleDuration`              | time.Duration | `5m`       | Duration of one cycle          |
+| `CycleDuration`              | time.Duration | `5m`       | Duration of one cycle (0 = 5 m) |
 | `EnablePortfolioMode`        | bool          | `false`    | Enable multi-symbol management |
 | `PortfolioSymbols`           | []string      | 4 symbols  | Symbols for portfolio mode     |
-| `MaxConcurrentOrchestrators` | int           | `2`        | Max orchestrators at once      |
-| `MaxDailyLoss`               | float64       | `500.0`    | Maximum daily loss allowed     |
-| `MaxDailyProfit`             | float64       | `1000.0`   | Daily profit target            |
+| `MaxConcurrentOrchestrators` | int           | `2`        | Most orchestrators started per cycle; a further one is not started (0 = no limit) |
+| `MaxDailyLoss`               | float64       | `500.0`    | Stop when balance − day start balance < −MaxDailyLoss |
+| `MaxDailyProfit`             | float64       | `1000.0`   | Stop when balance − day start balance > MaxDailyProfit |
+| `MaxCycles`                  | int           | `0`        | Stop after this many cycles (0 = until Ctrl+C / SIGTERM or a safety stop; the demo runner sets 2) |
+
+"Daily" limits are measured from the balance at `Execute()` start, and from the balance at the first safety check of each new day (local date) after that. The fields are exported, so set them on the preset before calling `Execute()`.
 
 ### Configuration Example
 
+Imports: `presets "github.com/MetaRPC/GoMT5/examples/demos/presets"` and `mt5 "github.com/MetaRPC/GoMT5/examples/mt5"` (both in the repository's `examples` module).
+
 ```go
-preset := presets.NewAdaptiveOrchestratorPreset(suga)
+sugar, err := mt5.NewMT5Sugar(12345678, "your_password", "mt5.mrpc.pro:443")
+if err != nil {
+    return err
+}
+defer sugar.Disconnect() // also when QuickConnect fails
+if err := sugar.QuickConnect("YourBroker-MT5 Demo"); err != nil {
+    return err
+}
+
+preset := presets.NewAdaptiveOrchestratorPreset(sugar)
 
 // Customize parameters
 preset.Symbol = "EURUSD"
@@ -236,8 +244,9 @@ preset.CycleDuration = 5 * time.Minute
 preset.EnablePortfolioMode = false
 preset.MaxDailyLoss = 500.0
 preset.MaxDailyProfit = 1000.0
+preset.MaxCycles = 0 // 0 = until Ctrl+C; e.g. 2 = stop after two cycles
 
-// Execute
+// Execute: blocks until Ctrl+C / SIGTERM, a safety stop or MaxCycles cycles, returns the total P/L
 totalProfit, err := preset.Execute()
 ```
 
@@ -261,8 +270,8 @@ go run main.go adaptive
 go run main.go preset
 ```
 
-All commands launch the **Adaptive Orchestrator Preset** with default configuration.
-To stop execution, press `Ctrl+C`.
+All commands launch `main.go -> RunOrchestrator_AdaptivePreset()`, which connects with `mt5.NewMT5Sugar(...)` + `QuickConnect(...)` and runs the preset with its default configuration and `MaxCycles = 2` (`presets.NewAdaptiveOrchestratorPreset(sugar)`, `preset.MaxCycles = 2`, `Execute()`).
+The preset runs two cycles (about 11 minutes) - so it also ends when nobody can press `Ctrl+C`, e.g. with stdin closed - unless you press `Ctrl+C` or a safety limit stops it earlier; either way `Execute()` stops the running orchestrators, shows the final results and returns, the runner prints `📊 Final Result: $<total P/L>` and disconnects the terminal (the runner disconnects however the run ends, also on an error or Ctrl+C).
 
 ---
 
@@ -289,7 +298,7 @@ INFINITE CYCLE LOOP:
 |   - Estimate trend strength
 |
 | SELECT MODE (priority order):
-|   1. Portfolio mode? (2+ symbols)
+|   1. Portfolio mode? (EnablePortfolioMode and 2+ symbols)
 |   2. High volatility? (>50 pts) → Protection Mode
 |   3. Low volatility? (<25 pts) → Grid Mode
 |   4. Strong trend? (>70%) → Trending Mode
@@ -300,11 +309,11 @@ INFINITE CYCLE LOOP:
 |   - Clear active orchestrators list
 |
 +-- STEP 3: EXECUTE SELECTED MODE
-|   - Grid Mode → Start GridTrade
-|   - Managed Mode → Start TrailingStop + PositionScale
-|   - Protection Mode → Start RiskManage
-|   - Portfolio Mode → Start PortfolioRebalance
-|   - Trending Mode → Start PositionScale (pyramiding)
+|   - Grid Mode → Start GridTrader
+|   - Managed Mode → Start TrailingStop + PositionScaler
+|   - Protection Mode → Start RiskManager
+|   - Portfolio Mode → Start PortfolioRebalancer
+|   - Trending Mode → Start PositionScaler (pyramiding)
 |
 +-- STEP 4: MONITOR CYCLE
 |   - Wait for CycleDuration (5 minutes)
@@ -320,13 +329,15 @@ INFINITE CYCLE LOOP:
 |   - Total loss > $100? → STOP
 |   - Daily loss > $500? → STOP
 |   - Daily profit > $1000? → STOP (success)
+|   - MaxCycles cycles done (if > 0)? → STOP
 |
 +-- STEP 7: PAUSE
 |   - Wait 30 seconds before next cycle
 |
 +-- REPEAT CYCLE
 |
-ON STOP (Ctrl+C or safety limit):
+ON SAFETY LIMIT, MaxCycles or Ctrl+C / SIGTERM:
+- The cycle loop ends (Ctrl+C also ends the running cycle early)
 - Stop all active orchestrators
 - Show final results
 - Return total profit
@@ -334,111 +345,201 @@ ON STOP (Ctrl+C or safety limit):
 END
 ```
 
+#### 1. Entry Point: Execute
+
+> Lines `269–323`
+
 
 ```go
 func (p *AdaptiveOrchestratorPreset) Execute() (float64, error) {
-    // Get starting balance
-    p.initialBalance, err := p.suga.GetBalance()
-    p.dailyStartBalance = p.initialBalance
+	printHeader()
+	if p.CycleDuration <= 0 {
+		p.CycleDuration = 5 * time.Minute
+	}
+	fmt.Printf("   Getting starting balance...\n")
 
-    // Setup context and signal handling
-    p.ctx, p.cancel = context.WithCancel(context.Background())
-    sigChan := make(chan os.Signal, 1)
-    signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	// Initialize
+	var err error
+	p.initialBalance, err = p.loadedBalance()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get balance: %w", err)
+	}
+	p.dailyStartBalance = p.initialBalance
+	p.dailyStartDate = time.Now()
 
-    // Start main cycle loop
-    go p.runCycles()
+	fmt.Printf("  💰 Starting balance: $%.2f\n", p.initialBalance)
+	fmt.Printf("  📊 Primary symbol: %s\n", p.Symbol)
+	fmt.Printf("  🎯 Base risk: $%.2f\n", p.BaseRiskAmount)
+	fmt.Printf("  📈 Volatility thresholds: Low < %.0f pts < Medium < %.0f pts < High\n\n",
+		p.LowVolatilityThreshold, p.HighVolatilityThreshold)
 
-    // Wait for interrupt
-    <-sigChan
+	// Setup context and signal handling
+	p.ctx, p.cancel = context.WithCancel(context.Background())
+	defer p.cancel()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sigChan)
+
+	// Main cycle loop
+	cyclesDone := make(chan struct{})
+	go func() {
+		defer close(cyclesDone)
+		p.runCycles()
+	}()
+
+	// Wait for interrupt, or for the cycles to end by themselves (safety stop or MaxCycles)
+	select {
+	case <-sigChan:
+		fmt.Println("\n\n🛑 Stopping preset...")
+	case <-cyclesDone:
+		fmt.Println("\n\n🛑 Cycles ended - stopping preset...")
+	}
+	p.cancel()
+	<-cyclesDone // the current cycle returns before its orchestrators are stopped
+
+	// Stop all active orchestrators
+	p.stopAllOrchestrators()
+
+	// Show final results
+	p.showFinalResults()
+
+	return p.totalProfit, nil
 }
 ```
 
 **What happens**:
 
-* Gets starting balance for profit calculation
+* Gets starting balance for profit calculation (fails if the balance cannot be read). All balance reads go through `loadedBalance()`, which turns a balance of 0 into the error `account data not loaded yet (balance 0)`: a terminal that the server has just started again answers 0 for a few seconds, and taken as real that would be a cycle "losing" the whole balance and a total-loss stop
 * Creates context for graceful shutdown
-* Sets up Ctrl+C handling
+* Sets up Ctrl+C / SIGTERM handling
 * Launches main cycle loop in a goroutine
-* Blocks until user stops execution (Ctrl+C)
+* Blocks until the user stops execution (Ctrl+C / SIGTERM) **or** the cycle loop ends by itself after a safety limit or `MaxCycles` cycles
+* Cancels the context and waits for the cycle loop to return, so no cycle starts orchestrators while they are being stopped
+* Stops the orchestrators of the last cycle, shows the final results and returns `(totalProfit, nil)` - the caller can then disconnect
 
 ---
 
 #### 2. Main Cycle Loop
   
-> Lines `307–331`  
+> Lines `326–360`  
 
 
 ```go
 func (p *AdaptiveOrchestratorPreset) runCycles() {
-    for {
-        select {
-        case <-p.ctx.Done():
-            return
-        default:
-            p.cycleNumber++
-            p.executeCycle()
+	for {
+		select {
+		case <-p.ctx.Done():
+			return
+		default:
+			p.cycleNumber++
+			p.executeCycle()
 
-            // Check safety limits
-            if p.checkSafetyLimits() {
-                p.cancel()
-                return
-            }
+			// Interrupted during the cycle
+			if p.ctx.Err() != nil {
+				return
+			}
 
-            // Pause 30 seconds
-            time.Sleep(30 * time.Second)
-        }
-    }
+			// Check safety limits (Execute stops everything when the cycles end)
+			if p.checkSafetyLimits() {
+				return
+			}
+
+			// Planned number of cycles done
+			if p.MaxCycles > 0 && p.cycleNumber >= p.MaxCycles {
+				fmt.Printf("
+  ✓ %d cycle(s) done (MaxCycles)
+", p.cycleNumber)
+				return
+			}
+
+			// Wait before next cycle
+			fmt.Printf("\n⏸️  Pausing 30 seconds before next cycle...\n")
+			select {
+			case <-p.ctx.Done():
+				return
+			case <-time.After(30 * time.Second):
+			}
+		}
+	}
 }
 ```
 
 **What happens**:
 
-* Infinite loop running cycles
+* Loop running cycles (endless with `MaxCycles = 0`)
 * Increments cycle counter
 * Executes one trading cycle
+* Returns at once when the context was cancelled during the cycle (Ctrl+C)
 * Checks safety limits after each cycle
-* Stops if limits are breached
-* Pauses 30 seconds between cycles
+* Ends the loop if limits are breached or `MaxCycles` cycles are done; `Execute()` sees the loop end and stops everything
+* Pauses 30 seconds between cycles (interruptible by the context)
 
 ---
 
 #### 3. Execute Single Cycle
   
-> Lines `334–387`  
+> Lines `363–420`  
 
 
 ```go
 func (p *AdaptiveOrchestratorPreset) executeCycle() {
-    // Step 1: Analyze market
-    condition, err := p.analyzeMarketConditions()
+	fmt.Printf("\n╔════════════════════════════════════════════════════════════╗\n")
+	fmt.Printf("║  CYCLE #%-3d                                               ║\n", p.cycleNumber)
+	fmt.Printf("╚════════════════════════════════════════════════════════════╝\n\n")
 
-    // Step 2: Stop previous orchestrators
-    p.stopAllOrchestrators()
+	// Step 1: Analyze market conditions
+	condition, err := p.analyzeMarketConditions()
+	if err != nil {
+		fmt.Printf("  ✗ Market analysis failed: %v\n", err)
+		return
+	}
 
-    // Step 3: Execute appropriate mode
-    cycleStartBalance, _ := p.suga.GetBalance()
+	fmt.Printf("  🔍 Market Analysis Complete:\n")
+	fmt.Printf("     Mode: %s\n", condition.Mode)
+	fmt.Printf("     Volatility: %.1f points\n", condition.VolatilityPoints)
+	fmt.Printf("     Trend: %.2f (%.0f%% strength)\n", condition.TrendStrength, math.Abs(condition.TrendStrength)*100)
+	fmt.Printf("     Reason: %s\n", condition.Reason)
+	fmt.Printf("     Active Positions: %d\n", condition.ActivePositions)
+	fmt.Printf("     Active Symbols: %d\n\n", condition.ActiveSymbols)
 
-    switch condition.Mode {
-    case GridMode:
-        p.executeGridMode(condition)
-    case ManagedMode:
-        p.executeManagedMode(condition)
-    case ProtectionMode:
-        p.executeProtectionMode(condition)
-    case PortfolioMode:
-        p.executePortfolioMode(condition)
-    case TrendingMode:
-        p.executeTrendingMode(condition)
-    }
+	// Step 2: Stop any running orchestrators from previous cycle
+	p.stopAllOrchestrators()
 
-    // Step 4: Monitor cycle
-    p.monitorCycle()
+	// Step 3: Select and execute appropriate orchestrator(s)
+	cycleStartBalance, startErr := p.loadedBalance()
 
-    // Step 5: Calculate profit
-    cycleEndBalance, _ := p.suga.GetBalance()
-    cycleProfit := cycleEndBalance - cycleStartBalance
-    p.totalProfit += cycleProfit
+	switch condition.Mode {
+	case GridMode:
+		p.executeGridMode(condition)
+	case ManagedMode:
+		p.executeManagedMode(condition)
+	case ProtectionMode:
+		p.executeProtectionMode(condition)
+	case PortfolioMode:
+		p.executePortfolioMode(condition)
+	case TrendingMode:
+		p.executeTrendingMode(condition)
+	default:
+		fmt.Printf("  ⚠️  Unknown market mode, skipping cycle\n")
+	}
+
+	// Monitor for cycle duration
+	p.monitorCycle()
+
+	// Calculate cycle profit (not counted when a balance could not be read)
+	cycleEndBalance, endErr := p.loadedBalance()
+	if startErr != nil || endErr != nil {
+		fmt.Printf("\n  ⚠️  Cycle #%d result unknown: balance not available (%v %v)\n", p.cycleNumber, startErr, endErr)
+		return
+	}
+	cycleProfit := cycleEndBalance - cycleStartBalance
+	p.totalProfit += cycleProfit
+
+	fmt.Printf("\n  📊 Cycle #%d Result:\n", p.cycleNumber)
+	fmt.Printf("     Profit: $%.2f\n", cycleProfit)
+	fmt.Printf("     Total P/L: $%.2f\n", p.totalProfit)
+	fmt.Printf("     Current Balance: $%.2f\n", cycleEndBalance)
 }
 ```
 
@@ -449,58 +550,84 @@ func (p *AdaptiveOrchestratorPreset) executeCycle() {
 * Records starting balance
 * Selects and executes the appropriate mode
 * Monitors execution for the cycle duration (5 minutes)
-* Calculates profit for this cycle
+* Calculates profit for this cycle (balance difference = realized P/L only); if a balance cannot be read (or reads 0) the cycle result is skipped instead of being counted as a huge loss
 * Updates total profit
+* If the market analysis fails, the cycle ends at once (no orchestrators are stopped or started) and the loop moves on to the safety check and pause
 
 ---
 
 #### 4. Market Analysis
   
-> Lines `394–447`  
+> Lines `427–480`  
 
 
 ```go
 func (p *AdaptiveOrchestratorPreset) analyzeMarketConditions() (*MarketCondition, error) {
-    // Get price info
-    priceInfo, err := p.suga.GetPriceInfo(p.Symbol)
+	// Get current market data
+	priceInfo, err := p.sugar.GetPriceInfo(p.Symbol)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get price info: %w", err)
+	}
 
-    // Calculate volatility from spread
-    spreadPoints := priceInfo.SpreadPips
-    estimatedVolatility := spreadPoints * 10
+	// Calculate volatility from spread
+	spreadPoints := priceInfo.SpreadPips
+	estimatedVolatility := spreadPoints * 10 // Rough estimate
 
-    // Get active positions
-    positions, _ := p.suga.GetOpenPositions()
+	// Get active positions
+	positions, err := p.sugar.GetOpenPositions()
+	if err != nil {
+		positions = make([]*pb.PositionInfo, 0)
+	}
 
-    // Count unique symbols
-    symbolMap := make(map[string]bool)
-    for _, pos := range positions {
-        symbolMap[pos.Symbol] = true
-    }
+	// Count unique symbols
+	symbolMap := make(map[string]bool)
+	for _, pos := range positions {
+		symbolMap[pos.Symbol] = true
+	}
 
-    // Determine mode (priority order)
-    if p.EnablePortfolioMode && len(symbolMap) >= 2 {
-        condition.Mode = PortfolioMode
-    } else if estimatedVolatility > p.HighVolatilityThreshold {
-        condition.Mode = ProtectionMode
-    } else if estimatedVolatility < p.LowVolatilityThreshold {
-        condition.Mode = GridMode
-    } else if math.Abs(condition.TrendStrength) > 0.7 {
-        condition.Mode = TrendingMode
-    } else {
-        condition.Mode = ManagedMode
-    }
+	condition := &MarketCondition{
+		VolatilityPoints: estimatedVolatility,
+		ActivePositions:  len(positions),
+		ActiveSymbols:    len(symbolMap),
+	}
+
+	// Simplified trend detection (would use bars in production)
+	// For demo, use random-like value based on spread
+	condition.TrendStrength = math.Mod(spreadPoints, 2.0) - 1.0 // -1.0 to 1.0
+
+	// Determine market mode (PRIORITY ORDER: Portfolio → Protection → Grid → Trending → Managed)
+	if p.EnablePortfolioMode && len(symbolMap) >= 2 {
+		condition.Mode = PortfolioMode
+		condition.Reason = fmt.Sprintf("Multi-symbol portfolio (%d symbols active)", len(symbolMap))
+	} else if estimatedVolatility > p.HighVolatilityThreshold {
+		condition.Mode = ProtectionMode
+		condition.Reason = fmt.Sprintf("High volatility (%.1f pts) - risk protection needed", estimatedVolatility)
+	} else if estimatedVolatility < p.LowVolatilityThreshold {
+		// LOW VOLATILITY = GRID MODE (checked BEFORE trending to prioritize range trading)
+		condition.Mode = GridMode
+		condition.Reason = fmt.Sprintf("Low volatility (%.1f pts) - range-bound market", estimatedVolatility)
+	} else if math.Abs(condition.TrendStrength) > 0.7 {
+		condition.Mode = TrendingMode
+		condition.Reason = fmt.Sprintf("Strong trend detected (strength: %.0f%%)", math.Abs(condition.TrendStrength)*100)
+	} else {
+		condition.Mode = ManagedMode
+		condition.Reason = fmt.Sprintf("Medium volatility (%.1f pts) - normal conditions", estimatedVolatility)
+	}
+
+	return condition, nil
 }
 ```
 
 **What happens**:
 
 * Fetches current price info using `GetPriceInfo()`
-* Calculates volatility as `spread × 10` (simplified estimate)
-* Gets all open positions
+* Calculates volatility as `spread × 10`, where the spread is `PriceInfo.SpreadPips` = (Ask − Bid) / point, i.e. in **points** (simplified estimate)
+* Gets all open positions (an error is treated as "no positions")
 * Counts unique symbols for portfolio detection
+* Derives a placeholder `TrendStrength` = `math.Mod(spread, 2) − 1`
 * Applies mode selection logic with priority:
 
-  1. **Portfolio** if 2+ symbols active
+  1. **Portfolio** if `EnablePortfolioMode` and 2+ symbols active
 
   2. **Protection** if volatility > 50 pts
 
@@ -514,58 +641,80 @@ func (p *AdaptiveOrchestratorPreset) analyzeMarketConditions() (*MarketCondition
 
 #### 5. Mode Execution Example: Grid Mode
   
-> Lines `454–477`  
+> Lines `487–504`, `563–576`  
 
 
 ```go
 func (p *AdaptiveOrchestratorPreset) executeGridMode(condition *MarketCondition) {
-    config := orchestrators.GridTradeConfig{
-        Symbol:        p.Symbol,
-        GridSize:      5,
-        GridStep:      100,
-        LotSize:       0.01,
-        MaxPositions:  10,
-        CheckInterval: 5 * time.Second,
-    }
+	fmt.Printf("  🎯 Executing: GRID TRADER ORCHESTRATOR\n\n")
 
-    gridTrade := orchestrators.NewGridTrade(p.suga, config)
-    if err := gridTrade.Start(); err != nil {
-        return
-    }
+	config := orchestrators.GridTraderConfig{
+		Symbol:        p.Symbol,
+		GridSize:      5,
+		GridStep:      100,
+		LotSize:       0.01,
+		MaxPositions:  10,
+		TakeProfit:    0,
+		StopLoss:      0,
+		CheckInterval: 5 * time.Second,
+		RebuildOnFill: false,
+	}
 
-    p.activeOrchestrators = append(p.activeOrchestrators, gridTrade)
+	gridTrader := orchestrators.NewGridTrader(p.sugar, config)
+	p.startOrchestrator(gridTrader, "Grid Trader")
+}
+
+// startOrchestrator starts an orchestrator unless MaxConcurrentOrchestrators are already
+// running (0 = no limit) and reports whether it runs.
+func (p *AdaptiveOrchestratorPreset) startOrchestrator(orch orchestrators.Orchestrator, name string) bool {
+	if p.MaxConcurrentOrchestrators > 0 && len(p.activeOrchestrators) >= p.MaxConcurrentOrchestrators {
+		fmt.Printf("  ⏭️  %s not started: %d orchestrator(s) running (MaxConcurrentOrchestrators = %d)\n",
+			name, len(p.activeOrchestrators), p.MaxConcurrentOrchestrators)
+		return false
+	}
+	if err := orch.Start(); err != nil {
+		fmt.Printf("  ✗ Failed to start %s: %v\n", name, err)
+		return false
+	}
+	p.activeOrchestrators = append(p.activeOrchestrators, orch)
+	fmt.Printf("  ✓ %s started\n", name)
+	return true
 }
 ```
 
 **What happens**:
 
-* Creates configuration for GridTrade
-* Instantiates a new GridTrade orchestrator
-* Starts the orchestrator
-* Adds it to the active orchestrators list
-* Same pattern is used for other modes (ManagedMode, ProtectionMode, etc.)
+* Creates configuration for GridTrader
+* Instantiates a new GridTrader orchestrator
+* `startOrchestrator()` enforces `MaxConcurrentOrchestrators`, starts the orchestrator (its `Start()` validates the configuration) and adds it to the active orchestrators list
+* Same pattern is used for the other modes (ManagedMode starts the scaler only if the trailing stop manager started)
 
 ---
 
 #### 6. Cycle Monitoring
  
-> Lines `562–580`  
+> Lines `583–601`  
 
 
 ```go
 func (p *AdaptiveOrchestratorPreset) monitorCycle() {
-    totalSeconds := int(p.CycleDuration.Seconds())
+	totalSeconds := int(p.CycleDuration.Seconds())
 
-    helpers.WaitWithProgressBarAndCallback(
-        totalSeconds,
-        fmt.Sprintf("Cycle #%d monitoring", p.cycleNumber),
-        10*time.Second, // Update every 10 seconds
-        func() bool {
-            p.showOrchestratorStatus()
-            return true
-        },
-        p.ctx,
-    )
+	// Use progress bar with callback to show orchestrator status
+	helpers.WaitWithProgressBarAndCallback(
+		totalSeconds,
+		fmt.Sprintf("Cycle #%d monitoring", p.cycleNumber),
+		10*time.Second, // Update orchestrator status every 10 seconds
+		func() bool {
+			// Show detailed orchestrator status during callback
+			fmt.Println() // New line before status
+			p.showOrchestratorStatus()
+			return true // Continue waiting
+		},
+		p.ctx,
+	)
+
+	fmt.Printf("\n  ✓ Cycle #%d completed\n", p.cycleNumber)
 }
 ```
 
@@ -581,48 +730,57 @@ func (p *AdaptiveOrchestratorPreset) monitorCycle() {
 
 #### 7. Safety Limits Check
  
-> Lines `609–632`  
+> Lines `644–675`  
 
 
 ```go
 func (p *AdaptiveOrchestratorPreset) checkSafetyLimits() bool {
-    // Check total loss
-    if p.totalProfit < -p.BaseRiskAmount*5 {
-        fmt.Printf("STOP: Total loss exceeds $%.2f\n", p.BaseRiskAmount*5)
-        return true
-    }
+	// Check max loss
+	if p.totalProfit < -p.BaseRiskAmount*5 {
+		fmt.Printf("\n  🛑 STOP: Total loss exceeds $%.2f\n", p.BaseRiskAmount*5)
+		return true
+	}
 
-    // Check daily loss
-    currentBalance, _ := p.suga.GetBalance()
-    dailyProfit := currentBalance - p.dailyStartBalance
+	// Check daily loss (the day starts again at local midnight)
+	currentBalance, err := p.loadedBalance()
+	if err != nil {
+		fmt.Printf("\n  ⚠️  Safety check skipped: %v\n", err)
+		return false
+	}
+	if y, m, d := time.Now().Date(); !(y == p.dailyStartDate.Year() && m == p.dailyStartDate.Month() && d == p.dailyStartDate.Day()) {
+		p.dailyStartBalance = currentBalance
+		p.dailyStartDate = time.Now()
+	}
+	dailyProfit := currentBalance - p.dailyStartBalance
 
-    if dailyProfit < -p.MaxDailyLoss {
-        fmt.Printf("STOP: Daily loss limit ($%.2f) reached\n", p.MaxDailyLoss)
-        return true
-    }
+	if dailyProfit < -p.MaxDailyLoss {
+		fmt.Printf("\n  🛑 STOP: Daily loss limit ($%.2f) reached\n", p.MaxDailyLoss)
+		return true
+	}
 
-    // Check daily profit target
-    if dailyProfit > p.MaxDailyProfit {
-        fmt.Printf("SUCCESS: Daily profit target ($%.2f) reached!\n", p.MaxDailyProfit)
-        return true
-    }
+	// Check daily profit target
+	if dailyProfit > p.MaxDailyProfit {
+		fmt.Printf("\n  ✓ SUCCESS: Daily profit target ($%.2f) reached!\n", p.MaxDailyProfit)
+		return true
+	}
 
-    return false
+	return false
 }
 ```
 
 **What happens**:
 
 * **Total loss check**: Stops if loss > $100 (5 × $20 base risk)
-* **Daily loss check**: Stops if daily loss > $500
-* **Daily profit check**: Stops if daily profit > $1000 (success)
-* Returns `true` if any limit is breached, stopping the preset
+* **Daily loss check**: Stops if the loss since the start of the day (or of `Execute()`) > $500; the baseline moves to the current balance on a new local date
+* **Daily profit check**: Stops if the profit since the start of the day > $1000 (success)
+* A balance read error skips the check (it is not mistaken for a loss)
+* Returns `true` if any limit is breached; `runCycles` then ends, and `Execute()` stops the orchestrators, shows the final results and returns
 
 ---
 
 #### 8. Stop All Orchestrators
  
-> Lines `599–606`  
+> Lines `620–627`  
 
 
 ```go
@@ -641,7 +799,8 @@ func (p *AdaptiveOrchestratorPreset) stopAllOrchestrators() {
 * Iterates through all active orchestrators
 * Stops each one if still running
 * Clears the orchestrators list
-* Called before starting a new cycle
+* Called before starting a new cycle, and by `Execute()` when the preset stops
+* Each `Stop()` waits for the orchestrator's check in progress (a GridTrader also deletes its pending orders)
 * Ensures a clean slate for the next mode
 
 ---
@@ -652,7 +811,7 @@ The preset uses **priority-based mode selection** to handle conflicting conditio
 
 ### Priority Order (Highest to Lowest)
 
-1. **Portfolio Mode** — if `EnablePortfolioMode = true` AND 2+ symbols are active
+1. **Portfolio Mode** — if `EnablePortfolioMode = true` AND 2+ symbols have open positions
 
 2. **Protection Mode** — if volatility > 50 points
 
@@ -683,8 +842,8 @@ estimatedVolatility := spreadPoints * 10
 
 **Current Implementation**:
 
-* Uses spread as a volatility proxy
-* Multiplies by 10 for point estimation
+* Uses the current spread (in points) as a volatility proxy
+* Multiplies it by 10
 * **Simplified for demonstration purposes**
 
 ### Production Alternatives
@@ -695,21 +854,33 @@ For real trading, calculate volatility using:
 2. **Historical Volatility** — standard deviation of price changes
 3. **VWAP Deviation** — distance from volume-weighted average price
 
-**Example with bars**:
+GoMT5's `MT5Account` / `MT5Service` / `MT5Sugar` have **no bar-history method**, so bars would have to come from another source. A measurement that works with the existing API is the range of sampled prices:
+
+**Example with sampled prices**:
 
 ```go
-// Get recent bars
-bars, _ := suga.GetBars(symbol, timeframe, 100)
-
-// Calculate ATR
-atr := calculateATR(bars, 14)
-
-// Use ATR as volatility
-if atr < 20 {
-    mode = GridMode
-} else if atr > 50 {
-    mode = ProtectionMode
+// Sample the Bid once per second for one minute
+high, low := 0.0, 0.0
+for i := 0; i < 60; i++ {
+    info, err := sugar.GetPriceInfo("EURUSD")
+    if err == nil {
+        if high == 0 || info.Bid > high {
+            high = info.Bid
+        }
+        if low == 0 || info.Bid < low {
+            low = info.Bid
+        }
+    }
+    time.Sleep(time.Second)
 }
+
+// Range in points (the point size comes from the symbol: EURUSD 0.00001)
+info, err := sugar.GetSymbolInfo("EURUSD")
+if err != nil {
+    return err
+}
+rangePoints := (high - low) / info.Point
+fmt.Printf("1-minute range: %.0f points\n", rangePoints)
 ```
 
 ---
@@ -761,13 +932,13 @@ if dailyProfit > p.MaxDailyProfit {
 
 ### 4. Maximum Concurrent Orchestrators
 
-**Orchestrator Limit**: Controls maximum orchestrators running at once
+**Orchestrator Limit**: at most `MaxConcurrentOrchestrators` orchestrators are started per cycle (default 2; 0 = no limit). A mode that wants more starts the first ones and reports the rest as not started.
 
 ```go
-MaxConcurrentOrchestrators: 2
+preset.MaxConcurrentOrchestrators = 2 // Managed Mode needs 2
 ```
 
-**Current Usage**:
+**Number per mode**:
 
 * Grid Mode: 1 orchestrator
 * Managed Mode: 2 orchestrators
@@ -777,15 +948,19 @@ MaxConcurrentOrchestrators: 2
 
 ### 5. Graceful Shutdown
 
-**Signal Handling**: Catches Ctrl+C for clean exit
+**Signal Handling**: Catches Ctrl+C for clean exit - and a safety stop ends the preset the same way
 
 ```go
-sigChan := make(chan os.Signal, 1)
-signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-
-<-sigChan // Wait for Ctrl+C
+select {
+case <-sigChan: // Ctrl+C / SIGTERM
+case <-cyclesDone: // safety stop
+}
+p.cancel()
+<-cyclesDone             // the running cycle returns
 p.stopAllOrchestrators() // Clean shutdown
 ```
+
+`Execute()` then returns, and the runner's deferred `sugar.Disconnect()` stops the terminal.
 
 ---
 
@@ -821,7 +996,7 @@ p.stopAllOrchestrators() // Clean shutdown
 ### 4. Mode Switching Overhead
 
 * Stops and starts orchestrators every cycle
-* May close positions prematurely
+* Stopping a GridTrader deletes its pending orders; a new RiskManager starts with a new peak/daily baseline each cycle; a new PositionScaler may open a base position again if the symbol has none (other `Stop()` calls do not close positions)
 * Consider longer cycle durations (10–15 minutes)
 * Balance adaptation speed vs. stability
 
@@ -831,7 +1006,9 @@ p.stopAllOrchestrators() // Clean shutdown
 
 * Managed Mode runs 2 orchestrators simultaneously
 * Ensure they don’t conflict (e.g., both modifying the same position)
-* Current implement
+* The current implementation does not coordinate them: the TrailingStopManager moves the SL of every open position (including the PositionScaler's scale-ins, which get their own SL)
+
+---
 
 
 ## Best Practices
@@ -964,10 +1141,12 @@ p.stopAllOrchestrators() // Clean shutdown
 The preset displays live status every 10 seconds during monitoring:
 
 ```
-[15:04:05] Active orchestrators: 2
-- TrailingStopManage: 5 ops (4 success, 1 error)
-- PositionScale: 3 ops (3 success, 0 errors)
+  [15:04:05] Active orchestrators: 2
+     - Trailing Stop Manager: 5 ops (4 success, 1 errors)
+     - Position Scaler: 3 ops (3 success, 0 errors)
 ```
+
+(The names come from each orchestrator's `GetStatus().Name`.)
 
 ---
 
@@ -984,8 +1163,8 @@ totalProfit := preset.GetTotalProfit()
 activeCount := preset.GetActiveOrchestratorCount()
 
 // Get orchestrator details
-orchestrators := preset.GetActiveOrchestrators()
-for _, orch := range orchestrators {
+active := preset.GetActiveOrchestrators()
+for _, orch := range active {
     status := orch.GetStatus()
     fmt.Printf("%s: %d operations\n", status.Name, status.SuccessCount)
 }
@@ -999,14 +1178,16 @@ When the preset stops (Ctrl+C or safety limit), it shows a summary:
 
 ```
 +============================================================+
-| FINAL RESULTS                                              |
+|  FINAL RESULTS                                            |
 +============================================================+
-Initial Balance:      $10000.00
-Final Balance:        $10350.00
-Total Profit / Loss:  $350.00
-Cycles Completed:     12
-Average Per Cycle:    $29.17
+  Initial Balance: $10000.00
+  Final Balance: $10350.00
+  Total Profit/Loss: $350.00
+  Cycles Completed: 12
+  Average Per Cycle: $29.17
 +============================================================+
+
+(`Average Per Cycle` is left out when no cycle has completed.)
 ```
 
 ---
@@ -1018,7 +1199,7 @@ Average Per Cycle:    $29.17
 **Solution**: Check volatility threshold
 
 * Current: `LowVolatilityThreshold = 25.0`
-* If your market always has spread > 2.5 pips, increase the threshold
+* Volatility = spread in points × 10, so a spread of 2.5 points or more never selects Grid Mode — increase the threshold
 * Try: `preset.LowVolatilityThreshold = 40.0`
 
 ---
@@ -1047,8 +1228,8 @@ Average Per Cycle:    $29.17
 
 **Solution**: Reduce risk or increase limit
 
-* Lower `BaseRiskAmount` from $20 to $10
-* Or increase `MaxDailyLoss` from $500 to $1000
+* Lower the orchestrators' lot sizes in the `execute...Mode` functions
+* Or increase `MaxDailyLoss` from $500 to $1000 (`BaseRiskAmount` only sets the total-loss stop at 5 × its value)
 * Verify orchestrator configurations are conservative
 
 ---
@@ -1068,39 +1249,33 @@ Average Per Cycle:    $29.17
 
 ### Custom Market Analysis
 
-Replace simplified volatility calculation:
+Replace the simplified volatility calculation. GoMT5 has no bar-history method, so a replacement has to work from prices you collect yourself (or from an external data source). Sketch of a change inside `analyzeMarketConditions()`, using a price history that you keep (for example filled from `GetPriceInfo` samples or `GetService().StreamTicks`):
 
 ```go
-func (p *AdaptiveOrchestratorPreset) analyzeMarketConditions() (*MarketCondition, error) {
-    // Get bars for analysis
-    bars, _ := p.suga.GetBars(p.Symbol, pb.Timeframe_M15, 100)
-
-    // Calculate ATR
-    atr := calculateATR(bars, 14)
-
-    // Calculate moving averages for trend
-    ma20 := calculateMA(bars, 20)
-    ma50 := calculateMA(bars, 50)
-
-    // Detect trend
-    trendStrength := 0.0
-    if ma20 > ma50 {
-        trendStrength = (ma20 - ma50) / ma50
-    } else {
-        trendStrength = (ma20 - ma50) / ma50
+// p.bids []float64 would be a new field you fill with sampled Bid prices
+if len(p.bids) >= 2 {
+    high, low := p.bids[0], p.bids[0]
+    for _, b := range p.bids {
+        high = math.Max(high, b)
+        low = math.Min(low, b)
     }
+    condition.VolatilityPoints = (high - low) / p.point // p.point: a field you fill from sugar.GetSymbolInfo(p.Symbol).Point
 
-    // Use ATR for volatility
-    condition.VolatilityPoints = atr
-    condition.TrendStrength = trendStrength
-
-    // ...rest of mode selection logic
+    // Simple trend: last price vs first price, scaled to -1..1
+    first, last := p.bids[0], p.bids[len(p.bids)-1]
+    if high > low {
+        condition.TrendStrength = (last - first) / (high - low)
+    }
 }
+
+// ...rest of mode selection logic
 ```
 
 ---
 
 ### Adding Time-of-Day Filters
+
+Sketch of code you would add to your copy of `16_AdaptiveOrchestratorPreset.go` (package `presets`; none of this exists in the shipped preset):
 
 ```go
 // Don’t trade during low-liquidity hours
@@ -1127,6 +1302,8 @@ if !p.isTradingHours() {
 
 ### Mode-Specific Optimization
 
+Sketch (not in the shipped code; `MarketMode` and `GridMode` are the preset's own types, so this belongs inside package `presets`):
+
 ```go
 // Track performance per mode
 type ModePerformance struct {
@@ -1149,6 +1326,8 @@ if modePerf[GridMode].SuccessRate < 0.4 {
 ## Integration with Other Systems
 
 ### With External Signals
+
+Sketch for your copy of the preset (`fetchSignalFromAPI` stands for your own signal source):
 
 ```go
 // Add signal integration
@@ -1177,19 +1356,22 @@ if signal := p.checkExternalSignals(); signal != nil {
 
 ### With Custom Risk Management
 
-```go
-// Override default RiskManage configuration
-func (p *AdaptiveOrchestratorPreset) executeProtectionMode(condition *MarketCondition) {
-    config := orchestrators.RiskManageConfig{
-        MaxDrawdownPercent: 3.0,  // Stricter limit
-        DailyLossLimit:     200.0, // Lower daily limit
-        MinMarginLevel:     200.0, // Higher margin safety
-        EnableAutoClose:    true,
-    }
+To use stricter limits, change the configuration lines of `executeProtectionMode` in your copy of the file. The shipped code is:
 
-    riskManage := orchestrators.NewRiskManage(p.suga, config)
-    riskManage.Start()
-}
+```go
+	config := orchestrators.DefaultRiskManagerConfig()
+	config.MaxDrawdownPercent = 5.0
+	config.EnableAutoClose = true
+```
+
+A stricter variant (starting from the defaults keeps the other limits; in a `RiskManagerConfig` literal a missing limit is 0 = off, and a missing `CheckInterval` becomes 5 s):
+
+```go
+	config := orchestrators.DefaultRiskManagerConfig()
+	config.MaxDrawdownPercent = 3.0 // Stricter limit
+	config.DailyLossLimit = 200.0   // Lower daily limit
+	config.MinMarginLevel = 200.0   // Higher margin safety
+	config.EnableAutoClose = true
 ```
 
 ---
@@ -1201,7 +1383,7 @@ func (p *AdaptiveOrchestratorPreset) executeProtectionMode(condition *MarketCond
 * **Adaptive Selection** — automatically chooses the best orchestrator based on market conditions
 * **Five Market Modes** — Grid, Managed, Protection, Portfolio, Trending
 * **Continuous Operation** — runs in cycles with automatic adaptation
-* **Built-in Safety** — multiple safety stops and daily limits
+* **Built-in Safety** — total-loss stop and daily loss/profit limits checked after each cycle
 * **Highly Customizable** — thresholds and configurations are adjustable
 
 **Remember**:
@@ -1212,4 +1394,4 @@ func (p *AdaptiveOrchestratorPreset) executeProtectionMode(condition *MarketCond
 * Customize thresholds for your symbols
 * Start with conservative limits
 
-**The goal**: Create a complete adaptive trading system that automatically selects the right strategy for current market conditions, providing true *set-and-forget* automated trading with intelligent risk management.
+**The goal**: Show how to build an adaptive trading system that selects a strategy for current market conditions — a starting point to improve, not a *set-and-forget* system.

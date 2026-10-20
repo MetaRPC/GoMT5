@@ -23,6 +23,7 @@ func (s *MT5Sugar) GetProfit() (float64, error)
 * **What it is:** Total unrealized profit/loss from ALL open positions (not closed deals!).
 * **Why you need it:** Monitor performance in real-time, set profit targets, manage risk.
 * **Sanity check:** Positive = winning, Negative = losing, Zero = breakeven or no positions.
+* **Under the hood:** `service.GetAccountDouble(ctx, pb.AccountInfoDoublePropertyType_ACCOUNT_PROFIT)`.
 
 ---
 
@@ -79,8 +80,13 @@ func MonitorProfitTarget(sugar *mt5.MT5Sugar, targetProfit float64) {
 
         if profit >= targetProfit {
             fmt.Printf("🎯 Profit target reached! Closing all positions...\n")
-            sugar.CloseAllPositions()
-            fmt.Println("✅ All positions closed")
+            closed, err := sugar.CloseAllPositions()
+            if err != nil {
+                // the error names every position that was not closed; closed is still valid
+                fmt.Printf("⚠️  %d closed, some not: %v\n", closed, err)
+                return
+            }
+            fmt.Printf("✅ All %d positions closed\n", closed)
             return
         }
     }
@@ -175,9 +181,9 @@ if profit > 0 {
 
 * `GetBalance()` - Account balance
 * `GetEquity()` - Balance + Profit
-* `GetTotalProfit()` - Same as GetProfit()
+* `GetTotalProfit()` - Sum of `Profit` over the open-position list (GetProfit reads the account's `ACCOUNT_PROFIT` instead)
 * `GetProfitBySymbol()` - Profit for specific symbol
-* `GetDealsToday()` - Today's closed deals (realized profit)
+* `GetDealsToday()` - Closed positions opened today (realized results)
 
 ---
 
@@ -191,7 +197,7 @@ profit, _ := sugar.GetProfit()
 fmt.Println("Money in my pocket:", profit) // WRONG! It's not realized yet!
 
 // ✅ CORRECT - for realized profit, use history
-realizedToday, _ := sugar.GetProfitToday() // Actual money made today
+realizedToday, _ := sugar.GetProfitToday() // Sum of Profit of closed positions opened today (swap/commission not included)
 ```
 
 ---

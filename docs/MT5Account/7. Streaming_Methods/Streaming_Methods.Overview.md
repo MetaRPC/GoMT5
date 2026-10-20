@@ -48,11 +48,11 @@
 
 | If you need…                                     | Use                                     | Returns (stream)           | Key inputs                          |
 | ------------------------------------------------ | --------------------------------------- | -------------------------- | ----------------------------------- |
-| Real-time price ticks                            | `OnSymbolTick`                          | Channel of MqlTick         | Symbol name                         |
-| Trade event notifications                        | `OnTrade`                               | Channel of TradeInfo       | *(none)*                            |
-| Detailed transaction audit log                   | `OnTradeTransaction`                    | Channel of TradeTransaction| *(none)*                            |
-| Real-time profit/loss updates                    | `OnPositionProfit`                      | Channel of PositionProfit  | Symbol filter (optional)            |
-| Real-time ticket list changes                    | `OnPositionsAndPendingOrdersTickets`    | Channel of ticket arrays   | *(none)*                            |
+| Real-time price ticks                            | `OnSymbolTick`                          | Channel of `*pb.OnSymbolTickData` (tick in `SymbolTick`) | SymbolNames (one or more) |
+| Trade event notifications                        | `OnTrade`                               | Channel of `*pb.OnTradeData` | *(none)*                          |
+| Detailed transaction audit log                   | `OnTradeTransaction`                    | Channel of `*pb.OnTradeTransactionData` | *(none)*               |
+| Real-time profit/loss updates                    | `OnPositionProfit`                      | Channel of `*pb.OnPositionProfitData` | TimerPeriodMilliseconds, IgnoreEmptyData (no symbol filter) |
+| Real-time ticket list changes                    | `OnPositionsAndPendingOrdersTickets`    | Channel of `*pb.OnPositionsAndPendingOrdersTicketsData` | TimerPeriodMilliseconds |
 
 ---
 
@@ -64,7 +64,7 @@
 * **OnSymbolTick** - High frequency, can generate many updates per second.
 * **OnTrade** - Triggered on every trade event (open, close, modify, delete).
 * **OnTradeTransaction** - Most detailed, includes all transaction types and states.
-* **OnPositionProfit** - Real-time updates triggered by price changes.
+* **OnPositionProfit** - Periodic updates every `TimerPeriodMilliseconds`; filter by `PositionSymbol` on the client side.
 * **Resource management** - Always cancel context when done to close channels and stop streams.
 * **Error handling** - Errors are sent through error channel, nil data indicates closed channel.
 
@@ -88,7 +88,7 @@ go func() {
             if tick == nil {
                 return
             }
-            fmt.Printf("EURUSD: Bid=%.5f, Ask=%.5f\n", tick.Bid, tick.Ask)
+            fmt.Printf("EURUSD: Bid=%.5f, Ask=%.5f\n", tick.SymbolTick.Bid, tick.SymbolTick.Ask)
 
         case err := <-errChan:
             if err != nil {
@@ -126,9 +126,10 @@ go func() {
 ```
 
 ```go
-// Monitor position profit/loss
+// Monitor position profit/loss (all positions; there is no symbol filter in the request)
 dataChan, errChan := account.OnPositionProfit(ctx, &pb.OnPositionProfitRequest{
-    Symbol: "EURUSD", // Or empty for all symbols
+    TimerPeriodMilliseconds: 1000,
+    IgnoreEmptyData:         true,
 })
 
 go func() {
@@ -138,8 +139,13 @@ go func() {
             if profitData == nil {
                 return
             }
-            fmt.Printf("#%d %s: $%.2f\n",
-                profitData.Ticket, profitData.Symbol, profitData.Profit)
+            for _, pos := range profitData.UpdatedPositions {
+                if pos.PositionSymbol != "EURUSD" { // filter on the client side
+                    continue
+                }
+                fmt.Printf("#%d %s: $%.2f\n",
+                    pos.Ticket, pos.PositionSymbol, pos.Profit)
+            }
 
         case err := <-errChan:
             if err != nil {
@@ -215,7 +221,7 @@ go func() {
             if tick == nil {
                 return
             }
-            fmt.Printf("[TICK] EURUSD: %.5f\n", tick.Bid)
+            fmt.Printf("[TICK] EURUSD: %.5f\n", tick.SymbolTick.Bid)
 
         case err := <-tickErr:
             if err != nil {

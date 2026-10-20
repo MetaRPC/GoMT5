@@ -5,8 +5,9 @@
 **API Information:**
 
 * **Method:** `sugar.ClosePositionPartial(ticket, volume)`
-* **Timeout:** 10 seconds
+* **Timeout:** 30 seconds
 * **Returns:** Error if close failed
+* **Request:** `pb.OrderCloseRequest{Ticket: ticket, Volume: volume}` sent via `MT5Service.CloseOrder` (MT5 `OrderClose`)
 
 ---
 
@@ -27,7 +28,7 @@ func (s *MT5Sugar) ClosePositionPartial(ticket uint64, volume float64) error
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `error` | `error` | `nil` if successful, error if failed |
+| `error` | `error` | `nil` when the server returns code 10009 (done); `"ClosePositionPartial failed: ..."` if the call fails; `"partial close rejected, code: N (meaning)"` for any other return code (the meaning comes from `helpers.GetRetCodeMessage`) |
 
 ---
 
@@ -36,6 +37,7 @@ func (s *MT5Sugar) ClosePositionPartial(ticket uint64, volume float64) error
 * **What it is:** Close part of position, keep rest running.
 * **Why you need it:** Lock in partial profits while letting winners run.
 * **Sanity check:** Volume must be less than position size. Position stays open with reduced volume.
+* **No normalization:** the volume is sent exactly as given - it is not rounded to the symbol's volume step and not checked against the position volume. Round it yourself (e.g. `pos.Volume / 2` of a 0.03-lot position is 0.015, which most symbols reject); an invalid volume comes back as an error.
 
 ---
 
@@ -59,12 +61,16 @@ func (s *MT5Sugar) ClosePositionPartial(ticket uint64, volume float64) error
 ticket := uint64(12345)
 
 // Get current position
-pos, _ := sugar.GetPositionByTicket(ticket)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    fmt.Printf("Position not found: %v\n", err)
+    return
+}
 fmt.Printf("Position: %.2f lots\n", pos.Volume)
 
-// Close half
-halfVolume := pos.Volume / 2
-err := sugar.ClosePositionPartial(ticket, halfVolume)
+// Close half (rounded down to a 0.01 volume step - the method does not round)
+halfVolume := math.Floor(pos.Volume/2/0.01) * 0.01
+err = sugar.ClosePositionPartial(ticket, halfVolume)
 if err != nil {
     fmt.Printf("Partial close failed: %v\n", err)
     return
@@ -88,7 +94,11 @@ defer ticker.Stop()
 alreadyScaled := false
 
 for range ticker.C {
-    pos, _ := sugar.GetPositionByTicket(ticket)
+    pos, err := sugar.GetPositionByTicket(ticket)
+    if err != nil { // "position with ticket N not found" once it is closed
+        fmt.Printf("Stopped: %v\n", err)
+        return
+    }
 
     if !alreadyScaled && pos.Profit >= firstTargetProfit {
         fmt.Printf("🎯 First target reached: $%.2f\n", pos.Profit)
@@ -121,15 +131,21 @@ ticket := uint64(12345)
 targets := []float64{50.0, 100.0, 150.0}
 closedTargets := 0
 
-pos, _ := sugar.GetPositionByTicket(ticket)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    return
+}
 originalVolume := pos.Volume
-volumePerTarget := originalVolume / 3.0
+volumePerTarget := originalVolume / 3.0 // round to the symbol's volume step in real code
 
 ticker := time.NewTicker(5 * time.Second)
 defer ticker.Stop()
 
 for range ticker.C {
-    pos, _ := sugar.GetPositionByTicket(ticket)
+    pos, err := sugar.GetPositionByTicket(ticket)
+    if err != nil { // position fully closed (or query failed)
+        return
+    }
 
     if closedTargets < len(targets) && pos.Profit >= targets[closedTargets] {
         targetNum := closedTargets + 1
@@ -160,16 +176,20 @@ for range ticker.C {
 ```go
 ticket := uint64(12345)
 
-pos, _ := sugar.GetPositionByTicket(ticket)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    fmt.Printf("Position not found: %v\n", err)
+    return
+}
 
 fmt.Printf("Position #%d:\n", ticket)
 fmt.Printf("  Volume: %.2f\n", pos.Volume)
 fmt.Printf("  Entry:  %.5f\n", pos.PriceOpen)
 fmt.Printf("  Profit: $%.2f\n", pos.Profit)
 
-// Close half
-halfVolume := pos.Volume / 2
-err := sugar.ClosePositionPartial(ticket, halfVolume)
+// Close half (rounded down to a 0.01 volume step)
+halfVolume := math.Floor(pos.Volume/2/0.01) * 0.01
+err = sugar.ClosePositionPartial(ticket, halfVolume)
 if err != nil {
     fmt.Printf("Partial close failed: %v\n", err)
     return
@@ -195,7 +215,10 @@ fmt.Println("\n🎯 Now trading risk-free!")
 ```go
 ticket := uint64(12345)
 
-pos, _ := sugar.GetPositionByTicket(ticket)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    return
+}
 originalVolume := pos.Volume
 
 // Close 25% at each profit milestone
@@ -208,11 +231,14 @@ ticker := time.NewTicker(5 * time.Second)
 defer ticker.Stop()
 
 for range ticker.C {
-    pos, _ := sugar.GetPositionByTicket(ticket)
+    pos, err := sugar.GetPositionByTicket(ticket)
+    if err != nil { // position closed (or query failed)
+        return
+    }
 
     if closedMilestones < len(milestones) && pos.Profit >= milestones[closedMilestones] {
         percent := closePercents[closedMilestones]
-        closeVolume := pos.Volume * percent
+        closeVolume := math.Floor(pos.Volume*percent/0.01) * 0.01 // 0.01 volume step
 
         fmt.Printf("🎯 Milestone %d: $%.2f\n", closedMilestones+1, pos.Profit)
         fmt.Printf("   Closing %.0f%% (%.2f lots)\n", percent*100, closeVolume)
@@ -240,19 +266,20 @@ for range ticker.C {
 ticket := uint64(12345)
 targetPips := 50.0
 
-pos, _ := sugar.GetPositionByTicket(ticket)
-
 ticker := time.NewTicker(3 * time.Second)
 defer ticker.Stop()
 
 for range ticker.C {
-    pos, _ := sugar.GetPositionByTicket(ticket)
+    pos, err := sugar.GetPositionByTicket(ticket)
+    if err != nil { // position closed (or query failed)
+        return
+    }
 
-    var currentPips float64
-    if pos.Type == "BUY" {
-        currentPips = (pos.PriceCurrent - pos.PriceOpen) / 0.00001
+    var currentPips float64 // (EURUSD: 1 pip = 0.0001 = 10 points)
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
+        currentPips = (pos.PriceCurrent - pos.PriceOpen) / 0.0001
     } else {
-        currentPips = (pos.PriceOpen - pos.PriceCurrent) / 0.00001
+        currentPips = (pos.PriceOpen - pos.PriceCurrent) / 0.0001
     }
 
     fmt.Printf("Current: %.1f pips\n", currentPips)
@@ -260,8 +287,8 @@ for range ticker.C {
     if currentPips >= targetPips {
         fmt.Printf("🎯 Target reached: %.1f pips\n", currentPips)
 
-        // Close 2/3 of position
-        closeVolume := pos.Volume * 0.66
+        // Close 2/3 of position (rounded down to a 0.01 volume step)
+        closeVolume := math.Floor(pos.Volume*0.66/0.01) * 0.01
         err := sugar.ClosePositionPartial(ticket, closeVolume)
         if err != nil {
             fmt.Printf("Failed: %v\n", err)
@@ -281,19 +308,25 @@ for range ticker.C {
 ```go
 ticket := uint64(12345)
 
-pos, _ := sugar.GetPositionByTicket(ticket)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    return
+}
 originalVolume := pos.Volume
 
 ticker := time.NewTicker(5 * time.Second)
 defer ticker.Stop()
 
 for range ticker.C {
-    pos, _ := sugar.GetPositionByTicket(ticket)
+    pos, err := sugar.GetPositionByTicket(ticket)
+    if err != nil { // position closed (or query failed)
+        return
+    }
 
     // If losing more than $30, reduce position size
     if pos.Profit < -30.0 && pos.Volume == originalVolume {
-        // Close 50% to reduce risk
-        closeVolume := pos.Volume / 2
+        // Close 50% to reduce risk (rounded down to a 0.01 volume step)
+        closeVolume := math.Floor(pos.Volume/2/0.01) * 0.01
 
         fmt.Printf("⚠️  Drawdown: $%.2f - reducing position\n", pos.Profit)
 
@@ -319,7 +352,11 @@ for range ticker.C {
 ticket := uint64(12345)
 lotsToClose := 0.05 // Close exactly 0.05 lots
 
-pos, _ := sugar.GetPositionByTicket(ticket)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    fmt.Printf("Position not found: %v\n", err)
+    return
+}
 
 fmt.Printf("Position: %.2f lots\n", pos.Volume)
 
@@ -328,7 +365,7 @@ if lotsToClose >= pos.Volume {
     return
 }
 
-err := sugar.ClosePositionPartial(ticket, lotsToClose)
+err = sugar.ClosePositionPartial(ticket, lotsToClose)
 if err != nil {
     fmt.Printf("Close failed: %v\n", err)
     return
@@ -351,7 +388,10 @@ ticker := time.NewTicker(5 * time.Second)
 defer ticker.Stop()
 
 for range ticker.C {
-    pos, _ := sugar.GetPositionByTicket(ticket)
+    pos, err := sugar.GetPositionByTicket(ticket)
+    if err != nil { // position closed (or query failed)
+        return
+    }
 
     if pos.Profit > highestProfit {
         highestProfit = pos.Profit
@@ -367,7 +407,7 @@ for range ticker.C {
     if !partialClosed && dropPercent >= 30.0 && highestProfit > 50.0 {
         fmt.Printf("⚠️  Profit dropped 30%% from peak - scaling out\n")
 
-        halfVolume := pos.Volume / 2
+        halfVolume := math.Floor(pos.Volume/2/0.01) * 0.01 // 0.01 volume step
         err := sugar.ClosePositionPartial(ticket, halfVolume)
         if err != nil {
             fmt.Printf("Failed: %v\n", err)
@@ -385,18 +425,18 @@ for range ticker.C {
 ### 10) Advanced partial close function
 
 ```go
-func ScaleOutPosition(
-    sugar *mt5.MT5Sugar,
-    ticket uint64,
-    closePercent float64,
-    reason string,
-) error {
+func ScaleOutPosition(sugar *mt5.MT5Sugar, ticket uint64, closePercent float64, reason string) error {
     pos, err := sugar.GetPositionByTicket(ticket)
     if err != nil {
         return fmt.Errorf("position not found: %w", err)
     }
 
-    closeVolume := pos.Volume * (closePercent / 100.0)
+    // ClosePositionPartial sends the volume as given - round it to the volume step yourself
+    info, err := sugar.GetSymbolInfo(pos.Symbol)
+    if err != nil {
+        return err
+    }
+    closeVolume := math.Floor(pos.Volume*(closePercent/100.0)/info.VolumeStep) * info.VolumeStep
 
     // Validate close volume
     if closeVolume >= pos.Volume {
@@ -404,7 +444,7 @@ func ScaleOutPosition(
             closeVolume, pos.Volume)
     }
 
-    if closeVolume < 0.01 {
+    if closeVolume < info.VolumeMin {
         return fmt.Errorf("close volume too small: %.2f", closeVolume)
     }
 
@@ -480,8 +520,10 @@ sugar.ModifyPositionSLTP(ticket, newSL, tp)
 // ❌ WRONG - might be below broker minimum
 sugar.ClosePositionPartial(ticket, 0.001) // Too small!
 
-// ✅ CORRECT - check minimum volume (usually 0.01)
-if closeVolume < 0.01 {
+// ✅ CORRECT - check minimum volume and step (the method does not round)
+info, _ := sugar.GetSymbolInfo(symbol)
+closeVolume = math.Floor(closeVolume/info.VolumeStep) * info.VolumeStep
+if closeVolume < info.VolumeMin {
     fmt.Println("Volume too small")
     return
 }

@@ -5,8 +5,9 @@
 **API Information:**
 
 * **Method:** `sugar.ModifyPositionSLTP(ticket, sl, tp)`
-* **Timeout:** 10 seconds
+* **Timeout:** 30 seconds
 * **Returns:** Error if modification failed
+* **Request:** `pb.OrderModifyRequest{Ticket: ticket, StopLoss: &sl, TakeProfit: &tp}` sent via `MT5Service.ModifyOrder`
 
 ---
 
@@ -15,6 +16,9 @@
 ```go
 func (s *MT5Sugar) ModifyPositionSLTP(ticket uint64, sl, tp float64) error
 ```
+
+Both values are always sent, exactly as given (no rounding to the symbol's digits, no stop-level check).
+To change only one of them use `ModifyPositionSL(ticket, sl)` or `ModifyPositionTP(ticket, tp)`, which send only that field.
 
 ---
 
@@ -28,7 +32,7 @@ func (s *MT5Sugar) ModifyPositionSLTP(ticket uint64, sl, tp float64) error
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `error` | `error` | `nil` if successful, error if failed |
+| `error` | `error` | `nil` when the server returns code 10009 (done); `"ModifyPositionSLTP failed: ..."` if the call fails; `"modify rejected, code: N, comment: ..."` for any other return code |
 
 ---
 
@@ -80,7 +84,11 @@ fmt.Printf("   New TP: %.5f\n", newTP)
 ticket := uint64(12345)
 profitThreshold := 50.0 // $50
 
-pos, _ := sugar.GetPositionByTicket(ticket)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    fmt.Printf("Position not found: %v\n", err)
+    return
+}
 
 if pos.Profit >= profitThreshold {
     fmt.Printf("Profit $%.2f reached threshold $%.2f\n", pos.Profit, profitThreshold)
@@ -104,7 +112,7 @@ if pos.Profit >= profitThreshold {
 
 ```go
 ticket := uint64(12345)
-trailDistance := 50.0 // 50 pips
+trailDistance := 50.0 // 50 points
 
 ticker := time.NewTicker(5 * time.Second)
 defer ticker.Stop()
@@ -121,7 +129,7 @@ for range ticker.C {
 
     var newSL float64
 
-    if pos.Type == "BUY" {
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
         // Trail below current price
         newSL = pos.PriceCurrent - trailDistancePrice
 
@@ -133,7 +141,7 @@ for range ticker.C {
                 continue
             }
 
-            fmt.Printf("✅ Trailing SL: %.5f → %.5f (%.0f pips)\n",
+            fmt.Printf("✅ Trailing SL: %.5f → %.5f (%.0f points)\n",
                 pos.StopLoss, newSL, trailDistance)
         }
     } else { // SELL
@@ -148,7 +156,7 @@ for range ticker.C {
                 continue
             }
 
-            fmt.Printf("✅ Trailing SL: %.5f → %.5f (%.0f pips)\n",
+            fmt.Printf("✅ Trailing SL: %.5f → %.5f (%.0f points)\n",
                 pos.StopLoss, newSL, trailDistance)
         }
     }
@@ -165,15 +173,25 @@ for range ticker.C {
 ```go
 ticket := uint64(12345)
 
-pos, _ := sugar.GetPositionByTicket(ticket)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    fmt.Printf("Position not found: %v\n", err)
+    return
+}
 
 // Check if position has no SL/TP
 if pos.StopLoss == 0 && pos.TakeProfit == 0 {
     fmt.Printf("⚠️  Position #%d has no protection!\n", ticket)
     fmt.Println("Adding SL/TP...")
 
-    // Calculate SL/TP
-    sl, tp, _ := sugar.CalculateSLTP(pos.Symbol, pos.Type, 0, 50, 100)
+    // CalculateSLTP takes a direction string: exactly "BUY" or "SELL" (anything else is an error)
+    direction := "SELL"
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
+        direction = "BUY"
+    }
+
+    // Distances are in points; entry 0 = current Ask (BUY) / Bid (SELL)
+    sl, tp, _ := sugar.CalculateSLTP(pos.Symbol, direction, 0, 50, 100)
 
     err := sugar.ModifyPositionSLTP(ticket, sl, tp)
     if err != nil {
@@ -182,8 +200,8 @@ if pos.StopLoss == 0 && pos.TakeProfit == 0 {
     }
 
     fmt.Printf("✅ Protection added:\n")
-    fmt.Printf("   SL: %.5f (50 pips)\n", sl)
-    fmt.Printf("   TP: %.5f (100 pips)\n", tp)
+    fmt.Printf("   SL: %.5f (50 points)\n", sl)
+    fmt.Printf("   TP: %.5f (100 points)\n", tp)
 }
 ```
 
@@ -194,7 +212,11 @@ if pos.StopLoss == 0 && pos.TakeProfit == 0 {
 ```go
 ticket := uint64(12345)
 
-pos, _ := sugar.GetPositionByTicket(ticket)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    fmt.Printf("Position not found: %v\n", err)
+    return
+}
 
 if pos.Profit > 100.0 {
     fmt.Printf("Large profit: $%.2f - widening SL\n", pos.Profit)
@@ -202,9 +224,9 @@ if pos.Profit > 100.0 {
     info, _ := sugar.GetSymbolInfo(pos.Symbol)
 
     var newSL float64
-    if pos.Type == "BUY" {
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
         // Move SL closer to entry (widen stop distance)
-        newSL = pos.PriceOpen - (20 * info.Point) // 20 pips instead of original 50
+        newSL = pos.PriceOpen - (20 * info.Point) // 20 points instead of original 50
     } else {
         newSL = pos.PriceOpen + (20 * info.Point)
     }
@@ -227,12 +249,16 @@ if pos.Profit > 100.0 {
 ```go
 ticket := uint64(12345)
 
-pos, _ := sugar.GetPositionByTicket(ticket)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    fmt.Printf("Position not found: %v\n", err)
+    return
+}
 
 // If 80% to target, tighten TP to lock profit sooner
 if pos.TakeProfit > 0 {
     var distanceToTP float64
-    if pos.Type == "BUY" {
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
         distanceToTP = pos.TakeProfit - pos.PriceCurrent
         targetDistance := pos.TakeProfit - pos.PriceOpen
 
@@ -278,9 +304,12 @@ fmt.Println("⚠️  WARNING: Position now has no protection!")
 
 ```go
 ticket := uint64(12345)
-stepSize := 20.0 // Move SL every 20 pips profit
+stepSize := 20.0 // Move SL every 20 points of profit
 
-pos, _ := sugar.GetPositionByTicket(ticket)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    return
+}
 info, _ := sugar.GetSymbolInfo(pos.Symbol)
 stepPrice := stepSize * info.Point
 
@@ -290,21 +319,24 @@ defer ticker.Stop()
 lastSLUpdate := 0.0
 
 for range ticker.C {
-    pos, _ := sugar.GetPositionByTicket(ticket)
-
-    var profitPips float64
-    if pos.Type == "BUY" {
-        profitPips = (pos.PriceCurrent - pos.PriceOpen) / info.Point
-    } else {
-        profitPips = (pos.PriceOpen - pos.PriceCurrent) / info.Point
+    pos, err := sugar.GetPositionByTicket(ticket)
+    if err != nil { // position closed (or query failed)
+        return
     }
 
-    // Move SL in 20 pip steps
-    steps := math.Floor(profitPips / stepSize)
+    var profitPoints float64
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
+        profitPoints = (pos.PriceCurrent - pos.PriceOpen) / info.Point
+    } else {
+        profitPoints = (pos.PriceOpen - pos.PriceCurrent) / info.Point
+    }
+
+    // Move SL in 20 point steps
+    steps := math.Floor(profitPoints / stepSize)
 
     if steps > lastSLUpdate && steps > 0 {
         var newSL float64
-        if pos.Type == "BUY" {
+        if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
             newSL = pos.PriceOpen + (steps * stepPrice)
         } else {
             newSL = pos.PriceOpen - (steps * stepPrice)
@@ -317,8 +349,8 @@ for range ticker.C {
         }
     }
 
-    fmt.Printf("Profit: %.1f pips, Steps: %.0f, SL: %.5f\n",
-        profitPips, steps, pos.StopLoss)
+    fmt.Printf("Profit: %.1f points, Steps: %.0f, SL: %.5f\n",
+        profitPoints, steps, pos.StopLoss)
 }
 ```
 
@@ -329,8 +361,12 @@ for range ticker.C {
 ```go
 ticket := uint64(12345)
 
-pos, _ := sugar.GetPositionByTicket(ticket)
-openDuration := time.Since(pos.TimeOpen)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    fmt.Printf("Position not found: %v\n", err)
+    return
+}
+openDuration := time.Since(pos.OpenTimeUtc.AsTime()) // OpenTime is broker time, OpenTimeUtc is UTC
 
 // After 2 hours, tighten SL
 if openDuration > 2*time.Hour {
@@ -339,8 +375,8 @@ if openDuration > 2*time.Hour {
     info, _ := sugar.GetSymbolInfo(pos.Symbol)
 
     var newSL float64
-    if pos.Type == "BUY" {
-        // Move SL to 20 pips below current (was 50 pips)
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
+        // Move SL to 20 points below current (was 50 points)
         newSL = pos.PriceCurrent - (20 * info.Point)
 
         if newSL > pos.StopLoss {
@@ -362,16 +398,16 @@ if openDuration > 2*time.Hour {
 ### 10) Advanced modification function
 
 ```go
-func ModifySLTP(
-    sugar *mt5.MT5Sugar,
-    ticket uint64,
-    slPips float64,
-    tpPips float64,
-    reason string,
-) error {
+// slPoints/tpPoints are distances in points (CalculateSLTP multiplies them by Point)
+func ModifySLTP(sugar *mt5.MT5Sugar, ticket uint64, slPoints float64, tpPoints float64, reason string) error {
     pos, err := sugar.GetPositionByTicket(ticket)
     if err != nil {
         return fmt.Errorf("position not found: %w", err)
+    }
+
+    direction := "SELL"
+    if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_BUY {
+        direction = "BUY"
     }
 
     fmt.Println("╔═══════════════════════════════════════╗")
@@ -379,20 +415,23 @@ func ModifySLTP(
     fmt.Println("╚═══════════════════════════════════════╝")
     fmt.Printf("Reason:   %s\n", reason)
     fmt.Printf("Position: #%d\n", ticket)
-    fmt.Printf("Symbol:   %s %s\n", pos.Symbol, pos.Type)
+    fmt.Printf("Symbol:   %s %s\n", pos.Symbol, direction)
     fmt.Printf("Entry:    %.5f\n", pos.PriceOpen)
     fmt.Printf("Current:  %.5f\n\n", pos.PriceCurrent)
 
-    // Calculate new SL/TP
-    sl, tp, _ := sugar.CalculateSLTP(pos.Symbol, pos.Type, pos.PriceOpen, slPips, tpPips)
+    // Calculate new SL/TP from the entry price
+    sl, tp, err := sugar.CalculateSLTP(pos.Symbol, direction, pos.PriceOpen, slPoints, tpPoints)
+    if err != nil {
+        return err
+    }
 
     fmt.Printf("Old SL:   %.5f\n", pos.StopLoss)
-    fmt.Printf("New SL:   %.5f (%.0f pips)\n", sl, slPips)
+    fmt.Printf("New SL:   %.5f (%.0f points)\n", sl, slPoints)
     fmt.Printf("Old TP:   %.5f\n", pos.TakeProfit)
-    fmt.Printf("New TP:   %.5f (%.0f pips)\n\n", tp, tpPips)
+    fmt.Printf("New TP:   %.5f (%.0f points)\n\n", tp, tpPoints)
 
     // Validate new SL is better (tighter or breakeven)
-    if pos.Type == "BUY" {
+    if direction == "BUY" {
         if sl < pos.StopLoss && pos.StopLoss > 0 {
             return fmt.Errorf("new SL %.5f is worse than current %.5f", sl, pos.StopLoss)
         }
@@ -422,8 +461,9 @@ ModifySLTP(sugar, 12345, 30, 100, "Moving to tighter stop")
 
 **🍬 Helper methods:**
 
-* `CalculateSLTP()` - Calculate SL/TP prices from pips
+* `CalculateSLTP()` - Calculate SL/TP prices from distances in points
 * `GetPositionByTicket()` - Get current position details
+* `ModifyPositionSL()` / `ModifyPositionTP()` - Change only one level
 
 **🍬 Opening with SL/TP:**
 
@@ -438,7 +478,6 @@ ModifySLTP(sugar, 12345, 30, 100, "Moving to tighter stop")
 
 ```go
 // ❌ WRONG - SL in wrong direction for BUY
-pos, _ := sugar.GetPositionByTicket(ticket)
 // BUY position, setting SL above entry!
 sugar.ModifyPositionSLTP(ticket, 1.09000, tp) // Wrong!
 
@@ -476,7 +515,7 @@ minDistance := float64(stopLevel) * point
 
 ## 💎 Pro Tips
 
-1. **Breakeven first** - Move to breakeven at +30-50 pips
+1. **Breakeven first** - Move to breakeven once the position is comfortably in profit
 
 2. **Trail wisely** - Don't trail too tight (give position room)
 

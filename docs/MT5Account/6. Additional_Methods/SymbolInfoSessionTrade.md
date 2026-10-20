@@ -18,7 +18,7 @@
 
 * **What it is.** Returns when trading operations are allowed for a symbol on specific days.
 * **Why you need it.** Check trading hours, validate order placement times, schedule trades.
-* **Time format.** Returns seconds from midnight (0 = 00:00, 3600 = 01:00, etc).
+* **Time format.** Returns `From`/`To` timestamps: their time of day (broker server time) is the session boundary, the date part is to be ignored.
 
 ---
 
@@ -42,7 +42,7 @@ type MT5Account struct {
 }
 
 // SymbolInfoSessionTrade retrieves trade session times for a symbol.
-// Returns From and To times in seconds from day start.
+// Returns From and To timestamps whose time of day is the session start/end (date part ignored).
 func (a *MT5Account) SymbolInfoSessionTrade(
     ctx context.Context,
     req *pb.SymbolInfoSessionTradeRequest,
@@ -54,8 +54,8 @@ func (a *MT5Account) SymbolInfoSessionTrade(
 ```protobuf
 SymbolInfoSessionTradeRequest {
   string Symbol = 1;       // Trading symbol
-  int32 DayOfWeek = 2;     // Day of week (0=Sunday to 6=Saturday)
-  int32 SessionIndex = 3;  // Session index (usually 0)
+  DayOfWeek day_of_week = 2;  // Day of week (0=Sunday to 6=Saturday)
+  uint32 session_index = 3;   // Session index (usually 0)
 }
 ```
 
@@ -73,8 +73,8 @@ SymbolInfoSessionTradeRequest {
 | Field          | Type     | Description                                   |
 | -------------- | -------- | --------------------------------------------- |
 | `Symbol`       | `string` | Trading symbol (e.g., "EURUSD")               |
-| `DayOfWeek`    | `int32`  | Day of week (see enum below)                  |
-| `SessionIndex` | `int32`  | Session index (usually 0 for main session)    |
+| `DayOfWeek`    | `pb.DayOfWeek` | Day of week (see enum below)            |
+| `SessionIndex` | `uint32` | Session index (usually 0 for main session)    |
 
 **DayOfWeek enum values:**
 
@@ -118,9 +118,9 @@ For a detailed line-by-line explanation with examples, see:
 ## 🧩 Notes & Tips
 
 * **Automatic reconnection:** All `MT5Account` methods have built-in protection against transient gRPC errors with automatic reconnection via `ExecuteWithReconnect`.
-* **Default timeout:** If context has no deadline, a default `3s` timeout is applied automatically.
+* **Default timeout:** If context has no deadline, a default `5s` timeout is applied automatically.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
-* **Time format:** Session times are in seconds from midnight (00:00:00 = 0, 23:59:59 = 86399).
+* **Time format:** `From`/`To` are timestamps; only their time of day (broker server time) matters. Convert to seconds from midnight as shown above (00:00:00 = 0, 23:59:59 = 86399).
 * **Multiple sessions:** Some symbols have multiple trading sessions per day (SessionIndex 0, 1, etc).
 * **Weekend:** Most symbols do not allow trading on Saturday and Sunday.
 * **Quote vs Trade:** Quote session shows when prices are available, trade session shows when orders can be placed.
@@ -135,6 +135,7 @@ For a detailed line-by-line explanation with examples, see:
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -144,15 +145,24 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
 
     data, err := account.SymbolInfoSessionTrade(ctx, &pb.SymbolInfoSessionTradeRequest{
         Symbol:       "EURUSD",
-        DayOfWeek:    1, // Monday
+        DayOfWeek:    pb.DayOfWeek_MONDAY,
         SessionIndex: 0,
     })
     if err != nil {
@@ -176,8 +186,13 @@ func main() {
 func IsTradingAllowedNow(account *mt5.MT5Account, symbol string) (bool, error) {
     ctx := context.Background()
 
-    now := time.Now()
-    dayOfWeek := int32(now.Weekday())
+    // Session times are broker server time: compare with the server clock, not the local one
+    summary, err := account.AccountSummary(ctx, &pb.AccountSummaryRequest{})
+    if err != nil {
+        return false, err
+    }
+    now := summary.ServerTime.AsTime() // broker wall clock
+    dayOfWeek := pb.DayOfWeek(now.Weekday())
     currentSeconds := int64(now.Hour()*3600 + now.Minute()*60 + now.Second())
 
     data, err := account.SymbolInfoSessionTrade(ctx, &pb.SymbolInfoSessionTradeRequest{
@@ -213,7 +228,7 @@ func GetWeeklyTradingSchedule(account *mt5.MT5Account, symbol string) {
     for day := 0; day <= 6; day++ {
         data, err := account.SymbolInfoSessionTrade(ctx, &pb.SymbolInfoSessionTradeRequest{
             Symbol:       symbol,
-            DayOfWeek:    int32(day),
+            DayOfWeek:    pb.DayOfWeek(day),
             SessionIndex: 0,
         })
         if err != nil {

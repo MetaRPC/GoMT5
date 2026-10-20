@@ -1,14 +1,14 @@
 # 📉 Sell Market with Pips (`SellMarketWithPips`)
 
-> **Sugar method:** Opens SELL position with SL/TP specified in **pips** - the most intuitive way to short!
+> **Sugar method:** Opens SELL position with SL/TP specified as **distances in points** (despite the method name, not pips) - the most intuitive way to short!
 
 **API Information:**
 
 * **Method:** `sugar.SellMarketWithPips(symbol, volume, stopLossPips, takeProfitPips)`
 * **Package:** `mt5` (MT5Sugar)
 * **Underlying calls:** `CalculateSLTP()`, `SellMarketWithSLTP()`
-* **Timeout:** 10 seconds
-* **Returns:** Position ticket number
+* **Timeout:** 30 seconds for the order (`SellMarketWithSLTP`); before that `CalculateSLTP` queries `GetSymbolInfo` (10 s) and `GetBid` (3 s)
+* **Returns:** Order ticket (for a market order MT5 uses it as the position ticket)
 
 ---
 
@@ -31,8 +31,10 @@ func (s *MT5Sugar) SellMarketWithPips(
 |-----------|------|-------------|
 | `symbol` | `string` | Trading symbol (e.g., "EURUSD", "GBPUSD") |
 | `volume` | `float64` | Lot size (e.g., 0.1, 1.0) |
-| `stopLossPips` | `float64` | Stop Loss distance in **points** from entry |
-| `takeProfitPips` | `float64` | Take Profit distance in **points** from entry |
+| `stopLossPips` | `float64` | Stop Loss distance in **POINTS** from entry despite the name (e.g., 500 = 50 pips on 5-digit EURUSD) |
+| `takeProfitPips` | `float64` | Take Profit distance in **POINTS** from entry despite the name (e.g., 1000 = 100 pips on 5-digit EURUSD) |
+
+**Important:** 1 point = the symbol's `Point` (0.00001 on 5-digit EURUSD, 0.001 on 3-digit USDJPY); on 5- and 3-digit symbols 10 points = 1 pip, so pass 500 for a 50-pip stop.
 
 ---
 
@@ -40,16 +42,16 @@ func (s *MT5Sugar) SellMarketWithPips(
 
 | Return | Type | Description |
 |--------|------|-------------|
-| `ticket` | `uint64` | Position ticket number |
-| `error` | `error` | Error if order rejected |
+| `ticket` | `uint64` | Order ticket (`result.Order`); for a market order MT5 uses it as the position ticket |
+| `error` | `error` | The `CalculateSLTP` error (symbol/price query failed), `order rejected, code: N, comment: ...` if the return code is not 10009 (TRADE_RETCODE_DONE), or `SellMarketWithSLTP failed: ...` |
 
 ---
 
 ## 💬 Just the Essentials
 
-* **What it is:** Opens SELL at market price with SL/TP specified in pips.
-* **Why you need it:** **Most intuitive way to short** - think in pips, not prices!
-* **Sanity check:** "SELL EURUSD 0.1 lots, 50 pip SL, 100 pip TP" → one method call.
+* **What it is:** Opens SELL at market price with SL/TP specified as point distances.
+* **Why you need it:** **Most intuitive way to short** - think in distances, not prices!
+* **Sanity check:** "SELL EURUSD 0.1 lots, 500 point SL, 1000 point TP" → one method call. Passing 0 does NOT mean "no SL/TP" - it puts SL/TP at the entry (Bid) price; use `SellMarket()` for no SL/TP. SL/TP prices are rounded to the symbol's digits; the volume is sent as given. The order has a 30-second timeout - an order that times out on the client side may still have been executed, so check `GetOpenPositions()` before retrying.
 
 ---
 
@@ -57,11 +59,11 @@ func (s *MT5Sugar) SellMarketWithPips(
 
 ✅ **Market SELL orders with SL/TP** - Most common shorting scenario
 
-✅ **Think in pips** - Natural risk/reward planning
+✅ **Think in distances** - Natural risk/reward planning
 
 ✅ **Quick short entries** - One-liner to open position
 
-✅ **Risk management** - Specify exact pip-based risk
+✅ **Risk management** - Specify exact distance-based risk
 
 ---
 
@@ -71,17 +73,33 @@ func (s *MT5Sugar) SellMarketWithPips(
 Step 1: Get current BID price (entry for SELL)
 Step 2: Calculate SL = entry + (stopLossPips × point)
 Step 3: Calculate TP = entry - (takeProfitPips × point)
-Step 4: Open SELL position with calculated SL/TP
+        (both rounded to the symbol's digits)
+Step 4: Open SELL position with calculated SL/TP (SellMarketWithSLTP)
 
 Example (EURUSD):
 - Current BID: 1.08500
-- SL pips: 50
-- TP pips: 100
+- SL distance: 500 points
+- TP distance: 1000 points
 
-SL = 1.08500 + (50 × 0.00001) = 1.09000  (ABOVE entry for SELL)
-TP = 1.08500 - (100 × 0.00001) = 1.07500 (BELOW entry for SELL)
+SL = 1.08500 + (500 × 0.00001) = 1.09000  (ABOVE entry for SELL)
+TP = 1.08500 - (1000 × 0.00001) = 1.07500 (BELOW entry for SELL)
 
 Opens SELL @ 1.08500, SL @ 1.09000, TP @ 1.07500
+```
+
+**Source:**
+
+```go
+func (s *MT5Sugar) SellMarketWithPips(symbol string, volume, stopLossPips, takeProfitPips float64) (uint64, error) {
+	// Calculate SL/TP prices
+	sl, tp, err := s.CalculateSLTP(symbol, "SELL", 0, stopLossPips, takeProfitPips)
+	if err != nil {
+		return 0, err
+	}
+
+	// Use existing SellMarketWithSLTP
+	return s.SellMarketWithSLTP(symbol, volume, sl, tp)
+}
 ```
 
 ---
@@ -93,8 +111,8 @@ Opens SELL @ 1.08500, SL @ 1.09000, TP @ 1.07500
 ```go
 symbol := "EURUSD"
 volume := 0.1
-stopLoss := 50.0   // 50 pips
-takeProfit := 100.0 // 100 pips (1:2 R:R)
+stopLoss := 500.0    // 500 points (= 50 pips on 5-digit EURUSD)
+takeProfit := 1000.0 // 1000 points (1:2 R:R)
 
 ticket, err := sugar.SellMarketWithPips(symbol, volume, stopLoss, takeProfit)
 if err != nil {
@@ -105,7 +123,7 @@ if err != nil {
 fmt.Printf("✅ SELL position opened: #%d\n", ticket)
 fmt.Printf("   Symbol: %s\n", symbol)
 fmt.Printf("   Volume: %.2f lots\n", volume)
-fmt.Printf("   SL: %.0f pips, TP: %.0f pips\n", stopLoss, takeProfit)
+fmt.Printf("   SL: %.0f points, TP: %.0f points\n", stopLoss, takeProfit)
 ```
 
 ---
@@ -115,8 +133,8 @@ fmt.Printf("   SL: %.0f pips, TP: %.0f pips\n", stopLoss, takeProfit)
 ```go
 symbol := "GBPUSD"
 riskPercent := 2.0
-stopLossPips := 60.0
-takeProfitPips := 120.0
+stopLossPips := 600.0
+takeProfitPips := 1200.0
 
 // Step 1: Calculate position size based on risk
 lotSize, err := sugar.CalculatePositionSize(symbol, riskPercent, stopLossPips)
@@ -141,8 +159,8 @@ if !canOpen {
 fmt.Printf("Opening SELL position:\n")
 fmt.Printf("  Symbol:      %s\n", symbol)
 fmt.Printf("  Lot size:    %.2f (risking %.1f%%)\n", lotSize, riskPercent)
-fmt.Printf("  Stop Loss:   %.0f pips\n", stopLossPips)
-fmt.Printf("  Take Profit: %.0f pips\n", takeProfitPips)
+fmt.Printf("  Stop Loss:   %.0f points\n", stopLossPips)
+fmt.Printf("  Take Profit: %.0f points\n", takeProfitPips)
 
 ticket, err := sugar.SellMarketWithPips(symbol, lotSize, stopLossPips, takeProfitPips)
 if err != nil {
@@ -152,10 +170,14 @@ if err != nil {
 
 fmt.Printf("✅ Position opened: #%d\n", ticket)
 
-// Step 4: Get entry details
-pos, _ := sugar.GetPositionByTicket(ticket)
+// Step 4: Get entry details (an error if the position is no longer open)
+pos, err := sugar.GetPositionByTicket(ticket)
+if err != nil {
+    fmt.Printf("Position not found: %v\n", err)
+    return
+}
 fmt.Printf("\nPosition details:\n")
-fmt.Printf("  Entry:  %.5f\n", pos.OpenPrice)
+fmt.Printf("  Entry:  %.5f\n", pos.PriceOpen)
 fmt.Printf("  SL:     %.5f (above entry)\n", pos.StopLoss)
 fmt.Printf("  TP:     %.5f (below entry)\n", pos.TakeProfit)
 ```
@@ -167,8 +189,8 @@ fmt.Printf("  TP:     %.5f (below entry)\n", pos.TakeProfit)
 ```go
 symbol := "EURUSD"
 volume := 0.1
-slPips := 50.0
-tpPips := 100.0
+slPips := 500.0
+tpPips := 1000.0
 
 // Get current price
 bid, _ := sugar.GetBid(symbol)
@@ -181,8 +203,8 @@ fmt.Printf("  SELL ORDER PREVIEW\n")
 fmt.Printf("═══════════════════════════════════════\n")
 fmt.Printf("Symbol:       %s\n", symbol)
 fmt.Printf("Entry (BID):  %.5f\n", bid)
-fmt.Printf("Stop Loss:    %.5f (+%.0f pips ABOVE)\n", sl, slPips)
-fmt.Printf("Take Profit:  %.5f (-%.0f pips BELOW)\n", tp, tpPips)
+fmt.Printf("Stop Loss:    %.5f (+%.0f points ABOVE)\n", sl, slPips)
+fmt.Printf("Take Profit:  %.5f (-%.0f points BELOW)\n", tp, tpPips)
 fmt.Printf("Risk/Reward:  1:%.1f\n", tpPips/slPips)
 fmt.Printf("═══════════════════════════════════════\n")
 
@@ -196,8 +218,8 @@ fmt.Printf("✅ SELL order #%d opened\n", ticket)
 // ═══════════════════════════════════════
 // Symbol:       EURUSD
 // Entry (BID):  1.08500
-// Stop Loss:    1.09000 (+50 pips ABOVE)
-// Take Profit:  1.07500 (-100 pips BELOW)
+// Stop Loss:    1.09000 (+500 points ABOVE)
+// Take Profit:  1.07500 (-1000 points BELOW)
 // Risk/Reward:  1:2.0
 // ═══════════════════════════════════════
 // ✅ SELL order #12345 opened
@@ -210,27 +232,27 @@ fmt.Printf("✅ SELL order #%d opened\n", ticket)
 ```go
 symbol := "USDJPY"
 volume := 0.15
-stopLoss := 40.0
+stopLoss := 400.0 // points
 
 // Conservative (1:1.5)
 ticket1, _ := sugar.SellMarketWithPips(symbol, volume, stopLoss, stopLoss*1.5)
-fmt.Printf("Conservative: #%d (1:1.5 R:R, %.0f/%.0f pips)\n",
+fmt.Printf("Conservative: #%d (1:1.5 R:R, %.0f/%.0f points)\n",
     ticket1, stopLoss, stopLoss*1.5)
 
 // Moderate (1:2)
 ticket2, _ := sugar.SellMarketWithPips(symbol, volume, stopLoss, stopLoss*2.0)
-fmt.Printf("Moderate:     #%d (1:2 R:R, %.0f/%.0f pips)\n",
+fmt.Printf("Moderate:     #%d (1:2 R:R, %.0f/%.0f points)\n",
     ticket2, stopLoss, stopLoss*2.0)
 
 // Aggressive (1:3)
 ticket3, _ := sugar.SellMarketWithPips(symbol, volume, stopLoss, stopLoss*3.0)
-fmt.Printf("Aggressive:   #%d (1:3 R:R, %.0f/%.0f pips)\n",
+fmt.Printf("Aggressive:   #%d (1:3 R:R, %.0f/%.0f points)\n",
     ticket3, stopLoss, stopLoss*3.0)
 
 // Output:
-// Conservative: #123456 (1:1.5 R:R, 40/60 pips)
-// Moderate:     #123457 (1:2 R:R, 40/80 pips)
-// Aggressive:   #123458 (1:3 R:R, 40/120 pips)
+// Conservative: #123456 (1:1.5 R:R, 400/600 points)
+// Moderate:     #123457 (1:2 R:R, 400/800 points)
+// Aggressive:   #123458 (1:3 R:R, 400/1200 points)
 ```
 
 ---
@@ -246,9 +268,9 @@ type ShortTrade struct {
 }
 
 shorts := []ShortTrade{
-    {"EURUSD", 0.1, 50, 100},
-    {"GBPUSD", 0.15, 60, 120},
-    {"AUDUSD", 0.2, 45, 90},
+    {"EURUSD", 0.1, 500, 1000}, // distances in points
+    {"GBPUSD", 0.15, 600, 1200},
+    {"AUDUSD", 0.2, 450, 900},
 }
 
 fmt.Println("Opening SELL positions on multiple pairs:")
@@ -270,7 +292,7 @@ for i, trade := range shorts {
     }
 
     successCount++
-    fmt.Printf("%d. %s: ✅ #%d (%.2f lots, %.0f/%.0f pips)\n",
+    fmt.Printf("%d. %s: ✅ #%d (%.2f lots, %.0f/%.0f points)\n",
         i+1, trade.Symbol, ticket, trade.Volume, trade.SLPips, trade.TPPips)
 }
 
@@ -291,8 +313,8 @@ func ShortOnDowntrend(
     // Example: SELL when price breaks support
     // (In real trading, you'd have trend detection logic)
 
-    stopLossPips := 50.0
-    takeProfitPips := 150.0 // 1:3 R:R for trend trades
+    stopLossPips := 500.0
+    takeProfitPips := 1500.0 // 1:3 R:R for trend trades
 
     // Calculate position size
     lotSize, err := sugar.CalculatePositionSize(symbol, riskPercent, stopLossPips)
@@ -309,8 +331,8 @@ func ShortOnDowntrend(
     fmt.Printf("TREND-FOLLOWING SHORT:\n")
     fmt.Printf("  Symbol:   %s\n", symbol)
     fmt.Printf("  Strategy: Downtrend continuation\n")
-    fmt.Printf("  SL:       %.0f pips\n", stopLossPips)
-    fmt.Printf("  TP:       %.0f pips (1:3 R:R)\n", takeProfitPips)
+    fmt.Printf("  SL:       %.0f points\n", stopLossPips)
+    fmt.Printf("  TP:       %.0f points (1:3 R:R)\n", takeProfitPips)
     fmt.Printf("  Volume:   %.2f lots\n\n", lotSize)
 
     // Open SELL
@@ -342,14 +364,14 @@ func ShortCounterTrend(
     volume float64,
 ) (uint64, error) {
     // Counter-trend = tighter stops, closer targets
-    stopLossPips := 30.0  // Tight stop
-    takeProfitPips := 45.0 // 1:1.5 R:R (counter-trend is riskier)
+    stopLossPips := 300.0  // Tight stop
+    takeProfitPips := 450.0 // 1:1.5 R:R (counter-trend is riskier)
 
     fmt.Printf("COUNTER-TREND SHORT:\n")
     fmt.Printf("  Symbol:   %s\n", symbol)
     fmt.Printf("  Strategy: Mean reversion\n")
-    fmt.Printf("  SL:       %.0f pips (tight!)\n", stopLossPips)
-    fmt.Printf("  TP:       %.0f pips\n", takeProfitPips)
+    fmt.Printf("  SL:       %.0f points (tight!)\n", stopLossPips)
+    fmt.Printf("  TP:       %.0f points\n", takeProfitPips)
     fmt.Printf("  Volume:   %.2f lots\n\n", volume)
 
     ticket, err := sugar.SellMarketWithPips(symbol, volume, stopLossPips, takeProfitPips)
@@ -374,6 +396,13 @@ if err != nil {
 ### 8) Batch SELL with validation
 
 ```go
+type ShortTrade struct {
+    Symbol string
+    Volume float64
+    SLPips float64 // points
+    TPPips float64 // points
+}
+
 func OpenMultipleSellPositions(
     sugar *mt5.MT5Sugar,
     trades []ShortTrade,
@@ -426,9 +455,9 @@ func OpenMultipleSellPositions(
 
 // Usage:
 trades := []ShortTrade{
-    {"EURUSD", 0.1, 50, 100},
-    {"GBPUSD", 0.15, 60, 120},
-    {"USDJPY", 0.1, 40, 80},
+    {"EURUSD", 0.1, 500, 1000}, // distances in points
+    {"GBPUSD", 0.15, 600, 1200},
+    {"USDJPY", 0.1, 400, 800},
 }
 
 tickets := OpenMultipleSellPositions(sugar, trades)
@@ -466,8 +495,8 @@ func (tl *TradeLogger) SellWithLog(
     fmt.Printf("Symbol:         %s\n", symbol)
     fmt.Printf("Volume:         %.2f lots\n", volume)
     fmt.Printf("Entry (BID):    %.5f\n", bid)
-    fmt.Printf("Stop Loss:      %.5f (+%.0f pips above)\n", sl, slPips)
-    fmt.Printf("Take Profit:    %.5f (-%.0f pips below)\n", tp, tpPips)
+    fmt.Printf("Stop Loss:      %.5f (+%.0f points above)\n", sl, slPips)
+    fmt.Printf("Take Profit:    %.5f (-%.0f points below)\n", tp, tpPips)
     fmt.Printf("R:R Ratio:      1:%.1f\n", tpPips/slPips)
     fmt.Printf("Balance:        $%.2f\n", balance)
     fmt.Printf("Reason:         %s\n", reason)
@@ -496,8 +525,8 @@ logger := &TradeLogger{sugar: sugar}
 ticket, err := logger.SellWithLog(
     "EURUSD",
     0.1,
-    50,
-    100,
+    500,  // SL points
+    1000, // TP points
     "Bearish engulfing on H4, resistance at 1.0900",
 )
 
@@ -535,7 +564,7 @@ func (ss *ShortingSystem) CanShort() (bool, string) {
     shortCount := 0
 
     for _, pos := range positions {
-        if pos.Type == 1 { // SELL
+        if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_SELL {
             shortCount++
         }
     }
@@ -557,9 +586,9 @@ func (ss *ShortingSystem) OpenShort(
     reason string,
 ) (uint64, error) {
     // Check if we can short
-    canShort, reason := ss.CanShort()
+    canShort, whyNot := ss.CanShort()
     if !canShort {
-        return 0, fmt.Errorf("cannot short: %s", reason)
+        return 0, fmt.Errorf("cannot short: %s", whyNot)
     }
 
     // Calculate position size
@@ -587,8 +616,8 @@ func (ss *ShortingSystem) OpenShort(
     fmt.Printf("  Symbol:   %s\n", symbol)
     fmt.Printf("  Volume:   %.2f lots (%.1f%% risk)\n",
         lotSize, ss.maxRiskPercent)
-    fmt.Printf("  SL:       %.0f pips\n", slPips)
-    fmt.Printf("  TP:       %.0f pips (1:%.1f R:R)\n", tpPips, tpPips/slPips)
+    fmt.Printf("  SL:       %.0f points\n", slPips)
+    fmt.Printf("  TP:       %.0f points (1:%.1f R:R)\n", tpPips, tpPips/slPips)
     fmt.Printf("  Reason:   %s\n", reason)
 
     ticket, err := ss.sugar.SellMarketWithPips(symbol, lotSize, slPips, tpPips)
@@ -607,7 +636,7 @@ func (ss *ShortingSystem) ShowStatus() {
 
     shortCount := 0
     for _, pos := range positions {
-        if pos.Type == 1 { // SELL
+        if pos.Type == pb.BMT5_ENUM_POSITION_TYPE_BMT5_POSITION_TYPE_SELL {
             shortCount++
         }
     }
@@ -639,8 +668,8 @@ shortSystem.ShowStatus()
 // Open short with automatic risk management
 ticket, err := shortSystem.OpenShort(
     "EURUSD",
-    50,
-    100,
+    500,  // SL points
+    1000, // TP points
     "Breakdown below support, strong selling pressure",
 )
 
@@ -657,7 +686,7 @@ if err != nil {
 
 **📦 Methods used internally:**
 
-* `CalculateSLTP()` - Calculates SL/TP prices from pips
+* `CalculateSLTP()` - Calculates SL/TP prices from point distances
 * `SellMarketWithSLTP()` - Opens position with exact prices
 
 **🍬 Complementary sugar methods:**
@@ -671,7 +700,7 @@ if err != nil {
 **Recommended workflow:**
 ```go
 // 1. Calculate lot size
-lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 50)
+lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 500)
 
 // 2. Validate
 canOpen, reason, _ := sugar.CanOpenPosition("EURUSD", lotSize)
@@ -680,8 +709,8 @@ if !canOpen {
     return
 }
 
-// 3. Trade with pips (most intuitive!)
-ticket, _ := sugar.SellMarketWithPips("EURUSD", lotSize, 50, 100)
+// 3. Trade with point distances (most intuitive!)
+ticket, _ := sugar.SellMarketWithPips("EURUSD", lotSize, 500, 1000)
 ```
 
 ---
@@ -696,27 +725,30 @@ ticket, _ := sugar.SellMarketWithPips("EURUSD", lotSize, 50, 100)
 
 // ✅ CORRECT - understand SELL mechanics
 // SELL @ 1.08500
-// SL @ 1.09000 (50 pips ABOVE - protects if price goes UP)
-// TP @ 1.07500 (100 pips BELOW - profit when price goes DOWN)
+// SL @ 1.09000 (500 points ABOVE - protects if price goes UP)
+// TP @ 1.07500 (1000 points BELOW - profit when price goes DOWN)
 ```
 
-### 2) Confusing pips and price
+### 2) Confusing distance and price
 
 ```go
-// ❌ WRONG - passing price as pips
+// ❌ WRONG - passing price as distance
 stopLossPrice := 1.09000
-sugar.SellMarketWithPips("EURUSD", 0.1, stopLossPrice, 100)
+sugar.SellMarketWithPips("EURUSD", 0.1, stopLossPrice, 1000)
 
-// ✅ CORRECT - use pip distance
-stopLossPips := 50.0
-sugar.SellMarketWithPips("EURUSD", 0.1, stopLossPips, 100)
+// ❌ WRONG - passing pips: 50 is read as 50 POINTS (= 5 pips)
+sugar.SellMarketWithPips("EURUSD", 0.1, 50, 100)
+
+// ✅ CORRECT - use distance in points (500 points = 50 pips on EURUSD)
+stopLossPips := 500.0
+sugar.SellMarketWithPips("EURUSD", 0.1, stopLossPips, 1000)
 ```
 
 ### 3) Not validating before opening
 
 ```go
 // ❌ WRONG - shorting without validation
-sugar.SellMarketWithPips("EURUSD", 10.0, 50, 100) // Might fail!
+sugar.SellMarketWithPips("EURUSD", 10.0, 500, 1000) // Might fail!
 
 // ✅ CORRECT - validate first
 canOpen, reason, _ := sugar.CanOpenPosition("EURUSD", 10.0)
@@ -724,28 +756,28 @@ if !canOpen {
     fmt.Println("Cannot open:", reason)
     return
 }
-sugar.SellMarketWithPips("EURUSD", 10.0, 50, 100)
+sugar.SellMarketWithPips("EURUSD", 10.0, 500, 1000)
 ```
 
 ### 4) Using fixed lot size
 
 ```go
 // ❌ WRONG - fixed lot size (ignores account growth)
-sugar.SellMarketWithPips("EURUSD", 0.1, 50, 100)
+sugar.SellMarketWithPips("EURUSD", 0.1, 500, 1000)
 
 // ✅ CORRECT - dynamic lot size based on risk
-lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 50)
-sugar.SellMarketWithPips("EURUSD", lotSize, 50, 100)
+lotSize, _ := sugar.CalculatePositionSize("EURUSD", 2.0, 500)
+sugar.SellMarketWithPips("EURUSD", lotSize, 500, 1000)
 ```
 
 ### 5) Not checking errors
 
 ```go
 // ❌ WRONG - ignoring errors
-sugar.SellMarketWithPips("INVALID", 0.1, 50, 100)
+sugar.SellMarketWithPips("INVALID", 0.1, 500, 1000)
 
 // ✅ CORRECT - check errors
-ticket, err := sugar.SellMarketWithPips("EURUSD", 0.1, 50, 100)
+ticket, err := sugar.SellMarketWithPips("EURUSD", 0.1, 500, 1000)
 if err != nil {
     fmt.Printf("Order failed: %v\n", err)
     return
@@ -760,7 +792,7 @@ if err != nil {
 
 2. **TP BELOW entry** - Take profit is BELOW (profit when price falls)
 
-3. **Think in pips** - This is THE method for shorting
+3. **Think in distances** - This is THE method for shorting
 
 4. **Always validate** - Use `CanOpenPosition()` first
 
@@ -768,7 +800,7 @@ if err != nil {
 
 6. **R:R ratios** - Use at least 1:1.5, ideally 1:2 or better
 
-7. **Points not pips** - Parameter is points (for 5-digit: 50 points = 5 pips)
+7. **Points not pips** - Parameter is points despite the `...Pips` name (for 5-digit: 50 points = 5 pips; pass 500 for a 50-pip stop)
 
 ---
 
@@ -777,8 +809,8 @@ if err != nil {
 ```
 SELL Position:
 Entry:  1.08500 (current BID)
-SL:     1.09000 (ABOVE entry - 50 pips)
-TP:     1.07500 (BELOW entry - 100 pips)
+SL:     1.09000 (ABOVE entry - 500 points)
+TP:     1.07500 (BELOW entry - 1000 points)
 
 Why SL is above:
 - You sold (shorted) at 1.08500

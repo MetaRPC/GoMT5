@@ -19,6 +19,8 @@ type AccountInfo struct {
 }
 ```
 
+**Where the values come from** (`GetAccountInfo()`): `Login`, `Balance`, `Equity`, `Currency`, `Leverage` and `Company` (`CompanyName`) come from one `GetAccountSummary` call. `Margin`, `FreeMargin`, `MarginLevel` and `Profit` come from four `service.GetAccountDouble` queries (`ACCOUNT_MARGIN`, `ACCOUNT_MARGIN_FREE`, `ACCOUNT_MARGIN_LEVEL`, `ACCOUNT_PROFIT`) on the same context as the summary - one 10-second deadline for the whole call. If any of them fails, `GetAccountInfo()` returns an error (`GetAccountInfo failed: margin: ...` etc.) instead of a struct - a field is never silently `0` because of a failed query.
+
 ## 📊 Field Details
 
 ### Login (int64)
@@ -74,7 +76,7 @@ type AccountInfo struct {
 
 ### Currency (string)
 
-- **What:** Account base currency
+- **What:** Account (deposit) currency
 - **Example:** `"USD"`, `"EUR"`, `"GBP"`
 - **Use:** Profit calculations, reporting
 
@@ -334,7 +336,7 @@ func generateDailyReport(info *mt5.AccountInfo, stats *mt5.DailyStats) {
 ### Example 10: Risk calculator
 
 ```go
-func calculateMaxPosition(info *mt5.AccountInfo, symbol string, riskPercent float64) {
+func calculateMaxPosition(sugar *mt5.MT5Sugar, info *mt5.AccountInfo, symbol string, riskPercent float64) {
     // Risk amount
     riskAmount := info.Balance * (riskPercent / 100)
 
@@ -342,11 +344,11 @@ func calculateMaxPosition(info *mt5.AccountInfo, symbol string, riskPercent floa
     usableMargin := info.FreeMargin * 0.5 // Use only 50%
 
     fmt.Printf("Account Balance: $%.2f\n", info.Balance)
-    fmt.Printf("Risk Amount (%%.1f%%): $%.2f\n", riskPercent, riskAmount)
+    fmt.Printf("Risk Amount (%.1f%%): $%.2f\n", riskPercent, riskAmount)
     fmt.Printf("Usable Margin: $%.2f\n", usableMargin)
 
-    // Calculate position size
-    lotSize, _ := sugar.CalculatePositionSize(symbol, riskPercent, 50)
+    // Calculate position size (500-point SL)
+    lotSize, _ := sugar.CalculatePositionSize(symbol, riskPercent, 500)
 
     // Check if affordable
     requiredMargin, _ := sugar.CalculateRequiredMargin(symbol, lotSize)

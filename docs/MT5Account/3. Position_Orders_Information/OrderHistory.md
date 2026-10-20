@@ -60,11 +60,15 @@ func (a *MT5Account) OrderHistory(
 
 ```protobuf
 OrderHistoryRequest {
-  google.protobuf.Timestamp inputFrom = 1;                   // Start date (required - server time)
-  google.protobuf.Timestamp inputTo = 2;                     // End date (required - server time)
-  BMT5_ENUM_ORDER_HISTORY_SORT_TYPE inputSortMode = 3;     // Sort mode (0 - by open time, 1 - by close time, 2 - by ticket id)
-  int32 pageNumber = 4;                                      // Page number (default 0)
-  int32 itemsPerPage = 5;                                    // Items per page (default 0 = all)
+  google.protobuf.Timestamp inputFrom = 1;                   // Start date (broker server time)
+  google.protobuf.Timestamp inputFromUtc = 8;                // Start date in UTC: send inputFrom or inputFromUtc, not both
+  google.protobuf.Timestamp inputTo = 2;                     // End date (broker server time)
+  google.protobuf.Timestamp inputToUtc = 9;                  // End date in UTC: send inputTo or inputToUtc, not both
+  BMT5_ENUM_ORDER_HISTORY_SORT_TYPE inputSortMode = 3;       // Sort mode (see enum below)
+  int32 pageNumber = 4;                                      // Page-number paging: 1-based page (0 = not used)
+  int32 itemsPerPage = 5;                                    // Page-number paging: rows per page (0 = not used, all rows)
+  string page_token = 6;                                     // Cursor paging: next_page_token of the previous page
+  int32 page_size = 7;                                       // Cursor paging: rows per page, 1..5000
 }
 ```
 
@@ -92,11 +96,15 @@ OrderHistoryReply {
 
 | Field          | Type                                   | Description                                                  |
 | -------------- | -------------------------------------- | ------------------------------------------------------------ |
-| `InputFrom`    | `google.protobuf.Timestamp`            | Start date (required - server time)                          |
-| `InputTo`      | `google.protobuf.Timestamp`            | End date (required - server time)                            |
+| `InputFrom`    | `*timestamppb.Timestamp`               | Start date in the broker server's time zone (send this or `InputFromUtc`) |
+| `InputFromUtc` | `*timestamppb.Timestamp`               | Start date in UTC (send this or `InputFrom`, not both)       |
+| `InputTo`      | `*timestamppb.Timestamp`               | End date in the broker server's time zone (send this or `InputToUtc`) |
+| `InputToUtc`   | `*timestamppb.Timestamp`               | End date in UTC (send this or `InputTo`, not both)           |
 | `InputSortMode`| `BMT5_ENUM_ORDER_HISTORY_SORT_TYPE`    | Sort mode (optional: 0=open time asc, 1=open time desc, etc)|
-| `PageNumber`   | `int32`                                | Page number for pagination (default 0)                       |
-| `ItemsPerPage` | `int32`                                | Number of items per page (default 0 = all)                   |
+| `PageNumber`   | `int32`                                | Page-number paging: 1-based page (0 = not used; 0 with `ItemsPerPage` set = page 1) |
+| `ItemsPerPage` | `int32`                                | Page-number paging: rows per page (0 = not used, all rows)   |
+| `PageToken`    | `string`                               | Cursor paging (preferred): `NextPageToken` of the previous page; empty for the first page |
+| `PageSize`     | `int32`                                | Cursor paging: rows per page, 1..5000 (0 = 1000 when `PageToken` is set) |
 
 ---
 
@@ -108,6 +116,7 @@ OrderHistoryReply {
 | `PageNumber`   | `int32`          | `int32`             | Current page number                              |
 | `ItemsPerPage` | `int32`          | `int32`             | Number of items per page                         |
 | `HistoryData`  | `HistoryData[]`  | `[]*pb.HistoryData` | Array of historical data (orders and deals)      |
+| `NextPageToken`| `string`         | `string`            | Cursor paging: pass back as `PageToken`; empty on the last page |
 
 **HistoryData structure:**
 
@@ -118,8 +127,8 @@ OrderHistoryReply {
 **OrderHistoryData complete structure:**
 
 - `Ticket` (uint64) - Order ticket number
-- `SetupTime` (*timestamppb.Timestamp) - Time when order was placed
-- `DoneTime` (*timestamppb.Timestamp) - Time when order was executed/cancelled
+- `SetupTime` (*timestamppb.Timestamp) - Time when order was placed (broker server time; `SetupTimeUtc` = same moment in UTC)
+- `DoneTime` (*timestamppb.Timestamp) - Time when order was executed/cancelled (broker server time; `DoneTimeUtc` = UTC)
 - `State` (BMT5_ENUM_ORDER_STATE) - Order state
 - `PriceCurrent` (float64) - Current market price
 - `PriceOpen` (float64) - Order open price
@@ -130,7 +139,7 @@ OrderHistoryReply {
 - `VolumeInitial` (float64) - Initial volume
 - `MagicNumber` (int64) - Magic number
 - `Type` (BMT5_ENUM_ORDER_TYPE) - Order type
-- `TimeExpiration` (*timestamppb.Timestamp) - Expiration time
+- `TimeExpiration` (*timestamppb.Timestamp) - Expiration time (broker server time; `TimeExpirationUtc` = UTC)
 - `TypeFilling` (BMT5_ENUM_ORDER_TYPE_FILLING) - Order filling type
 - `TypeTime` (BMT5_ENUM_ORDER_TYPE_TIME) - Order time type
 - `PositionId` (uint64) - Position ID
@@ -151,7 +160,7 @@ OrderHistoryReply {
 - `Swap` (float64) - Swap charges
 - `Volume` (float64) - Deal volume
 - `EntryType` (BMT5_ENUM_DEAL_ENTRY_TYPE) - Deal entry type
-- `Time` (*timestamppb.Timestamp) - Deal execution time
+- `Time` (*timestamppb.Timestamp) - Deal execution time (broker server time; `TimeUtc` = UTC)
 - `Type` (BMT5_ENUM_DEAL_TYPE) - Deal type
 - `Reason` (BMT5_ENUM_DEAL_REASON) - Deal execution reason
 - `PositionId` (uint64) - Position ID
@@ -294,8 +303,8 @@ OrderHistoryReply {
 * **Automatic reconnection:** All `MT5Account` methods have built-in protection against transient gRPC errors with automatic reconnection via `ExecuteWithReconnect`.
 * **Default timeout:** If context has no deadline, a default `15s` timeout is applied automatically.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
-* **Time range:** InputFrom and InputTo are `google.protobuf.Timestamp` (use `timestamppb.New()` to convert from `time.Time`).
-* **Pagination:** Use PageNumber and ItemsPerPage to retrieve large datasets in chunks.
+* **Time range:** InputFrom/InputTo (broker server time) or InputFromUtc/InputToUtc (UTC) are `google.protobuf.Timestamp` (use `timestamppb.New()` to convert from `time.Time`). Values built from `time.Now()` belong in the `*Utc` fields.
+* **Pagination:** Use PageNumber (1-based) and ItemsPerPage, or the preferred cursor paging (PageToken/PageSize with NextPageToken), to retrieve large datasets in chunks. The two paging styles cannot be combined.
 * **Sort mode:** InputSortMode allows sorting by open time, close time, or ticket ID.
 
 ---
@@ -308,6 +317,7 @@ OrderHistoryReply {
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -318,8 +328,17 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
     defer cancel()
@@ -328,8 +347,8 @@ func main() {
     weekAgo := now.Add(-7 * 24 * time.Hour)
 
     data, err := account.OrderHistory(ctx, &pb.OrderHistoryRequest{
-        InputFrom:     timestamppb.New(weekAgo),
-        InputTo:       timestamppb.New(now),
+        InputFromUtc:  timestamppb.New(weekAgo),
+        InputToUtc:    timestamppb.New(now),
         InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_BMT5_SORT_BY_OPEN_TIME_DESC,
         PageNumber:    0,
         ItemsPerPage:  100,
@@ -352,8 +371,8 @@ func GetHistoryWithSorting(account *mt5.MT5Account, days int) ([]*pb.HistoryData
     fromDate := now.Add(-time.Duration(days) * 24 * time.Hour)
 
     data, err := account.OrderHistory(ctx, &pb.OrderHistoryRequest{
-        InputFrom:     timestamppb.New(fromDate),
-        InputTo:       timestamppb.New(now),
+        InputFromUtc:  timestamppb.New(fromDate),
+        InputToUtc:    timestamppb.New(now),
         InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_BMT5_SORT_BY_CLOSE_TIME_DESC,
         PageNumber:    0,
         ItemsPerPage:  0, // All orders
@@ -377,12 +396,12 @@ func GetAllHistoryPaginated(account *mt5.MT5Account, fromDate, toDate time.Time,
     ctx := context.Background()
 
     allHistory := []*pb.HistoryData{}
-    pageNumber := int32(0)
+    pageNumber := int32(1) // pages are 1-based
 
     for {
         data, err := account.OrderHistory(ctx, &pb.OrderHistoryRequest{
-            InputFrom:     timestamppb.New(fromDate),
-            InputTo:       timestamppb.New(toDate),
+            InputFromUtc:  timestamppb.New(fromDate),
+            InputToUtc:    timestamppb.New(toDate),
             InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_BMT5_SORT_BY_OPEN_TIME_ASC,
             PageNumber:    pageNumber,
             ItemsPerPage:  pageSize,
@@ -424,8 +443,8 @@ func GetMonthlyStats(account *mt5.MT5Account, year, month int) {
     endDate := startDate.AddDate(0, 1, 0).Add(-time.Second)
 
     data, err := account.OrderHistory(ctx, &pb.OrderHistoryRequest{
-        InputFrom:     timestamppb.New(startDate),
-        InputTo:       timestamppb.New(endDate),
+        InputFromUtc:  timestamppb.New(startDate),
+        InputToUtc:    timestamppb.New(endDate),
         InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_BMT5_SORT_BY_OPEN_TIME_ASC,
         PageNumber:    0,
         ItemsPerPage:  0,
@@ -476,8 +495,8 @@ func FindOrdersByDateRange(account *mt5.MT5Account, startDate, endDate string) (
     end = end.Add(24 * time.Hour).Add(-time.Second)
 
     data, err := account.OrderHistory(ctx, &pb.OrderHistoryRequest{
-        InputFrom:     timestamppb.New(start),
-        InputTo:       timestamppb.New(end),
+        InputFromUtc:  timestamppb.New(start),
+        InputToUtc:    timestamppb.New(end),
         InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_BMT5_SORT_BY_OPEN_TIME_ASC,
         PageNumber:    0,
         ItemsPerPage:  0,
@@ -507,8 +526,8 @@ func GetTodayHistory(account *mt5.MT5Account) ([]*pb.HistoryData, error) {
     startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
     data, err := account.OrderHistory(ctx, &pb.OrderHistoryRequest{
-        InputFrom:     timestamppb.New(startOfDay),
-        InputTo:       timestamppb.New(now),
+        InputFromUtc:  timestamppb.New(startOfDay),
+        InputToUtc:    timestamppb.New(now),
         InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_BMT5_SORT_BY_OPEN_TIME_ASC,
         PageNumber:    0,
         ItemsPerPage:  0,
@@ -528,8 +547,8 @@ func CalculatePeriodProfit(account *mt5.MT5Account, fromDate, toDate time.Time) 
     ctx := context.Background()
 
     data, err := account.OrderHistory(ctx, &pb.OrderHistoryRequest{
-        InputFrom:     timestamppb.New(fromDate),
-        InputTo:       timestamppb.New(toDate),
+        InputFromUtc:  timestamppb.New(fromDate),
+        InputToUtc:    timestamppb.New(toDate),
         InputSortMode: pb.BMT5_ENUM_ORDER_HISTORY_SORT_TYPE_BMT5_SORT_BY_OPEN_TIME_ASC,
         PageNumber:    0,
         ItemsPerPage:  0,

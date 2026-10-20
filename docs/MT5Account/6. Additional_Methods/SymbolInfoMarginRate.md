@@ -52,8 +52,8 @@ func (a *MT5Account) SymbolInfoMarginRate(
 
 ```protobuf
 SymbolInfoMarginRateRequest {
-  string Symbol = 1;     // Trading symbol
-  int32 OrderType = 2;   // Order type (BUY, SELL, etc)
+  string symbol = 1;              // Trading symbol
+  ENUM_ORDER_TYPE order_type = 2; // Order type (BUY, SELL, etc)
 }
 ```
 
@@ -71,7 +71,7 @@ SymbolInfoMarginRateRequest {
 | Field       | Type     | Description                                |
 | ----------- | -------- | ------------------------------------------ |
 | `Symbol`    | `string` | Trading symbol (e.g., "EURUSD")            |
-| `OrderType` | `int32`  | Order type (see enum below)                |
+| `OrderType` | `pb.ENUM_ORDER_TYPE` | Order type (see enum below)      |
 
 **OrderType enum values:**
 
@@ -111,7 +111,7 @@ For a detailed line-by-line explanation with examples, see:
 ## 🧩 Notes & Tips
 
 * **Automatic reconnection:** All `MT5Account` methods have built-in protection against transient gRPC errors with automatic reconnection via `ExecuteWithReconnect`.
-* **Default timeout:** If context has no deadline, a default `3s` timeout is applied automatically.
+* **Default timeout:** If context has no deadline, a default `5s` timeout is applied automatically.
 * **Nil context:** If you pass `nil` context, `context.Background()` is used automatically.
 * **Margin rates vary:** Different order types have different margin requirements.
 * **Initial vs Maintenance:** Initial margin is required to open position, maintenance margin is required to keep it open.
@@ -127,6 +127,7 @@ For a detailed line-by-line explanation with examples, see:
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -136,8 +137,17 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
@@ -188,16 +198,16 @@ func CompareMarginRates(account *mt5.MT5Account, symbol string) {
 func GetAllMarginRates(account *mt5.MT5Account, symbol string) {
     ctx := context.Background()
 
-    orderTypes := map[int32]string{
-        0: "BUY",
-        1: "SELL",
-        2: "BUY_LIMIT",
-        3: "SELL_LIMIT",
-        4: "BUY_STOP",
-        5: "SELL_STOP",
-        6: "BUY_STOP_LIMIT",
-        7: "SELL_STOP_LIMIT",
-        8: "CLOSE_BY",
+    orderTypes := map[pb.ENUM_ORDER_TYPE]string{
+        pb.ENUM_ORDER_TYPE_ORDER_TYPE_BUY:             "BUY",
+        pb.ENUM_ORDER_TYPE_ORDER_TYPE_SELL:            "SELL",
+        pb.ENUM_ORDER_TYPE_ORDER_TYPE_BUY_LIMIT:       "BUY_LIMIT",
+        pb.ENUM_ORDER_TYPE_ORDER_TYPE_SELL_LIMIT:      "SELL_LIMIT",
+        pb.ENUM_ORDER_TYPE_ORDER_TYPE_BUY_STOP:        "BUY_STOP",
+        pb.ENUM_ORDER_TYPE_ORDER_TYPE_SELL_STOP:       "SELL_STOP",
+        pb.ENUM_ORDER_TYPE_ORDER_TYPE_BUY_STOP_LIMIT:  "BUY_STOP_LIMIT",
+        pb.ENUM_ORDER_TYPE_ORDER_TYPE_SELL_STOP_LIMIT: "SELL_STOP_LIMIT",
+        pb.ENUM_ORDER_TYPE_ORDER_TYPE_CLOSE_BY:        "CLOSE_BY",
     }
 
     fmt.Printf("Margin rates for %s:\n", symbol)

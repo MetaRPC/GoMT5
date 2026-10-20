@@ -21,7 +21,7 @@ if err != nil {
     fmt.Printf("  ❌ Subscription failed: %v\n", err)
     fmt.Println("     → Broker does not support DOM for this symbol")
 } else {
-    if marketBookAddData.Success {
+    if marketBookAddData.OpenedSuccessfully {
         fmt.Printf("  ✓ Subscription accepted for '%s'\n", cfg.TestSymbol)
         fmt.Println("     → This doesn't mean data will be available")
     } else {
@@ -68,7 +68,7 @@ if err != nil {
     fmt.Printf("  ❌ Subscription failed: %v\n", err)
     fmt.Println("     → Broker does not support DOM for this symbol")
 } else {
-    if marketBookAddData.Success {
+    if marketBookAddData.OpenedSuccessfully {
         fmt.Printf("  ✓ Subscription accepted for '%s'\n", cfg.TestSymbol)
         fmt.Println("     → This doesn't mean data will be available")
     } else {
@@ -80,7 +80,7 @@ if err != nil {
 Handling possible scenarios:
 
 * **Error (`err`)** — broker or server does not support DOM.
-* **Subscription accepted (`Success = true`)** — broker allowed subscription, but doesn't guarantee data availability.
+* **Subscription accepted (`OpenedSuccessfully = true`)** — broker allowed subscription, but doesn't guarantee data availability.
 * **Subscription rejected** — broker explicitly refused (common on demo or forex accounts).
 
 ---

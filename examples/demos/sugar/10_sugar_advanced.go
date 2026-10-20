@@ -14,7 +14,7 @@
  📚 WHAT THIS DEMO COVERS (4 NEW Categories):
 
    1. RISK MANAGEMENT METHODS 🔥 MOST IMPORTANT (4 methods)
-      • CalculatePositionSize(symbol, risk%, SL_pips) - Auto position sizing
+      • CalculatePositionSize(symbol, risk%, SL_points) - Auto position sizing
       • GetMaxLotSize(symbol) - Maximum tradeable volume
       • CanOpenPosition(symbol, volume) - Pre-trade validation
       • CalculateRequiredMargin(symbol, volume) - Margin calculation
@@ -25,9 +25,11 @@
       • IsSymbolAvailable(symbol) - Check symbol tradability
 
    3. TRADING HELPERS (3 methods)
-      • CalculateSLTP(symbol, direction, entry, SL_pips, TP_pips)
-      • BuyMarketWithPips(symbol, volume, SL_pips, TP_pips)
-      • SellMarketWithPips(symbol, volume, SL_pips, TP_pips)
+      The "...Pips" distances are POINTS (1 point = SYMBOL_POINT; 10 points = 1 pip
+      on 5-digit symbols, so 500 = 50 pips on EURUSD)
+      • CalculateSLTP(symbol, direction, entry, SL_points, TP_points)
+      • BuyMarketWithPips(symbol, volume, SL_points, TP_points)
+      • SellMarketWithPips(symbol, volume, SL_points, TP_points)
 
    4. ACCOUNT INFORMATION (2 methods + 2 structs)
       • GetAccountInfo() - Complete account snapshot
@@ -37,7 +39,7 @@
    • Professional risk management (risk 2% per trade)
    • Automated position sizing based on account balance
    • Pre-trade validation to prevent errors
-   • Working with pips instead of raw prices
+   • Working with point distances instead of raw prices
    • Comprehensive account analytics
 
  🔄 API LEVELS:
@@ -50,9 +52,8 @@
    go run main.go 10    (or select [10] from menu)
 
  ⚠️  SAFE DEMO - READ ONLY:
-   • This demo is SAFE - mostly read operations
-   • Optional: Can open 1 test position with risk management
-   • All trading actions require explicit confirmation
+   • This demo is SAFE - it only reads and calculates, it places no orders
+   • The risk-managed trade at the end is only printed, not executed
    • Recommended for DEMO account, but safe for LIVE too
 ══════════════════════════════════════════════════════════════════════════════*/
 
@@ -81,12 +82,13 @@ func RunSugarAdvancedDemo() {
 	sugar, err := mt5.NewMT5Sugar(cfg.User, cfg.Password, cfg.GrpcServer)
 	helpers.Fatal(err, "Failed to create Sugar instance")
 	sugar.GetAccount().ApiKey = cfg.ApiKey
+	// Disconnect however the demo ends (normal end, early return, Fatal, panic, Ctrl+C)
+	defer helpers.DisconnectOnExit(sugar)()
 
 	// Connect to MT5
 	fmt.Println("\n🔌 Connecting to MT5...")
 	err = sugar.QuickConnect(cfg.MtCluster)
 	helpers.Fatal(err, "Failed to connect to MT5")
-	defer sugar.Disconnect()
 	fmt.Println("✅ Connected successfully!")
 
 	printHeader("🎯 ADVANCED SUGAR API DEMO - RISK MANAGEMENT & MORE")
@@ -108,7 +110,11 @@ func RunSugarAdvancedDemo() {
 	fmt.Printf("    Equity:           %.2f %s\n", accountInfo.Equity, accountInfo.Currency)
 	fmt.Printf("    Margin Used:      %.2f %s\n", accountInfo.Margin, accountInfo.Currency)
 	fmt.Printf("    Free Margin:      %.2f %s\n", accountInfo.FreeMargin, accountInfo.Currency)
-	fmt.Printf("    Margin Level:     %.2f%%\n", accountInfo.MarginLevel)
+	if accountInfo.MarginLevel == 0 {
+		fmt.Println("    Margin Level:     ∞ (no margin used)")
+	} else {
+		fmt.Printf("    Margin Level:     %.2f%%\n", accountInfo.MarginLevel)
+	}
 	fmt.Printf("    Floating P/L:     %.2f %s\n", accountInfo.Profit, accountInfo.Currency)
 	fmt.Printf("     Leverage:         1:%d\n", accountInfo.Leverage)
 	fmt.Printf("    Broker:           %s\n", accountInfo.Company)
@@ -124,6 +130,7 @@ func RunSugarAdvancedDemo() {
 		printError("GetDailyStats", err)
 	} else {
 		printSuccess("GetDailyStats()", "Today's statistics calculated")
+		fmt.Println("    (closed positions opened since local midnight; profit without commission/swap/fee)")
 		fmt.Printf("    Total Deals:      %d\n", stats.TotalDeals)
 		fmt.Printf("    Winning Deals:    %d\n", stats.WinningDeals)
 		fmt.Printf("    Losing Deals:     %d\n", stats.LosingDeals)
@@ -139,7 +146,7 @@ func RunSugarAdvancedDemo() {
 	// ══════════════════════════════════════════════════════════════════════
 	printSection("3. SYMBOL INFORMATION - Comprehensive Symbol Data")
 
-	symbol := "EURUSD"
+	symbol := cfg.TestSymbol
 	symbolInfo, err := sugar.GetSymbolInfo(symbol)
 	if err != nil {
 		printError("GetSymbolInfo", err)
@@ -160,13 +167,25 @@ func RunSugarAdvancedDemo() {
 	fmt.Printf("    Contract Size:    %.0f\n", symbolInfo.ContractSize)
 	fmt.Println()
 
-	// Check symbol availability
+	// Check symbol availability. Right after connecting the symbol may still be synchronizing
+	// (false for a few seconds although it quotes and trades): retry for up to 10 s before
+	// concluding that it is not available.
 	available, err := sugar.IsSymbolAvailable(symbol)
+	waited := 0
+	for err == nil && !available && waited < 10 {
+		time.Sleep(time.Second)
+		waited++
+		available, err = sugar.IsSymbolAvailable(symbol)
+	}
 	if err != nil {
 		printError("IsSymbolAvailable", err)
 	} else {
 		if available {
-			printSuccess(fmt.Sprintf("IsSymbolAvailable(\"%s\")", symbol), "Symbol is available for trading")
+			msg := "Symbol is available for trading"
+			if waited > 0 {
+				msg += fmt.Sprintf(" (after %d s of synchronizing)", waited)
+			}
+			printSuccess(fmt.Sprintf("IsSymbolAvailable(\"%s\")", symbol), msg)
 		} else {
 			printWarning(fmt.Sprintf("IsSymbolAvailable(\"%s\")", symbol), "Symbol is NOT available")
 		}
@@ -191,25 +210,26 @@ func RunSugarAdvancedDemo() {
 	// ══════════════════════════════════════════════════════════════════════
 	printSection("4. RISK MANAGEMENT - Professional Position Sizing 🔥")
 
-	// Example: Risk 2% of balance with 50 pip stop loss
+	// Example: Risk 2% of balance with a 500-point stop loss (= 50 pips on a 5-digit symbol)
 	riskPercent := 2.0
-	stopLossPips := 50.0
+	stopLossPoints := 500.0
 
-	lotSize, err := sugar.CalculatePositionSize(symbol, riskPercent, stopLossPips)
+	lotSize, err := sugar.CalculatePositionSize(symbol, riskPercent, stopLossPoints)
 	if err != nil {
 		printError("CalculatePositionSize", err)
 	} else {
 		printSuccess(
-			fmt.Sprintf("CalculatePositionSize(\"%s\", %.1f%%, %.0f pips)", symbol, riskPercent, stopLossPips),
+			fmt.Sprintf("CalculatePositionSize(\"%s\", %.1f%%, %.0f points)", symbol, riskPercent, stopLossPoints),
 			fmt.Sprintf("Recommended lot size: %.2f", lotSize),
 		)
 		riskAmount := accountInfo.Balance * riskPercent / 100.0
 		fmt.Printf("    Balance:          %.2f %s\n", accountInfo.Balance, accountInfo.Currency)
 		fmt.Printf("     Risk Amount:      %.2f %s (%.1f%%)\n", riskAmount, accountInfo.Currency, riskPercent)
-		fmt.Printf("   🛑 Stop Loss:        %.0f pips\n", stopLossPips)
+		fmt.Printf("   🛑 Stop Loss:        %.0f points\n", stopLossPoints)
 		fmt.Printf("    Position Size:    %.2f lots\n", lotSize)
-		fmt.Printf("    If SL hits, you lose exactly %.2f %s (%.1f%% of balance)\n",
+		fmt.Printf("    If SL hits, you lose at most about %.2f %s (%.1f%% of balance) -\n",
 			riskAmount, accountInfo.Currency, riskPercent)
+		fmt.Println("    less when the size was rounded down or limited by the free margin")
 		fmt.Println()
 	}
 
@@ -221,6 +241,11 @@ func RunSugarAdvancedDemo() {
 		printSuccess(fmt.Sprintf("GetMaxLotSize(\"%s\")", symbol), fmt.Sprintf("Max lots: %.2f", maxLots))
 		fmt.Printf("    Free Margin:      %.2f %s\n", accountInfo.FreeMargin, accountInfo.Currency)
 		fmt.Printf("    Maximum Lots:     %.2f (with 80%% safety buffer)\n", maxLots)
+		// The margin of the max volume itself (it can be more than max lots x margin of 1 lot)
+		if maxMargin, err := sugar.CalculateRequiredMargin(symbol, maxLots); err == nil {
+			fmt.Printf("    Its margin:       %.2f %s (80%% of the free margin: %.2f)\n",
+				maxMargin, accountInfo.Currency, accountInfo.FreeMargin*0.8)
+		}
 		fmt.Println()
 	}
 
@@ -256,39 +281,39 @@ func RunSugarAdvancedDemo() {
 	}
 
 	// ══════════════════════════════════════════════════════════════════════
-	// PART 5: TRADING HELPERS - Working with pips instead of prices
+	// PART 5: TRADING HELPERS - Working with point distances instead of prices
 	// ══════════════════════════════════════════════════════════════════════
-	printSection("5. TRADING HELPERS - Pip-Based SL/TP Calculation")
+	printSection("5. TRADING HELPERS - Point-Based SL/TP Calculation")
 
-	// Calculate SL/TP from pips
+	// Calculate SL/TP from point distances (500 points = 50 pips on a 5-digit symbol)
 	direction := "BUY"
 	entryPrice := 0.0 // 0 = use current market price
-	slPips := 50.0
-	tpPips := 100.0
+	slPoints := 500.0
+	tpPoints := 1000.0
 
-	sl, tp, err := sugar.CalculateSLTP(symbol, direction, entryPrice, slPips, tpPips)
+	sl, tp, err := sugar.CalculateSLTP(symbol, direction, entryPrice, slPoints, tpPoints)
 	if err != nil {
 		printError("CalculateSLTP", err)
 	} else {
 		currentAsk, _ := sugar.GetAsk(symbol)
 		printSuccess(
-			fmt.Sprintf("CalculateSLTP(\"%s\", \"%s\", market, %.0f, %.0f)", symbol, direction, slPips, tpPips),
-			"SL/TP prices calculated from pips",
+			fmt.Sprintf("CalculateSLTP(\"%s\", \"%s\", market, %.0f, %.0f)", symbol, direction, slPoints, tpPoints),
+			"SL/TP prices calculated from point distances",
 		)
 		fmt.Printf("    Current ASK:      %.5f\n", currentAsk)
-		fmt.Printf("    Stop Loss:        %.5f (%.0f pips below entry)\n", sl, slPips)
-		fmt.Printf("    Take Profit:      %.5f (%.0f pips above entry)\n", tp, tpPips)
-		fmt.Printf("    Risk/Reward:      1:%.1f\n", tpPips/slPips)
+		fmt.Printf("    Stop Loss:        %.5f (%.0f points below entry)\n", sl, slPoints)
+		fmt.Printf("    Take Profit:      %.5f (%.0f points above entry)\n", tp, tpPoints)
+		fmt.Printf("    Risk/Reward:      1:%.1f\n", tpPoints/slPoints)
 		fmt.Println()
 	}
 
 	// Demonstrate BuyMarketWithPips and SellMarketWithPips
-	printInfo("OPTIONAL TRADING DEMO", "You can test pip-based trading methods:")
-	fmt.Printf("   Example 1: sugar.BuyMarketWithPips(\"%s\", 0.01, 50, 100)\n", symbol)
-	fmt.Printf("              Opens BUY 0.01 lots, SL=50 pips, TP=100 pips\n")
+	printInfo("OPTIONAL TRADING DEMO", "You can test the point-distance trading methods:")
+	fmt.Printf("   Example 1: sugar.BuyMarketWithPips(\"%s\", 0.01, 500, 1000)\n", symbol)
+	fmt.Printf("              Opens BUY 0.01 lots, SL=500 points, TP=1000 points from entry\n")
 	fmt.Printf("   \n")
-	fmt.Printf("   Example 2: sugar.SellMarketWithPips(\"%s\", 0.01, 50, 100)\n", symbol)
-	fmt.Printf("              Opens SELL 0.01 lots, SL=50 pips, TP=100 pips\n")
+	fmt.Printf("   Example 2: sugar.SellMarketWithPips(\"%s\", 0.01, 500, 1000)\n", symbol)
+	fmt.Printf("              Opens SELL 0.01 lots, SL=500 points, TP=1000 points from entry\n")
 	fmt.Printf("   \n")
 	fmt.Printf("   💡 These methods automatically calculate exact SL/TP prices!\n")
 	fmt.Println()
@@ -301,15 +326,15 @@ func RunSugarAdvancedDemo() {
 	fmt.Println("   🎯 SCENARIO: Open a BUY position with proper risk management")
 	fmt.Println()
 
-	tradingSymbol := "EURUSD"
-	targetRisk := 2.0      // Risk 2% of balance
-	targetSL := 50.0       // 50 pip stop loss
-	targetTP := 100.0      // 100 pip take profit (1:2 R/R)
+	tradingSymbol := cfg.TestSymbol
+	targetRisk := 2.0   // Risk 2% of balance
+	targetSL := 500.0   // 500-point stop loss (50 pips on a 5-digit symbol)
+	targetTP := 1000.0  // 1000-point take profit (1:2 R/R)
 
 	fmt.Printf("   1️⃣  Symbol:           %s\n", tradingSymbol)
 	fmt.Printf("   2️⃣  Risk:             %.1f%% of balance\n", targetRisk)
-	fmt.Printf("   3️⃣  Stop Loss:        %.0f pips\n", targetSL)
-	fmt.Printf("   4️⃣  Take Profit:      %.0f pips\n", targetTP)
+	fmt.Printf("   3️⃣  Stop Loss:        %.0f points\n", targetSL)
+	fmt.Printf("   4️⃣  Take Profit:      %.0f points\n", targetTP)
 	fmt.Printf("   5️⃣  Risk/Reward:      1:%.1f\n", targetTP/targetSL)
 	fmt.Println()
 
@@ -363,11 +388,11 @@ func RunSugarAdvancedDemo() {
 	fmt.Printf("    Symbol:           %s\n", tradingSymbol)
 	fmt.Printf("    Direction:        BUY\n")
 	fmt.Printf("    Lot Size:         %.2f lots\n", optimalLots)
-	fmt.Printf("    Stop Loss:        %.0f pips\n", targetSL)
-	fmt.Printf("    Take Profit:      %.0f pips\n", targetTP)
-	fmt.Printf("   ⚠️  Risk Amount:      %.2f %s (%.1f%%)\n",
+	fmt.Printf("    Stop Loss:        %.0f points\n", targetSL)
+	fmt.Printf("    Take Profit:      %.0f points\n", targetTP)
+	fmt.Printf("   ⚠️  Risk Amount:      up to %.2f %s (%.1f%%)\n",
 		accountInfo.Balance*targetRisk/100, accountInfo.Currency, targetRisk)
-	fmt.Printf("    Potential Reward: %.2f %s (%.1f%%)\n",
+	fmt.Printf("    Potential Reward: up to %.2f %s (%.1f%%)\n",
 		accountInfo.Balance*targetRisk*2/100, accountInfo.Currency, targetRisk*2)
 	fmt.Printf("    Margin Required:  %.2f %s\n", margin, accountInfo.Currency)
 	fmt.Println()

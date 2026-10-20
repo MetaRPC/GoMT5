@@ -88,7 +88,7 @@ PositionsTotalReply {
 
 | Field            | Type    | Go Type | Description                       |
 | ---------------- | ------- | ------- | --------------------------------- |
-| `TotalPositions` | `int64` | `int64` | Total number of open positions    |
+| `TotalPositions` | `int32` | `int32` | Total number of open positions    |
 
 ---
 
@@ -111,6 +111,7 @@ PositionsTotalReply {
 package main
 
 import (
+    "github.com/google/uuid"
     "context"
     "fmt"
     "time"
@@ -120,8 +121,17 @@ import (
 )
 
 func main() {
-    account, _ := mt5.NewMT5Account(12345, "password", "mt5.mrpc.pro:443", uuid.New())
+    account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
+    if err != nil {
+        panic(err)
+    }
     defer account.Close()
+
+    // Connect first
+    _, err = account.ConnectEx(context.Background(), &pb.ConnectExRequest{User: 591129415, Password: "password", MtClusterName: "MetaQuotes-Demo"})
+    if err != nil {
+        panic(err)
+    }
 
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
@@ -160,7 +170,7 @@ func HasOpenPositions(account *mt5.MT5Account) (bool, error) {
 ### 3) Enforce maximum positions limit
 
 ```go
-func CanOpenNewPosition(account *mt5.MT5Account, maxPositions int64) (bool, error) {
+func CanOpenNewPosition(account *mt5.MT5Account, maxPositions int32) (bool, error) {
     ctx := context.Background()
 
     data, err := account.PositionsTotal(ctx)
@@ -190,7 +200,7 @@ func MonitorPositionCount(account *mt5.MT5Account, interval time.Duration) {
     ticker := time.NewTicker(interval)
     defer ticker.Stop()
 
-    var lastCount int64 = -1
+    var lastCount int32 = -1
 
     for range ticker.C {
         data, err := account.PositionsTotal(ctx)
@@ -256,10 +266,10 @@ func WaitForAllPositionsClosed(account *mt5.MT5Account, timeout time.Duration) e
 
 ```go
 type PositionStats struct {
-    CurrentCount int64
-    MaxCount     int64
-    MinCount     int64
-    CheckCount   int64
+    CurrentCount int32
+    MaxCount     int32
+    MinCount     int32
+    CheckCount   int32
 }
 
 func TrackPositionStats(account *mt5.MT5Account, duration time.Duration, interval time.Duration) *PositionStats {
@@ -269,7 +279,7 @@ func TrackPositionStats(account *mt5.MT5Account, duration time.Duration, interva
 
     deadline := time.Now().Add(duration)
     stats := &PositionStats{
-        MinCount: int64(^uint64(0) >> 1), // Max int64
+        MinCount: int32(^uint32(0) >> 1), // Max int32
     }
 
     for time.Now().Before(deadline) {
@@ -306,7 +316,7 @@ func TrackPositionStats(account *mt5.MT5Account, duration time.Duration, interva
 ### Safe position count check
 
 ```go
-func GetPositionCountSafe(account *mt5.MT5Account) int64 {
+func GetPositionCountSafe(account *mt5.MT5Account) int32 {
     ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
     defer cancel()
 
@@ -322,7 +332,7 @@ func GetPositionCountSafe(account *mt5.MT5Account) int64 {
 ### Conditional trading based on position count
 
 ```go
-func TradeIfBelowLimit(account *mt5.MT5Account, maxPositions int64, tradeFn func() error) error {
+func TradeIfBelowLimit(account *mt5.MT5Account, maxPositions int32, tradeFn func() error) error {
     ctx := context.Background()
 
     data, err := account.PositionsTotal(ctx)
