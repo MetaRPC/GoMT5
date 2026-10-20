@@ -22,7 +22,30 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DemoAccountClient interface {
-	// Open a demo account. Full wizard flow: search → select → fill form → register.
+	// Search for broker companies by name.
+	// Returns a list of matching companies from the wizard's ListView.
+	// [DefaultValues]
+	//
+	//	{
+	//	  "searchText": "MetaQuotes"
+	//	}
+	FindCompanies(ctx context.Context, in *GuiDemoFindCompaniesRequest, opts ...grpc.CallOption) (*GuiDemoFindCompaniesReply, error)
+	// Get available servers and account types for a company.
+	// Navigates: company selection → demo account → reads dropdown options.
+	// [DefaultValues]
+	//
+	//	{
+	//	  "companyName": "MetaQuotes Ltd."
+	//	}
+	ServersAndAccountTypes(ctx context.Context, in *GuiDemoServersAndTypesRequest, opts ...grpc.CallOption) (*GuiDemoServersAndTypesReply, error)
+	// Debug: enumerate the controls of the wizard dialog currently open in the terminal.
+	// controlCount is -1 and the dump empty when no wizard dialog is open.
+	EnumControls(ctx context.Context, in *GuiDemoEnumControlsRequest, opts ...grpc.CallOption) (*GuiDemoEnumControlsReply, error)
+	// Open a demo account. The wire protocol is tried first (a direct request to the trade
+	// server, about a second); when the trade server does not accept it (TeleTrade answers
+	// 1001 INVALID_ACCOUNT, for example) the terminal's "Open an Account" wizard is driven
+	// instead, bounded by timeoutSeconds (default 90). debugLog says which path produced the
+	// account ("Wire protocol" or "Wire protocol failed: ...; GUI wizard used").
 	// Returns login, password, and investor password for the new demo account.
 	// [DefaultValues]
 	//
@@ -46,6 +69,33 @@ type demoAccountClient struct {
 
 func NewDemoAccountClient(cc grpc.ClientConnInterface) DemoAccountClient {
 	return &demoAccountClient{cc}
+}
+
+func (c *demoAccountClient) FindCompanies(ctx context.Context, in *GuiDemoFindCompaniesRequest, opts ...grpc.CallOption) (*GuiDemoFindCompaniesReply, error) {
+	out := new(GuiDemoFindCompaniesReply)
+	err := c.cc.Invoke(ctx, "/mt5_term_api.DemoAccount/FindCompanies", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *demoAccountClient) ServersAndAccountTypes(ctx context.Context, in *GuiDemoServersAndTypesRequest, opts ...grpc.CallOption) (*GuiDemoServersAndTypesReply, error) {
+	out := new(GuiDemoServersAndTypesReply)
+	err := c.cc.Invoke(ctx, "/mt5_term_api.DemoAccount/ServersAndAccountTypes", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *demoAccountClient) EnumControls(ctx context.Context, in *GuiDemoEnumControlsRequest, opts ...grpc.CallOption) (*GuiDemoEnumControlsReply, error) {
+	out := new(GuiDemoEnumControlsReply)
+	err := c.cc.Invoke(ctx, "/mt5_term_api.DemoAccount/EnumControls", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *demoAccountClient) OpenDemoAccount(ctx context.Context, in *GuiDemoOpenAccountRequest, opts ...grpc.CallOption) (*GuiDemoOpenAccountReply, error) {
@@ -92,7 +142,30 @@ func (x *demoAccountDemoOpenAccountInteractiveClient) Recv() (*GuiDemoInteractiv
 // All implementations should embed UnimplementedDemoAccountServer
 // for forward compatibility
 type DemoAccountServer interface {
-	// Open a demo account. Full wizard flow: search → select → fill form → register.
+	// Search for broker companies by name.
+	// Returns a list of matching companies from the wizard's ListView.
+	// [DefaultValues]
+	//
+	//	{
+	//	  "searchText": "MetaQuotes"
+	//	}
+	FindCompanies(context.Context, *GuiDemoFindCompaniesRequest) (*GuiDemoFindCompaniesReply, error)
+	// Get available servers and account types for a company.
+	// Navigates: company selection → demo account → reads dropdown options.
+	// [DefaultValues]
+	//
+	//	{
+	//	  "companyName": "MetaQuotes Ltd."
+	//	}
+	ServersAndAccountTypes(context.Context, *GuiDemoServersAndTypesRequest) (*GuiDemoServersAndTypesReply, error)
+	// Debug: enumerate the controls of the wizard dialog currently open in the terminal.
+	// controlCount is -1 and the dump empty when no wizard dialog is open.
+	EnumControls(context.Context, *GuiDemoEnumControlsRequest) (*GuiDemoEnumControlsReply, error)
+	// Open a demo account. The wire protocol is tried first (a direct request to the trade
+	// server, about a second); when the trade server does not accept it (TeleTrade answers
+	// 1001 INVALID_ACCOUNT, for example) the terminal's "Open an Account" wizard is driven
+	// instead, bounded by timeoutSeconds (default 90). debugLog says which path produced the
+	// account ("Wire protocol" or "Wire protocol failed: ...; GUI wizard used").
 	// Returns login, password, and investor password for the new demo account.
 	// [DefaultValues]
 	//
@@ -114,6 +187,15 @@ type DemoAccountServer interface {
 type UnimplementedDemoAccountServer struct {
 }
 
+func (UnimplementedDemoAccountServer) FindCompanies(context.Context, *GuiDemoFindCompaniesRequest) (*GuiDemoFindCompaniesReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FindCompanies not implemented")
+}
+func (UnimplementedDemoAccountServer) ServersAndAccountTypes(context.Context, *GuiDemoServersAndTypesRequest) (*GuiDemoServersAndTypesReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ServersAndAccountTypes not implemented")
+}
+func (UnimplementedDemoAccountServer) EnumControls(context.Context, *GuiDemoEnumControlsRequest) (*GuiDemoEnumControlsReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EnumControls not implemented")
+}
 func (UnimplementedDemoAccountServer) OpenDemoAccount(context.Context, *GuiDemoOpenAccountRequest) (*GuiDemoOpenAccountReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OpenDemoAccount not implemented")
 }
@@ -130,6 +212,60 @@ type UnsafeDemoAccountServer interface {
 
 func RegisterDemoAccountServer(s grpc.ServiceRegistrar, srv DemoAccountServer) {
 	s.RegisterService(&DemoAccount_ServiceDesc, srv)
+}
+
+func _DemoAccount_FindCompanies_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GuiDemoFindCompaniesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DemoAccountServer).FindCompanies(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mt5_term_api.DemoAccount/FindCompanies",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DemoAccountServer).FindCompanies(ctx, req.(*GuiDemoFindCompaniesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DemoAccount_ServersAndAccountTypes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GuiDemoServersAndTypesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DemoAccountServer).ServersAndAccountTypes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mt5_term_api.DemoAccount/ServersAndAccountTypes",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DemoAccountServer).ServersAndAccountTypes(ctx, req.(*GuiDemoServersAndTypesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DemoAccount_EnumControls_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GuiDemoEnumControlsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DemoAccountServer).EnumControls(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/mt5_term_api.DemoAccount/EnumControls",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DemoAccountServer).EnumControls(ctx, req.(*GuiDemoEnumControlsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _DemoAccount_OpenDemoAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -183,6 +319,18 @@ var DemoAccount_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "mt5_term_api.DemoAccount",
 	HandlerType: (*DemoAccountServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "FindCompanies",
+			Handler:    _DemoAccount_FindCompanies_Handler,
+		},
+		{
+			MethodName: "ServersAndAccountTypes",
+			Handler:    _DemoAccount_ServersAndAccountTypes_Handler,
+		},
+		{
+			MethodName: "EnumControls",
+			Handler:    _DemoAccount_EnumControls_Handler,
+		},
 		{
 			MethodName: "OpenDemoAccount",
 			Handler:    _DemoAccount_OpenDemoAccount_Handler,
