@@ -5330,8 +5330,9 @@ type AccountSummaryData struct {
 	AccountCredit                     float64                  `protobuf:"fixed64,11,opt,name=account_credit,json=accountCredit,proto3" json:"account_credit,omitempty"`
 	// The broker server's offset from UTC in seconds, positive = ahead of UTC: validated by the terminal (a multiple of 15
 	// minutes). Information, never converted; it is the offset behind every *_utc field of this API. Valid when
-	// account_leverage > 0 (data with account_leverage above 0 always carries a valid offset); 0 while the account is not
-	// connected yet (not UTC+0). A connected terminal whose offset cannot be determined answers SERVER_TIMEZONE_UNDETERMINED
+	// account_leverage > 0 (data with account_leverage above 0 always carries a valid offset). While the account is not
+	// connected the Terminal Manager answers its last data from while it was connected, or ACCOUNT_NOT_CONNECTED when it has
+	// never been connected. A connected terminal whose offset cannot be determined answers SERVER_TIMEZONE_UNDETERMINED
 	// instead of data and cannot start (MT4: typically a closed market with no quote). The current offset is applied to every
 	// value, so history from before the broker's last daylight-saving change is off by the daylight-saving step (usually 3600
 	// s).
