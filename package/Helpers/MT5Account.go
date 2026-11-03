@@ -263,8 +263,10 @@ func NewMT5AccountWithApiKey(user uint64, password string, grpcServer string, ap
 }
 
 // GetId retrieves the deterministic account ID via the server's GetId gRPC endpoint and stores it in Id.
-// Call it before Connect/ConnectEx to connect under that id. If the call fails, the id is computed
-// locally with ComputeDeterministicTerminalId.
+// Call it before Connect/ConnectEx to connect under that id. The server answers a prefixed token
+// (mt5_live_<32hex> / mt5_stg_<32hex>); the part after the last '_' is the id.
+// If the call fails or the server answers an error, Id is still set to the locally computed
+// ComputeDeterministicTerminalId value and that error is returned with it.
 func (a *MT5Account) GetId(ctx ...context.Context) (uuid.UUID, error) {
 	if !a.isConnected() {
 		return uuid.Nil, ErrNotConnected
@@ -287,16 +289,25 @@ func (a *MT5Account) GetId(ctx ...context.Context) (uuid.UUID, error) {
 	}
 	callCtx = metadata.AppendToOutgoingContext(callCtx, "apikey", apiKey)
 	reply, err := a.ConnectionClient.GetId(callCtx, req)
-	if err == nil && reply != nil {
-		if data := reply.GetData(); data != nil && data.GetId() != "" {
-			if parsed, parseErr := uuid.Parse(data.GetId()); parseErr == nil {
+	if err == nil {
+		if apiErr := reply.GetError(); apiErr != nil {
+			err = NewApiError(apiErr)
+		} else if token := reply.GetData().GetId(); token != "" {
+			raw := token
+			if i := strings.LastIndex(raw, "_"); i >= 0 {
+				raw = raw[i+1:]
+			}
+			if parsed, parseErr := uuid.Parse(raw); parseErr == nil {
 				a.Id = parsed
 				return a.Id, nil
 			}
+			err = fmt.Errorf("GetId: unexpected id %q in server reply", token)
+		} else {
+			err = fmt.Errorf("GetId: empty server reply")
 		}
 	}
 	a.Id = ComputeDeterministicTerminalId(a.User, a.Password)
-	return a.Id, nil
+	return a.Id, err
 }
 
 // isConnected checks if the account has an active gRPC connection.
