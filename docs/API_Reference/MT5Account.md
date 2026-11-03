@@ -8,6 +8,7 @@ MT5Account represents a low-level gRPC client for MetaTrader 5 terminal. All met
 
 ### 🏗️ Constructor & Connection
 - [NewMT5Account](#newmt5account)
+- [GetId](#getid)
 - [Connect](#connect)
 - [ConnectEx](#connectex)
 - [ConnectProxy](#connectproxy)
@@ -79,7 +80,8 @@ Creates a new MT5Account instance with gRPC connection. Default grpcServer is "m
 
 **Signature**
 ```go
-func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID) (*MT5Account, error)
+func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID, apiKey ...string) (*MT5Account, error)
+func NewMT5AccountWithApiKey(user uint64, password string, grpcServer string, apiKey string) (*MT5Account, error)
 ```
 
 **Parameters**
@@ -90,6 +92,7 @@ func NewMT5Account(user uint64, password string, grpcServer string, id uuid.UUID
 | password | string | MT5 account password |
 | grpcServer | string | gRPC server address (e.g., "mt5.mrpc.pro:443", empty for default) |
 | id | uuid.UUID | Unique identifier for this account instance |
+| apiKey | string (optional) | API key sent as the `apikey` header; without it `MRPC_API_KEY` from the environment, or `TRIAL` |
 
 **Returns**
 
@@ -115,6 +118,35 @@ _, err = account.ConnectEx(ctx, &pb.ConnectExRequest{
     Password:      "password",
     MtClusterName: "YourBroker-MT5 Demo",
 })
+```
+
+---
+
+## GetId
+
+Gets the deterministic terminal id for the account's User/Password from the server (GetId RPC) and stores it in `Id`, so a later `Connect`/`ConnectEx` reuses the same terminal. The same id can be computed offline with `ComputeDeterministicTerminalId(user, password)`.
+
+**Signature**
+```go
+func (a *MT5Account) GetId(ctx ...context.Context) (uuid.UUID, error)
+```
+
+**Returns**
+
+The terminal id. If the call fails or the server answers an error (for example `API_KEY_INVALID`), `Id` is still set to the locally computed id and the error is returned with it.
+
+**Example**
+```go
+account, err := helpers.NewMT5AccountWithApiKey(12345678, "password", "", "your-api-key")
+if err != nil {
+    log.Fatal(err)
+}
+defer account.Close()
+
+id, err := account.GetId(ctx)
+if err != nil {
+    log.Printf("GetId: %v (using local id %s)", err, id)
+}
 ```
 
 ---
