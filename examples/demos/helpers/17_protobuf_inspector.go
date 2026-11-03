@@ -106,7 +106,7 @@
    → Result: Shows all available types to explore
 
  📊 STATISTICS:
-   • Total Types: 267 (all MT5 gRPC protobuf message types)
+   • Total Types: 255 (all MT5 gRPC protobuf message types)
    • Total Enums: 67 (with 1400+ enum values)
    • Coverage: 100% of MT5 gRPC API types
    • Note: Type count is dynamic - actual count may vary with API updates
@@ -192,7 +192,7 @@ func (pi *ProtobufInspector) discoverTypes() {
 	// Use reflection to discover ALL types from pb package
 	// We'll use a sample instance to get the package, then scan all exported types
 
-	// Register ALL available protobuf types from pb package (267 types)
+	// Register ALL available protobuf types from pb package (255 types)
 	sampleTypes := []interface{}{
 		&pb.AccountInfoDoubleData{}, &pb.AccountInfoDoubleReply{}, &pb.AccountInfoDoubleReply_Data{}, &pb.AccountInfoDoubleReply_Error{},
 		&pb.AccountInfoDoubleRequest{}, &pb.AccountInfoIntegerData{}, &pb.AccountInfoIntegerReply{}, &pb.AccountInfoIntegerReply_Data{},
@@ -205,9 +205,8 @@ func (pi *ProtobufInspector) discoverTypes() {
 		&pb.ConnectProxyData{}, &pb.ConnectProxyReply{}, &pb.ConnectProxyReply_Data{}, &pb.ConnectProxyReply_Error{},
 		&pb.ConnectProxyRequest{}, &pb.ConnectReply{}, &pb.ConnectReply_Data{}, &pb.ConnectReply_Error{},
 		&pb.ConnectRequest{}, &pb.DealHistoryData{}, &pb.DisconnectData{}, &pb.DisconnectReply{},
-		&pb.DisconnectReply_Data{}, &pb.DisconnectReply_Error{}, &pb.DisconnectRequest{}, &pb.EaParam{},
-		&pb.Error{}, &pb.ErrorProperty{}, &pb.ExpertAdviser{}, &pb.GetEaParamsData{},
-		&pb.GetEaParamsReply{}, &pb.GetEaParamsReply_Data{}, &pb.GetEaParamsReply_Error{}, &pb.GetEaParamsRequest{},
+		&pb.DisconnectReply_Data{}, &pb.DisconnectReply_Error{}, &pb.DisconnectRequest{},
+		&pb.Error{}, &pb.ErrorProperty{}, &pb.ExpertAdviser{},
 		&pb.HealthCheckReply{}, &pb.HealthCheckRequest{}, &pb.HistoryData{}, &pb.LogFileInfo{},
 		&pb.MarketBookAddData{}, &pb.MarketBookAddReply{}, &pb.MarketBookAddReply_Data{}, &pb.MarketBookAddReply_Error{},
 		&pb.MarketBookAddRequest{}, &pb.MarketBookGetData{}, &pb.MarketBookGetReply{}, &pb.MarketBookGetReply_Data{},
@@ -227,9 +226,8 @@ func (pi *ProtobufInspector) discoverTypes() {
 		&pb.OpenChartForSymbolRequest{}, &pb.OpenChartWithEaParameter{}, &pb.OpenChartWithEaReply{}, &pb.OpenChartWithEaRequest{},
 		&pb.OpenedOrderInfo{}, &pb.OpenedOrdersData{}, &pb.OpenedOrdersReply{}, &pb.OpenedOrdersReply_Data{},
 		&pb.OpenedOrdersReply_Error{}, &pb.OpenedOrdersRequest{}, &pb.OpenedOrdersTicketsData{}, &pb.OpenedOrdersTicketsReply{},
-		&pb.OpenedOrdersTicketsReply_Data{}, &pb.OpenedOrdersTicketsReply_Error{}, &pb.OpenedOrdersTicketsRequest{}, &pb.OpenTerminalChartWithEaData{},
-		&pb.OpenTerminalChartWithEaParameter{}, &pb.OpenTerminalChartWithEaReply{}, &pb.OpenTerminalChartWithEaReply_Data{}, &pb.OpenTerminalChartWithEaReply_Error{},
-		&pb.OpenTerminalChartWithEaRequest{}, &pb.OrderCalcMarginData{}, &pb.OrderCalcMarginReply{}, &pb.OrderCalcMarginReply_Data{},
+		&pb.OpenedOrdersTicketsReply_Data{}, &pb.OpenedOrdersTicketsReply_Error{}, &pb.OpenedOrdersTicketsRequest{},
+		&pb.OrderCalcMarginData{}, &pb.OrderCalcMarginReply{}, &pb.OrderCalcMarginReply_Data{},
 		&pb.OrderCalcMarginReply_Error{}, &pb.OrderCalcMarginRequest{}, &pb.OrderCalcProfitData{}, &pb.OrderCalcProfitReply{},
 		&pb.OrderCalcProfitReply_Data{}, &pb.OrderCalcProfitReply_Error{}, &pb.OrderCalcProfitRequest{}, &pb.OrderCheckData{},
 		&pb.OrderCheckReply{}, &pb.OrderCheckReply_Data{}, &pb.OrderCheckReply_Error{}, &pb.OrderCheckRequest{},
