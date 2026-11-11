@@ -23,7 +23,7 @@ jobs:
       - name: Build and vet every module of the workspace
         run: |
           set -e
-          for m in package examples examples/mt5; do
+          for m in package examples mt5; do
             echo "::group::$m"
             (cd "$m" && go build ./... && go vet ./...)
             echo "::endgroup::"
