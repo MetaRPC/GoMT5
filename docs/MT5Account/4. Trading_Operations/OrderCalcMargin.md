@@ -4,7 +4,7 @@
 
 **API Information:**
 
-* **Low-level API:** `MT5Account.OrderCalcMargin(...)` (from Go package `github.com/MetaRPC/GoMT5/package/Helpers`)
+* **Low-level API:** `MT5Account.OrderCalcMargin(...)` (from Go package `github.com/MetaRPC/GoMT5/mt5`)
 * **gRPC service:** `mt5_term_api.TradeFunctions`
 * **Proto definition:** `OrderCalcMargin` (defined in `mt5-term-api-trade-functions.proto`)
 
@@ -136,7 +136,7 @@ import (
     "time"
 
     pb "github.com/MetaRPC/GoMT5/package"
-    "github.com/MetaRPC/GoMT5/package/Helpers"
+    "github.com/MetaRPC/GoMT5/mt5"
 )
 
 func main() {
@@ -178,7 +178,7 @@ func CanOpenPosition(account *mt5.MT5Account, symbol string, volume float64, pri
     ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
     defer cancel()
 
-    // Get free margin (AccountSummary has no free margin field)
+    // Get free margin (single-value call; AccountSummary.AccountMarginFree carries the same value)
     freeData, err := account.AccountInfoDouble(ctx, &pb.AccountInfoDoubleRequest{
         PropertyId: pb.AccountInfoDoublePropertyType_ACCOUNT_MARGIN_FREE,
     })

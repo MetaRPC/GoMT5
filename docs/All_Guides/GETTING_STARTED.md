@@ -99,6 +99,7 @@ GoMT5 → gRPC → mt5term Gateway → MT5 Terminal
   "port": 443,
   "grpc_server": "mt5.mrpc.pro:443",
   "mt_cluster": "FxPro-MT5 Demo",
+  "api_key": "",
   "test_symbol": "EURUSD",
   "test_volume": 0.01
 }
@@ -182,7 +183,7 @@ We will guide you through all major aspects - from basic manual trading to a ful
 
 ## 🏗️ Project Architecture: Three-Tier System
 
-The project consists of **three interconnected files** in the `examples/mt5/` directory, each building upon the previous one. Understanding this chain is key to mastering GoMT5.
+The project consists of **three interconnected files** in the `mt5/` directory, each building upon the previous one. Understanding this chain is key to mastering GoMT5.
 
 ### Tier 1: MT5Account.go - Low-Level gRPC Foundation
 
@@ -190,7 +191,7 @@ The project consists of **three interconnected files** in the `examples/mt5/` di
 
 **[📖 MT5Account Master Overview](../MT5Account/MT5Account.Master.Overview.md)**
 
-**File:** `package/Helpers/MT5Account.go` (2300+ lines)
+**File:** `mt5/MT5Account.go` (2300+ lines)
 
 - Raw protocol buffer messages and gRPC communication
 - Maximum control and flexibility over each request/response
@@ -227,13 +228,13 @@ This allows you to quickly find reference OR deeply understand how the method wo
 
 **[📖 MT5Service API Overview](../MT5Service/MT5Service.Overview.md)**
 
-**File:** `examples/mt5/MT5Service.go` (1160+ lines)
+**File:** `mt5/MT5Service.go` (1160+ lines)
 
 - Simplified error handling and response parsing
 - Pre-configured common operations
 - Go-style return types (no protobuf in signatures)
 - Easier to work with than raw gRPC
-- **50+ methods** for common trading scenarios
+- **38 methods** for common trading scenarios
 - **Best for:** Most common trading scenarios
 
 **Key features:**
@@ -248,7 +249,7 @@ This allows you to quickly find reference OR deeply understand how the method wo
 
 **[📖 MT5Sugar API Overview](../MT5Sugar/MT5Sugar.API_Overview.md)**
 
-**File:** `examples/mt5/MT5Sugar.go` (2200+ lines)
+**File:** `mt5/MT5Sugar.go` (2200+ lines)
 
 - One-line operations for common tasks
 - Smart defaults and automatic parameter inference
@@ -710,7 +711,7 @@ go run main.go inspect
 
 Features:
 
-- Explore 267 protobuf types
+- Explore 255 protobuf types
 - Search types and fields
 - View enum values
 - Understand message structures
@@ -747,7 +748,7 @@ go run main.go 18
 
 GoMT5 has comprehensive error handling:
 
-**File:** `package/Helpers/errors.go`
+**File:** `mt5/errors.go`
 
 Features:
 
@@ -802,24 +803,7 @@ Critical patterns:
 
 ### Code Examples
 
-All examples are located in `examples/demos/` numbered 01-17.
-
----
-
-## 💬 Support and Community
-
-If you encounter problems in the code or have questions about the gateway:
-
-**Support repository:** [https://github.com/Moongoord/MetaRPC-Gateway-Support](https://github.com/Moongoord/MetaRPC-Gateway-Support)
-
-This is a discussion repository where you can:
-
-- Ask questions about the gateway
-- Report issues
-- Share your experience
-- Get help from the community
-
-**Note:** This repository is currently under development and will be available to everyone soon.
+All examples are located in `examples/demos/` numbered 01-18.
 
 ---
 

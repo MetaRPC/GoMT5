@@ -88,7 +88,7 @@ import (
 	pb "github.com/MetaRPC/GoMT5/package"
 	"github.com/MetaRPC/GoMT5/examples/demos/config"
 	"github.com/MetaRPC/GoMT5/examples/demos/helpers"
-	mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+	mt5 "github.com/MetaRPC/GoMT5/mt5"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )

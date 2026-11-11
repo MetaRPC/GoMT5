@@ -4,7 +4,7 @@
 
 ## 📁 What lives here
 
-* **[AccountSummary](./AccountSummary.md)** - **all account info** at once (login, balance, equity, credit, leverage, currency, server time, etc.; no margin or profit). Returns `MrpcEnumAccountTradeMode` enum.
+* **[AccountSummary](./AccountSummary.md)** - **all account info** at once (login, balance, equity, credit, leverage, currency, margin / free margin / margin level, server time, etc.; no floating profit). Returns `MrpcEnumAccountTradeMode` and `MrpcEnumAccountMarginMode` enums.
 * **[AccountInfoDouble](./AccountInfoDouble.md)** - **single double value** from account (balance, equity, margin, profit, credit, etc.). Uses `AccountInfoDoublePropertyType` enum as input.
 * **[AccountInfoInteger](./AccountInfoInteger.md)** - **single integer value** from account (login, leverage, limit orders, etc.). Uses `AccountInfoIntegerPropertyType` enum as input.
 * **[AccountInfoString](./AccountInfoString.md)** - **single string value** from account (name, server, currency, company). Uses `AccountInfoStringPropertyType` enum as input.
@@ -39,7 +39,7 @@ Want detailed explanations with line-by-line code breakdown? Check these guides:
 
 | If you need…                                     | Use                       | Returns                    | ENUMs Used                          |
 | ------------------------------------------------ | ------------------------- | -------------------------- | ----------------------------------- |
-| Complete account snapshot (all values)           | `AccountSummary`          | AccountSummaryData         | **Output**: `MrpcEnumAccountTradeMode` |
+| Complete account snapshot (all values)           | `AccountSummary`          | AccountSummaryData         | **Output**: `MrpcEnumAccountTradeMode`, `MrpcEnumAccountMarginMode` |
 | One numeric value (balance, equity, margin, etc.)| `AccountInfoDouble`       | Single `float64`           | **Input**: `AccountInfoDoublePropertyType` |
 | One integer value (login, leverage, etc.)        | `AccountInfoInteger`      | Single `int64`             | **Input**: `AccountInfoIntegerPropertyType` |
 | One text value (name, currency, server, etc.)    | `AccountInfoString`       | Single `string`            | **Input**: `AccountInfoStringPropertyType` |
@@ -48,9 +48,8 @@ Want detailed explanations with line-by-line code breakdown? Check these guides:
 
 ## ❌ Cross‑refs & gotchas
 
-* **Margin Level** - use `AccountInfoDouble(ACCOUNT_MARGIN_LEVEL)` to get as percentage.
-* **Free Margin** - use `AccountInfoDouble(ACCOUNT_MARGIN_FREE)` for available margin.
-* **AccountSummary** includes basic info (balance, equity, leverage); for margin use `AccountInfoDouble`.
+* **Margin** - `AccountSummary` already returns `AccountMargin`, `AccountMarginFree` and `AccountMarginLevel` (and `AccountMarginMode`); `AccountInfoDouble(ACCOUNT_MARGIN_LEVEL / ACCOUNT_MARGIN_FREE)` is just the single-value alternative.
+* **AccountSummary** includes balance, equity, leverage **and** the margin fields; the one thing it does not carry is **floating profit** — use `AccountInfoDouble(ACCOUNT_PROFIT)` for that.
 * **AccountInfo*** methods are lighter if you only need one property.
 * **Currency** affects how profits are calculated - always check account currency.
 * **Leverage** determines margin requirements - higher leverage = less margin needed.
@@ -119,18 +118,13 @@ fmt.Printf("Currency: %s\n", currencyData.RequestedValue)
 ```
 
 ```go
-// Check account health
-summary, _ := account.AccountSummary(ctx, &pb.AccountSummaryRequest{})
-
-// Get margin level (AccountSummary doesn't include margin, need separate call)
-marginData, err := account.AccountInfoDouble(ctx, &pb.AccountInfoDoubleRequest{
-    PropertyId: pb.AccountInfoDoublePropertyType_ACCOUNT_MARGIN_LEVEL,
-})
+// Check account health — AccountSummary already carries the margin level
+summary, err := account.AccountSummary(ctx, &pb.AccountSummaryRequest{})
 if err != nil {
     log.Fatalf("Failed: %v", err)
 }
 
-marginLevel := marginData.RequestedValue
+marginLevel := summary.AccountMarginLevel // also: AccountMargin, AccountMarginFree
 
 if marginLevel < 100 {
     fmt.Println("⚠️ Warning: Margin level critical!")
@@ -189,6 +183,7 @@ These ENUMs are **returned in the response** to represent account state:
 | Method | Output ENUM | Field Name | Purpose | Values |
 |--------|-------------|------------|---------|--------|
 | **AccountSummary** | `MrpcEnumAccountTradeMode` | `AccountTradeMode` | Indicates account type | `MRPC_ACCOUNT_TRADE_MODE_DEMO` (0)<br>`MRPC_ACCOUNT_TRADE_MODE_CONTEST` (1)<br>`MRPC_ACCOUNT_TRADE_MODE_REAL` (2) |
+| **AccountSummary** | `MrpcEnumAccountMarginMode` | `AccountMarginMode` | Margin calculation mode (MT5 = hedging) | `MRPC_ACCOUNT_MARGIN_MODE_RETAIL_NETTING` (0)<br>`MRPC_ACCOUNT_MARGIN_MODE_EXCHANGE` (1)<br>`MRPC_ACCOUNT_MARGIN_MODE_RETAIL_HEDGING` (2) |
 | **AccountInfoInteger** | Various ENUMs returned as int64 | `RequestedValue` | When querying `ACCOUNT_TRADE_MODE` property, value represents account type | Same as above (0=DEMO, 1=CONTEST, 2=REAL) |
 
 **Usage in code:**

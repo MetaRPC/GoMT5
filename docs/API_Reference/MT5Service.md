@@ -1,6 +1,6 @@
 # MT5Service API Reference
 
-> **Note:** Complete API reference for examples/mt5/MT5Service.go with enhanced navigation. Single-page format for easy browsing.
+> **Note:** Complete API reference for mt5/MT5Service.go with enhanced navigation. Single-page format for easy browsing.
 
 MT5Service is the mid-level API wrapper that bridges MT5Account (low-level gRPC) and MT5Sugar (high-level convenience). It unwraps protobuf structures and provides Go native types while maintaining full control over request parameters and contexts.
 
@@ -73,16 +73,16 @@ Creates a new MT5Service wrapping an MT5Account instance. This is the main entry
 
 **Signature**
 ```go
-func NewMT5Service(account *helpers.MT5Account) *MT5Service
+func NewMT5Service(account *mt5.MT5Account) *MT5Service
 ```
 
-`helpers` is `github.com/MetaRPC/GoMT5/package/Helpers` (create the account with `helpers.NewMT5Account(user, password, grpcServer, uuid.New())` and connect it with `ConnectEx`). MT5Service itself is in `examples/mt5` (package `mt5`, import `github.com/MetaRPC/GoMT5/examples/mt5`) of the repository's examples module - you get it by cloning the repository.
+`helpers` is `github.com/MetaRPC/GoMT5/mt5` (create the account with `mt5.NewMT5Account(user, password, grpcServer, uuid.New())` and connect it with `ConnectEx`). MT5Service itself is in `mt5` (package `mt5`, import `github.com/MetaRPC/GoMT5/mt5`) of the repository's examples module - you get it by cloning the repository.
 
 **Parameters**
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| account | *helpers.MT5Account | MT5Account instance (low-level gRPC client) |
+| account | *mt5.MT5Account | MT5Account instance (low-level gRPC client) |
 
 **Returns**
 
@@ -96,12 +96,12 @@ Returns the underlying MT5Account for direct low-level access. Use this when you
 
 **Signature**
 ```go
-func (s *MT5Service) GetAccount() *helpers.MT5Account
+func (s *MT5Service) GetAccount() *mt5.MT5Account
 ```
 
 **Returns**
 
-Returns `*helpers.MT5Account` instance used by this service.
+Returns `*mt5.MT5Account` instance used by this service.
 
 ---
 

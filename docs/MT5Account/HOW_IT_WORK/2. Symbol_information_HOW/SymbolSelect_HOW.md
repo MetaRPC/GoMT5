@@ -17,7 +17,7 @@ selectReq := &pb.SymbolSelectRequest{
     Select: true, // true = add to Market Watch, false = remove
 }
 selectData, err := account.SymbolSelect(ctx, selectReq)
-if !helpers.PrintShortError(err, fmt.Sprintf("SymbolSelect(%s) failed", cfg.TestSymbol)) {
+if !mt5.PrintShortError(err, fmt.Sprintf("SymbolSelect(%s) failed", cfg.TestSymbol)) {
     fmt.Printf("  Symbol '%s' added to Market Watch: %v\n", cfg.TestSymbol, selectData.Success)
 }
 ```
@@ -64,7 +64,7 @@ Executes a gRPC request to the MetaTrader server.
 #### 🔹 Processing the result
 
 ```go
-if !helpers.PrintShortError(err, fmt.Sprintf("SymbolSelect(%s) failed", cfg.TestSymbol)) {
+if !mt5.PrintShortError(err, fmt.Sprintf("SymbolSelect(%s) failed", cfg.TestSymbol)) {
     fmt.Printf("  Symbol '%s' added to Market Watch: %v\n", cfg.TestSymbol, selectData.Success)
 }
 ```

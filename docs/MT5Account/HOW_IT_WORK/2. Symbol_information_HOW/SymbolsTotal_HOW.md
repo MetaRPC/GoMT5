@@ -24,7 +24,7 @@ allSymbolsReq := &pb.SymbolsTotalRequest{
 }
 allSymbolsData, err := account.SymbolsTotal(ctx, allSymbolsReq)
 if err != nil {
-    helpers.PrintShortError(err, "SymbolsTotal(all) failed")
+    mt5.PrintShortError(err, "SymbolsTotal(all) failed")
 } else {
     fmt.Printf("  Total available symbols:       %d\n", allSymbolsData.Total)
 }
@@ -35,7 +35,7 @@ selectedSymbolsReq := &pb.SymbolsTotalRequest{
 }
 selectedSymbolsData, err := account.SymbolsTotal(ctx, selectedSymbolsReq)
 if err != nil {
-    helpers.PrintShortError(err, "SymbolsTotal(selected) failed")
+    mt5.PrintShortError(err, "SymbolsTotal(selected) failed")
 } else {
     fmt.Printf("  Symbols in Market Watch:       %d\n", selectedSymbolsData.Total)
 }

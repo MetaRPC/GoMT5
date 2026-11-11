@@ -16,7 +16,7 @@ tickReq := &pb.SymbolInfoTickRequest{
 }
 tickData, err := account.SymbolInfoTick(ctx, tickReq)
 if err != nil {
-    helpers.PrintShortError(err, "SymbolInfoTick failed")
+    mt5.PrintShortError(err, "SymbolInfoTick failed")
 } else {
     fmt.Printf("  Last tick for %s:\n", cfg.TestSymbol)
     fmt.Printf("    Bid:                         %.5f\n", tickData.Bid)
@@ -57,7 +57,7 @@ Executes a gRPC request to the gateway. Returns a structure with the last update
 
 ```go
 if err != nil {
-    helpers.PrintShortError(err, "SymbolInfoTick failed")
+    mt5.PrintShortError(err, "SymbolInfoTick failed")
 } else {
     fmt.Printf("  Last tick for %s:\n", cfg.TestSymbol)
 ```

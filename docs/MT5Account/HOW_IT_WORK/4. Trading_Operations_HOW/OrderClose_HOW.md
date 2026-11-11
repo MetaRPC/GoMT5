@@ -18,7 +18,7 @@ closeReq := &pb.OrderCloseRequest{
 }
 
 closeData, err := account.OrderClose(ctx, closeReq)
-if !helpers.PrintShortError(err, "OrderClose failed") {
+if !mt5.PrintShortError(err, "OrderClose failed") {
     fmt.Printf("  Order close result:\n")
     fmt.Printf("    Return Code:                 %d (%s)\n", closeData.ReturnedCode, closeData.ReturnedStringCode)
     fmt.Printf("    Description:                 %s\n", closeData.ReturnedCodeDescription)
@@ -111,7 +111,7 @@ if mt5.IsRetCodeSuccess(closeData.ReturnedCode) {
    - `TRADE_RETCODE_INVALID_VOLUME` - Invalid volume specified
    - `TRADE_RETCODE_REQUOTE` - Price changed, retry needed
    - `TRADE_RETCODE_POSITION_CLOSED` - Position already closed
-4. **Maintainability**: Centralized logic in `package/Helpers/errors.go` - one place to update for all projects
+4. **Maintainability**: Centralized logic in `mt5/errors.go` - one place to update for all projects
 
 Code **`10009` (`TRADE_RETCODE_DONE`)** — standard confirmation of successful trading request execution.
 

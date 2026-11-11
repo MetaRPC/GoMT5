@@ -16,7 +16,7 @@ syncReq := &pb.SymbolIsSynchronizedRequest{
     Symbol: cfg.TestSymbol,
 }
 syncData, err := account.SymbolIsSynchronized(ctx, syncReq)
-if !helpers.PrintShortError(err, fmt.Sprintf("SymbolIsSynchronized(%s) failed", cfg.TestSymbol)) {
+if !mt5.PrintShortError(err, fmt.Sprintf("SymbolIsSynchronized(%s) failed", cfg.TestSymbol)) {
     fmt.Printf("  Symbol '%s' synchronized:  %v\n", cfg.TestSymbol, syncData.Synchronized)
 }
 ```
@@ -56,7 +56,7 @@ Executes a gRPC request to the MetaTrader server.
 #### 🔹 Processing the result
 
 ```go
-if !helpers.PrintShortError(err, fmt.Sprintf("SymbolIsSynchronized(%s) failed", cfg.TestSymbol)) {
+if !mt5.PrintShortError(err, fmt.Sprintf("SymbolIsSynchronized(%s) failed", cfg.TestSymbol)) {
     fmt.Printf("  Symbol '%s' synchronized:  %v\n", cfg.TestSymbol, syncData.Synchronized)
 }
 ```

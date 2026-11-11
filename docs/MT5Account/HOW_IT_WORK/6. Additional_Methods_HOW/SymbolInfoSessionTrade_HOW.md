@@ -17,7 +17,7 @@ tradeSessionReq := &pb.SymbolInfoSessionTradeRequest{
 }
 tradeSessionData, err := account.SymbolInfoSessionTrade(ctx, tradeSessionReq)
 if err != nil {
-    helpers.PrintShortError(err, "SymbolInfoSessionTrade failed")
+    mt5.PrintShortError(err, "SymbolInfoSessionTrade failed")
 } else {
     fmt.Printf("  Monday trade session #0:\n")
     // From and To are *timestamppb.Timestamp holding a time of day (broker server time); their date is not meaningful.

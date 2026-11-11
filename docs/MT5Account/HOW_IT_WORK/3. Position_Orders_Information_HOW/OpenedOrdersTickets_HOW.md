@@ -16,7 +16,7 @@ fmt.Println("\n5.3. OpenedOrdersTickets() - Get ticket numbers only")
 ticketsReq := &pb.OpenedOrdersTicketsRequest{}
 ticketsData, err := account.OpenedOrdersTickets(ctx, ticketsReq)
 if err != nil {
-    helpers.PrintShortError(err, "OpenedOrdersTickets failed")
+    mt5.PrintShortError(err, "OpenedOrdersTickets failed")
 } else {
     // Direct field access: OpenedOrdersTickets and OpenedPositionTickets
     totalTickets := len(ticketsData.OpenedOrdersTickets) + len(ticketsData.OpenedPositionTickets)

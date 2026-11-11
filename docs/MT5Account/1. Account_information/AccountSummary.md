@@ -4,7 +4,7 @@
 
 **API Information:**
 
-* **Low-level API:** `MT5Account.AccountSummary(...)` (from Go package `github.com/MetaRPC/GoMT5/package/Helpers`)
+* **Low-level API:** `MT5Account.AccountSummary(...)` (from Go package `github.com/MetaRPC/GoMT5/mt5`)
 * **gRPC service:** `mt5_term_api.AccountHelper`
 * **Proto definition:** `AccountSummary` (defined in `mt5-term-api-account-helper.proto`)
 
@@ -17,7 +17,7 @@
 
 ## 💬 Just the essentials
 
-* **What it is.** Single RPC returning account state: balance, equity, currency, leverage, trade mode, server time.
+* **What it is.** Single RPC returning full account state: balance, equity, credit, currency, leverage, trade mode, margin / free margin / margin level / margin mode, and server time.
 * **Why you need it.** Fast dashboard/CLI status; double‑check login/currency/leverage; heartbeat via `ServerTime`.
 * **Sanity check.** If you see `AccountLogin`, `AccountCurrency`, `AccountLeverage`, `AccountEquity` → connection is alive.
 
@@ -114,6 +114,14 @@ defer cancel()
 | `UtcTimezoneServerTimeShiftMinutes`  | `int64`               | `int64`                    | Server offset relative to UTC (minutes).         |
 | `AccountCredit`                      | `double`              | `float64`                  | Credit amount.                                   |
 | `ServerUtcOffsetSeconds`             | `int32`               | `int32`                    | Broker server's offset from UTC in seconds (positive = ahead of UTC); `0` while the account is not connected yet. |
+| `AccountMargin`                      | `double`              | `float64`                  | Margin currently used by open positions.         |
+| `AccountMarginFree`                  | `double`              | `float64`                  | Free margin available for new positions.         |
+| `AccountMarginLevel`                 | `double`              | `float64`                  | Margin level in percent (`equity / margin × 100`); `0` when no margin is used. |
+| `AccountMarginMode`                  | `MrpcEnumAccountMarginMode` (enum) | `pb.MrpcEnumAccountMarginMode` | Margin calculation mode (MT5 demo = `RETAIL_HEDGING`). See enum below. |
+| `AccountTradeAllowed`                | `bool`                | `bool`                     | Trading allowed for this account.                |
+| `AccountTradeExpert`                 | `bool`                | `bool`                     | Automated (Expert Advisor) trading allowed.      |
+| `TerminalConnected`                  | `bool`                | `bool`                     | Terminal is connected to the broker.             |
+| `TerminalTradeAllowed`               | `bool`                | `bool`                     | Trading is allowed in the terminal.              |
 
 ---
 
@@ -165,6 +173,26 @@ func AccountTradeModeToString(mode pb.MrpcEnumAccountTradeMode) string {
 }
 ```
 
+### `MrpcEnumAccountMarginMode`
+
+Defined in `mt5-term-api-account-helper.proto`:
+
+```protobuf
+enum MrpcEnumAccountMarginMode {
+  MRPC_ACCOUNT_MARGIN_MODE_RETAIL_NETTING = 0;  // netting (one position per symbol)
+  MRPC_ACCOUNT_MARGIN_MODE_EXCHANGE       = 1;  // exchange margin
+  MRPC_ACCOUNT_MARGIN_MODE_RETAIL_HEDGING = 2;  // hedging (multiple positions per symbol) — typical MT5
+}
+```
+
+```go
+const (
+    MrpcEnumAccountMarginMode_MRPC_ACCOUNT_MARGIN_MODE_RETAIL_NETTING MrpcEnumAccountMarginMode = 0
+    MrpcEnumAccountMarginMode_MRPC_ACCOUNT_MARGIN_MODE_EXCHANGE       MrpcEnumAccountMarginMode = 1
+    MrpcEnumAccountMarginMode_MRPC_ACCOUNT_MARGIN_MODE_RETAIL_HEDGING MrpcEnumAccountMarginMode = 2
+)
+```
+
 ---
 
 
@@ -190,7 +218,7 @@ import (
     "time"
 
     pb "github.com/MetaRPC/GoMT5/package"
-    "github.com/MetaRPC/GoMT5/package/Helpers"
+    "github.com/MetaRPC/GoMT5/mt5"
     "github.com/google/uuid"
 )
 

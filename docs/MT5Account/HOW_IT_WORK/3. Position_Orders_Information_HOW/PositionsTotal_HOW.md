@@ -15,7 +15,7 @@
 ```go
 positionsTotalData, err := account.PositionsTotal(ctx)
 if err != nil {
-    helpers.PrintShortError(err, "PositionsTotal failed")
+    mt5.PrintShortError(err, "PositionsTotal failed")
 } else {
     // Direct field access: TotalPositions
     fmt.Printf("  Total open positions:          %d\n", positionsTotalData.TotalPositions)
@@ -39,7 +39,7 @@ In response, the method returns a `*pb.PositionsTotalData` object containing the
 
 ```go
 if err != nil {
-    helpers.PrintShortError(err, "PositionsTotal failed")
+    mt5.PrintShortError(err, "PositionsTotal failed")
 }
 ```
 

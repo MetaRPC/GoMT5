@@ -47,7 +47,7 @@
 
 ## 🔌 Usage pattern (gRPC protocol)
 
-Every method is called on an `MT5Account` (package `github.com/MetaRPC/GoMT5/package/Helpers`, imported as `mt5`), which wraps the gRPC connection, sends the terminal id and API key as metadata and unwraps the reply:
+Every method is called on an `MT5Account` (package `github.com/MetaRPC/GoMT5/mt5`, imported as `mt5`), which wraps the gRPC connection, sends the terminal id and API key as metadata and unwraps the reply:
 
 ```go
 // Create the account (opens the gRPC connection)
@@ -289,7 +289,7 @@ Every method follows the same shape:
 - Complete access to all MT5 functions
 - Highest complexity
 
-**Location:** `package/Helpers/MT5Account.go` (on top of the gRPC clients generated from the proto files in `package/`)
+**Location:** `mt5/MT5Account.go` (on top of the gRPC clients generated from the proto files in `package/`)
 
 **Documentation:** This folder (you are here!)
 
@@ -310,7 +310,7 @@ Every method follows the same shape:
 - No proto objects in return values
 - No auto-normalization
 
-**Location:** `examples/mt5/MT5Service.go`
+**Location:** `mt5/MT5Service.go`
 
 **Documentation:** [MT5Service.Overview.md](../MT5Service/MT5Service.Overview.md) *(if exists)*
 
@@ -332,7 +332,7 @@ Every method follows the same shape:
 - Batch operations
 - Smart helpers
 
-**Location:** `examples/mt5/MT5Sugar.go`
+**Location:** `mt5/MT5Sugar.go`
 
 **Documentation:** [MT5Sugar.API_Overview.md](../MT5Sugar/MT5Sugar.API_Overview.md)
 
@@ -377,7 +377,7 @@ Every method follows the same shape:
 
 ### Step 3: Use Convenience Layer (MT5Sugar)
 
-**Why last:** With foundation + wrappers understood, appreciate how MT5Sugar adds auto-normalization and smart helpers.
+**Why last:** With foundation + wrappers understood, appreciate how MT5Sugar adds auto-normalization and smart mt5.
 
 ```
 1. Study: MT5Sugar convenience methods (~60 methods)

@@ -29,7 +29,7 @@ marginReq := &pb.OrderCalcMarginRequest{
 }
 
 marginData, err := account.OrderCalcMargin(ctx, marginReq)
-if !helpers.PrintShortError(err, "OrderCalcMargin failed") {
+if !mt5.PrintShortError(err, "OrderCalcMargin failed") {
     fmt.Printf("  Symbol:                        %s\n", cfg.TestSymbol)
     fmt.Printf("  Action:                        BUY\n")
     fmt.Printf("  Volume:                        %.2f lots\n", cfg.TestVolume)

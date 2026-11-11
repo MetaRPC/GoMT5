@@ -23,7 +23,7 @@ balanceReq := &pb.AccountInfoDoubleRequest{
 }
 balanceData, err := account.AccountInfoDouble(ctx, balanceReq)
 if err != nil {
-    helpers.PrintShortError(err, "AccountInfoDouble(BALANCE) failed")
+    mt5.PrintShortError(err, "AccountInfoDouble(BALANCE) failed")
 } else {
     fmt.Printf("  Balance:                       %.2f\n", balanceData.GetRequestedValue())
 }
@@ -77,7 +77,7 @@ Executes a gRPC call to the MetaTrader server through the gateway.
 
 ```go
 if err != nil {
-    helpers.PrintShortError(err, "AccountInfoDouble(BALANCE) failed")
+    mt5.PrintShortError(err, "AccountInfoDouble(BALANCE) failed")
 } else {
     fmt.Printf("  Balance:                       %.2f\n", balanceData.GetRequestedValue())
 }

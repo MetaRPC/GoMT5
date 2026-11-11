@@ -70,8 +70,8 @@ go run main.go custom
 
 ✓ **Connection** - MT5 terminal connected via gRPC (`sugar.QuickConnect(cfg.MtCluster)`; the server waits up to 120 s for the terminal)
 
-✓ **Disconnect** - `defer helpers.DisconnectOnExit(sugar)()` (registered before connecting) stops the terminal when
-`RunUserCode` returns, and also after `helpers.Fatal`, a panic or Ctrl+C - you do not need to call `sugar.Disconnect()`
+✓ **Disconnect** - `defer mt5.DisconnectOnExit(sugar)()` (registered before connecting) stops the terminal when
+`RunUserCode` returns, and also after `mt5.Fatal`, a panic or Ctrl+C - you do not need to call `sugar.Disconnect()`
 
 ✓ **Configuration** - Loaded from `config/config.json` or environment variables (`config.LoadConfig()`; API key from `api_key`, `MRPC_API_KEY` or `--api-key`)
 
@@ -83,7 +83,7 @@ go run main.go custom
 
 ✓ **Context** - `context.Background()` (variable: `ctx`) - no timeout; wrap it with `context.WithTimeout` where you need one
 
-✓ **Imports** - `context`, `fmt`, `strings`, `config`, `helpers` (demo helpers), `mt5` (`examples/mt5`) and `pb` - add more as you need them
+✓ **Imports** - `context`, `fmt`, `strings`, `config`, `helpers` (demo helpers), `mt5` (`mt5`) and `pb` - add more as you need them
 
 ## Can I mix API levels?
 
@@ -285,7 +285,7 @@ GoMT5 has two types of errors you must check:
 ```go
 result, err := service.PlaceOrder(ctx, req)
 if err != nil {
-    // A network/gRPC error, or an *ApiError from package/Helpers when the terminal refused the
+    // A network/gRPC error, or an *ApiError from mt5 when the terminal refused the
     // request - its MqlErrorTradeIntCode() carries the RetCode (e.g. 10014 invalid volume)
     fmt.Printf("Error: %v\n", err)
     return
@@ -295,7 +295,7 @@ if err != nil {
 ### 2. Trading operation errors (RetCode)
 
 ```go
-if !helpers.CheckRetCode(result.ReturnedCode, "Order placement") { // prints the code, its description and a hint
+if !mt5.CheckRetCode(result.ReturnedCode, "Order placement") { // prints the code, its description and a hint
     fmt.Printf("Trade rejected: %s\n", result.Comment)
 }
 ```

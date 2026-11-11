@@ -236,7 +236,7 @@ The value names are the full Go constant names - in code write `pb.BMT5_ENUM_ORD
 ║              ALL PROTOBUF TYPES                            ║
 ╚════════════════════════════════════════════════════════════╝
 
-📦 Found 267 types:
+📦 Found 255 types:
 
   [Type]    AccountInfoDoubleData
   [Reply]   AccountInfoDoubleReply
@@ -341,7 +341,7 @@ BMT5_ENUM_ORDER_TYPE_BMT5_ORDER_TYPE_BUY_LIMIT     = 2
 
 ## 📊 Statistics
 
-- **Total Types:** 267 (all MT5 gRPC protobuf message types)
+- **Total Types:** 255 (all MT5 gRPC protobuf message types)
 - **Total Enums:** 67 (with 943 enum values)
 - **Coverage:** 100% of MT5 gRPC API
 
@@ -472,7 +472,7 @@ The Protobuf Inspector uses Go reflection to:
 
 **Source file:** `examples/demos/helpers/17_protobuf_inspector.go`
 
-**Registration:** the 267 types are registered from a fixed list of sample values, and all 943 enum values of the 67 enums
+**Registration:** the 255 types are registered from a fixed list of sample values, and all 943 enum values of the 67 enums
 are written out in the code. A type or enum added to the API later appears only after it is added to that file.
 
 ---
@@ -480,7 +480,7 @@ are written out in the code. A type or enum added to the API later appears only 
 ## 🔧 Technical Notes
 
 - **No MT5 connection required** - This is a purely offline tool that inspects type definitions
-- **Complete coverage** - All 267 types and 67 enums from the MT5 gRPC API
+- **Complete coverage** - All 255 types and 67 enums from the MT5 gRPC API
 - **Instant search** - In-memory index for fast lookup
 - **Development only** - Not intended for production use
 

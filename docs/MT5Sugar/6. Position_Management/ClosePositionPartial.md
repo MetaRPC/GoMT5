@@ -28,7 +28,7 @@ func (s *MT5Sugar) ClosePositionPartial(ticket uint64, volume float64) error
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `error` | `error` | `nil` when the server returns code 10009 (done); `"ClosePositionPartial failed: ..."` if the call fails; `"partial close rejected, code: N (meaning)"` for any other return code (the meaning comes from `helpers.GetRetCodeMessage`) |
+| `error` | `error` | `nil` when the server returns code 10009 (done); `"ClosePositionPartial failed: ..."` if the call fails; `"partial close rejected, code: N (meaning)"` for any other return code (the meaning comes from `mt5.GetRetCodeMessage`) |
 
 ---
 

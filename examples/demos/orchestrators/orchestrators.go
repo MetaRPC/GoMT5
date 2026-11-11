@@ -200,7 +200,7 @@ import (
 	"syscall"
 	"time"
 
-	mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
+	mt5 "github.com/MetaRPC/GoMT5/mt5"
 )
 
 // ══════════════════════════════════════════════════════════════════════════════

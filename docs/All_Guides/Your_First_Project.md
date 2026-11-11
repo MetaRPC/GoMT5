@@ -47,7 +47,7 @@ import (
 	"time"
 
 	pb "github.com/MetaRPC/GoMT5/package"
-	mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+	mt5 "github.com/MetaRPC/GoMT5/mt5"
 	"github.com/google/uuid"
 )
 
@@ -85,7 +85,7 @@ func main() {
 }
 ```
 
-The program uses the SDK's `MT5Account` helper (`github.com/MetaRPC/GoMT5/package/Helpers`), which connects, keeps the terminal id and sends it
+The program uses the SDK's `MT5Account` helper (`github.com/MetaRPC/GoMT5/mt5`), which connects, keeps the terminal id and sends it
 with your API key on every call.
 
 ---

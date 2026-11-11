@@ -20,7 +20,7 @@ positionsHistoryReq := &pb.PositionsHistoryRequest{
 }
 positionsHistoryData, err := account.PositionsHistory(ctx, positionsHistoryReq)
 if err != nil {
-    helpers.PrintShortError(err, "PositionsHistory failed")
+    mt5.PrintShortError(err, "PositionsHistory failed")
 } else {
     fmt.Printf("  Historical positions (last 30d): %d\n", len(positionsHistoryData.HistoryPositions))
 

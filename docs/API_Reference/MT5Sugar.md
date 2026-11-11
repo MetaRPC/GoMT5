@@ -1,6 +1,6 @@
 # MT5Sugar API Reference
 
-> **Note:** Complete API reference for examples/mt5/MT5Sugar.go with enhanced navigation. Single-page format for easy browsing.
+> **Note:** Complete API reference for mt5/MT5Sugar.go with enhanced navigation. Single-page format for easy browsing.
 
 MT5Sugar is the high-level API wrapper providing ultra-simple one-liner methods for all common MT5 operations. It automatically handles contexts, timeouts, and provides smart defaults for all parameters.
 
@@ -174,12 +174,12 @@ Returns the underlying MT5Account instance for low-level operations. Use this wh
 
 **Signature**
 ```go
-func (s *MT5Sugar) GetAccount() *helpers.MT5Account
+func (s *MT5Sugar) GetAccount() *mt5.MT5Account
 ```
 
 **Returns**
 
-Returns `*helpers.MT5Account` (package `github.com/MetaRPC/GoMT5/package/Helpers`) instance used by the underlying Service layer.
+Returns `*mt5.MT5Account` (package `github.com/MetaRPC/GoMT5/mt5`) instance used by the underlying Service layer.
 
 ---
 

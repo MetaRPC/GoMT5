@@ -16,7 +16,7 @@ descReq := &pb.SymbolInfoStringRequest{
 }
 descData, err := account.SymbolInfoString(ctx, descReq)
 if err != nil {
-    helpers.PrintShortError(err, "SymbolInfoString(DESCRIPTION) failed")
+    mt5.PrintShortError(err, "SymbolInfoString(DESCRIPTION) failed")
 } else {
     fmt.Printf("  Description:                   %s\n", descData.Value)
 }
@@ -42,7 +42,7 @@ baseReq := &pb.SymbolInfoStringRequest{
 }
 baseData, err := account.SymbolInfoString(ctx, baseReq)
 if err != nil {
-    helpers.PrintShortError(err, "SymbolInfoString(CURRENCY_BASE) failed")
+    mt5.PrintShortError(err, "SymbolInfoString(CURRENCY_BASE) failed")
 } else {
     fmt.Printf("  Base currency:                 %s\n", baseData.Value)
 }
@@ -67,7 +67,7 @@ profitCurrReq := &pb.SymbolInfoStringRequest{
 }
 profitCurrData, err := account.SymbolInfoString(ctx, profitCurrReq)
 if err != nil {
-    helpers.PrintShortError(err, "SymbolInfoString(CURRENCY_PROFIT) failed")
+    mt5.PrintShortError(err, "SymbolInfoString(CURRENCY_PROFIT) failed")
 } else {
     fmt.Printf("  Profit currency:               %s\n", profitCurrData.Value)
 }

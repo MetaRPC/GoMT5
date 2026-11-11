@@ -60,7 +60,7 @@ import (
 	pb "github.com/MetaRPC/GoMT5/package"
 	"github.com/MetaRPC/GoMT5/examples/demos/config"
 	"github.com/MetaRPC/GoMT5/examples/demos/helpers"
-	mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
+	mt5 "github.com/MetaRPC/GoMT5/mt5"
 )
 
 // RunSugarPositionsDemo demonstrates MT5Sugar position management:

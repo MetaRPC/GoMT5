@@ -99,7 +99,7 @@ import (
 	"github.com/MetaRPC/GoMT5/examples/demos/service"
 	"github.com/MetaRPC/GoMT5/examples/demos/sugar"
 	"github.com/MetaRPC/GoMT5/examples/demos/usercode"
-	mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
+	mt5 "github.com/MetaRPC/GoMT5/mt5"
 )
 
 func main() {

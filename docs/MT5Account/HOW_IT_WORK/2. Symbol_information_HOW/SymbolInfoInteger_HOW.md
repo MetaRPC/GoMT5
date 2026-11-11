@@ -17,7 +17,7 @@ digitsReq := &pb.SymbolInfoIntegerRequest{
 }
 digitsData, err := account.SymbolInfoInteger(ctx, digitsReq)
 if err != nil {
-    helpers.PrintShortError(err, "SymbolInfoInteger(DIGITS) failed")
+    mt5.PrintShortError(err, "SymbolInfoInteger(DIGITS) failed")
 } else {
     fmt.Printf("  Digits (SYMBOL_DIGITS):        %d\n", digitsData.Value)
 }
@@ -53,7 +53,7 @@ Calls the `SymbolInfoInteger()` method via gRPC.
 
 ```go
 if err != nil {
-    helpers.PrintShortError(err, "SymbolInfoInteger(DIGITS) failed")
+    mt5.PrintShortError(err, "SymbolInfoInteger(DIGITS) failed")
 } else {
     fmt.Printf("  Digits (SYMBOL_DIGITS):        %d\n", digitsData.Value)
 }
@@ -76,7 +76,7 @@ spreadReq := &pb.SymbolInfoIntegerRequest{
 }
 spreadData, err := account.SymbolInfoInteger(ctx, spreadReq)
 if err != nil {
-    helpers.PrintShortError(err, "SymbolInfoInteger(SPREAD) failed")
+    mt5.PrintShortError(err, "SymbolInfoInteger(SPREAD) failed")
 } else {
     fmt.Printf("  Spread (SYMBOL_SPREAD):        %d points\n", spreadData.Value)
 }
@@ -97,7 +97,7 @@ stopsLevelReq := &pb.SymbolInfoIntegerRequest{
 }
 stopsLevelData, err := account.SymbolInfoInteger(ctx, stopsLevelReq)
 if err != nil {
-    helpers.PrintShortError(err, "SymbolInfoInteger(STOPS_LEVEL) failed")
+    mt5.PrintShortError(err, "SymbolInfoInteger(STOPS_LEVEL) failed")
 } else {
     fmt.Printf("  Stops level (STOPS_LEVEL):     %d points\n", stopsLevelData.Value)
 }

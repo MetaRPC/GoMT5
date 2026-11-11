@@ -22,7 +22,7 @@ paramsManyReq := &pb.SymbolParamsManyRequest{
 }
 paramsManyData, err := account.SymbolParamsMany(ctx, paramsManyReq)
 if err != nil {
-    helpers.PrintShortError(err, "SymbolParamsMany failed")
+    mt5.PrintShortError(err, "SymbolParamsMany failed")
 } else {
     fmt.Printf("  Retrieved parameters for %d symbols:\n", len(paramsManyData.SymbolInfos))
     // Show only first 3 symbols
