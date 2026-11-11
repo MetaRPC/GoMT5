@@ -17,7 +17,7 @@ quoteSessionReq := &pb.SymbolInfoSessionQuoteRequest{
 }
 quoteSessionData, err := account.SymbolInfoSessionQuote(ctx, quoteSessionReq)
 if err != nil {
-    helpers.PrintShortError(err, "SymbolInfoSessionQuote failed")
+    mt5.PrintShortError(err, "SymbolInfoSessionQuote failed")
 } else {
     fmt.Printf("  Monday quote session #0:\n")
     // From and To are *timestamppb.Timestamp holding a time of day (broker server time); their date is not meaningful.

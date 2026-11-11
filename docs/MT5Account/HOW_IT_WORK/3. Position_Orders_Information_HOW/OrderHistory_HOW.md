@@ -25,7 +25,7 @@ orderHistoryReq := &pb.OrderHistoryRequest{
 }
 orderHistoryData, err := account.OrderHistory(ctx, orderHistoryReq)
 if err != nil {
-    helpers.PrintShortError(err, "OrderHistory failed")
+    mt5.PrintShortError(err, "OrderHistory failed")
 } else {
     fmt.Printf("  Historical orders (last 30d):  %d\n", len(orderHistoryData.HistoryData))
 

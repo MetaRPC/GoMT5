@@ -110,8 +110,7 @@ import (
 	pb "github.com/MetaRPC/GoMT5/package"
 	"github.com/MetaRPC/GoMT5/examples/demos/config"
 	"github.com/MetaRPC/GoMT5/examples/demos/helpers"
-	helpers_mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
-	mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
+	mt5 "github.com/MetaRPC/GoMT5/mt5"
 	"github.com/google/uuid"
 )
 
@@ -143,7 +142,7 @@ func RunService04() error {
 	fmt.Println("───────────────────────────────────────────────────────────")
 
 	// Create low-level MT5Account first
-	account, err := helpers_mt5.NewMT5Account(cfg.User, cfg.Password, cfg.GrpcServer, uuid.New())
+	account, err := mt5.NewMT5Account(cfg.User, cfg.Password, cfg.GrpcServer, uuid.New())
 	if err != nil {
 		return fmt.Errorf("failed to create MT5Account: %w", err)
 	}

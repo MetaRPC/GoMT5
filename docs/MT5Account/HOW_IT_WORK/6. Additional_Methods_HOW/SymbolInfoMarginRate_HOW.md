@@ -19,7 +19,7 @@ marginRateReq := &pb.SymbolInfoMarginRateRequest{
 }
 marginRateData, err := account.SymbolInfoMarginRate(ctx, marginRateReq)
 if err != nil {
-    helpers.PrintShortError(err, "SymbolInfoMarginRate failed")
+    mt5.PrintShortError(err, "SymbolInfoMarginRate failed")
 } else {
     fmt.Printf("  Initial margin rate (BUY):     %.2f\n", marginRateData.InitialMarginRate)
     fmt.Printf("  Maintenance margin rate (BUY): %.2f\n", marginRateData.MaintenanceMarginRate)
@@ -54,7 +54,7 @@ The result is stored in `marginRateData`.
 
 ```go
 if err != nil {
-    helpers.PrintShortError(err, "SymbolInfoMarginRate failed")
+    mt5.PrintShortError(err, "SymbolInfoMarginRate failed")
 } else {
     fmt.Printf("  Initial margin rate (BUY):     %.2f\n", marginRateData.InitialMarginRate)
     fmt.Printf("  Maintenance margin rate (BUY): %.2f\n", marginRateData.MaintenanceMarginRate)

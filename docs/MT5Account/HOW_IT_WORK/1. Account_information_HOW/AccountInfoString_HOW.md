@@ -21,7 +21,7 @@ companyReq := &pb.AccountInfoStringRequest{
 }
 companyData, err := account.AccountInfoString(ctx, companyReq)
 if err != nil {
-    helpers.PrintShortError(err, "AccountInfoString(COMPANY) failed")
+    mt5.PrintShortError(err, "AccountInfoString(COMPANY) failed")
 } else {
     fmt.Printf("  Company:                  %s\n", companyData.GetRequestedValue())
 }
@@ -64,7 +64,7 @@ Executes a gRPC call to the MetaTrader server through the gateway.
 
 ```go
 if err != nil {
-    helpers.PrintShortError(err, "AccountInfoString(COMPANY) failed")
+    mt5.PrintShortError(err, "AccountInfoString(COMPANY) failed")
 } else {
     fmt.Printf("  Company:                  %s\n", companyData.GetRequestedValue())
 }

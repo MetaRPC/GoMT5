@@ -48,7 +48,7 @@ func (s *MT5Sugar) WaitForPrice(symbol string, timeout time.Duration) (*PriceInf
         tick, err := s.service.GetSymbolTick(ctx, symbol)
         if err != nil {
             // An error from the server (unknown symbol, ...) does not go away by waiting: return it.
-            var apiErr *helpers.ApiError
+            var apiErr *mt5.ApiError
             if errors.As(err, &apiErr) {
                 return nil, err
             }

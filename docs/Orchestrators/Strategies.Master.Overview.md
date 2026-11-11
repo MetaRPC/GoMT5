@@ -7,7 +7,7 @@ Think of them as *trading robots* that handle complex scenarios like trailing st
 
 🧠 **Presets** are intelligent systems that combine multiple orchestrators and automatically switch between them based on market conditions.
 
-All of them are example code in the repository's `examples` module (get it by cloning the repository): orchestrators in `examples/demos/orchestrators` (import `"github.com/MetaRPC/GoMT5/examples/demos/orchestrators"`), the preset in `examples/demos/presets` (import `"github.com/MetaRPC/GoMT5/examples/demos/presets"`), built on `mt5 "github.com/MetaRPC/GoMT5/examples/mt5"` (MT5Sugar).
+All of them are example code in the repository's `examples` module (get it by cloning the repository): orchestrators in `examples/demos/orchestrators` (import `"github.com/MetaRPC/GoMT5/examples/demos/orchestrators"`), the preset in `examples/demos/presets` (import `"github.com/MetaRPC/GoMT5/examples/demos/presets"`), built on `mt5 "github.com/MetaRPC/GoMT5/mt5"` (MT5Sugar).
 
 
 ---

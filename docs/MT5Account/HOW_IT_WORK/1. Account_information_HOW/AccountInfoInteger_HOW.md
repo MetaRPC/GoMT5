@@ -19,7 +19,7 @@ leverageReq := &pb.AccountInfoIntegerRequest{
 }
 leverageData, err := account.AccountInfoInteger(ctx, leverageReq)
 if err != nil {
-    helpers.PrintShortError(err, "AccountInfoInteger(LEVERAGE) failed")
+    mt5.PrintShortError(err, "AccountInfoInteger(LEVERAGE) failed")
 } else {
     fmt.Printf("  Leverage:                 1:%d\n", leverageData.GetRequestedValue())
 }
@@ -62,7 +62,7 @@ Executes a gRPC call to the MetaTrader server.
 
 ```go
 if err != nil {
-    helpers.PrintShortError(err, "AccountInfoInteger(LEVERAGE) failed")
+    mt5.PrintShortError(err, "AccountInfoInteger(LEVERAGE) failed")
 } else {
     fmt.Printf("  Leverage:                 1:%d\n", leverageData.GetRequestedValue())
 }

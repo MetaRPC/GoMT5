@@ -5,7 +5,7 @@
 **API Information:**
 
 * **Method:** `sugar.QuickConnect(clusterName)`
-* **Package:** `mt5` (MT5Sugar), import `mt5 "github.com/MetaRPC/GoMT5/examples/mt5"` - it lives in the repository's
+* **Package:** `mt5` (MT5Sugar), import `mt5 "github.com/MetaRPC/GoMT5/mt5"` - it lives in the repository's
   *examples* module (`github.com/MetaRPC/GoMT5/examples`), so you get it by cloning the repository, not by `go get` of the SDK package
 * **Underlying calls:** `account.ConnectEx()` with `pb.ConnectExRequest{User, Password, MtClusterName, TimeoutSeconds}`
 * **Timeout:** the server waits up to 120 seconds (`TimeoutSeconds`) for the terminal to start and log in; the call itself has a 130-second deadline
@@ -114,8 +114,8 @@ gRPC connection, and returns the disconnect error (`"Disconnect failed: ..."`).
 
 **WITHOUT sugar:**
 ```go
-// helpers "github.com/MetaRPC/GoMT5/package/Helpers", pb "github.com/MetaRPC/GoMT5/package", "github.com/google/uuid"
-account, _ := helpers.NewMT5Account(12345678, "your_password", "mt5.mrpc.pro:443", uuid.New())
+// "github.com/MetaRPC/GoMT5/mt5", pb "github.com/MetaRPC/GoMT5/package", "github.com/google/uuid"
+account, _ := mt5.NewMT5Account(12345678, "your_password", "mt5.mrpc.pro:443", uuid.New())
 
 timeoutSeconds := uint32(120)
 ctx, cancel := context.WithTimeout(context.Background(), 130*time.Second)
@@ -154,7 +154,7 @@ package main
 import (
     "fmt"
 
-    mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
+    mt5 "github.com/MetaRPC/GoMT5/mt5"
 )
 
 func main() {

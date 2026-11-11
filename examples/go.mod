@@ -9,6 +9,7 @@ require (
 )
 
 require (
+	github.com/MetaRPC/GoMT5/mt5 v0.0.0-00010101000000-000000000000
 	golang.org/x/net v0.40.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
@@ -18,3 +19,5 @@ require (
 )
 
 replace github.com/MetaRPC/GoMT5/package => ../package
+
+replace github.com/MetaRPC/GoMT5/mt5 => ../mt5

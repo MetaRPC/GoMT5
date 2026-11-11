@@ -19,7 +19,7 @@ These codes are:
 - **Unified across all languages** (C#, Python, Java, Node.js, Go, PHP)
 - **Unified with MT5 terminal** - returned directly from the trading server
 - **Defined in protobuf** - enum `MqlErrorTradeCode` in the API proto contract
-- **Available as Go constants** - defined in `package/Helpers/errors.go`
+- **Available as Go constants** - defined in `mt5/errors.go`
 
 ---
 
@@ -41,7 +41,7 @@ import (
     "errors"
     "fmt"
 
-    mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+    mt5 "github.com/MetaRPC/GoMT5/mt5"
 )
 
 // Using Sugar API
@@ -81,7 +81,7 @@ import (
     "context"
     "fmt"
 
-    mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+    mt5 "github.com/MetaRPC/GoMT5/mt5"
     pb "github.com/MetaRPC/GoMT5/package"
 )
 
@@ -113,7 +113,7 @@ import (
     "errors"
     "fmt"
 
-    mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+    mt5 "github.com/MetaRPC/GoMT5/mt5"
     pb "github.com/MetaRPC/GoMT5/package"
 )
 
@@ -264,7 +264,7 @@ if mt5.IsRetCodeRetryable(retCode) {
 
 ## Go Helper Functions
 
-The `package/Helpers` (mt5 package) provides helper functions for working with RetCodes:
+The `mt5` (mt5 package) provides helper functions for working with RetCodes:
 
 ### IsRetCodeSuccess()
 
@@ -336,7 +336,7 @@ import (
     "fmt"
     "time"
 
-    mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+    mt5 "github.com/MetaRPC/GoMT5/mt5"
     pb "github.com/MetaRPC/GoMT5/package"
     "github.com/google/uuid"
 )
@@ -405,7 +405,7 @@ import (
     "fmt"
     "time"
 
-    mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+    mt5 "github.com/MetaRPC/GoMT5/mt5"
 )
 
 ticket, err := sugar.BuyMarket("GBPUSD", 0.5)
@@ -459,12 +459,12 @@ import (
     "fmt"
     "time"
 
-    sdk "github.com/MetaRPC/GoMT5/examples/mt5"   // MT5Sugar
-    mt5 "github.com/MetaRPC/GoMT5/package/Helpers" // ApiError, RetCode helpers
+    "github.com/MetaRPC/GoMT5/mt5"   // MT5Sugar
+    mt5 "github.com/MetaRPC/GoMT5/mt5" // ApiError, RetCode helpers
 )
 
 func PlaceOrderWithRetry(
-    sugar *sdk.MT5Sugar,
+    sugar *mt5.MT5Sugar,
     symbol string,
     volume float64,
     maxRetries int,
@@ -520,16 +520,16 @@ if err != nil {
 }
 ```
 
-### Example 4: Using helpers.CheckRetCode()
+### Example 4: Using mt5.CheckRetCode()
 
 ```go
 import "github.com/MetaRPC/GoMT5/examples/demos/helpers"
 
 sendData, err := account.OrderSend(ctx, req)
-helpers.Fatal(err, "OrderSend failed")
+mt5.Fatal(err, "OrderSend failed")
 
 // CheckRetCode prints formatted message and returns true on success
-if helpers.CheckRetCode(sendData.ReturnedCode, "Order placement") {
+if mt5.CheckRetCode(sendData.ReturnedCode, "Order placement") {
     fmt.Printf("Order ticket: %d\n", sendData.Order)
 }
 
@@ -549,7 +549,7 @@ import (
     "context"
     "fmt"
 
-    mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+    mt5 "github.com/MetaRPC/GoMT5/mt5"
     pb "github.com/MetaRPC/GoMT5/package"
 )
 
@@ -684,7 +684,7 @@ default:
 
 ## Constants Reference
 
-All RetCode constants are defined in `package/Helpers/errors.go`:
+All RetCode constants are defined in `mt5/errors.go`:
 
 ```go
 package mt5

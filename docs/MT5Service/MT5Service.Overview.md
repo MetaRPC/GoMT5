@@ -121,13 +121,13 @@ fmt.Printf("Price at %s: %.5f\n", tick.Time.Format("15:04:05"), tick.Bid)
 ```go
 import (
     pb "github.com/MetaRPC/GoMT5/package"
-    helpers "github.com/MetaRPC/GoMT5/package/Helpers"
-    mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
+    "github.com/MetaRPC/GoMT5/mt5"
+    mt5 "github.com/MetaRPC/GoMT5/mt5"
     "github.com/google/uuid"
 )
 
 // 1. Create MT5Account (low-level) and connect it
-account, err := helpers.NewMT5Account(login, password, "mt5.mrpc.pro:443", uuid.New())
+account, err := mt5.NewMT5Account(login, password, "mt5.mrpc.pro:443", uuid.New())
 if err != nil {
     return err
 }
@@ -149,7 +149,7 @@ balance, _ := service.GetAccountDouble(ctx,
 fmt.Printf("Balance: %.2f\n", balance)
 ```
 
-> `MT5Service` (and `MT5Sugar`) live in `examples/mt5` of the repository's **examples** module
+> `MT5Service` (and `MT5Sugar`) live in `mt5` of the repository's **examples** module
 > (`github.com/MetaRPC/GoMT5/examples`). Get them by cloning the repository; `go get` of the
 > `github.com/MetaRPC/GoMT5/package` module gives you only `pb` and `MT5Account`.
 

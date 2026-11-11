@@ -549,7 +549,7 @@ if err := sugar.Ping(); err != nil {
 
 ## 🚀 Quick Start
 
-MT5Sugar lives in the repository's **examples** module (`github.com/MetaRPC/GoMT5/examples`, package `mt5` in `examples/mt5`). Get it by cloning the repository and building your program inside that module - it is not a separate `go get` package.
+MT5Sugar lives in the repository's **examples** module (`github.com/MetaRPC/GoMT5/examples`, package `mt5` in `mt5`). Get it by cloning the repository and building your program inside that module - it is not a separate `go get` package.
 
 ```go
 package main
@@ -558,7 +558,7 @@ import (
     "fmt"
     "log"
 
-    mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
+    mt5 "github.com/MetaRPC/GoMT5/mt5"
 )
 
 func main() {

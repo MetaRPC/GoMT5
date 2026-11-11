@@ -39,7 +39,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+	mt5 "github.com/MetaRPC/GoMT5/mt5"
 )
 
 // ══════════════════════════════════════════════════════════════════════════════

@@ -130,7 +130,7 @@ margin := marginData.Margin
 
 fmt.Printf("Required margin: $%.2f\n", margin)
 
-// Check if we have enough (AccountSummary has no free margin: use AccountInfoDouble)
+// Check free margin (single-value call; AccountSummary.AccountMarginFree carries the same value)
 freeData, _ := account.AccountInfoDouble(ctx, &pb.AccountInfoDoubleRequest{
     PropertyId: pb.AccountInfoDoublePropertyType_ACCOUNT_MARGIN_FREE,
 })

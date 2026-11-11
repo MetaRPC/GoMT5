@@ -151,7 +151,7 @@ if result.ReturnedCode == 0 {
    - `TRADE_RETCODE_INVALID_STOPS` - SL/TP levels violate broker rules
    - `TRADE_RETCODE_INVALID_PRICE` - Price out of valid range
 2. **Consistency**: Same error handling pattern used across all trading operations
-3. **Centralized**: All 40+ error codes defined in `package/Helpers/errors.go`
+3. **Centralized**: All 40+ error codes defined in `mt5/errors.go`
 
 If `ReturnedCode == 0` → the order passed validation and it's safe to proceed with `OrderSend()`.
 Any other value indicates a validation error that should be fixed before attempting to send the order.

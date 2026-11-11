@@ -4,7 +4,7 @@
 
 **API Information:**
 
-* **Low-level API:** `MT5Account.OrderModify(...)` (from Go package `github.com/MetaRPC/GoMT5/package/Helpers`)
+* **Low-level API:** `MT5Account.OrderModify(...)` (from Go package `github.com/MetaRPC/GoMT5/mt5`)
 * **gRPC service:** `mt5_term_api.TradingHelper`
 * **Proto definition:** `OrderModify` (defined in `mt5-term-api-trading-helper.proto`)
 
@@ -157,7 +157,7 @@ import (
     "time"
 
     pb "github.com/MetaRPC/GoMT5/package"
-    "github.com/MetaRPC/GoMT5/package/Helpers"
+    "github.com/MetaRPC/GoMT5/mt5"
 )
 
 func main() {

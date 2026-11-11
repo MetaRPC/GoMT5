@@ -16,7 +16,7 @@ bidReq := &pb.SymbolInfoDoubleRequest{
 }
 bidData, err := account.SymbolInfoDouble(ctx, bidReq)
 if err != nil {
-    helpers.PrintShortError(err, "SymbolInfoDouble(BID) failed")
+    mt5.PrintShortError(err, "SymbolInfoDouble(BID) failed")
 } else {
     fmt.Printf("  Bid price (SYMBOL_BID):        %.5f\n", bidData.Value)
 }
@@ -52,7 +52,7 @@ Calls the `SymbolInfoDouble()` method via gRPC.
 
 ```go
 if err != nil {
-    helpers.PrintShortError(err, "SymbolInfoDouble(BID) failed")
+    mt5.PrintShortError(err, "SymbolInfoDouble(BID) failed")
 } else {
     fmt.Printf("  Bid price (SYMBOL_BID): %.5f\n", bidData.Value)
 }
@@ -81,7 +81,7 @@ askReq := &pb.SymbolInfoDoubleRequest{
 }
 askData, err := account.SymbolInfoDouble(ctx, askReq)
 if err != nil {
-    helpers.PrintShortError(err, "SymbolInfoDouble(ASK) failed")
+    mt5.PrintShortError(err, "SymbolInfoDouble(ASK) failed")
 } else {
     fmt.Printf("  Ask price (SYMBOL_ASK):        %.5f\n", askData.Value)
 }
@@ -102,7 +102,7 @@ pointReq := &pb.SymbolInfoDoubleRequest{
 }
 pointData, err := account.SymbolInfoDouble(ctx, pointReq)
 if err != nil {
-    helpers.PrintShortError(err, "SymbolInfoDouble(POINT) failed")
+    mt5.PrintShortError(err, "SymbolInfoDouble(POINT) failed")
 } else {
     fmt.Printf("  Point size (SYMBOL_POINT):     %.5f\n", pointData.Value)
 }
@@ -123,7 +123,7 @@ volumeMinReq := &pb.SymbolInfoDoubleRequest{
 }
 volumeMinData, err := account.SymbolInfoDouble(ctx, volumeMinReq)
 if err != nil {
-    helpers.PrintShortError(err, "SymbolInfoDouble(VOLUME_MIN) failed")
+    mt5.PrintShortError(err, "SymbolInfoDouble(VOLUME_MIN) failed")
 } else {
     fmt.Printf("  Min volume (VOLUME_MIN):       %.2f\n", volumeMinData.Value)
 }

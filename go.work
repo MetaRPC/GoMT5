@@ -2,7 +2,7 @@ go 1.23.6
 
 use (
 	.
-	./package
 	./examples
-	./examples/mt5
+	./mt5
+	./package
 )

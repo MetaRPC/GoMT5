@@ -1,6 +1,6 @@
 # MT5Account API Reference
 
-> **Note:** Complete API reference for package/Helpers/MT5Account.go with enhanced navigation. Single-page format for easy browsing.
+> **Note:** Complete API reference for mt5/MT5Account.go with enhanced navigation. Single-page format for easy browsing.
 
 MT5Account represents a low-level gRPC client for MetaTrader 5 terminal. All methods accept protobuf Request objects and return protobuf Data objects. This is the foundation layer that directly communicates with the MT5 gRPC server.
 
@@ -102,12 +102,12 @@ Returns `*MT5Account` instance with established gRPC connection, or error if con
 ```go
 import (
     pb "github.com/MetaRPC/GoMT5/package"
-    helpers "github.com/MetaRPC/GoMT5/package/Helpers"
+    "github.com/MetaRPC/GoMT5/mt5"
     "github.com/google/uuid"
 )
 
-// Create account with a random UUID (the package name is mt5, imported here as helpers)
-account, err := helpers.NewMT5Account(12345678, "password", "", uuid.New())
+// Create account with a random UUID (package name is mt5)
+account, err := mt5.NewMT5Account(12345678, "password", "", uuid.New())
 if err != nil {
     log.Fatal(err)
 }
@@ -137,7 +137,7 @@ The terminal id. If the call fails or the server answers an error (for example `
 
 **Example**
 ```go
-account, err := helpers.NewMT5AccountWithApiKey(12345678, "password", "", "your-api-key")
+account, err := mt5.NewMT5AccountWithApiKey(12345678, "password", "", "your-api-key")
 if err != nil {
     log.Fatal(err)
 }

@@ -40,7 +40,7 @@ import (
     "time"
 
     pb "github.com/MetaRPC/GoMT5/package"
-    mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+    mt5 "github.com/MetaRPC/GoMT5/mt5"
     "github.com/google/uuid"
 )
 
@@ -165,7 +165,7 @@ All streaming methods return **two channels**: `<-chan *Data` and `<-chan error`
 
 ### MT5Service (Go-typed Streams)
 
-The same five streams, with the same two-channel contract, are available on `MT5Service` (`examples/mt5/MT5Service.go`):
+The same five streams, with the same two-channel contract, are available on `MT5Service` (`mt5/MT5Service.go`):
 
 | Method | Returns |
 |--------|---------|
@@ -1104,7 +1104,7 @@ User code → context.Context → gRPC call → Network
 The `ExecuteStreamWithReconnect` method ensures proper cleanup:
 
 ```go
-// In package/Helpers/MT5Account.go (simplified)
+// In mt5/MT5Account.go (simplified)
 func ExecuteStreamWithReconnect[TRequest any, TReply any, TData any](
     ctx context.Context,
     a *MT5Account,

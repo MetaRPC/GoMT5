@@ -20,7 +20,7 @@ profitReq := &pb.OrderCalcProfitRequest{
     ClosePrice: tickData.Bid, // exit price - immediate close at Bid
 }
 profitData, err := account.OrderCalcProfit(ctx, profitReq)
-if !helpers.PrintShortError(err, "OrderCalcProfit failed") {
+if !mt5.PrintShortError(err, "OrderCalcProfit failed") {
     fmt.Printf("  Symbol:                        %s\n", cfg.TestSymbol)
     fmt.Printf("  Action:                        BUY\n")
     fmt.Printf("  Volume:                        %.2f lots\n", cfg.TestVolume)
@@ -60,7 +60,7 @@ profitTargetReq := &pb.OrderCalcProfitRequest{
     ClosePrice: targetPrice,
 }
 profitTargetData, err := account.OrderCalcProfit(ctx, profitTargetReq)
-if !helpers.PrintShortError(err, "OrderCalcProfit (target) failed") {
+if !mt5.PrintShortError(err, "OrderCalcProfit (target) failed") {
     fmt.Printf("\n  If price moves +10 pips to %.5f:\n", targetPrice)
     fmt.Printf("  Potential Profit:              %.2f\n", profitTargetData.Profit)
 }

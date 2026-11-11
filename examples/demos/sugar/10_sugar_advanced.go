@@ -66,7 +66,7 @@ import (
 
 	"github.com/MetaRPC/GoMT5/examples/demos/config"
 	"github.com/MetaRPC/GoMT5/examples/demos/helpers"
-	mt5 "github.com/MetaRPC/GoMT5/examples/mt5"
+	mt5 "github.com/MetaRPC/GoMT5/mt5"
 )
 
 // RunSugarAdvancedDemo demonstrates advanced Sugar API features

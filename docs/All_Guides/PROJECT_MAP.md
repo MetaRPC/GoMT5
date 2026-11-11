@@ -14,7 +14,7 @@ GoMT5/
 │   ├── Proto definitions (*.pb.go)
 │   └── gRPC stubs (*_grpc.pb.go)
 │
-├── 📦 examples/mt5/ - High-level API layers
+├── 📦 mt5/ - High-level API layers
 │   ├── MT5Service.go (Layer 2 - Wrappers)
 │   └── MT5Sugar.go (Layer 3 - Convenience)
 │
@@ -35,7 +35,7 @@ External dependencies:
 **User interaction:** Import and use, but typically don't modify.
 
 ```
-package/Helpers/
+mt5/
 ├── MT5Account.go              ← LAYER 1: Low-level gRPC ⭐ FOUNDATION
 │   └── Direct gRPC calls to MT5 terminal
 │   └── Connection management with retry logic
@@ -49,7 +49,7 @@ package/Helpers/
     └── Trade return code constants & helpers
     └── Centralized error inspection methods
 
-examples/mt5/
+mt5/
 ├── MT5Service.go              ← LAYER 2: Wrapper methods
 │   └── Simplified signatures (no proto objects)
 │   └── Type conversion (proto → Go primitives)
@@ -71,7 +71,7 @@ go.mod / go.sum                ← Module dependencies
 ```
 MT5Sugar → uses → MT5Service → uses → MT5Account → gRPC → MT5 Terminal
        ↓                ↓                    ↓
-examples/mt5/    examples/mt5/      package/Helpers/
+mt5/    mt5/      mt5/
 ```
 
 **💡 Creating Your Own Project:**
@@ -81,7 +81,7 @@ For your own standalone project using GoMT5, you only need the `package` module:
 ```go
 import (
     pb "github.com/MetaRPC/GoMT5/package"           // protobuf messages and enums
-    mt5 "github.com/MetaRPC/GoMT5/package/Helpers"  // MT5Account, ApiError, return-code helpers
+    mt5 "github.com/MetaRPC/GoMT5/mt5"  // MT5Account, ApiError, return-code helpers
 )
 ```
 
@@ -97,7 +97,7 @@ This makes the package **portable** and easy to integrate into any Go project!
 **User decision:**
 
 - **Building your own app:** Import `package` and use MT5Account directly
-- **Learning/Examples:** Use the full GoMT5 repo with all 3 layers (MT5Service/MT5Sugar are `github.com/MetaRPC/GoMT5/examples/mt5` in the clone)
+- **Learning/Examples:** Use the full GoMT5 repo with all 3 layers (MT5Service/MT5Sugar are `github.com/MetaRPC/GoMT5/mt5` in the clone)
 - **95% of demo cases:** Start with `MT5Sugar` (highest level, easiest)
 - **Need wrappers:** Move to `MT5Service` (Go types, full control over request parameters)
 - **Need raw proto:** Move to `MT5Account` (full control)
@@ -293,43 +293,43 @@ examples/demos/helpers/
 **Connection (connection.go):**
 ```go
 // Load config.json / env vars, create MT5Account and ConnectEx by server name
-account, cfg, err := helpers.CreateAndConnectAccount()
-defer helpers.DisconnectAccount(account)
+account, cfg, err := mt5.CreateAndConnectAccount()
+defer mt5.DisconnectAccount(account)
 service := mt5.NewMT5Service(account)
 
 // MT5Sugar creates its own account from the credentials
 sugar, err := mt5.NewMT5Sugar(cfg.User, cfg.Password, cfg.GrpcServer)
-defer helpers.DisconnectOnExit(sugar)() // disconnect at the end, on helpers.Fatal, panic or Ctrl+C
+defer mt5.DisconnectOnExit(sugar)() // disconnect at the end, on mt5.Fatal, panic or Ctrl+C
 err = sugar.QuickConnect(cfg.MtCluster)
 ```
 
 **Progress bar (progress_bar.go):**
 ```go
 // Visual countdown during orchestrator operation
-helpers.WaitWithProgressBar(60, "Monitoring positions", ctx)
+mt5.WaitWithProgressBar(60, "Monitoring positions", ctx)
 ```
 
 **Errors (error_helper.go):**
 ```go
 // Check return codes and handle errors
-if !helpers.CheckRetCode(result.ReturnedCode, "Order placement") {
+if !mt5.CheckRetCode(result.ReturnedCode, "Order placement") {
     // prints the code and its description
 }
-helpers.PrintIfError(err, "Order placement failed") // prints ApiError details when err != nil
+mt5.PrintIfError(err, "Order placement failed") // prints ApiError details when err != nil
 
-// helpers.Fatal prints the error, runs the OnFatal hooks (e.g. the disconnect registered by
+// mt5.Fatal prints the error, runs the OnFatal hooks (e.g. the disconnect registered by
 // DisconnectOnExit) and exits - log.Fatal alone would skip deferred calls and leave the terminal running
-helpers.Fatal(err, "QuickConnect failed")
+mt5.Fatal(err, "QuickConnect failed")
 
 // An orchestrator/preset that stops gracefully on Ctrl+C gets the first Ctrl+C to itself (main.go does this
 // after Start); a second Ctrl+C runs the hooks and exits
-defer helpers.LetCallerHandleInterrupt()()
+defer mt5.LetCallerHandleInterrupt()()
 ```
 
 **Protobuf inspector (17_protobuf_inspector.go):**
 ```go
 // Interactive explorer of protobuf types, fields and enums (menu item 17)
-helpers.RunProtobufInspector()
+mt5.RunProtobufInspector()
 ```
 
 ---
@@ -361,9 +361,9 @@ docs/                                  (mkdocs.yml - the MkDocs configuration - 
 │
 ├── API_Reference/                     ← Concise API documentation
 │   │                                     (slightly enhanced for better navigation)
-│   ├── MT5Account.md                  ← ⭐ Layer 1 API (foundation of everything) → from package/Helpers/MT5Account.go
-│   ├── MT5Service.md                  ← Layer 2 API → from examples/mt5/MT5Service.go
-│   └── MT5Sugar.md                    ← Layer 3 API → from examples/mt5/MT5Sugar.go
+│   ├── MT5Account.md                  ← ⭐ Layer 1 API (foundation of everything) → from mt5/MT5Account.go
+│   ├── MT5Service.md                  ← Layer 2 API → from mt5/MT5Service.go
+│   └── MT5Sugar.md                    ← Layer 3 API → from mt5/MT5Sugar.go
 │
 ├── MT5Account/                        ← ⭐ FOUNDATION OF EVERYTHING - Detailed Layer 1 documentation
 │   ├── MT5Account.Master.Overview.md  ← ⭐ Complete API reference
@@ -590,7 +590,7 @@ MT5Service (Layer 2 - Wrappers)
                   │ uses
                   ↓
 MT5Account (Layer 1 - Low level) ⭐ FOUNDATION
-  📍 Location: package/Helpers/MT5Account.go
+  📍 Location: mt5/MT5Account.go
   ├─ Proto Request/Response
   ├─ gRPC communication
   ├─ Connection management
@@ -610,11 +610,11 @@ MT5 Gateway (mt5term) or MT5 Terminal
 ### Core API (Multi-location)
 
 **Layer 1 (Foundation):**
-- `package/Helpers/MT5Account.go` - Low-level gRPC (independent module)
+- `mt5/MT5Account.go` - Low-level gRPC (independent module)
 
 **Layers 2-3 (High-level wrappers):**
-- `examples/mt5/MT5Service.go` - Wrapper methods
-- `examples/mt5/MT5Sugar.go` - Convenience API
+- `mt5/MT5Service.go` - Wrapper methods
+- `mt5/MT5Sugar.go` - Convenience API
 - `go.mod / go.sum` - Dependencies
 
 ### User Code (examples/demos/)
@@ -658,9 +658,9 @@ README.md                      ← Update with your changes
 ### 📖 READ (Core API)
 
 ```
-package/Helpers/MT5Account.go  ← Use but don't modify (import and call) ⭐ FOUNDATION
-examples/mt5/MT5Service.go     ← Use but don't modify
-examples/mt5/MT5Sugar.go       ← Use but don't modify
+mt5/MT5Account.go  ← Use but don't modify (import and call) ⭐ FOUNDATION
+mt5/MT5Service.go     ← Use but don't modify
+mt5/MT5Sugar.go       ← Use but don't modify
 docs/                          ← Reference documentation
 ```
 
@@ -749,7 +749,7 @@ go version   # Should be 1.23 or higher (go.mod: go 1.23.6)
 ✅ DO: Use context for lifecycle management
 ✅ DO: Add comprehensive error handling
 ✅ DO: Document your strategy logic clearly
-✅ DO: Use helpers.WaitWithProgressBar for long operations
+✅ DO: Use mt5.WaitWithProgressBar for long operations
 
 ❌ DON'T: Mix strategy logic with API calls
 ❌ DON'T: Use time.Sleep (use time.After with context)

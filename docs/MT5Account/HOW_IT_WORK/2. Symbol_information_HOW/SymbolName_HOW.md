@@ -31,7 +31,7 @@ if symbolsToShow == 0 {
             Selected: true, // true = Market Watch, false = all symbols
         }
         nameData, err := account.SymbolName(ctx, nameReq)
-        if !helpers.PrintShortError(err, fmt.Sprintf("SymbolName(pos=%d) failed", i)) {
+        if !mt5.PrintShortError(err, fmt.Sprintf("SymbolName(pos=%d) failed", i)) {
             if nameData.Name != "" {
                 fmt.Printf("    [%d] %s\n", i, nameData.Name)
             } else {

@@ -21,7 +21,7 @@ openedOrdersReq := &pb.OpenedOrdersRequest{
 }
 openedOrdersData, err := account.OpenedOrders(ctx, openedOrdersReq)
 if err != nil {
-    helpers.PrintShortError(err, "OpenedOrders failed")
+    mt5.PrintShortError(err, "OpenedOrders failed")
 } else {
     // Direct field access: OpenedOrders and PositionInfos
     totalOrders := len(openedOrdersData.OpenedOrders) + len(openedOrdersData.PositionInfos)

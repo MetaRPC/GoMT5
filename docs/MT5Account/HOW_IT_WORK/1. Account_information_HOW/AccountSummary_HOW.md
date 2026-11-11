@@ -114,7 +114,7 @@ if err != nil {
 ```
 
 Checks if an error occurred. If `err != nil`, the demo function returns the error. It does not exit on the spot
-(`helpers.Fatal()` would call `os.Exit`, which skips the deferred `account.DisconnectAndClose()` and leaves the
+(`mt5.Fatal()` would call `os.Exit`, which skips the deferred `account.DisconnectAndClose()` and leaves the
 terminal connected): returning lets the deferred cleanup disconnect the terminal first.
 
 ---

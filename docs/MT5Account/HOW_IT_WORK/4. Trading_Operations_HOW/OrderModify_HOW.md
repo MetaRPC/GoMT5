@@ -22,7 +22,7 @@ modifyReq := &pb.OrderModifyRequest{
 }
 
 modifyData, err := account.OrderModify(ctx, modifyReq)
-if !helpers.PrintShortError(err, "OrderModify failed") {
+if !mt5.PrintShortError(err, "OrderModify failed") {
     fmt.Printf("  Order modify result:\n")
     fmt.Printf("    Return Code:                 %d\n", modifyData.ReturnedCode)
     fmt.Printf("    Order Ticket:                %d\n", modifyData.Order)
@@ -130,7 +130,7 @@ if mt5.IsRetCodeSuccess(modifyData.ReturnedCode) {
 **Why use `mt5.IsRetCodeSuccess()` instead of checking `== 10009` manually?**
 
 1. **Self-Documenting**: The function name clearly explains what is being validated
-2. **Centralized Logic**: Single source of truth for success validation in `package/Helpers/errors.go`
+2. **Centralized Logic**: Single source of truth for success validation in `mt5/errors.go`
 3. **Better Error Messages**: `mt5.GetRetCodeMessage()` automatically provides human-readable descriptions for common errors like:
    - `TRADE_RETCODE_INVALID_STOPS` - SL/TP levels too close to market price
    - `TRADE_RETCODE_INVALID_ORDER` - Order already closed or doesn't exist

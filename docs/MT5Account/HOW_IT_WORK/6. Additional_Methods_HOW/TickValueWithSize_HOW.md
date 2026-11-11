@@ -14,7 +14,7 @@ tickValueReq := &pb.TickValueWithSizeRequest{
 }
 tickValueData, err := account.TickValueWithSize(ctx, tickValueReq)
 if err != nil {
-    helpers.PrintShortError(err, "TickValueWithSize failed")
+    mt5.PrintShortError(err, "TickValueWithSize failed")
 } else {
     fmt.Printf("  Retrieved tick value/size data for %d symbols:\n", len(tickValueData.SymbolTickSizeInfos))
     for _, info := range tickValueData.SymbolTickSizeInfos {

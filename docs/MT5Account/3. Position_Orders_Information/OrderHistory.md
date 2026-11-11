@@ -4,7 +4,7 @@
 
 **API Information:**
 
-* **Low-level API:** `MT5Account.OrderHistory(...)` (from Go package `github.com/MetaRPC/GoMT5/package/Helpers`)
+* **Low-level API:** `MT5Account.OrderHistory(...)` (from Go package `github.com/MetaRPC/GoMT5/mt5`)
 * **gRPC service:** `mt5_term_api.AccountHelper`
 * **Proto definition:** `OrderHistory` (defined in `mt5-term-api-account-helper.proto`)
 
@@ -164,6 +164,8 @@ OrderHistoryReply {
 - `Type` (BMT5_ENUM_DEAL_TYPE) - Deal type
 - `Reason` (BMT5_ENUM_DEAL_REASON) - Deal execution reason
 - `PositionId` (uint64) - Position ID
+- `Order` (uint64) - Ticket of the order that generated the deal
+- `Magic` (int64) - Magic number (Expert Advisor ID) of the order
 - `Comment` (string) - Deal comment
 - `Symbol` (string) - Trading symbol
 - `ExternalId` (string) - External identifier
@@ -323,7 +325,7 @@ import (
     "time"
 
     pb "github.com/MetaRPC/GoMT5/package"
-    "github.com/MetaRPC/GoMT5/package/Helpers"
+    "github.com/MetaRPC/GoMT5/mt5"
     "google.golang.org/protobuf/types/known/timestamppb"
 )
 

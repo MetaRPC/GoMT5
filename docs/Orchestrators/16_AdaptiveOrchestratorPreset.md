@@ -51,7 +51,7 @@ Instead of running one fixed strategy, the **Adaptive Orchestrator Preset** acts
 
 * **MT5Sugar** — high-level convenience API (`GetBalance`, `GetPriceInfo`, `GetOpenPositions`)
 * **All 5 Orchestrators** — GridTrader, TrailingStopManager, PositionScaler, RiskManager, PortfolioRebalancer (package `orchestrators`)
-* **Helpers** — `helpers.WaitWithProgressBarAndCallback` progress bar (package `examples/demos/helpers`)
+* **Helpers** — `mt5.WaitWithProgressBarAndCallback` progress bar (package `examples/demos/helpers`)
 
 ---
 
@@ -221,7 +221,7 @@ config.MaxScales = 3         // Max 3 scales
 
 ### Configuration Example
 
-Imports: `presets "github.com/MetaRPC/GoMT5/examples/demos/presets"` and `mt5 "github.com/MetaRPC/GoMT5/examples/mt5"` (both in the repository's `examples` module).
+Imports: `presets "github.com/MetaRPC/GoMT5/examples/demos/presets"` and `mt5 "github.com/MetaRPC/GoMT5/mt5"` (both in the repository's `examples` module).
 
 ```go
 sugar, err := mt5.NewMT5Sugar(12345678, "your_password", "mt5.mrpc.pro:443")
@@ -701,7 +701,7 @@ func (p *AdaptiveOrchestratorPreset) monitorCycle() {
 	totalSeconds := int(p.CycleDuration.Seconds())
 
 	// Use progress bar with callback to show orchestrator status
-	helpers.WaitWithProgressBarAndCallback(
+	mt5.WaitWithProgressBarAndCallback(
 		totalSeconds,
 		fmt.Sprintf("Cycle #%d monitoring", p.cycleNumber),
 		10*time.Second, // Update orchestrator status every 10 seconds

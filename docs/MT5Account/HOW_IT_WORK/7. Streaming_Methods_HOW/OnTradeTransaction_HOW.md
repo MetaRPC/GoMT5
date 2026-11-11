@@ -53,7 +53,7 @@ for {
 
 	case err := <-transactionErrChan:
 		if err != nil {
-			helpers.PrintShortError(err, "Stream error")
+			mt5.PrintShortError(err, "Stream error")
 			break streamTransaction
 		}
 

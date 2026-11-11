@@ -4,7 +4,7 @@
 
 **API Information:**
 
-* **Low-level API:** `MT5Account.SymbolExist(...)` (from Go package `github.com/MetaRPC/GoMT5/package/Helpers`)
+* **Low-level API:** `MT5Account.SymbolExist(...)` (from Go package `github.com/MetaRPC/GoMT5/mt5`)
 * **gRPC service:** `mt5_term_api.MarketInfo`
 * **Proto definition:** `SymbolExist` (defined in `mt5-term-api-market-info.proto`)
 
@@ -126,7 +126,7 @@ import (
     "time"
 
     pb "github.com/MetaRPC/GoMT5/package"
-    "github.com/MetaRPC/GoMT5/package/Helpers"
+    "github.com/MetaRPC/GoMT5/mt5"
 )
 
 func main() {

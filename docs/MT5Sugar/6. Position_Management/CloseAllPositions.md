@@ -50,7 +50,7 @@ func (s *MT5Sugar) closePositions(selected func(*pb.PositionInfo) bool) (int, er
         case err != nil:
             failures = append(failures, fmt.Errorf("position #%d: %w", pos.Ticket, err))
         case retCode != 10009:
-            failures = append(failures, fmt.Errorf("position #%d: close rejected, code: %d (%s)", pos.Ticket, retCode, helpers.GetRetCodeMessage(retCode)))
+            failures = append(failures, fmt.Errorf("position #%d: close rejected, code: %d (%s)", pos.Ticket, retCode, mt5.GetRetCodeMessage(retCode)))
         default:
             closed++
         }

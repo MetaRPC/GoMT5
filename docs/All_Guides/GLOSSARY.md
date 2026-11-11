@@ -33,7 +33,7 @@ Base layer providing direct access to MT5 terminal via gRPC protocol.
 
 **When to use:** Custom integrations, need proto-level control, building custom wrappers.
 
-**Location:** `package/Helpers/MT5Account.go` (2400+ lines)
+**Location:** `mt5/MT5Account.go` (2400+ lines)
 
 **Documentation:** [MT5Account.Master.Overview.md](../MT5Account/MT5Account.Master.Overview.md)
 
@@ -61,12 +61,12 @@ Middle layer providing simplified method signatures without proto complexity.
 - Type conversion (proto → Go primitives/structs)
 - Simplified method names
 - No normalization (values are sent as you pass them; you control precision)
-- **36 methods**: account, symbols, positions & orders, market depth, trading, 5 streams
+- **38 methods**: account, symbols, positions & orders, market depth, trading, 5 streams
 - Typed result structs (`AccountSummary`, `SymbolTick`, `OrderResult`, ...)
 
 **When to use:** Need Go types but full control over request parameters, building custom strategies.
 
-**Location:** `examples/mt5/MT5Service.go` (1160+ lines)
+**Location:** `mt5/MT5Service.go` (1160+ lines)
 
 **Documentation:** [MT5Service.Overview.md](../MT5Service/MT5Service.Overview.md)
 
@@ -95,7 +95,7 @@ High-level API for common trading operations.
 
 **When to use:** Rapid development, prototyping, simple strategies.
 
-**Location:** `examples/mt5/MT5Sugar.go` (2200+ lines)
+**Location:** `mt5/MT5Sugar.go` (2200+ lines)
 
 **Documentation:** [MT5Sugar.API_Overview.md](../MT5Sugar/MT5Sugar.API_Overview.md)
 
@@ -357,7 +357,7 @@ High-performance RPC (Remote Procedure Call) framework using HTTP/2.
 
 **Connection setup:**
 ```go
-// import mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+// import mt5 "github.com/MetaRPC/GoMT5/mt5"
 // The API key is read from MRPC_API_KEY (or set account.ApiKey); ConnectEx sets the terminal id.
 account, err := mt5.NewMT5Account(591129415, "password", "mt5.mrpc.pro:443", uuid.Nil)
 if err != nil {
@@ -462,7 +462,7 @@ Protobuf return codes indicating operation success/failure.
 
 **Helper functions:**
 ```go
-import mt5 "github.com/MetaRPC/GoMT5/package/Helpers"
+import mt5 "github.com/MetaRPC/GoMT5/mt5"
 
 result, err := account.OrderSend(ctx, req)
 var apiErr *mt5.ApiError
@@ -763,7 +763,7 @@ Interactive tool for exploring MT5 API types.
 
 **Features:**
 
-- Explore 267 protobuf types
+- Explore 255 protobuf types
 - Search types and fields
 - View enum values (67 enums)
 - Understand message structures
@@ -1030,7 +1030,7 @@ type MT5Sugar struct {
 }
 
 type MT5Service struct {
-    account *helpers.MT5Account // wraps MT5Account
+    account *MT5Account // wraps MT5Account (same package)
 }
 ```
 

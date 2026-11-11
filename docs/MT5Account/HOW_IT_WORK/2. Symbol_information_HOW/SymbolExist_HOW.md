@@ -18,7 +18,7 @@ existReq := &pb.SymbolExistRequest{
     Name: cfg.TestSymbol, // Direct protobuf field: Name (not Symbol)
 }
 existData, err := account.SymbolExist(ctx, existReq)
-if !helpers.PrintShortError(err, fmt.Sprintf("SymbolExist(%s) failed", cfg.TestSymbol)) {
+if !mt5.PrintShortError(err, fmt.Sprintf("SymbolExist(%s) failed", cfg.TestSymbol)) {
     fmt.Printf("  Symbol '%s' exists:      %v\n", cfg.TestSymbol, existData.Exists)
     fmt.Printf("  Is custom symbol:         %v\n", existData.IsCustom)
 }
@@ -54,7 +54,7 @@ Executes a gRPC call to the MetaTrader server.
 #### 🔹 Checking the result
 
 ```go
-if !helpers.PrintShortError(err, fmt.Sprintf("SymbolExist(%s) failed", cfg.TestSymbol)) {
+if !mt5.PrintShortError(err, fmt.Sprintf("SymbolExist(%s) failed", cfg.TestSymbol)) {
     fmt.Printf("  Symbol '%s' exists:      %v\n", cfg.TestSymbol, existData.Exists)
     fmt.Printf("  Is custom symbol:         %v\n", existData.IsCustom)
 }

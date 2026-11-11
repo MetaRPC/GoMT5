@@ -182,7 +182,6 @@ import (
 	"time"
 
 	pb "github.com/MetaRPC/GoMT5/package"
-	helpers "github.com/MetaRPC/GoMT5/package/Helpers"
 	"github.com/google/uuid"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -237,7 +236,7 @@ type PriceInfo struct {
 // RETURNS:
 //   *MT5Sugar instance ready for connection, or error if initialization fails
 func NewMT5Sugar(user uint64, password string, grpcServer string) (*MT5Sugar, error) {
-	account, err := helpers.NewMT5Account(user, password, grpcServer, uuid.New())
+	account, err := NewMT5Account(user, password, grpcServer, uuid.New())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create MT5Account: %w", err)
 	}
@@ -268,7 +267,7 @@ func (s *MT5Sugar) GetService() *MT5Service {
 //
 // RETURNS:
 //   *MT5Account instance used by the underlying Service layer
-func (s *MT5Sugar) GetAccount() *helpers.MT5Account {
+func (s *MT5Sugar) GetAccount() *MT5Account {
 	return s.service.account
 }
 
@@ -569,7 +568,7 @@ func (s *MT5Sugar) WaitForPrice(symbol string, timeout time.Duration) (*PriceInf
 		tick, err := s.service.GetSymbolTick(ctx, symbol)
 		if err != nil {
 			// An error from the server (unknown symbol, ...) does not go away by waiting: return it.
-			var apiErr *helpers.ApiError
+			var apiErr *ApiError
 			if errors.As(err, &apiErr) {
 				return nil, err
 			}
@@ -974,7 +973,7 @@ func (s *MT5Sugar) ClosePosition(ticket uint64) error {
 	}
 
 	if retCode != 10009 {
-		return fmt.Errorf("close rejected, code: %d (%s)", retCode, helpers.GetRetCodeMessage(retCode))
+		return fmt.Errorf("close rejected, code: %d (%s)", retCode, GetRetCodeMessage(retCode))
 	}
 
 	return nil
@@ -1005,7 +1004,7 @@ func (s *MT5Sugar) ClosePositionPartial(ticket uint64, volume float64) error {
 	}
 
 	if retCode != 10009 {
-		return fmt.Errorf("partial close rejected, code: %d (%s)", retCode, helpers.GetRetCodeMessage(retCode))
+		return fmt.Errorf("partial close rejected, code: %d (%s)", retCode, GetRetCodeMessage(retCode))
 	}
 
 	return nil
@@ -1058,7 +1057,7 @@ func (s *MT5Sugar) closePositions(selected func(*pb.PositionInfo) bool) (int, er
 		case err != nil:
 			failures = append(failures, fmt.Errorf("position #%d: %w", pos.Ticket, err))
 		case retCode != 10009:
-			failures = append(failures, fmt.Errorf("position #%d: close rejected, code: %d (%s)", pos.Ticket, retCode, helpers.GetRetCodeMessage(retCode)))
+			failures = append(failures, fmt.Errorf("position #%d: close rejected, code: %d (%s)", pos.Ticket, retCode, GetRetCodeMessage(retCode)))
 		default:
 			closed++
 		}
