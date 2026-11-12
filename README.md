@@ -75,3 +75,10 @@ Explore comprehensive documentation at [https://metarpc.github.io/GoMT5/](https:
 - 📡 **Live Market Data & gRPC Streaming**
 - 💼 **Account Management & Order Execution**
 - 📊 **Return Codes & Error Handling Reference**
+
+---
+
+## 📄 License
+
+This SDK is open-sourced under the [MIT License](LICENSE).  
+Cloud infrastructure and API services are operated by [MetaRPC](https://mrpc.pro).
