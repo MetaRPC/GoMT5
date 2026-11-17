@@ -400,9 +400,46 @@ func (a *MT5Account) IsConnected() bool {
 //   - Max delay: 5s
 //   - Exponential backoff with jitter
 //   - Retries on: Unavailable, DeadlineExceeded, TERMINAL_INSTANCE_NOT_FOUND
+//   - Never retries a refused API key (API_KEY_INVALID / API_KEY_REQUIRED)
+//
+// TRADE CALLS (OrderSend, OrderModify, OrderClose) do not use the transport retry:
+// they go through executeTradeWithReconnect, which returns a *TradeOutcomeUnknownError
+// instead of re-sending the order (see TradeOutcomeUnknownError).
 func ExecuteWithReconnect[T any](
 	a *MT5Account,
 	ctx context.Context,
+	grpcCall func(metadata.MD) (T, error),
+	errorSelector func(T) mrpcError,
+) (T, error) {
+	return executeWithReconnect(a, ctx, "", grpcCall, errorSelector)
+}
+
+// executeTradeWithReconnect runs a trade call (OrderSend, OrderModify, OrderClose).
+// A transport failure that may have happened after the request reached the terminal
+// (Unavailable, DeadlineExceeded, Unknown, Internal) is NOT retried: the order may already
+// have been executed, so it is returned as *TradeOutcomeUnknownError. Only an in-band
+// TERMINAL_INSTANCE_NOT_FOUND / TERMINAL_REGISTRY_TERMINAL_NOT_FOUND answer (the gateway
+// answered before any terminal saw the request) is retried.
+func executeTradeWithReconnect[T any](
+	a *MT5Account,
+	ctx context.Context,
+	operation string,
+	grpcCall func(metadata.MD) (T, error),
+	errorSelector func(T) mrpcError,
+) (T, error) {
+	return executeWithReconnect(a, ctx, operation, grpcCall, errorSelector)
+}
+
+// isApiKeyRefused reports whether a gRPC status message carries a refused API key code.
+func isApiKeyRefused(msg string) bool {
+	return strings.Contains(msg, "API_KEY_INVALID") || strings.Contains(msg, "API_KEY_REQUIRED")
+}
+
+// executeWithReconnect is the shared loop; tradeOperation != "" marks a trade call.
+func executeWithReconnect[T any](
+	a *MT5Account,
+	ctx context.Context,
+	tradeOperation string,
 	grpcCall func(metadata.MD) (T, error),
 	errorSelector func(T) mrpcError,
 ) (T, error) {
@@ -422,7 +459,17 @@ func ExecuteWithReconnect[T any](
 
 		res, err := grpcCall(headers)
 		if err != nil {
-			if s, ok := status.FromError(err); ok && (s.Code() == codes.Unavailable || s.Code() == codes.DeadlineExceeded) {
+			s, isStatus := status.FromError(err)
+			if isStatus && isApiKeyRefused(s.Message()) {
+				return zeroT, err
+			}
+			if tradeOperation != "" {
+				if isStatus && isTradeOutcomeUnknownCode(s.Code()) {
+					return zeroT, newTradeOutcomeUnknownError(tradeOperation, err)
+				}
+				return zeroT, err
+			}
+			if isStatus && (s.Code() == codes.Unavailable || s.Code() == codes.DeadlineExceeded) {
 				log.Printf("[grpc-retry] code=%s msg=%q next_delay=%s", s.Code(), s.Message(), delay)
 				j := time.Duration(rand.Int63n(int64(delay/2))) - delay/4
 				wait := delay + j
@@ -2141,7 +2188,7 @@ func (a *MT5Account) OrderSend(ctx context.Context, req *pb.OrderSendRequest) (*
 		return reply.GetError()
 	}
 
-	reply, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
+	reply, err := executeTradeWithReconnect(a, ctx, "OrderSend", grpcCall, errorSelector)
 	if err != nil {
 		return nil, err
 	}
@@ -2185,7 +2232,7 @@ func (a *MT5Account) OrderModify(ctx context.Context, req *pb.OrderModifyRequest
 		return reply.GetError()
 	}
 
-	reply, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
+	reply, err := executeTradeWithReconnect(a, ctx, "OrderModify", grpcCall, errorSelector)
 	if err != nil {
 		return nil, err
 	}
@@ -2228,7 +2275,7 @@ func (a *MT5Account) OrderClose(ctx context.Context, req *pb.OrderCloseRequest) 
 		return reply.GetError()
 	}
 
-	reply, err := ExecuteWithReconnect(a, ctx, grpcCall, errorSelector)
+	reply, err := executeTradeWithReconnect(a, ctx, "OrderClose", grpcCall, errorSelector)
 	if err != nil {
 		return nil, err
 	}

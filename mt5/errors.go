@@ -94,7 +94,7 @@ WHERE AND HOW THESE ERRORS ARE USED
      // Check trade execution result
      if result.ReturnedCode != mt5.TradeRetCodeDone {
          if mt5.IsRetCodeRetryable(result.ReturnedCode) {
-             // Retry: timeout, locked, no quotes, etc.
+             // Retry: no quotes, too many requests, frozen (never 10012/10028/10031: outcome unknown)
              time.Sleep(500 * time.Millisecond)
              return retryOrder()
          }
@@ -119,7 +119,7 @@ MT5Account.OrderSend() checks isConnected()
           ↓
           ExecuteWithReconnect() makes gRPC call
           ↓
-          ├─ gRPC error? → retry with backoff
+          ├─ gRPC error? → reads: retry with backoff; OrderSend/OrderModify/OrderClose: TradeOutcomeUnknownError, never re-sent
           ↓
           ├─ reply.Error present? → return ApiError
           ↓
@@ -136,8 +136,11 @@ MT5Account.OrderSend() checks isConnected()
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	pb "github.com/MetaRPC/GoMT5/package"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -147,6 +150,76 @@ import (
 // ErrNotConnected is returned when attempting to call API methods before Connect().
 // Use errors.Is(err, mt5.ErrNotConnected) to check for this error.
 var ErrNotConnected = errors.New("MT5Account not connected - call Connect() or ConnectEx() first")
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TRADE OUTCOME UNKNOWN - a trade call failed after it may have been executed
+// ══════════════════════════════════════════════════════════════════════════════
+
+// TradeOutcomeUnknownCode is the error code of TradeOutcomeUnknownError.
+const TradeOutcomeUnknownCode = "TRADE_OUTCOME_UNKNOWN"
+
+// TradeOutcomeUnknownError is returned by OrderSend, OrderModify and OrderClose (and the
+// Service/Sugar methods built on them) when the call failed at the transport level with
+// gRPC Unavailable, DeadlineExceeded, Unknown or Internal. The request may already have
+// reached the terminal and been executed, so the SDK did NOT re-send it: check open
+// positions/orders before retrying.
+//
+// It wraps the original gRPC status error: errors.As(err, &*TradeOutcomeUnknownError),
+// status.FromError(err) and status.Code(err) all keep working.
+type TradeOutcomeUnknownError struct {
+	Code      string // always TradeOutcomeUnknownCode
+	Operation string // "OrderSend", "OrderModify" or "OrderClose"
+	Err       error  // the original gRPC status error
+}
+
+func newTradeOutcomeUnknownError(operation string, err error) *TradeOutcomeUnknownError {
+	return &TradeOutcomeUnknownError{Code: TradeOutcomeUnknownCode, Operation: operation, Err: err}
+}
+
+// isTradeOutcomeUnknownCode: transport codes after which a trade may have been executed.
+func isTradeOutcomeUnknownCode(c codes.Code) bool {
+	switch c {
+	case codes.Unavailable, codes.DeadlineExceeded, codes.Unknown, codes.Internal:
+		return true
+	}
+	return false
+}
+
+// Error implements the error interface.
+func (e *TradeOutcomeUnknownError) Error() string {
+	return fmt.Sprintf("%s: %s failed with gRPC %s after the request may have reached the terminal; "+
+		"the trade may or may not have been executed. It was NOT re-sent automatically: "+
+		"check open positions/orders before retrying. (%v)",
+		TradeOutcomeUnknownCode, e.Operation, grpcCodeName(status.Code(e.Err)), e.Err)
+}
+
+// ErrorCode returns TradeOutcomeUnknownCode.
+func (e *TradeOutcomeUnknownError) ErrorCode() string { return TradeOutcomeUnknownCode }
+
+// Unwrap returns the original gRPC status error.
+func (e *TradeOutcomeUnknownError) Unwrap() error { return e.Err }
+
+// GRPCStatus returns the status of the original gRPC error, so status.FromError and
+// status.Code see the original code (e.g. codes.Unavailable).
+func (e *TradeOutcomeUnknownError) GRPCStatus() *status.Status {
+	s, _ := status.FromError(e.Err)
+	return s
+}
+
+// grpcCodeName returns the upper-case gRPC code name, e.g. "UNAVAILABLE".
+func grpcCodeName(c codes.Code) string {
+	switch c {
+	case codes.Unavailable:
+		return "UNAVAILABLE"
+	case codes.DeadlineExceeded:
+		return "DEADLINE_EXCEEDED"
+	case codes.Unknown:
+		return "UNKNOWN"
+	case codes.Internal:
+		return "INTERNAL"
+	}
+	return strings.ToUpper(c.String())
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // API ERROR - Wrapper for protobuf Error
@@ -403,12 +476,14 @@ func IsRetCodeRequote(retCode uint32) bool {
 
 // IsRetCodeRetryable checks if the error is retryable (temporary).
 // These errors might succeed if you retry with exponential backoff.
+//
+// It does NOT include 10012 (TradeRetCodeTimeout), 10028 (TradeRetCodeLocked) and
+// 10031 (TradeRetCodeNoConnection): with those the trade server may already have executed
+// the request, so re-sending it can open a duplicate position. Check open positions/orders
+// before trying again after one of them.
 func IsRetCodeRetryable(retCode uint32) bool {
 	switch retCode {
-	case TradeRetCodeTimeout,
-		TradeRetCodeNoConnection,
-		TradeRetCodeFrozen,
-		TradeRetCodeLocked,
+	case TradeRetCodeFrozen,
 		TradeRetCodeTooManyRequests,
 		TradeRetCodeNoQuotes:
 		return true
