@@ -216,7 +216,7 @@ Each symbol contains comprehensive trading information organized in the followin
 | `Spread`               | `int32`   | Current spread in points             |
 | `TicksBookDepth`       | `int32`   | Maximal number of requests in order book |
 | `TradeCalcMode`        | `enum`    | Contract price calculation mode      |
-| `TradeMode`            | `enum`    | Order execution type                 |
+| `TradeMode`            | `enum`    | Allowed trading mode                 |
 | `StartTime`            | `timestamp` | Date of symbol trading start (broker server time) |
 | `StartTimeUtc`         | `timestamp` | `StartTime` in UTC                 |
 | `ExpirationTime`       | `timestamp` | Date of symbol expiration (broker server time) |

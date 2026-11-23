@@ -118,7 +118,7 @@ SymbolInfoIntegerReply {
 | `SYMBOL_SPREAD` | 19 | Current spread in points |
 | `SYMBOL_TICKS_BOOKDEPTH` | 20 | Maximum depth of market (DOM) |
 | `SYMBOL_TRADE_CALC_MODE` | 21 | Margin calculation mode (SYMBOL_CALC_MODE enum) |
-| `SYMBOL_TRADE_MODE` | 22 | Trade execution mode (SYMBOL_TRADE_MODE enum) |
+| `SYMBOL_TRADE_MODE` | 22 | Allowed trading mode (SYMBOL_TRADE_MODE enum) |
 | `SYMBOL_START_TIME` | 23 | Date of symbol trade beginning |
 | `SYMBOL_EXPIRATION_TIME` | 24 | Date of symbol trade end |
 | `SYMBOL_TRADE_STOPS_LEVEL` | 25 | Minimum distance for SL/TP in points |
