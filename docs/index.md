@@ -1,13 +1,26 @@
 ---
+title: "MetaTrader 5 API — Go SDK"
 description: "MetaRPC GoMT5 — type-safe Go SDK for MetaTrader 5 trading automation over gRPC. Connect, stream live ticks and positions, and execute orders from any Go application."
 hide:
   - navigation
   - toc
 ---
 
-# GoMT5 SDK Documentation
+# MetaTrader 5 API — Go SDK
 
 > ℹ️ **Account ID / Session ID**: when connecting via `Connect` / `ConnectEx`, MetaRPC automatically generates a terminal session GUID and returns it in `terminalInstanceGuid`. You do not need to call `GetId` or supply an `id` header before connecting — subsequent calls (subscriptions, order requests) use this session ID automatically.
+
+!!! info "Use the MT5 SDK with MetaRPC"
+
+    MetaRPC provides APIs and hosted terminal infrastructure for developers. Build your client on Windows, macOS or Linux; you control your broker accounts and trading decisions.
+
+    Start with the API setup guide, try the browser playground, or connect a trade-copying workflow.
+
+    [API setup and pricing](https://mrpc.pro/start/api?lang=en&utm_source=github&utm_medium=referral&utm_campaign=api_sdk_discovery&utm_content=gomt5_setup)
+
+    [Try the API playground](https://mrpc.pro/api?lang=en&utm_source=github&utm_medium=referral&utm_campaign=api_sdk_discovery&utm_content=gomt5_playground#live-code)
+
+    [Explore trade copying](https://mrpc.pro/start/copier?lang=en&utm_source=github&utm_medium=referral&utm_campaign=api_sdk_discovery&utm_content=gomt5_copier)
 
 <div class="hx-wrap" markdown="0">
 
